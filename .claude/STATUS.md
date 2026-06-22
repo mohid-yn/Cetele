@@ -29,6 +29,7 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 | D10 | Notifications = **Web Push + service worker** (VAPID, sent from Vercel cron / Supabase Edge Fn); **email fallback** (Resend) for non-installers / iOS <16.4. Push is v1.1 |
 | D11 | **Brand = Youth Nexus** (navy `#1D3A5F` + orange `#F26522`), replacing the placeholder green. Design system tokens in `app/globals.css`, components in `components/ui/`, reference at `/designsystem`, guidelines in `docs/DESIGN_SYSTEM.md` |
 | D12 | UI primitives are **bespoke** (cva + tailwind-merge) rather than shadcn — same underpinnings, so shadcn/Radix can be layered in later for complex widgets (dialogs, dropdowns) |
+| D13 | Colours grounded in psychology research: navy=focus/trust surface, orange=arousal for action/celebration only, red=errors only. **`accent-foreground` is navy not white** (white-on-orange fails WCAG AA ~3.1:1; navy ~5.0:1). Soft off-white surface for calm. Never colour-alone (glyph/label + colour). See `docs/DESIGN_SYSTEM.md` §Colour psychology |
 
 ---
 

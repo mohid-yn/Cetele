@@ -126,9 +126,11 @@ export default function DesignSystemPage() {
     <div className="mx-auto w-full max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
       {/* Header */}
       <header className="mb-12 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="font-display text-xl font-bold text-primary">outh</span>
-          <span className="font-display text-xl font-bold text-accent">nexus</span>
+        <div className="flex items-center gap-2.5">
+          <span className="font-display text-xl font-bold">
+            <span className="text-primary">Youth</span>{" "}
+            <span className="text-accent">Nexus</span>
+          </span>
           <Badge variant="outline" size="sm">
             Cetele
           </Badge>
@@ -166,8 +168,28 @@ export default function DesignSystemPage() {
         <Section
           id="colors"
           title="Colors"
-          description="Primary (navy) carries the brand and most UI chrome; accent (orange) is reserved for the single most important action and progress. Semantic tokens adapt to light/dark."
+          description="Cool hues (navy) calm and focus — they own the surface and chrome. Warm hues (orange) arouse — reserved for the single most important action and live progress, so their energy is earned, not background noise. Red is errors only, never urgency/FOMO."
         >
+          <Card>
+            <CardContent className="grid gap-3 pt-6 text-sm sm:grid-cols-2">
+              {[
+                ["Navy — primary", "Trust, focus, structure. Default buttons, chrome, headings.", "bg-primary"],
+                ["Orange — accent", "Energy. The one CTA per view + progress + celebration. (Navy text for AA contrast.)", "bg-accent"],
+                ["Green — success", "Complete / on track. Always paired with a ✓ glyph.", "bg-success"],
+                ["Amber — warning", "At risk / attention. Paired with text.", "bg-warning"],
+                ["Red — danger", "Errors & destructive actions ONLY. Never FOMO.", "bg-danger"],
+                ["Slate — neutral", "Text, borders, muted surfaces.", "bg-neutral-400"],
+              ].map(([name, role, dot]) => (
+                <div key={name} className="flex items-start gap-3">
+                  <span className={`mt-0.5 size-4 shrink-0 rounded-full ${dot}`} />
+                  <span>
+                    <span className="font-medium text-foreground">{name}</span>
+                    <span className="text-muted-foreground"> — {role}</span>
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
             <Swatch name="Primary" varName="--primary" />
             <Swatch name="Accent" varName="--accent" />

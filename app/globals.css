@@ -79,8 +79,10 @@
   --shadow-lg: 0 12px 28px -6px rgb(17 35 56 / 0.14), 0 4px 10px -4px rgb(17 35 56 / 0.08);
   --shadow-xl: 0 24px 48px -12px rgb(17 35 56 / 0.20);
 
-  /* ---- Motion ---- */
+  /* ---- Motion ---- (150–300ms micro-interactions, ≤500ms transitions;
+     ease-out for entrances; spring ONLY for earned celebration moments) */
   --ease-brand: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --duration-fast: 150ms;
   --duration-base: 220ms;
   --duration-slow: 360ms;
@@ -121,20 +123,24 @@
 }
 
 :root {
-  --background: #ffffff;
+  /* Cool, soft off-white surface — lower glare than pure white keeps cognitive
+     load down ("calm is the brand"). Cards stay pure white for gentle depth. */
+  --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
   --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted-foreground: #64748b; /* slate-500 ≈ 4.6:1 on surface — passes AA */
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #f26522; /* orange focus ring — on-brand & high-visibility */
 
-  --primary: #1d3a5f;
-  --primary-foreground: #ffffff;
-  --accent: #f26522;
-  --accent-foreground: #ffffff;
+  --primary: #1d3a5f; /* navy: trust, focus, calm — the workhorse */
+  --primary-foreground: #ffffff; /* ≈ 11.5:1 */
+  --accent: #f26522; /* orange: arousal/energy — actions & celebration only */
+  /* Navy text on orange ≈ 5.0:1 (passes AA); white-on-orange is only ~3.1:1
+     (fails). Navy-on-orange also mirrors the Youth Nexus logo pairing. */
+  --accent-foreground: #122338;
 
   --success: #16a34a;
   --success-foreground: #ffffff;
@@ -161,7 +167,7 @@
     --primary: #3c5c8a; /* lighter navy so buttons read on dark */
     --primary-foreground: #ffffff;
     --accent: #f26522;
-    --accent-foreground: #ffffff;
+    --accent-foreground: #122338; /* navy-on-orange — AA + brand pairing */
   }
 }
 

@@ -11,7 +11,9 @@ Live reference: **`/designsystem`** · Tokens: **`app/globals.css`** · Componen
 2. **Semantic before scale.** Prefer `bg-primary` / `text-foreground` over `bg-primary-700`. Reach for a scale step (`bg-accent-100`) only for tints/states the semantic layer doesn't cover.
 3. **Accent is precious.** Orange = the single most important action or live progress on a screen. Navy is the workhorse. If everything is accent, nothing is.
 4. **Mobile-first.** Design for the phone, enhance up. Tap targets ≥ 44px (our `md`/`icon` buttons are 44px).
-5. **Accessible by default.** Visible focus ring, labelled controls, AA contrast, `aria-*` on stateful components.
+5. **Accessible by default.** Visible focus ring, labelled controls, **AA contrast (≥ 4.5:1)**, `aria-*` on stateful components.
+6. **Never colour alone.** ~6–8% of men can't separate green/amber/orange/red. Every status colour ships with a **glyph or text label** (✓ ✗ ⚠ / "Complete" / "At risk"); never green-vs-red as the only differentiator.
+7. **Motion serves, never decorates.** 150–300ms micro-interactions, ≤500ms transitions, `--ease-spring` only for earned celebration; everything no-ops under `prefers-reduced-motion`.
 6. **Composition over configuration.** Small primitives that compose (Card + Stat + Button) beat one mega-component with 20 props.
 
 ---
@@ -29,6 +31,22 @@ All tokens live in `app/globals.css`. Tailwind 4 generates utilities from them.
 - Generates `bg-*`, `text-*`, `border-*`, `ring-*`, `fill-*`, etc.
 - `--ring` is **orange** — focus is always high-visibility and on-brand.
 - Dark mode is automatic via `prefers-color-scheme`; only semantic tokens flip.
+
+#### Colour psychology & meaning (why these colours)
+Research-backed (see Youth Nexus / arabic-app UI research): **cool hues calm and
+focus; warm hues arouse; red alarms.** Map meaning once and never reassign it:
+
+| Colour | Role | Why |
+|---|---|---|
+| **Navy** `primary` | Trust, focus, structure — chrome, default buttons, headings, the surface | Blue family lowers stress, improves attention & the calm "flow" the app wants |
+| **Orange** `accent` | The **one** primary action per view + live progress + celebration | Warm = arousal/energy "without red's alarm"; spend it at moments so it stays meaningful |
+| **Green** `success` | Complete / on track | Growth, completion — always paired with a ✓ glyph (never colour-alone) |
+| **Amber** `warning` | At risk / needs attention | Caution without alarm — paired with text |
+| **Red** `danger` | Errors & destructive actions **only** | Red = "this is wrong/destructive", never urgency or FOMO marketing |
+
+- **Calm surface:** `--background` is a soft cool off-white (not pure white) to cut glare and cognitive load. Cards are white for gentle depth.
+- **Contrast is non-negotiable (WCAG AA ≥ 4.5:1).** That's why `accent-foreground` is **navy, not white** — white-on-orange is only ~3.1:1 (fails); navy-on-orange is ~5.0:1 and mirrors the logo.
+- **One accent per view, ≤ ~3 hues per view.** If everything is coloured, nothing stands out and retention drops.
 
 ### Typography
 - `font-sans` → **Geist** (body, UI). `font-display` → **Quicksand** (headings, numbers, brand).
@@ -109,6 +127,9 @@ Rules:
 | `font-display` + `tabular-nums` for counts | Body font for big jittery numbers |
 | Extend a primitive via `className` | Fork/duplicate a component to tweak it |
 | `prefers-reduced-motion` guard on confetti | Unconditional heavy animation |
+| Pair status colour with ✓/✗/label | Green-vs-red border as the only signal |
+| Red only for errors/destructive | Red for "streak about to die!" FOMO |
+| Navy text on orange (AA) | White text on orange (fails contrast) |
 
 ---
 
