@@ -8,7 +8,7 @@ group accountability** to make daily dhikr stick. Built around the traditional
 ## Start here (resume context)
 
 1. **[.claude/STATUS.md](.claude/STATUS.md)** — current state, locked decisions, and ordered next steps. **Read first — it is the only doc that tracks status.**
-2. **[docs/PRD.md](docs/PRD.md)** — the product spec (features, roles, data model, success metrics).
+2. **[docs/PRD.md](docs/PRD.md)** — the product spec (features, roles, data model, success metrics). This is the editable source of truth; `docs/PRD.docx` is a generated Word copy for the user.
 
 When resuming: read STATUS.md, continue from its "Next steps". When work state
 changes, update STATUS.md **and** Linear — never track status elsewhere.
@@ -20,6 +20,7 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 - **Build in increments**, verify, then commit. End commit messages with:
   `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
 - The user prefers **concise, scannable** docs — tables and short bullets, not walls of text.
+- **Keep the PRD Word copy in sync:** edit `docs/PRD.md`, then regenerate the formatted `.docx` with `python3 scripts/build_prd_docx.py` (stdlib-only; the script *is* the doc's formatting — edit its content there too).
 
 ## Stack
 
