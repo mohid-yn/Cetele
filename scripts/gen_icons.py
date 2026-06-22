@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Generate Cetele PWA icons (stdlib-only, no PIL).
-Design: deep-green background + a white progress ring (the app's core motif).
+Design: Youth Nexus navy field + an orange open progress ring (the core motif).
 Outputs PNGs to public/icons/. Re-run after changing the design here.
 """
 import os, struct, zlib, math
 
-GREEN = (0x1F, 0x7A, 0x5A)
-WHITE = (0xFF, 0xFF, 0xFF)
+NAVY = (0x1D, 0x3A, 0x5F)   # Youth Nexus primary
+ORANGE = (0xF2, 0x65, 0x22)  # Youth Nexus accent
+BG = NAVY
+RING = ORANGE
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "public", "icons")
 
 
@@ -26,12 +28,12 @@ def write_png(path, size, ring_outer=0.40, ring_inner=0.30, gap_deg=70):
         for x in range(size):
             dx, dy = x - cx + 0.5, y - cy + 0.5
             dist = math.hypot(dx, dy)
-            r, g, b = GREEN
+            r, g, b = BG
             if ri <= dist <= ro:
                 # angle measured from top, clockwise; leave a gap at the top
                 ang = (math.degrees(math.atan2(dx, -dy)) + 360) % 360
                 if not (360 - gap_deg / 2 <= ang or ang <= gap_deg / 2):
-                    r, g, b = WHITE
+                    r, g, b = RING
             rows += bytes((r, g, b, 255))
     raw = zlib.compress(bytes(rows), 9)
     ihdr = struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)  # 8-bit RGBA

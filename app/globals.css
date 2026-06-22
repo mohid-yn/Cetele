@@ -1,30 +1,184 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  /* Cetele brand */
-  --brand: #1f7a5a;
-  --brand-foreground: #ffffff;
+/* ============================================================================
+   CETELE DESIGN TOKENS  —  themed to Youth Nexus (navy #1D3A5F + orange #F26522)
+   Single source of truth. Tailwind 4 reads @theme and generates utilities, e.g.
+   --color-primary-500 → bg-primary-500 / text-primary-500 / border-primary-500.
+   Semantic, theme-aware tokens (background, primary, …) live in @theme inline
+   and resolve to the CSS vars under :root / dark mode below.
+   ============================================================================ */
+
+@theme {
+  /* ---- Type families ---- */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-quicksand), var(--font-geist-sans), ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* ---- Primary · navy (brand figure + "outh") ---- */
+  --color-primary-50: #f0f4f9;
+  --color-primary-100: #dbe4f0;
+  --color-primary-200: #b7c8df;
+  --color-primary-300: #8da6c8;
+  --color-primary-400: #5e7da8;
+  --color-primary-500: #3c5c8a;
+  --color-primary-600: #2a4870;
+  --color-primary-700: #1d3a5f; /* ← logo navy (brand) */
+  --color-primary-800: #172e4b;
+  --color-primary-900: #122338;
+  --color-primary-950: #0b1622;
+
+  /* ---- Accent · orange ("nexus" + swoosh) ---- */
+  --color-accent-50: #fef4ee;
+  --color-accent-100: #fde3d3;
+  --color-accent-200: #fac3a2;
+  --color-accent-300: #f79c68;
+  --color-accent-400: #f47e3e;
+  --color-accent-500: #f26522; /* ← logo orange */
+  --color-accent-600: #dd4f12;
+  --color-accent-700: #b73c10;
+  --color-accent-800: #923114;
+  --color-accent-900: #772b14;
+  --color-accent-950: #401206;
+
+  /* ---- Neutral · cool slate (pairs with navy) ---- */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+  --color-neutral-950: #020617;
+
+  /* ---- Status hues ---- */
+  --color-success-500: #16a34a;
+  --color-success-600: #15803d;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-danger-500: #dc2626;
+  --color-danger-600: #b91c1c;
+  --color-info-500: #2563eb;
+  --color-info-600: #1d4ed8;
+
+  /* ---- Radii (friendly, youthful) ---- */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+
+  /* ---- Elevation (soft, navy-tinted) ---- */
+  --shadow-xs: 0 1px 2px 0 rgb(17 35 56 / 0.06);
+  --shadow-sm: 0 1px 3px 0 rgb(17 35 56 / 0.08), 0 1px 2px -1px rgb(17 35 56 / 0.08);
+  --shadow-md: 0 4px 12px -2px rgb(17 35 56 / 0.10), 0 2px 6px -2px rgb(17 35 56 / 0.06);
+  --shadow-lg: 0 12px 28px -6px rgb(17 35 56 / 0.14), 0 4px 10px -4px rgb(17 35 56 / 0.08);
+  --shadow-xl: 0 24px 48px -12px rgb(17 35 56 / 0.20);
+
+  /* ---- Motion ---- */
+  --ease-brand: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --duration-slow: 360ms;
 }
 
+/* ----------------------------------------------------------------------------
+   Semantic, theme-aware tokens. Components should reference THESE (bg-background,
+   text-foreground, bg-primary, border-border, …) — not raw scale steps — so
+   light/dark and future re-themes are a single edit.
+   ---------------------------------------------------------------------------- */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-brand: var(--brand);
-  --color-brand-foreground: var(--brand-foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* legacy alias kept so existing `brand` utilities keep working */
+  --color-brand: var(--primary);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #f26522; /* orange focus ring — on-brand & high-visibility */
+
+  --primary: #1d3a5f;
+  --primary-foreground: #ffffff;
+  --accent: #f26522;
+  --accent-foreground: #ffffff;
+
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #422006;
+  --danger: #dc2626;
+  --danger-foreground: #ffffff;
+  --info: #2563eb;
+  --info-foreground: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0b1622;
+    --foreground: #f1f5f9;
+    --card: #122338;
+    --card-foreground: #f1f5f9;
+    --muted: #172e4b;
+    --muted-foreground: #94a3b8;
+    --border: #1f3656;
+    --input: #1f3656;
+    --ring: #f47e3e;
+
+    --primary: #3c5c8a; /* lighter navy so buttons read on dark */
+    --primary-foreground: #ffffff;
+    --accent: #f26522;
+    --accent-foreground: #ffffff;
   }
+}
+
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Consistent, on-brand focus ring for keyboard users across all components. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }

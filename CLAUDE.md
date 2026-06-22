@@ -22,6 +22,19 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 - The user prefers **concise, scannable** docs — tables and short bullets, not walls of text.
 - **Keep the PRD Word copy in sync:** edit `docs/PRD.md`, then regenerate the formatted `.docx` with `python3 scripts/build_prd_docx.py` (stdlib-only; the script *is* the doc's formatting — edit its content there too).
 
+## UI / design system
+
+Branded to **Youth Nexus** (navy `#1D3A5F` + orange `#F26522`). Build UI from the
+existing system — don't hard-code colors/spacing or fork primitives.
+
+- **Tokens:** `app/globals.css` (Tailwind 4 `@theme`). Use semantic utilities
+  (`bg-primary`, `text-muted-foreground`, `border-border`), not raw hex/px.
+- **Components:** `components/ui/` (Button, Card, Badge, Input/Field, Avatar,
+  ProgressRing, Stat, Spinner) — import from `@/components/ui`. Pattern: `cva` +
+  `cn` (`lib/utils.ts`), always spread `className`/`...props`.
+- **Living reference:** route `/designsystem`. **Guidelines:** `docs/DESIGN_SYSTEM.md`.
+- Accent (orange) = one primary action per view. PWA icons: `python3 scripts/gen_icons.py`.
+
 ## Commands
 
 `pnpm dev` (dev server) · `pnpm build` · `pnpm start` (serve prod build) ·

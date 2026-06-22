@@ -27,6 +27,8 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 | D8 | Retention = dopamine layer **on top of** group accountability + "never miss twice" forgiveness |
 | D9 | **Three roles**: `member` · `group_admin` (per group) · `admin` (app-level, via `users.is_admin`) |
 | D10 | Notifications = **Web Push + service worker** (VAPID, sent from Vercel cron / Supabase Edge Fn); **email fallback** (Resend) for non-installers / iOS <16.4. Push is v1.1 |
+| D11 | **Brand = Youth Nexus** (navy `#1D3A5F` + orange `#F26522`), replacing the placeholder green. Design system tokens in `app/globals.css`, components in `components/ui/`, reference at `/designsystem`, guidelines in `docs/DESIGN_SYSTEM.md` |
+| D12 | UI primitives are **bespoke** (cva + tailwind-merge) rather than shadcn — same underpinnings, so shadcn/Radix can be layered in later for complex widgets (dialogs, dropdowns) |
 
 ---
 
@@ -38,6 +40,7 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 - [x] `.claude/STATUS.md` + `CLAUDE.md` created
 - [x] Linear issues created for all v1 + v1.1 features (CET-1 → CET-11)
 - [x] **CET-1** — Next.js 16 + React 19 + TS + Tailwind 4 scaffolded; installable PWA (manifest + service worker + icons); mobile-first layout. `pnpm build`/`lint`/`tsc` all green. _(branch `mohidkhanzada/cet-1-scaffold-nextjs-app-pwa`)_
+- [x] **CET-12** — Youth Nexus design system: tokens (`app/globals.css`), component library (`components/ui/`), living reference (`/designsystem`), guidelines (`docs/DESIGN_SYSTEM.md`); PWA icons re-skinned navy/orange. _(branch `mohidkhanzada/cet-12-design-system`)_
 
 ### Next steps (ordered) — tracked in Linear
 
