@@ -43,6 +43,7 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 - [x] Linear issues created for all v1 + v1.1 features (CET-1 → CET-11)
 - [x] **CET-1** — Next.js 16 + React 19 + TS + Tailwind 4 scaffolded; installable PWA (manifest + service worker + icons); mobile-first layout. `pnpm build`/`lint`/`tsc` all green. _(branch `mohidkhanzada/cet-1-scaffold-nextjs-app-pwa`)_
 - [x] **CET-12** — Youth Nexus design system: tokens (`app/globals.css`), component library (`components/ui/`), living reference (`/designsystem`), guidelines (`docs/DESIGN_SYSTEM.md`); PWA icons re-skinned navy/orange. _(branch `mohidkhanzada/cet-12-design-system`)_
+- [x] Automated linting — **husky** pre-commit (`lint-staged` → `eslint --fix` on staged files) + **GitHub Actions CI** (`.github/workflows/ci.yml`: lint + typecheck + build on push/PR). Token contract now blocks bad commits locally *and* in CI.
 
 ### Next steps (ordered) — tracked in Linear
 
