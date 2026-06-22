@@ -27,8 +27,12 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 Branded to **Youth Nexus** (navy `#1D3A5F` + orange `#F26522`). Build UI from the
 existing system — don't hard-code colors/spacing or fork primitives.
 
-- **Tokens:** `app/globals.css` (Tailwind 4 `@theme`). Use semantic utilities
-  (`bg-primary`, `text-muted-foreground`, `border-border`), not raw hex/px.
+- **Token contract (enforced):** every UI value comes from a design token in
+  `app/globals.css` — colour, type, spacing, radius, shadow, motion, z-index.
+  Reference via a utility (`bg-primary`, `text-sm`, `rounded-lg`) or `var(--token)`;
+  **never hardcode** a colour. Raw hex/`rgb()`/`hsl()` in `.ts`/`.tsx` is an
+  **ESLint error** (`pnpm lint` fails). Need a new value? Add a token, don't inline.
+  The only sanctioned literal is `lib/brand.ts` (`BRAND_THEME_COLOR`, for PWA/meta).
 - **Components:** `components/ui/` (Button, Card, Badge, Input/Field, Avatar,
   ProgressRing, Stat, Spinner) — import from `@/components/ui`. Pattern: `cva` +
   `cn` (`lib/utils.ts`), always spread `className`/`...props`.

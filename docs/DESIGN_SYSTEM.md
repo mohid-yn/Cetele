@@ -5,6 +5,33 @@ Live reference: **`/designsystem`** · Tokens: **`app/globals.css`** · Componen
 
 ---
 
+## 0. The token contract (golden rule) — read first
+
+> **Every UI value comes from a design token. No exceptions in components.**
+
+All colour, typography, spacing, radius, shadow, motion, and layering values are
+defined **once** as CSS variables in `app/globals.css` (`@theme` + `:root`). UI
+code must reference them — it must **never** hardcode a raw value. This is what
+makes the whole app re-themeable from one file and keeps it modular.
+
+**How to reference a token (in priority order):**
+1. **Token-backed Tailwind utility** — the default. `bg-primary`, `text-foreground`, `p-4`, `rounded-lg`, `text-sm`, `shadow-md`, `gap-3`. These all resolve to the CSS variables under the hood.
+2. **`var(--token)`** — when a utility doesn't fit (inline `style`, SVG strokes, dynamic values). `style={{ stroke: "var(--accent)" }}`, `className="z-[var(--z-modal)]"`.
+
+**Forbidden in components:**
+- Raw colours: `#1d3a5f`, `rgb(...)`, `hsl(...)`, `text-[#fff]` → **ESLint error** (`no-restricted-syntax`, see `eslint.config.mjs`). `pnpm lint` fails the build.
+- Magic numbers for spacing/size: prefer the scale (`p-4`, `h-11`) over `p-[13px]`. Arbitrary values are allowed only for genuinely relative/one-off cases (`size-[1.1em]`).
+
+**The one sanctioned literal:** `lib/brand.ts` exports `BRAND_THEME_COLOR` — the
+PWA manifest and `<meta name="theme-color">` are platform APIs that require a
+literal colour and can't read CSS vars. That file is the *only* place a raw
+brand colour lives; keep it in sync with `--primary`.
+
+**Adding a value?** If something you need isn't a token yet, **add it to
+`app/globals.css`** (and document it here) — don't inline it.
+
+---
+
 ## 1. Principles
 
 1. **Tokens over hard-codes.** Never write a raw hex or px color in a component. Use a token (`bg-primary`, `text-muted-foreground`, `border-border`). One re-theme = one edit.
@@ -14,7 +41,7 @@ Live reference: **`/designsystem`** · Tokens: **`app/globals.css`** · Componen
 5. **Accessible by default.** Visible focus ring, labelled controls, **AA contrast (≥ 4.5:1)**, `aria-*` on stateful components.
 6. **Never colour alone.** ~6–8% of men can't separate green/amber/orange/red. Every status colour ships with a **glyph or text label** (✓ ✗ ⚠ / "Complete" / "At risk"); never green-vs-red as the only differentiator.
 7. **Motion serves, never decorates.** 150–300ms micro-interactions, ≤500ms transitions, `--ease-spring` only for earned celebration; everything no-ops under `prefers-reduced-motion`.
-6. **Composition over configuration.** Small primitives that compose (Card + Stat + Button) beat one mega-component with 20 props.
+8. **Composition over configuration.** Small primitives that compose (Card + Stat + Button) beat one mega-component with 20 props.
 
 ---
 
@@ -49,21 +76,25 @@ focus; warm hues arouse; red alarms.** Map meaning once and never reassign it:
 - **One accent per view, ≤ ~3 hues per view.** If everything is coloured, nothing stands out and retention drops.
 
 ### Typography
-- `font-sans` → **Geist** (body, UI). `font-display` → **Quicksand** (headings, numbers, brand).
-- Scale: `text-xs` `sm` `base` `lg` `xl` `2xl` `3xl` `4xl`. Weights 400/500/600/700.
+- Families: `--font-sans` → **Geist** (body, UI); `--font-display` → **Quicksand** (headings, numbers, brand); `--font-mono`.
+- Sizes (token + paired line-height): `--text-xs … --text-5xl` → utilities `text-xs … text-5xl`.
+- Weights: `--font-weight-normal|medium|semibold|bold` → `font-normal … font-bold`.
 - Headings & big numbers use `font-display`. Use `tabular-nums` for counts/streaks so digits don't jitter.
 
 ### Spacing
-- 4px base (Tailwind scale). Stick to `1 2 3 4 6 8 12 16`. Inside cards use `p-6`; stack gaps `gap-1.5`–`gap-6`.
+- 4px base (`--spacing`, Tailwind scale). Stick to `1 2 3 4 6 8 12 16`. Inside cards use `p-6`; stack gaps `gap-1.5`–`gap-6`.
 
 ### Radii
-`rounded-sm`(6) `md`(8) `lg`(12) `xl`(16) `2xl`(24) `3xl`(32) `full`. Buttons `lg`, cards `2xl`, pills/badges/avatars `full`.
+`--radius-sm`(6) `md`(8) `lg`(12) `xl`(16) `2xl`(24) `3xl`(32) → `rounded-*` (+ `rounded-full`). Buttons `lg`, cards `2xl`, pills/badges/avatars `full`.
 
 ### Elevation
-`shadow-xs sm md lg xl` — soft, navy-tinted. Cards `sm`; menus/popovers `md`–`lg`; modals `xl`.
+`--shadow-xs sm md lg xl` → `shadow-*` — soft, navy-tinted. Cards `sm`; menus/popovers `md`–`lg`; modals `xl`.
 
 ### Motion
-`--duration-fast|base|slow` (150/220/360ms), `--ease-brand`. Respect `prefers-reduced-motion` for celebratory effects.
+`--duration-fast|base|slow` (150/220/360ms), `--ease-brand` (entrances), `--ease-spring` (celebration only). Respect `prefers-reduced-motion`.
+
+### Layout & layering
+`--container-page` (page max-width) and the z-index ladder `--z-base|dropdown|sticky|overlay|modal|toast`. Use via `var()`: `className="z-[var(--z-modal)]"`. Never invent ad-hoc z-index numbers.
 
 ---
 

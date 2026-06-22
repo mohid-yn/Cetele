@@ -30,6 +30,7 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 | D11 | **Brand = Youth Nexus** (navy `#1D3A5F` + orange `#F26522`), replacing the placeholder green. Design system tokens in `app/globals.css`, components in `components/ui/`, reference at `/designsystem`, guidelines in `docs/DESIGN_SYSTEM.md` |
 | D12 | UI primitives are **bespoke** (cva + tailwind-merge) rather than shadcn — same underpinnings, so shadcn/Radix can be layered in later for complex widgets (dialogs, dropdowns) |
 | D13 | Colours grounded in psychology research: navy=focus/trust surface, orange=arousal for action/celebration only, red=errors only. **`accent-foreground` is navy not white** (white-on-orange fails WCAG AA ~3.1:1; navy ~5.0:1). Soft off-white surface for calm. Never colour-alone (glyph/label + colour). See `docs/DESIGN_SYSTEM.md` §Colour psychology |
+| D14 | **Token contract, lint-enforced.** All UI values are CSS-variable tokens in `app/globals.css` (colour, type scale, weights, spacing, radii, shadows, motion, z-index/layout). Components reference utilities or `var(--token)` — hardcoded hex/`rgb()`/`hsl()` is an ESLint error. Sole sanctioned literal: `lib/brand.ts` (`BRAND_THEME_COLOR`, for PWA/meta APIs that can't read CSS vars) |
 
 ---
 

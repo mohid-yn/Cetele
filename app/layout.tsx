@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Quicksand } from "next/font/google";
 import "./globals.css";
+import { BRAND_THEME_COLOR } from "@/lib/brand";
 import { ServiceWorkerRegister } from "./sw-register";
 
 const geistSans = Geist({
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1d3a5f",
+  themeColor: BRAND_THEME_COLOR,
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { BRAND_THEME_COLOR } from "@/lib/brand";
 
 // Generates /manifest.webmanifest — makes Cetele installable as a PWA.
 export default function manifest(): MetadataRoute.Manifest {
@@ -10,8 +11,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#1d3a5f",
-    theme_color: "#1d3a5f",
+    background_color: BRAND_THEME_COLOR,
+    theme_color: BRAND_THEME_COLOR,
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
