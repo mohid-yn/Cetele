@@ -37,12 +37,13 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 - [x] Docs: PRD written (`docs/PRD.md` + `docs/PRD.docx`)
 - [x] `.claude/STATUS.md` + `CLAUDE.md` created
 - [x] Linear issues created for all v1 + v1.1 features (CET-1 → CET-11)
+- [x] **CET-1** — Next.js 16 + React 19 + TS + Tailwind 4 scaffolded; installable PWA (manifest + service worker + icons); mobile-first layout. `pnpm build`/`lint`/`tsc` all green. _(branch `mohidkhanzada/cet-1-scaffold-nextjs-app-pwa`)_
 
 ### Next steps (ordered) — tracked in Linear
 
 | # | Issue | Feature |
 |---|---|---|
-| 1 | [CET-1](https://linear.app/mohidkz/issue/CET-1) | Scaffold Next.js app + PWA |
+| 1 | [CET-1](https://linear.app/mohidkz/issue/CET-1) | Scaffold Next.js app + PWA ✅ |
 | 2 | [CET-2](https://linear.app/mohidkz/issue/CET-2) | Supabase: schema + Row-Level Security |
 | 3 | [CET-3](https://linear.app/mohidkz/issue/CET-3) | Auth: Google OAuth + email magic link |
 | 4 | [CET-4](https://linear.app/mohidkz/issue/CET-4) | Groups: create / invite / join + roles |
