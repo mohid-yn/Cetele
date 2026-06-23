@@ -47,7 +47,7 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 - [x] **CET-1** — Next.js 16 + React 19 + TS + Tailwind 4 scaffolded; installable PWA (manifest + service worker + icons); mobile-first layout. `pnpm build`/`lint`/`tsc` all green. _(branch `mohidkhanzada/cet-1-scaffold-nextjs-app-pwa`)_
 - [x] **CET-12** — Youth Nexus design system: tokens (`app/globals.css`), component library (`components/ui/`), living reference (`/designsystem`), guidelines (`docs/DESIGN_SYSTEM.md`); PWA icons re-skinned navy/orange. _(branch `mohidkhanzada/cet-12-design-system`)_
 - [x] Automated linting — **husky** pre-commit (`lint-staged` → `eslint --fix` on staged files) + **GitHub Actions CI** (`.github/workflows/ci.yml`: lint + typecheck + build on push/PR). Token contract now blocks bad commits locally _and_ in CI.
-- [~] **CET-13** — Dev tooling & workflow _(in progress)_: **Prettier** + tailwind class sort wired into lint-staged & CI `format:check` (commit `0632027`); `gh` 2.95.0 + Vercel CLI 54.15.0 installed; solo no-PR workflow adopted (D16). **Remaining:** merge `cet-12` → `main` (+ delete branch), `vercel login` → `vercel link`.
+- [x] **CET-13** — Dev tooling & workflow: **Prettier** + tailwind class sort wired into lint-staged & CI `format:check`; `gh` 2.95.0 + Vercel CLI 54.15.0 installed; solo branch-per-issue / PRs-optional workflow adopted (D16); `cet-12` merged → `main` and branches deleted. **Vercel linked** (project `cetele`, GitHub repo connected → auto-deploy on push + branch previews). **Live:** [cetele-iota.vercel.app](https://cetele-iota.vercel.app) (production, public, HTTP 200).
 
 ### Next steps (ordered) — tracked in Linear
 
@@ -74,5 +74,4 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 
 ## Open questions / parking lot
 
-- **Vercel not yet linked** — pending your `vercel login`, then I run `vercel link` (CET-13).
-- **Merge `cet-12-design-system` → `main`** then delete the merged branch (CET-13) — main currently has none of the work.
+- Deployment Protection is **on** for project-scoped / branch-preview URLs (they 401 unless signed in to Vercel) — fine for solo; if a preview ever needs public sharing, toggle it in Vercel → Settings → Deployment Protection.
