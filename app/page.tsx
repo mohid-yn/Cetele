@@ -7,8 +7,10 @@ export default function Home() {
         style={{ borderTopColor: "transparent" }}
       />
       <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-brand">Cetele</h1>
-        <p className="max-w-xs text-balance text-sm text-foreground/70">
+        <h1 className="text-3xl font-semibold tracking-tight text-brand">
+          Cetele
+        </h1>
+        <p className="max-w-xs text-sm text-balance text-foreground/70">
           Track your daily dhikr together. A shared tally that makes remembrance
           a habit.
         </p>

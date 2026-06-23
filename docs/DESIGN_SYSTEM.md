@@ -15,16 +15,18 @@ code must reference them — it must **never** hardcode a raw value. This is wha
 makes the whole app re-themeable from one file and keeps it modular.
 
 **How to reference a token (in priority order):**
+
 1. **Token-backed Tailwind utility** — the default. `bg-primary`, `text-foreground`, `p-4`, `rounded-lg`, `text-sm`, `shadow-md`, `gap-3`. These all resolve to the CSS variables under the hood.
 2. **`var(--token)`** — when a utility doesn't fit (inline `style`, SVG strokes, dynamic values). `style={{ stroke: "var(--accent)" }}`, `className="z-[var(--z-modal)]"`.
 
 **Forbidden in components:**
+
 - Raw colours: `#1d3a5f`, `rgb(...)`, `hsl(...)`, `text-[#fff]` → **ESLint error** (`no-restricted-syntax`, see `eslint.config.mjs`). `pnpm lint` fails the build.
 - Magic numbers for spacing/size: prefer the scale (`p-4`, `h-11`) over `p-[13px]`. Arbitrary values are allowed only for genuinely relative/one-off cases (`size-[1.1em]`).
 
 **The one sanctioned literal:** `lib/brand.ts` exports `BRAND_THEME_COLOR` — the
 PWA manifest and `<meta name="theme-color">` are platform APIs that require a
-literal colour and can't read CSS vars. That file is the *only* place a raw
+literal colour and can't read CSS vars. That file is the _only_ place a raw
 brand colour lives; keep it in sync with `--primary`.
 
 **Adding a value?** If something you need isn't a token yet, **add it to
@@ -50,50 +52,58 @@ brand colour lives; keep it in sync with `--primary`.
 All tokens live in `app/globals.css`. Tailwind 4 generates utilities from them.
 
 ### Color
-| Layer | Tokens | Use |
-|---|---|---|
-| **Scales** | `primary-{50–950}`, `accent-{50–950}`, `neutral-{0–950}`, `success/warning/danger/info-{500,600}` | tints, borders, state backgrounds |
-| **Semantic** (theme-aware) | `background`, `foreground`, `card`, `card-foreground`, `muted`, `muted-foreground`, `border`, `input`, `ring`, `primary(-foreground)`, `accent(-foreground)`, `success/warning/danger/info(-foreground)` | everything in components |
+
+| Layer                      | Tokens                                                                                                                                                                                                   | Use                               |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| **Scales**                 | `primary-{50–950}`, `accent-{50–950}`, `neutral-{0–950}`, `success/warning/danger/info-{500,600}`                                                                                                        | tints, borders, state backgrounds |
+| **Semantic** (theme-aware) | `background`, `foreground`, `card`, `card-foreground`, `muted`, `muted-foreground`, `border`, `input`, `ring`, `primary(-foreground)`, `accent(-foreground)`, `success/warning/danger/info(-foreground)` | everything in components          |
 
 - Generates `bg-*`, `text-*`, `border-*`, `ring-*`, `fill-*`, etc.
 - `--ring` is **orange** — focus is always high-visibility and on-brand.
 - Dark mode is automatic via `prefers-color-scheme`; only semantic tokens flip.
 
 #### Colour psychology & meaning (why these colours)
+
 Research-backed (see Youth Nexus / arabic-app UI research): **cool hues calm and
 focus; warm hues arouse; red alarms.** Map meaning once and never reassign it:
 
-| Colour | Role | Why |
-|---|---|---|
-| **Navy** `primary` | Trust, focus, structure — chrome, default buttons, headings, the surface | Blue family lowers stress, improves attention & the calm "flow" the app wants |
-| **Orange** `accent` | The **one** primary action per view + live progress + celebration | Warm = arousal/energy "without red's alarm"; spend it at moments so it stays meaningful |
-| **Green** `success` | Complete / on track | Growth, completion — always paired with a ✓ glyph (never colour-alone) |
-| **Amber** `warning` | At risk / needs attention | Caution without alarm — paired with text |
-| **Red** `danger` | Errors & destructive actions **only** | Red = "this is wrong/destructive", never urgency or FOMO marketing |
+| Colour              | Role                                                                     | Why                                                                                     |
+| ------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| **Navy** `primary`  | Trust, focus, structure — chrome, default buttons, headings, the surface | Blue family lowers stress, improves attention & the calm "flow" the app wants           |
+| **Orange** `accent` | The **one** primary action per view + live progress + celebration        | Warm = arousal/energy "without red's alarm"; spend it at moments so it stays meaningful |
+| **Green** `success` | Complete / on track                                                      | Growth, completion — always paired with a ✓ glyph (never colour-alone)                  |
+| **Amber** `warning` | At risk / needs attention                                                | Caution without alarm — paired with text                                                |
+| **Red** `danger`    | Errors & destructive actions **only**                                    | Red = "this is wrong/destructive", never urgency or FOMO marketing                      |
 
 - **Calm surface:** `--background` is a soft cool off-white (not pure white) to cut glare and cognitive load. Cards are white for gentle depth.
 - **Contrast is non-negotiable (WCAG AA ≥ 4.5:1).** That's why `accent-foreground` is **navy, not white** — white-on-orange is only ~3.1:1 (fails); navy-on-orange is ~5.0:1 and mirrors the logo.
 - **One accent per view, ≤ ~3 hues per view.** If everything is coloured, nothing stands out and retention drops.
 
 ### Typography
+
 - Families: `--font-sans` → **Geist** (body, UI); `--font-display` → **Quicksand** (headings, numbers, brand); `--font-mono`.
 - Sizes (token + paired line-height): `--text-xs … --text-5xl` → utilities `text-xs … text-5xl`.
 - Weights: `--font-weight-normal|medium|semibold|bold` → `font-normal … font-bold`.
 - Headings & big numbers use `font-display`. Use `tabular-nums` for counts/streaks so digits don't jitter.
 
 ### Spacing
+
 - 4px base (`--spacing`, Tailwind scale). Stick to `1 2 3 4 6 8 12 16`. Inside cards use `p-6`; stack gaps `gap-1.5`–`gap-6`.
 
 ### Radii
+
 `--radius-sm`(6) `md`(8) `lg`(12) `xl`(16) `2xl`(24) `3xl`(32) → `rounded-*` (+ `rounded-full`). Buttons `lg`, cards `2xl`, pills/badges/avatars `full`.
 
 ### Elevation
+
 `--shadow-xs sm md lg xl` → `shadow-*` — soft, navy-tinted. Cards `sm`; menus/popovers `md`–`lg`; modals `xl`.
 
 ### Motion
+
 `--duration-fast|base|slow` (150/220/360ms), `--ease-brand` (entrances), `--ease-spring` (celebration only). Respect `prefers-reduced-motion`.
 
 ### Layout & layering
+
 `--container-page` (page max-width) and the z-index ladder `--z-base|dropdown|sticky|overlay|modal|toast`. Use via `var()`: `className="z-[var(--z-modal)]"`. Never invent ad-hoc z-index numbers.
 
 ---
@@ -102,16 +112,16 @@ focus; warm hues arouse; red alarms.** Map meaning once and never reassign it:
 
 Import from the barrel: `import { Button, Card, ProgressRing } from "@/components/ui";`
 
-| Component | Key props | Notes |
-|---|---|---|
-| `Button` | `variant` (primary·accent·outline·subtle·ghost·link·destructive), `size` (sm·md·lg·icon), `loading`, `leadingIcon`, `trailingIcon` | One accent per view |
-| `Card` + `CardHeader/Title/Description/Content/Footer` | — | Default surface |
-| `Badge` | `variant`, `size` | Roles, status, counts |
-| `Input`, `Label`, `Field` | `Field`: `label`, `htmlFor`, `hint`, `error`, `required` | Always wrap inputs in `Field` |
-| `Avatar` | `name` (required, for initials+alt), `src`, `size` | Falls back to initials on error |
-| `ProgressRing` | `value`, `max`, `size`, `thickness`, `progressColor` | Signature dhikr ring; turns green at 100% |
-| `Stat` | `label`, `value`, `icon`, `hint` | Streaks, totals, ranks |
-| `Spinner` | — | Inherits `currentColor` |
+| Component                                              | Key props                                                                                                                          | Notes                                     |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `Button`                                               | `variant` (primary·accent·outline·subtle·ghost·link·destructive), `size` (sm·md·lg·icon), `loading`, `leadingIcon`, `trailingIcon` | One accent per view                       |
+| `Card` + `CardHeader/Title/Description/Content/Footer` | —                                                                                                                                  | Default surface                           |
+| `Badge`                                                | `variant`, `size`                                                                                                                  | Roles, status, counts                     |
+| `Input`, `Label`, `Field`                              | `Field`: `label`, `htmlFor`, `hint`, `error`, `required`                                                                           | Always wrap inputs in `Field`             |
+| `Avatar`                                               | `name` (required, for initials+alt), `src`, `size`                                                                                 | Falls back to initials on error           |
+| `ProgressRing`                                         | `value`, `max`, `size`, `thickness`, `progressColor`                                                                               | Signature dhikr ring; turns green at 100% |
+| `Stat`                                                 | `label`, `value`, `icon`, `hint`                                                                                                   | Streaks, totals, ranks                    |
+| `Spinner`                                              | —                                                                                                                                  | Inherits `currentColor`                   |
 
 ---
 
@@ -130,15 +140,19 @@ const thingVariants = cva("base classes here", {
 });
 
 export interface ThingProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof thingVariants> {}
 
 export function Thing({ className, variant, ...props }: ThingProps) {
-  return <div className={cn(thingVariants({ variant }), className)} {...props} />;
+  return (
+    <div className={cn(thingVariants({ variant }), className)} {...props} />
+  );
 }
 ```
 
 Rules:
+
 - **Always** accept and spread `className` (merged last via `cn`) and `...props`. Callers must be able to override.
 - Use `cva` for anything with ≥ 2 visual variants; plain `cn` otherwise.
 - `forwardRef` for focusable/controllable elements (inputs, buttons).
@@ -150,17 +164,17 @@ Rules:
 
 ## 5. Do / Don't
 
-| ✅ Do | ❌ Don't |
-|---|---|
-| `className="bg-primary text-primary-foreground"` | `className="bg-[#1d3a5f] text-white"` |
-| One `accent` button per view | Accent on every button |
-| Wrap inputs in `<Field>` | Bare `<input>` with no label |
-| `font-display` + `tabular-nums` for counts | Body font for big jittery numbers |
-| Extend a primitive via `className` | Fork/duplicate a component to tweak it |
-| `prefers-reduced-motion` guard on confetti | Unconditional heavy animation |
-| Pair status colour with ✓/✗/label | Green-vs-red border as the only signal |
-| Red only for errors/destructive | Red for "streak about to die!" FOMO |
-| Navy text on orange (AA) | White text on orange (fails contrast) |
+| ✅ Do                                            | ❌ Don't                               |
+| ------------------------------------------------ | -------------------------------------- |
+| `className="bg-primary text-primary-foreground"` | `className="bg-[#1d3a5f] text-white"`  |
+| One `accent` button per view                     | Accent on every button                 |
+| Wrap inputs in `<Field>`                         | Bare `<input>` with no label           |
+| `font-display` + `tabular-nums` for counts       | Body font for big jittery numbers      |
+| Extend a primitive via `className`               | Fork/duplicate a component to tweak it |
+| `prefers-reduced-motion` guard on confetti       | Unconditional heavy animation          |
+| Pair status colour with ✓/✗/label                | Green-vs-red border as the only signal |
+| Red only for errors/destructive                  | Red for "streak about to die!" FOMO    |
+| Navy text on orange (AA)                         | White text on orange (fails contrast)  |
 
 ---
 

@@ -29,7 +29,8 @@ function initials(name: string) {
 }
 
 export interface AvatarProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
+  extends
+    React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof avatarVariants> {
   src?: string;
   /** Full name — used for the initials fallback and alt text. */

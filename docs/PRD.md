@@ -1,6 +1,6 @@
 # Cetele — Product Requirements (v1)
 
-> **One line:** A group dhikr tracker that makes daily remembrance *addictive* — built around the traditional **cetele** (a shared tally where a group splits and completes a collective dhikr goal together).
+> **One line:** A group dhikr tracker that makes daily remembrance _addictive_ — built around the traditional **cetele** (a shared tally where a group splits and completes a collective dhikr goal together).
 
 ---
 
@@ -8,12 +8,12 @@
 
 People don't quit dhikr because they don't want to — they quit because **nothing pulls them back daily**. Cetele combines two forces:
 
-| Layer | What it does | Why it works |
-|---|---|---|
-| 🔥 **Dopamine (the hook)** | Tap counter, progress rings, streaks, live group counter, surprise milestones | Gets people opening the app every day |
-| 🤝 **Accountability (the glue)** | Real groups, visible peers, leaderboard, forgiveness | Stops the "streak broke → quit forever" collapse |
+| Layer                            | What it does                                                                  | Why it works                                     |
+| -------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
+| 🔥 **Dopamine (the hook)**       | Tap counter, progress rings, streaks, live group counter, surprise milestones | Gets people opening the app every day            |
+| 🤝 **Accountability (the glue)** | Real groups, visible peers, leaderboard, forgiveness                          | Stops the "streak broke → quit forever" collapse |
 
-> Dhikr is *repetitive habit-maintenance*, not skill mastery — the exact use case where gamification works. We lean in, but anchor it in real group accountability so it lasts.
+> Dhikr is _repetitive habit-maintenance_, not skill mastery — the exact use case where gamification works. We lean in, but anchor it in real group accountability so it lasts.
 
 ---
 
@@ -21,11 +21,11 @@ People don't quit dhikr because they don't want to — they quit because **nothi
 
 Three roles:
 
-| Role | Scope | Can do |
-|---|---|---|
-| **Member** | their groups | Join a group, log dhikr, see own streak + group activity & leaderboard |
-| **Group Admin** | one group | Everything a member can + create/edit that group's **dhikr list & targets**, invite/remove members, promote members to group admin |
-| **Admin** | whole app | Everything above + create/manage **all** groups, assign group admins, app-level config |
+| Role            | Scope        | Can do                                                                                                                             |
+| --------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Member**      | their groups | Join a group, log dhikr, see own streak + group activity & leaderboard                                                             |
+| **Group Admin** | one group    | Everything a member can + create/edit that group's **dhikr list & targets**, invite/remove members, promote members to group admin |
+| **Admin**       | whole app    | Everything above + create/manage **all** groups, assign group admins, app-level config                                             |
 
 ---
 
@@ -47,7 +47,7 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 - **Auth** — Google OAuth + email magic link (Supabase Auth)
 - **Groups** — create, join via invite link/code, admins manage members
-- **Admin-set dhikr list** — admin defines items + daily target counts per group (e.g. *Allahu Akbar ×100*, *Astaghfirullah ×1000*)
+- **Admin-set dhikr list** — admin defines items + daily target counts per group (e.g. _Allahu Akbar ×100_, _Astaghfirullah ×1000_)
 - **Tap counter** — tasbih-style: tap to count, haptics + subtle sound, number animation
 - **Progress rings** — Apple-Watch-style ring per item, fills toward target, closes on completion
 - **Live collective counter** — real-time group total ("41,300 / 100,000 today") via Supabase Realtime
@@ -69,14 +69,14 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 ## 5. Retention mechanics (where each lever lives)
 
-| Lever | Source | Implementation |
-|---|---|---|
-| Completion drive | dopamine | Progress rings + confetti |
-| Variable reward | dopamine | Surprise milestone reveals |
-| Social proof | accountability | Live group counter + leaderboard |
-| Identity | durable | "You're someone who does dhikr daily" framing |
-| Forgiveness | durable | Never-miss-twice + streak freeze |
-| Real accountability | durable | Visible group peers (the *cetele* itself) |
+| Lever               | Source         | Implementation                                |
+| ------------------- | -------------- | --------------------------------------------- |
+| Completion drive    | dopamine       | Progress rings + confetti                     |
+| Variable reward     | dopamine       | Surprise milestone reveals                    |
+| Social proof        | accountability | Live group counter + leaderboard              |
+| Identity            | durable        | "You're someone who does dhikr daily" framing |
+| Forgiveness         | durable        | Never-miss-twice + streak freeze              |
+| Real accountability | durable        | Visible group peers (the _cetele_ itself)     |
 
 ---
 
@@ -96,14 +96,14 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 ## 7. Tech stack
 
-| Concern | Choice |
-|---|---|
-| Framework | **Next.js (App Router) + React + TypeScript** |
-| UI | Tailwind + shadcn/ui |
-| Backend / DB / Auth / Realtime | **Supabase** (Postgres, Auth, Realtime) |
-| Hosting | **Vercel** |
-| Delivery | **Installable PWA** (no app store — works on any phone via browser) |
-| Tracking | **Linear** (team `CET`) |
+| Concern                        | Choice                                                              |
+| ------------------------------ | ------------------------------------------------------------------- |
+| Framework                      | **Next.js (App Router) + React + TypeScript**                       |
+| UI                             | Tailwind + shadcn/ui                                                |
+| Backend / DB / Auth / Realtime | **Supabase** (Postgres, Auth, Realtime)                             |
+| Hosting                        | **Vercel**                                                          |
+| Delivery                       | **Installable PWA** (no app store — works on any phone via browser) |
+| Tracking                       | **Linear** (team `CET`)                                             |
 
 ---
 
@@ -115,11 +115,11 @@ Native iOS/Android apps · payments · multiple languages · in-app messaging/ch
 
 ## 9. Success = retention, not signups
 
-| Metric | Target |
-|---|---|
-| **D7 retention** | members active 7 days after joining |
-| **Daily completion rate** | % of members closing all rings |
-| **Streak survival** | % keeping a 14-day+ streak |
-| **Group liveness** | groups with daily collective activity |
+| Metric                    | Target                                |
+| ------------------------- | ------------------------------------- |
+| **D7 retention**          | members active 7 days after joining   |
+| **Daily completion rate** | % of members closing all rings        |
+| **Streak survival**       | % keeping a 14-day+ streak            |
+| **Group liveness**        | groups with daily collective activity |
 
 > North star: **70%+ consistency** across a group over 90 days — showing up, not perfection.

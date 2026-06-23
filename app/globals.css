@@ -11,7 +11,8 @@
 @theme {
   /* ---- Type families ---- */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-quicksand), var(--font-geist-sans), ui-sans-serif, sans-serif;
+  --font-display:
+    var(--font-quicksand), var(--font-geist-sans), ui-sans-serif, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   /* ---- Type scale (size + paired line-height) → text-xs … text-5xl ---- */
@@ -100,10 +101,13 @@
 
   /* ---- Elevation (soft, navy-tinted) ---- */
   --shadow-xs: 0 1px 2px 0 rgb(17 35 56 / 0.06);
-  --shadow-sm: 0 1px 3px 0 rgb(17 35 56 / 0.08), 0 1px 2px -1px rgb(17 35 56 / 0.08);
-  --shadow-md: 0 4px 12px -2px rgb(17 35 56 / 0.10), 0 2px 6px -2px rgb(17 35 56 / 0.06);
-  --shadow-lg: 0 12px 28px -6px rgb(17 35 56 / 0.14), 0 4px 10px -4px rgb(17 35 56 / 0.08);
-  --shadow-xl: 0 24px 48px -12px rgb(17 35 56 / 0.20);
+  --shadow-sm:
+    0 1px 3px 0 rgb(17 35 56 / 0.08), 0 1px 2px -1px rgb(17 35 56 / 0.08);
+  --shadow-md:
+    0 4px 12px -2px rgb(17 35 56 / 0.1), 0 2px 6px -2px rgb(17 35 56 / 0.06);
+  --shadow-lg:
+    0 12px 28px -6px rgb(17 35 56 / 0.14), 0 4px 10px -4px rgb(17 35 56 / 0.08);
+  --shadow-xl: 0 24px 48px -12px rgb(17 35 56 / 0.2);
 
   /* ---- Motion ---- (150–300ms micro-interactions, ≤500ms transitions;
      ease-out for entrances; spring ONLY for earned celebration moments) */

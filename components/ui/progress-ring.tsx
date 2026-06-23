@@ -1,8 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export interface ProgressRingProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+export interface ProgressRingProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Current value. */
   value: number;
   /** Target value the ring fills toward. */

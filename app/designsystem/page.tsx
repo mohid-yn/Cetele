@@ -19,7 +19,8 @@ import { RingDemo } from "./ring-demo";
 
 export const metadata: Metadata = {
   title: "Design System · Cetele",
-  description: "Living style guide — tokens and components, themed to Youth Nexus.",
+  description:
+    "Living style guide — tokens and components, themed to Youth Nexus.",
 };
 
 /* ---------- small presentational helpers (page-local) ---------- */
@@ -42,7 +43,9 @@ function Section({
           {title}
         </h2>
         {description && (
-          <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            {description}
+          </p>
         )}
       </div>
       {children}
@@ -88,12 +91,28 @@ function Scale({ label, prefix }: { label: string; prefix: string }) {
 }
 
 const TYPE_SCALE = [
-  { name: "Display / 4xl", cls: "font-display text-4xl font-bold", note: "2.25rem · headings, hero" },
-  { name: "Display / 2xl", cls: "font-display text-2xl font-bold", note: "1.5rem · section titles" },
-  { name: "Heading / lg", cls: "font-display text-lg font-semibold", note: "1.125rem · card titles" },
+  {
+    name: "Display / 4xl",
+    cls: "font-display text-4xl font-bold",
+    note: "2.25rem · headings, hero",
+  },
+  {
+    name: "Display / 2xl",
+    cls: "font-display text-2xl font-bold",
+    note: "1.5rem · section titles",
+  },
+  {
+    name: "Heading / lg",
+    cls: "font-display text-lg font-semibold",
+    note: "1.125rem · card titles",
+  },
   { name: "Body / base", cls: "text-base", note: "1rem · default body" },
   { name: "Body / sm", cls: "text-sm", note: "0.875rem · secondary, UI" },
-  { name: "Caption / xs", cls: "text-xs text-muted-foreground", note: "0.75rem · hints, labels" },
+  {
+    name: "Caption / xs",
+    cls: "text-xs text-muted-foreground",
+    note: "0.75rem · hints, labels",
+  },
 ];
 
 const SPACING = [1, 2, 3, 4, 6, 8, 12, 16];
@@ -105,7 +124,13 @@ const RADII = [
   ["2xl", "rounded-2xl"],
   ["full", "rounded-full"],
 ] as const;
-const SHADOWS = ["shadow-xs", "shadow-sm", "shadow-md", "shadow-lg", "shadow-xl"];
+const SHADOWS = [
+  "shadow-xs",
+  "shadow-sm",
+  "shadow-md",
+  "shadow-lg",
+  "shadow-xl",
+];
 
 const NAV = [
   ["Colors", "colors"],
@@ -173,15 +198,41 @@ export default function DesignSystemPage() {
           <Card>
             <CardContent className="grid gap-3 pt-6 text-sm sm:grid-cols-2">
               {[
-                ["Navy — primary", "Trust, focus, structure. Default buttons, chrome, headings.", "bg-primary"],
-                ["Orange — accent", "Energy. The one CTA per view + progress + celebration. (Navy text for AA contrast.)", "bg-accent"],
-                ["Green — success", "Complete / on track. Always paired with a ✓ glyph.", "bg-success"],
-                ["Amber — warning", "At risk / attention. Paired with text.", "bg-warning"],
-                ["Red — danger", "Errors & destructive actions ONLY. Never FOMO.", "bg-danger"],
-                ["Slate — neutral", "Text, borders, muted surfaces.", "bg-neutral-400"],
+                [
+                  "Navy — primary",
+                  "Trust, focus, structure. Default buttons, chrome, headings.",
+                  "bg-primary",
+                ],
+                [
+                  "Orange — accent",
+                  "Energy. The one CTA per view + progress + celebration. (Navy text for AA contrast.)",
+                  "bg-accent",
+                ],
+                [
+                  "Green — success",
+                  "Complete / on track. Always paired with a ✓ glyph.",
+                  "bg-success",
+                ],
+                [
+                  "Amber — warning",
+                  "At risk / attention. Paired with text.",
+                  "bg-warning",
+                ],
+                [
+                  "Red — danger",
+                  "Errors & destructive actions ONLY. Never FOMO.",
+                  "bg-danger",
+                ],
+                [
+                  "Slate — neutral",
+                  "Text, borders, muted surfaces.",
+                  "bg-neutral-400",
+                ],
               ].map(([name, role, dot]) => (
                 <div key={name} className="flex items-start gap-3">
-                  <span className={`mt-0.5 size-4 shrink-0 rounded-full ${dot}`} />
+                  <span
+                    className={`mt-0.5 size-4 shrink-0 rounded-full ${dot}`}
+                  />
                   <span>
                     <span className="font-medium text-foreground">{name}</span>
                     <span className="text-muted-foreground"> — {role}</span>
@@ -256,14 +307,20 @@ export default function DesignSystemPage() {
         </Section>
 
         {/* RADII */}
-        <Section id="radii" title="Radii" description="Generous, youthful rounding.">
+        <Section
+          id="radii"
+          title="Radii"
+          description="Generous, youthful rounding."
+        >
           <div className="flex flex-wrap gap-6">
             {RADII.map(([name, cls]) => (
               <div key={name} className="space-y-2 text-center">
                 <div
                   className={`size-20 border border-border bg-primary-100 ${cls}`}
                 />
-                <p className="font-mono text-xs text-muted-foreground">{name}</p>
+                <p className="font-mono text-xs text-muted-foreground">
+                  {name}
+                </p>
               </div>
             ))}
           </div>
@@ -305,7 +362,9 @@ export default function DesignSystemPage() {
               <Button size="sm">Small</Button>
               <Button size="md">Medium</Button>
               <Button size="lg">Large</Button>
-              <Button size="icon" aria-label="Add">+</Button>
+              <Button size="icon" aria-label="Add">
+                +
+              </Button>
               <Button loading>Saving</Button>
               <Button disabled>Disabled</Button>
             </div>
@@ -313,7 +372,11 @@ export default function DesignSystemPage() {
         </Section>
 
         {/* BADGES */}
-        <Section id="badges" title="Badges" description="Status, roles, and counts.">
+        <Section
+          id="badges"
+          title="Badges"
+          description="Status, roles, and counts."
+        >
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="neutral">Member</Badge>
             <Badge variant="primary">Group Admin</Badge>
@@ -332,7 +395,11 @@ export default function DesignSystemPage() {
           description="Inputs composed with the Field wrapper for labels, hints, and errors."
         >
           <div className="grid max-w-md gap-5">
-            <Field label="Group name" htmlFor="ds-name" hint="Visible to all members.">
+            <Field
+              label="Group name"
+              htmlFor="ds-name"
+              hint="Visible to all members."
+            >
               <Input id="ds-name" placeholder="e.g. Friday Halaqa" />
             </Field>
             <Field
@@ -350,7 +417,11 @@ export default function DesignSystemPage() {
         </Section>
 
         {/* AVATARS */}
-        <Section id="avatars" title="Avatars" description="Image with initials fallback.">
+        <Section
+          id="avatars"
+          title="Avatars"
+          description="Image with initials fallback."
+        >
           <div className="flex items-end gap-4">
             <Avatar size="sm" name="Mohid Khan" />
             <Avatar size="md" name="Aisha Rahman" />
@@ -378,7 +449,7 @@ export default function DesignSystemPage() {
               </div>
               <div className="flex flex-col items-center gap-2">
                 <ProgressRing value={100} max={100}>
-                  <span className="text-success text-xl">✓</span>
+                  <span className="text-xl text-success">✓</span>
                 </ProgressRing>
                 <span className="text-xs text-muted-foreground">Complete</span>
               </div>
@@ -398,7 +469,12 @@ export default function DesignSystemPage() {
               <CardDescription>Today’s collective dhikr</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-10">
-              <Stat label="Streak" value="12" icon={<span>🔥</span>} hint="days" />
+              <Stat
+                label="Streak"
+                value="12"
+                icon={<span>🔥</span>}
+                hint="days"
+              />
               <Stat label="Group total" value="41,300" hint="/ 100,000" />
               <Stat label="Your rank" value="#3" hint="of 18" />
             </CardContent>

@@ -3,7 +3,7 @@
 A mobile-first **group dhikr tracker** (installable PWA): dopamine hooks (tap
 counter, progress rings, streaks, live collective counter) layered on **real
 group accountability** to make daily dhikr stick. Built around the traditional
-*cetele* — a group that splits and completes a shared dhikr goal together.
+_cetele_ — a group that splits and completes a shared dhikr goal together.
 
 ## Start here (resume context)
 
@@ -20,7 +20,7 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 - **Build in increments**, verify, then commit. End commit messages with:
   `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
 - The user prefers **concise, scannable** docs — tables and short bullets, not walls of text.
-- **Keep the PRD Word copy in sync:** edit `docs/PRD.md`, then regenerate the formatted `.docx` with `python3 scripts/build_prd_docx.py` (stdlib-only; the script *is* the doc's formatting — edit its content there too).
+- **Keep the PRD Word copy in sync:** edit `docs/PRD.md`, then regenerate the formatted `.docx` with `python3 scripts/build_prd_docx.py` (stdlib-only; the script _is_ the doc's formatting — edit its content there too).
 
 ## UI / design system
 
@@ -56,9 +56,9 @@ PWA** (no app store). Develop inside WSL Ubuntu — run `pnpm` directly.
 
 ## Retention thesis
 
-Dhikr is *repetitive habit-maintenance*, not skill mastery — the use case where
+Dhikr is _repetitive habit-maintenance_, not skill mastery — the use case where
 gamification works. Lean into dopamine, but anchor it in group accountability +
 "never miss twice" forgiveness so streaks breaking doesn't cause permanent quit.
 Reference: `../arabic-app/claude/retention_and_motivation_guide.md` (note: that
-guide argues *against* gamification — but that's for a mastery app; the durable
+guide argues _against_ gamification — but that's for a mastery app; the durable
 mechanics, esp. real accountability & never-miss-twice, still apply here).

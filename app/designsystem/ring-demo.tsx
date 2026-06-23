@@ -21,7 +21,7 @@ export function RingDemo() {
       >
         <ProgressRing value={count} max={TARGET} size={148} thickness={14}>
           <div className="flex flex-col items-center">
-            <span className="font-display text-4xl font-bold tabular-nums text-foreground">
+            <span className="font-display text-4xl font-bold text-foreground tabular-nums">
               {count}
             </span>
             <span className="text-xs text-muted-foreground">/ {TARGET}</span>

@@ -14,8 +14,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-800",
-        accent: "bg-accent text-accent-foreground shadow-sm hover:bg-accent-600",
+        primary:
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary-800",
+        accent:
+          "bg-accent text-accent-foreground shadow-sm hover:bg-accent-600",
         outline:
           "border border-border bg-background text-foreground hover:bg-muted",
         ghost: "text-foreground hover:bg-muted",
@@ -36,7 +38,8 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   /** Show a spinner and disable interaction. */
   loading?: boolean;
