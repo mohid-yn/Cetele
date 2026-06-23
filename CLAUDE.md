@@ -19,6 +19,11 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 - **Confirm consequential product decisions** with the user, then log them in STATUS.md "Decisions locked".
 - **Build in increments**, verify, then commit. End commit messages with:
   `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+- **Branching (solo, branch-per-issue, no mandatory PRs):**
+  - One **feature branch per Linear issue**, named to match the issue's git branch (`mohidkhanzada/cet-N-slug`). Never commit features straight to `main`.
+  - Commit increments on the branch; **push to get a Vercel preview URL** for that branch.
+  - When `build` + `lint` + `tsc` + `format:check` are all green, **ask the user before merging to `main`** — `main` auto-deploys to production, so that confirm is the approval step (it replaces a PR).
+  - On approval: merge to `main`, push, **delete the branch** (local + remote). Open a real PR only ad-hoc when a written review trail is wanted (`gh` is installed). See STATUS.md **D16**.
 - The user prefers **concise, scannable** docs — tables and short bullets, not walls of text.
 - **Keep the PRD Word copy in sync:** edit `docs/PRD.md`, then regenerate the formatted `.docx` with `python3 scripts/build_prd_docx.py` (stdlib-only; the script _is_ the doc's formatting — edit its content there too).
 
