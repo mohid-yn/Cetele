@@ -56,7 +56,7 @@ export default function TodayPage() {
               <li key={t.id}>
                 <Link
                   href={`/count/${t.id}`}
-                  className="flex items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition-colors hover:bg-muted/60"
+                  className="flex items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none"
                 >
                   <ProgressRing
                     value={count}

@@ -8,4 +8,4 @@
 // tokens (utilities or var(--token)) — never a raw color. See docs/DESIGN_SYSTEM.md.
 //
 // eslint-disable-next-line no-restricted-syntax -- platform APIs need a literal; see note above
-export const BRAND_THEME_COLOR = "#1d3a5f";
+export const BRAND_THEME_COLOR = "#047857";

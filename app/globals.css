@@ -1,11 +1,15 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   CETELE DESIGN TOKENS  —  themed to Youth Nexus (navy #1D3A5F + orange #F26522)
-   Single source of truth. Tailwind 4 reads @theme and generates utilities, e.g.
-   --color-primary-500 → bg-primary-500 / text-primary-500 / border-primary-500.
-   Semantic, theme-aware tokens (background, primary, …) live in @theme inline
-   and resolve to the CSS vars under :root / dark mode below.
+   CETELE DESIGN TOKENS  —  Emerald + Gold on white (light-first)
+   Primary = emerald (#047857): brand, calm/spiritual surface, AND the
+   "complete / streak-alive / growth" signal — for a dhikr audience green is the
+   culturally-expected hue and the retention-correct completion colour at once.
+   Accent  = gold/amber (#F59E0B): earned action + celebration only (one CTA per
+   view, confetti, "tap to count"). Background is pure white; cards separate by
+   border + soft shadow. Single source of truth — Tailwind 4 reads @theme and
+   generates utilities (--color-primary-500 → bg-primary-500 / text- / border-).
+   Semantic, theme-aware tokens resolve to the CSS vars under :root / .dark.
    ============================================================================ */
 
 @theme {
@@ -41,33 +45,33 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* ---- Primary · navy (brand figure + "Youth") ---- */
-  --color-primary-50: #f0f4f9;
-  --color-primary-100: #dbe4f0;
-  --color-primary-200: #b7c8df;
-  --color-primary-300: #8da6c8;
-  --color-primary-400: #5e7da8;
-  --color-primary-500: #3c5c8a;
-  --color-primary-600: #2a4870;
-  --color-primary-700: #1d3a5f; /* ← logo navy (brand) */
-  --color-primary-800: #172e4b;
-  --color-primary-900: #122338;
-  --color-primary-950: #0b1622;
+  /* ---- Primary · emerald (brand + completion/growth) ---- */
+  --color-primary-50: #ecfdf5;
+  --color-primary-100: #d1fae5;
+  --color-primary-200: #a7f3d0;
+  --color-primary-300: #6ee7b7;
+  --color-primary-400: #34d399;
+  --color-primary-500: #10b981;
+  --color-primary-600: #059669;
+  --color-primary-700: #047857; /* ← brand emerald */
+  --color-primary-800: #065f46;
+  --color-primary-900: #064e3b;
+  --color-primary-950: #022c22;
 
-  /* ---- Accent · orange ("nexus" + swoosh) ---- */
-  --color-accent-50: #fef4ee;
-  --color-accent-100: #fde3d3;
-  --color-accent-200: #fac3a2;
-  --color-accent-300: #f79c68;
-  --color-accent-400: #f47e3e;
-  --color-accent-500: #f26522; /* ← logo orange */
-  --color-accent-600: #dd4f12;
-  --color-accent-700: #b73c10;
-  --color-accent-800: #923114;
-  --color-accent-900: #772b14;
-  --color-accent-950: #401206;
+  /* ---- Accent · gold/amber (earned action + celebration only) ---- */
+  --color-accent-50: #fffbeb;
+  --color-accent-100: #fef3c7;
+  --color-accent-200: #fde68a;
+  --color-accent-300: #fcd34d;
+  --color-accent-400: #fbbf24;
+  --color-accent-500: #f59e0b; /* ← brand gold */
+  --color-accent-600: #d97706;
+  --color-accent-700: #b45309;
+  --color-accent-800: #92400e;
+  --color-accent-900: #78350f;
+  --color-accent-950: #451a03;
 
-  /* ---- Neutral · cool slate (pairs with navy) ---- */
+  /* ---- Neutral · slate (pairs cleanly with emerald) ---- */
   --color-neutral-0: #ffffff;
   --color-neutral-50: #f8fafc;
   --color-neutral-100: #f1f5f9;
@@ -81,11 +85,13 @@
   --color-neutral-900: #0f172a;
   --color-neutral-950: #020617;
 
-  /* ---- Status hues ---- */
-  --color-success-500: #16a34a;
-  --color-success-600: #15803d;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
+  /* ---- Status hues ---- (success = emerald, slightly brighter than the
+     brand primary so a closed "done" state pops; warning shifts to true orange
+     so it never reads as the gold accent) ---- */
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-warning-500: #ea580c;
+  --color-warning-600: #c2410c;
   --color-danger-500: #dc2626;
   --color-danger-600: #b91c1c;
   --color-info-500: #2563eb;
@@ -99,15 +105,18 @@
   --radius-2xl: 1.5rem;
   --radius-3xl: 2rem;
 
-  /* ---- Elevation (soft, navy-tinted) ---- */
-  --shadow-xs: 0 1px 2px 0 rgb(17 35 56 / 0.06);
+  /* ---- Elevation (soft, neutral slate — two-layer for real depth on white) ---- */
+  --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.06);
   --shadow-sm:
-    0 1px 3px 0 rgb(17 35 56 / 0.08), 0 1px 2px -1px rgb(17 35 56 / 0.08);
+    0 1px 2px 0 rgb(15 23 42 / 0.06), 0 4px 10px -2px rgb(15 23 42 / 0.08);
   --shadow-md:
-    0 4px 12px -2px rgb(17 35 56 / 0.1), 0 2px 6px -2px rgb(17 35 56 / 0.06);
+    0 2px 4px -1px rgb(15 23 42 / 0.07), 0 8px 20px -4px rgb(15 23 42 / 0.1);
   --shadow-lg:
-    0 12px 28px -6px rgb(17 35 56 / 0.14), 0 4px 10px -4px rgb(17 35 56 / 0.08);
-  --shadow-xl: 0 24px 48px -12px rgb(17 35 56 / 0.2);
+    0 4px 8px -2px rgb(15 23 42 / 0.08), 0 16px 32px -8px rgb(15 23 42 / 0.14);
+  --shadow-xl:
+    0 8px 16px -4px rgb(15 23 42 / 0.1), 0 28px 56px -12px rgb(15 23 42 / 0.2);
+  /* Upward lift for the sticky bottom nav (separates it from scrolling content). */
+  --shadow-up: 0 -2px 12px -4px rgb(15 23 42 / 0.1);
 
   /* ---- Motion ---- (150–300ms micro-interactions, ≤500ms transitions;
      ease-out for entrances; spring ONLY for earned celebration moments) */
@@ -153,29 +162,28 @@
 }
 
 :root {
-  /* Cool, soft off-white surface — lower glare than pure white keeps cognitive
-     load down ("calm is the brand"). Cards stay pure white for gentle depth. */
-  --background: #f8fafc;
+  /* Pure white surface — clean, calm, maximal text contrast. Cards are also
+     white and separate from the page by border + soft shadow (not a fill). */
+  --background: #ffffff;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b; /* slate-500 ≈ 4.6:1 on surface — passes AA */
+  --muted: #f1f5f9; /* light slate — chips, fills, hover states */
+  --muted-foreground: #64748b; /* slate-500 ≈ 4.6:1 on white — passes AA */
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #f26522; /* orange focus ring — on-brand & high-visibility */
+  --ring: #047857; /* emerald focus ring — calm & on-brand */
 
-  --primary: #1d3a5f; /* navy: trust, focus, calm — the workhorse */
-  --primary-foreground: #ffffff; /* ≈ 11.5:1 */
-  --accent: #f26522; /* orange: arousal/energy — actions & celebration only */
-  /* Navy text on orange ≈ 5.0:1 (passes AA); white-on-orange is only ~3.1:1
-     (fails). Navy-on-orange also mirrors the Youth Nexus logo pairing. */
-  --accent-foreground: #122338;
+  --primary: #047857; /* emerald: brand, calm/spiritual, completion/growth */
+  --primary-foreground: #ffffff; /* white on emerald-700 ≈ 6.5:1 — passes AA */
+  --accent: #f59e0b; /* gold: earned action + celebration only */
+  /* Dark text on gold ≈ 8:1 (passes AA); white-on-gold ~1.9:1 (fails). */
+  --accent-foreground: #422006;
 
-  --success: #16a34a;
+  --success: #059669; /* emerald-600 "done" — pops vs the brand emerald-700 */
   --success-foreground: #ffffff;
-  --warning: #f59e0b;
-  --warning-foreground: #422006;
+  --warning: #ea580c;
+  --warning-foreground: #ffffff;
   --danger: #dc2626;
   --danger-foreground: #ffffff;
   --info: #2563eb;
@@ -200,29 +208,30 @@
    so they sit calmly on dark rather than vibrating.
    ---------------------------------------------------------------------------- */
 :root.dark {
-  --background: #0b1622; /* deep navy-black, not pure #000 (avoids glare) */
-  --foreground: #f1f5f9; /* off-white, not pure #fff (avoids halation) */
-  --card: #122338;
-  --card-foreground: #f1f5f9;
-  --muted: #172e4b;
-  --muted-foreground: #9fb0c4; /* lifted for ≥4.5:1 on the dark surface */
-  --border: #1f3656;
-  --input: #1f3656;
-  --ring: #f4814e;
+  /* Light mode is the priority (per product call); these keep dark coherent
+     with the emerald/gold system so a toggle isn't broken — not finely tuned. */
+  --background: #0a1410; /* deep emerald-black, not pure #000 (avoids glare) */
+  --foreground: #ecf3ef; /* off-white, not pure #fff (avoids halation) */
+  --card: #11201a;
+  --card-foreground: #ecf3ef;
+  --muted: #16271f;
+  --muted-foreground: #9bb0a6; /* lifted for ≥4.5:1 on the dark surface */
+  --border: #20372d;
+  --input: #20372d;
+  --ring: #34d399;
 
-  --primary: #3c5c8a; /* lighter navy so buttons read on dark */
-  --primary-foreground: #ffffff;
-  --accent: #f4814e; /* lightened + slightly desaturated so it won't vibrate */
-  --accent-foreground: #122338; /* navy-on-orange — AA + brand pairing */
+  --primary: #10b981; /* lighter emerald so buttons read on dark */
+  --primary-foreground: #04130d;
+  --accent: #fbbf24; /* lightened gold so it won't vibrate on dark */
+  --accent-foreground: #422006;
 
-  /* Status hues lightened for dark (green = the completion/growth anchor). */
-  --success: #2ecc71;
-  --success-foreground: #06210f;
-  --warning: #fbbf24;
-  --warning-foreground: #2a1a02;
-  --danger: #f26d6d;
+  --success: #34d399;
+  --success-foreground: #04130d;
+  --warning: #fb923c;
+  --warning-foreground: #2a1402;
+  --danger: #f87171;
   --danger-foreground: #2a0a0a;
-  --info: #4b91f7;
+  --info: #60a5fa;
   --info-foreground: #061122;
 }
 

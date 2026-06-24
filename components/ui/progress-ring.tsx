@@ -10,7 +10,7 @@ export interface ProgressRingProps extends React.HTMLAttributes<HTMLDivElement> 
   size?: number;
   /** Stroke width in px. */
   thickness?: number;
-  /** Track + progress colors (any CSS color). Defaults: muted track, accent fill. */
+  /** Track + progress colors (any CSS color). Defaults: muted track, emerald fill. */
   trackColor?: string;
   progressColor?: string;
   /** Render content in the center (e.g. count, percent, icon). */
@@ -27,7 +27,7 @@ export function ProgressRing({
   size = 96,
   thickness = 10,
   trackColor = "var(--muted)",
-  progressColor = "var(--accent)",
+  progressColor = "var(--primary)",
   className,
   children,
   ...props

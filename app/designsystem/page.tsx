@@ -20,7 +20,7 @@ import { RingDemo } from "./ring-demo";
 export const metadata: Metadata = {
   title: "Design System · Cetele",
   description:
-    "Living style guide — tokens and components, themed to Youth Nexus.",
+    "Living style guide — tokens and components, themed emerald + gold on white.",
 };
 
 /* ---------- small presentational helpers (page-local) ---------- */
@@ -164,8 +164,8 @@ export default function DesignSystemPage() {
           Design System
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Tokens and reusable components for Cetele, themed to the Youth Nexus
-          brand. Everything below is driven by the design tokens in{" "}
+          Tokens and reusable components for Cetele, themed emerald + gold on
+          white. Everything below is driven by the design tokens in{" "}
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
             app/globals.css
           </code>
@@ -193,19 +193,19 @@ export default function DesignSystemPage() {
         <Section
           id="colors"
           title="Colors"
-          description="Cool hues (navy) calm and focus — they own the surface and chrome. Warm hues (orange) arouse — reserved for the single most important action and live progress, so their energy is earned, not background noise. Red is errors only, never urgency/FOMO."
+          description="Emerald (primary) is calm, spiritual, and the colour of completion/growth — it owns the surface, chrome, and 'done' states. Gold (accent) arouses — reserved for the single most important action and live progress, so its energy is earned, not background noise. Red is errors only, never urgency/FOMO."
         >
           <Card>
             <CardContent className="grid gap-3 pt-6 text-sm sm:grid-cols-2">
               {[
                 [
-                  "Navy — primary",
-                  "Trust, focus, structure. Default buttons, chrome, headings.",
+                  "Emerald — primary",
+                  "Brand, calm/spiritual, completion & growth. Buttons, chrome, headings, closed rings.",
                   "bg-primary",
                 ],
                 [
-                  "Orange — accent",
-                  "Energy. The one CTA per view + progress + celebration. (Navy text for AA contrast.)",
+                  "Gold — accent",
+                  "Energy. The one CTA per view + progress + celebration. (Dark text for AA contrast.)",
                   "bg-accent",
                 ],
                 [
@@ -256,8 +256,8 @@ export default function DesignSystemPage() {
             <Swatch name="Card" varName="--card" />
           </div>
           <div className="space-y-5">
-            <Scale label="Primary · navy" prefix="primary" />
-            <Scale label="Accent · orange" prefix="accent" />
+            <Scale label="Primary · emerald" prefix="primary" />
+            <Scale label="Accent · gold" prefix="accent" />
             <Scale label="Neutral · slate" prefix="neutral" />
           </div>
         </Section>
@@ -330,7 +330,7 @@ export default function DesignSystemPage() {
         <Section
           id="elevation"
           title="Elevation"
-          description="Soft, navy-tinted shadows. Cards use sm; popovers/menus use md–lg; modals use xl."
+          description="Soft, neutral shadows for a clean lift on white. Cards use sm; popovers/menus use md–lg; modals use xl."
         >
           <div className="flex flex-wrap gap-6">
             {SHADOWS.map((s) => (
@@ -489,7 +489,7 @@ export default function DesignSystemPage() {
       </div>
 
       <footer className="mt-20 border-t border-border pt-6 text-xs text-muted-foreground">
-        Cetele design system · Youth Nexus · tokens in{" "}
+        Cetele design system · emerald + gold on white · tokens in{" "}
         <code className="font-mono">app/globals.css</code>, components in{" "}
         <code className="font-mono">components/ui/</code>.
       </footer>

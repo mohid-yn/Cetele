@@ -25,7 +25,7 @@ export function DemoControls() {
   const [open, setOpen] = React.useState(false);
 
   return (
-    <div className="fixed right-3 bottom-20 z-[var(--z-overlay)] flex flex-col items-end gap-2">
+    <div className="fixed right-3 bottom-24 z-[var(--z-overlay)] flex flex-col items-end gap-2 lg:bottom-6">
       {open && (
         <div className="w-60 rounded-2xl border border-border bg-card p-3 shadow-xl">
           <p className="mb-2 px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">

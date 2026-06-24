@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Generate Cetele PWA icons (stdlib-only, no PIL).
-Design: Youth Nexus navy field + an orange open progress ring (the core motif).
+Design: emerald field + a gold open progress ring (the core motif).
 Outputs PNGs to public/icons/. Re-run after changing the design here.
 """
 import os, struct, zlib, math
 
-NAVY = (0x1D, 0x3A, 0x5F)   # Youth Nexus primary
-ORANGE = (0xF2, 0x65, 0x22)  # Youth Nexus accent
-BG = NAVY
-RING = ORANGE
+EMERALD = (0x04, 0x78, 0x57)  # brand primary
+GOLD = (0xF5, 0x9E, 0x0B)     # brand accent
+BG = EMERALD
+RING = GOLD
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "public", "icons")
 
 

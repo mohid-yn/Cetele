@@ -20,15 +20,15 @@ doc open.
 
 ## Implementation tracker (research → work)
 
-| §   | Finding / shortcoming                                                                                                                             | Action                                                                                       | Priority |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------- |
-| §1  | Green is underused. For a _dhikr_ audience it carries cultural+psychological weight (growth, calm, spirituality). Promote to a semantic.          | Elevate `--success`/new `--growth` to completion/streak role; decision needed (touches D13). | High     |
-| §2  | App follows OS theme only — **no manual light/dark toggle.** Dhikr peaks at night (82.7% enable dark after 10pm); dhikr ≈ Isha/Tahajjud/pre-Fajr. | Add persisted theme toggle (system / light / dark); `class` strategy.                        | High     |
-| §2  | Dark accent orange is fully saturated → "vibrates" on dark surfaces. Off-white text is good; verify no pure black.                                | Desaturate/lighten accent + status hues in the dark block.                                   | Medium   |
-| §3  | **Not responsive** — hard-capped at `max-w-[28rem]` with a phone bottom-nav. Unusable as a real layout on laptop/desktop.                         | Responsive shell: bottom-nav (mobile) → sidebar + wider/multi-col (≥`lg`).                   | High     |
-| §4  | Motion budget + earned-celebration model **validated** — keep within 150–300ms / spring only on celebration.                                      | — (review-time bar)                                                                          | —        |
-| §5  | Status today leans on colour; some states (rings, leaderboard) need a second channel for colour-blind safety.                                     | Glyph/label beside every status colour; never colour-alone.                                  | Medium   |
-| §1  | Navy+orange brand **validated as psychologically optimal** for trust + action — no re-theme needed.                                               | — (keep D11)                                                                                 | —        |
+| §   | Finding / shortcoming                                                                                                                                                                                                                       | Action                                                                                       | Priority |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------- |
+| §1  | Green is underused. For a _dhikr_ audience it carries cultural+psychological weight (growth, calm, spirituality). Promote to a semantic.                                                                                                    | Elevate `--success`/new `--growth` to completion/streak role; decision needed (touches D13). | High     |
+| §2  | App follows OS theme only — **no manual light/dark toggle.** Dhikr peaks at night (82.7% enable dark after 10pm); dhikr ≈ Isha/Tahajjud/pre-Fajr.                                                                                           | Add persisted theme toggle (system / light / dark); `class` strategy.                        | High     |
+| §2  | Dark accent orange is fully saturated → "vibrates" on dark surfaces. Off-white text is good; verify no pure black.                                                                                                                          | Desaturate/lighten accent + status hues in the dark block.                                   | Medium   |
+| §3  | **Not responsive** — hard-capped at `max-w-[28rem]` with a phone bottom-nav. Unusable as a real layout on laptop/desktop.                                                                                                                   | Responsive shell: bottom-nav (mobile) → sidebar + wider/multi-col (≥`lg`).                   | High     |
+| §4  | Motion budget + earned-celebration model **validated** — keep within 150–300ms / spring only on celebration.                                                                                                                                | — (review-time bar)                                                                          | —        |
+| §5  | Status today leans on colour; some states (rings, leaderboard) need a second channel for colour-blind safety.                                                                                                                               | Glyph/label beside every status colour; never colour-alone.                                  | Medium   |
+| §1  | ~~Navy+orange validated — no re-theme needed.~~ **Reversed (D20):** product owner found navy/orange ugly + too corporate for a calm dhikr app. Re-themed to **emerald + gold on white** — green becomes the brand _and_ the completion hue. | Done — see §1 synthesis (updated).                                                           | —        |
 
 ---
 
@@ -41,11 +41,11 @@ doc open.
   30-day churn**; users are **2.3× more likely** to return daily once past a
   7-day streak. The colour job is to make _progress and its preservation_
   unmistakable at a glance.
-- **Navy = trust; orange = energy; together they're the strongest pair.** Blue
-  raises perceived trustworthiness by **~42%** in service contexts; **navy+orange
-  is rated ~34% more trustworthy** than other pairings, and a bright orange CTA
-  on a navy field wins by the **isolation (Von Restorff) effect** — contrast,
-  not hue, drives the **32–40% higher click** on warm CTAs.
+- **Calm base + one scarce warm accent beats a high-tension pair.** The job of
+  the accent is won by the **isolation (Von Restorff) effect** — contrast, not
+  hue, drives the **32–40% higher click** on a warm CTA against a calm field. A
+  single gold spark on a green/white field gets that contrast _without_ the
+  corporate, high-arousal feel of a navy+orange clash (the reason D20 dropped it).
 - **Green means growth, calm, and — for this audience — spirituality.** Islamic
   apps default to green/teal precisely because it reads as harmony, renewal, and
   serenity; it lowers anxiety and recalls nature. It is the natural colour of
@@ -53,22 +53,26 @@ doc open.
 - **If everything is colourful, nothing is.** Bright accents work by scarcity —
   one accent per view; >~3 hues raises cognitive load and _lowers_ retention.
 
-### How this maps to Cetele (the synthesis)
+### How this maps to Cetele (the synthesis) — updated 2026-06-24 (D20)
 
-Keep the brand; give each hue **one consistent psychological job**:
+> **Re-themed:** the original navy+orange "Youth Nexus" brand was dropped (too
+> corporate/high-tension for a calm dhikr app). New direction makes **green the
+> brand itself** — which collapses three jobs (brand, calm surface, completion)
+> into one culturally-resonant hue. Give each colour **one consistent job**:
 
-| Token                        | Colour            | Job (consistent everywhere)                                                                                                   |
-| ---------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `--primary` (navy)           | `#1D3A5F`         | **Trust / calm surface.** Headers, the live-counter card, structure. The workhorse backdrop.                                  |
-| `--accent` (orange)          | `#F26522`         | **Earned action + celebration spark.** One primary CTA per view; confetti; "tap to count". Never body, never decoration.      |
-| `--success`/`growth` (green) | `#16A34A`+        | **Completion / streak-alive / growth.** Closed rings, "done", streak flames-alive, group goal met. The dhikr-resonant anchor. |
-| `--danger` (red)             | `#DC2626`         | **Errors only.** Never urgency/FOMO ("streak about to die!") — that breaks D8 and is bad colour practice.                     |
-| neutral slate                | `#F8FAFC` surface | Low-glare calm. Cards stay white for gentle depth.                                                                            |
+| Token                 | Colour    | Job (consistent everywhere)                                                                                                                                 |
+| --------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--primary` (emerald) | `#047857` | **Brand + calm/spiritual surface + completion/growth.** Headers, structure, default buttons, closed rings, "done". The workhorse _and_ the progress signal. |
+| `--accent` (gold)     | `#F59E0B` | **Earned action + celebration spark.** One primary CTA per view; confetti; "tap to count". Dark text for AA. Never body, never decoration.                  |
+| `--success` (emerald) | `#059669` | **Completion / streak-alive / goal met.** Same family as brand, a touch brighter so "done" pops. Always with a ✓ glyph.                                     |
+| `--warning` (orange)  | `#EA580C` | **At risk / caution.** True orange, distinct from the gold accent. Paired with text.                                                                        |
+| `--danger` (red)      | `#DC2626` | **Errors only.** Never urgency/FOMO ("streak about to die!") — that breaks D8 and is bad colour practice.                                                   |
+| surface (white)       | `#FFFFFF` | **Pure white** — max contrast, clean and calm. Cards separate by border + soft shadow, not a fill.                                                          |
 
-This resolves the green tension: **navy+orange stays the brand** (validated as
-optimal for trust+action), and **green becomes the meaning of progress** — which
-is simultaneously the correct retention signal _and_ the culturally-expected
-spiritual hue for a dhikr community.
+This makes the retention-correct choice and the audience-expected choice the
+**same colour**: green is simultaneously the spiritual hue a dhikr community
+expects _and_ the signal that progress is alive. Gold is the single scarce spark
+of energy, spent only on action and celebration.
 
 ### Rules to hold
 

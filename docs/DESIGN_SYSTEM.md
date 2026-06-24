@@ -1,6 +1,8 @@
 # Cetele Design System
 
-Branded to **Youth Nexus** — navy `#1D3A5F` + orange `#F26522`.
+Themed **emerald `#047857` + gold `#F59E0B` on white** (light-first). Emerald is
+brand, calm/spiritual, _and_ the completion/growth signal; gold is reserved for
+earned action and celebration only.
 Live reference: **`/designsystem`** · Tokens: **`app/globals.css`** · Components: **`components/ui/`**.
 
 ---
@@ -38,7 +40,7 @@ brand colour lives; keep it in sync with `--primary`.
 
 1. **Tokens over hard-codes.** Never write a raw hex or px color in a component. Use a token (`bg-primary`, `text-muted-foreground`, `border-border`). One re-theme = one edit.
 2. **Semantic before scale.** Prefer `bg-primary` / `text-foreground` over `bg-primary-700`. Reach for a scale step (`bg-accent-100`) only for tints/states the semantic layer doesn't cover.
-3. **Accent is precious.** Orange = the single most important action or live progress on a screen. Navy is the workhorse. If everything is accent, nothing is.
+3. **Accent is precious.** Gold = the single most important action or live progress on a screen. Emerald is the workhorse. If everything is accent, nothing is.
 4. **Mobile-first.** Design for the phone, enhance up. Tap targets ≥ 44px (our `md`/`icon` buttons are 44px).
 5. **Accessible by default.** Visible focus ring, labelled controls, **AA contrast (≥ 4.5:1)**, `aria-*` on stateful components.
 6. **Never colour alone.** ~6–8% of men can't separate green/amber/orange/red. Every status colour ships with a **glyph or text label** (✓ ✗ ⚠ / "Complete" / "At risk"); never green-vs-red as the only differentiator.
@@ -59,24 +61,26 @@ All tokens live in `app/globals.css`. Tailwind 4 generates utilities from them.
 | **Semantic** (theme-aware) | `background`, `foreground`, `card`, `card-foreground`, `muted`, `muted-foreground`, `border`, `input`, `ring`, `primary(-foreground)`, `accent(-foreground)`, `success/warning/danger/info(-foreground)` | everything in components          |
 
 - Generates `bg-*`, `text-*`, `border-*`, `ring-*`, `fill-*`, etc.
-- `--ring` is **orange** — focus is always high-visibility and on-brand.
-- Dark mode is automatic via `prefers-color-scheme`; only semantic tokens flip.
+- `--ring` is **emerald** — focus is high-visibility, calm, and on-brand.
+- Dark mode is automatic via `prefers-color-scheme`; only semantic tokens flip. Light mode is the priority; dark is kept coherent but secondary.
 
 #### Colour psychology & meaning (why these colours)
 
-Research-backed (see Youth Nexus / arabic-app UI research): **cool hues calm and
-focus; warm hues arouse; red alarms.** Map meaning once and never reassign it:
+Research-backed (habit-app + Islamic-app + white-UI research, 2026-06): **green
+calms and signals growth/spirituality/completion; a single warm accent arouses;
+red alarms.** For a dhikr audience green is both culturally expected and the
+retention-correct "done" colour. Map meaning once and never reassign it:
 
-| Colour              | Role                                                                     | Why                                                                                     |
-| ------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| **Navy** `primary`  | Trust, focus, structure — chrome, default buttons, headings, the surface | Blue family lowers stress, improves attention & the calm "flow" the app wants           |
-| **Orange** `accent` | The **one** primary action per view + live progress + celebration        | Warm = arousal/energy "without red's alarm"; spend it at moments so it stays meaningful |
-| **Green** `success` | Complete / on track                                                      | Growth, completion — always paired with a ✓ glyph (never colour-alone)                  |
-| **Amber** `warning` | At risk / needs attention                                                | Caution without alarm — paired with text                                                |
-| **Red** `danger`    | Errors & destructive actions **only**                                    | Red = "this is wrong/destructive", never urgency or FOMO marketing                      |
+| Colour                | Role                                                                                           | Why                                                                                                                     |
+| --------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Emerald** `primary` | Brand, calm/spiritual surface, **completion & growth** — chrome, buttons, closed rings, "done" | Green lowers anxiety, reads as harmony/renewal for a dhikr audience, and is the natural "this is complete/alive" hue    |
+| **Gold** `accent`     | The **one** primary action per view + live progress + celebration                              | Warm = arousal/energy "without red's alarm"; gold carries Islamic resonance; spend it at moments so it stays meaningful |
+| **Emerald** `success` | Complete / on track                                                                            | Same family as brand, a touch brighter so "done" pops — always paired with a ✓ glyph                                    |
+| **Orange** `warning`  | At risk / needs attention                                                                      | True orange (distinct from gold accent) — caution without alarm, paired with text                                       |
+| **Red** `danger`      | Errors & destructive actions **only**                                                          | Red = "this is wrong/destructive", never urgency or FOMO marketing                                                      |
 
-- **Calm surface:** `--background` is a soft cool off-white (not pure white) to cut glare and cognitive load. Cards are white for gentle depth.
-- **Contrast is non-negotiable (WCAG AA ≥ 4.5:1).** That's why `accent-foreground` is **navy, not white** — white-on-orange is only ~3.1:1 (fails); navy-on-orange is ~5.0:1 and mirrors the logo.
+- **Clean white surface:** `--background` is **pure white `#FFFFFF`** for maximal text contrast and a calm, uncluttered feel. Cards are also white and separate by border + soft shadow (not a fill).
+- **Contrast is non-negotiable (WCAG AA ≥ 4.5:1).** That's why `accent-foreground` is **dark, not white** — white-on-gold is only ~1.9:1 (fails); dark-on-gold is ~8:1.
 - **One accent per view, ≤ ~3 hues per view.** If everything is coloured, nothing stands out and retention drops.
 
 ### Typography
@@ -96,7 +100,7 @@ focus; warm hues arouse; red alarms.** Map meaning once and never reassign it:
 
 ### Elevation
 
-`--shadow-xs sm md lg xl` → `shadow-*` — soft, navy-tinted. Cards `sm`; menus/popovers `md`–`lg`; modals `xl`.
+`--shadow-xs sm md lg xl` → `shadow-*` — soft, neutral-tinted for a clean lift on white. Cards `sm`; menus/popovers `md`–`lg`; modals `xl`.
 
 ### Motion
 
@@ -166,7 +170,7 @@ Rules:
 
 | ✅ Do                                            | ❌ Don't                               |
 | ------------------------------------------------ | -------------------------------------- |
-| `className="bg-primary text-primary-foreground"` | `className="bg-[#1d3a5f] text-white"`  |
+| `className="bg-primary text-primary-foreground"` | `className="bg-[#047857] text-white"`  |
 | One `accent` button per view                     | Accent on every button                 |
 | Wrap inputs in `<Field>`                         | Bare `<input>` with no label           |
 | `font-display` + `tabular-nums` for counts       | Body font for big jittery numbers      |
@@ -174,7 +178,7 @@ Rules:
 | `prefers-reduced-motion` guard on confetti       | Unconditional heavy animation          |
 | Pair status colour with ✓/✗/label                | Green-vs-red border as the only signal |
 | Red only for errors/destructive                  | Red for "streak about to die!" FOMO    |
-| Navy text on orange (AA)                         | White text on orange (fails contrast)  |
+| Dark text on gold (AA)                           | White text on gold (fails contrast)    |
 
 ---
 

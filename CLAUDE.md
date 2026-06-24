@@ -29,8 +29,10 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 
 ## UI / design system
 
-Branded to **Youth Nexus** (navy `#1D3A5F` + orange `#F26522`). Build UI from the
-existing system — don't hard-code colors/spacing or fork primitives.
+Themed **emerald `#047857` + gold `#F59E0B` on pure white** (light-first; see D20).
+Emerald = brand + calm/spiritual + completion/growth; gold = earned action +
+celebration only. Build UI from the existing system — don't hard-code
+colors/spacing or fork primitives.
 
 - **Token contract (enforced):** every UI value comes from a design token in
   `app/globals.css` — colour, type, spacing, radius, shadow, motion, z-index.
