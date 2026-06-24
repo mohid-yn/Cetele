@@ -6,6 +6,7 @@ import { Avatar, Badge, Button, Card } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
 import { FlameIcon, ShieldIcon } from "@/components/demo/icons";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 function Toggle({
   label,
@@ -116,6 +117,22 @@ export default function ProfilePage() {
           </div>
         </div>
       </Card>
+
+      {/* Appearance */}
+      <section>
+        <h2 className="mb-1 text-sm font-semibold text-foreground">
+          Appearance
+        </h2>
+        <Card className="flex items-center justify-between gap-3 p-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">Theme</p>
+            <p className="text-xs text-muted-foreground">
+              Easier on the eyes for night dhikr
+            </p>
+          </div>
+          <ThemeToggle />
+        </Card>
+      </section>
 
       {/* Settings (mock) */}
       <section>

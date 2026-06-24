@@ -3,8 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { Avatar, Badge, buttonVariants } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
 import { LiveCounter } from "@/components/demo/live-counter";
+import { CheckIcon } from "@/components/demo/icons";
 import { isoDate } from "@/lib/mock/data";
 
 export default function GroupPage() {
@@ -78,11 +80,19 @@ export default function GroupPage() {
         <ul className="flex flex-col gap-3">
           {taskTotals.map(({ task, total, goal }) => {
             const pct = goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
+            const met = goal > 0 && total >= goal;
             return (
               <li key={task.id}>
                 <div className="mb-1 flex items-baseline justify-between text-sm">
-                  <span className="font-medium text-foreground">
+                  <span className="flex items-center gap-1.5 font-medium text-foreground">
                     {task.label}
+                    {/* Green = completion (UI_PRACTICES §1); glyph+label too (§5). */}
+                    {met && (
+                      <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
+                        <CheckIcon className="size-3.5" />
+                        met
+                      </span>
+                    )}
                   </span>
                   <span className="text-muted-foreground tabular-nums">
                     {total.toLocaleString()} / {goal.toLocaleString()}
@@ -90,7 +100,10 @@ export default function GroupPage() {
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
+                    className={cn(
+                      "h-full rounded-full transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]",
+                      met ? "bg-success" : "bg-primary",
+                    )}
                     style={{ width: `${pct}%` }}
                   />
                 </div>

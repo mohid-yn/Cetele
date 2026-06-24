@@ -191,23 +191,39 @@
   --z-toast: 50;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b1622;
-    --foreground: #f1f5f9;
-    --card: #122338;
-    --card-foreground: #f1f5f9;
-    --muted: #172e4b;
-    --muted-foreground: #94a3b8;
-    --border: #1f3656;
-    --input: #1f3656;
-    --ring: #f47e3e;
+/* ----------------------------------------------------------------------------
+   Dark theme. Applied via a `.dark` class on <html> (set before paint by the
+   no-flash script in the root layout). The ThemeProvider resolves "system" to
+   an explicit class, so CSS only needs the class hook — the manual toggle can
+   always override the OS. Dark values follow the research (UI_PRACTICES §2):
+   never pure black, off-white text, and warm/status hues desaturated/lightened
+   so they sit calmly on dark rather than vibrating.
+   ---------------------------------------------------------------------------- */
+:root.dark {
+  --background: #0b1622; /* deep navy-black, not pure #000 (avoids glare) */
+  --foreground: #f1f5f9; /* off-white, not pure #fff (avoids halation) */
+  --card: #122338;
+  --card-foreground: #f1f5f9;
+  --muted: #172e4b;
+  --muted-foreground: #9fb0c4; /* lifted for ≥4.5:1 on the dark surface */
+  --border: #1f3656;
+  --input: #1f3656;
+  --ring: #f4814e;
 
-    --primary: #3c5c8a; /* lighter navy so buttons read on dark */
-    --primary-foreground: #ffffff;
-    --accent: #f26522;
-    --accent-foreground: #122338; /* navy-on-orange — AA + brand pairing */
-  }
+  --primary: #3c5c8a; /* lighter navy so buttons read on dark */
+  --primary-foreground: #ffffff;
+  --accent: #f4814e; /* lightened + slightly desaturated so it won't vibrate */
+  --accent-foreground: #122338; /* navy-on-orange — AA + brand pairing */
+
+  /* Status hues lightened for dark (green = the completion/growth anchor). */
+  --success: #2ecc71;
+  --success-foreground: #06210f;
+  --warning: #fbbf24;
+  --warning-foreground: #2a1a02;
+  --danger: #f26d6d;
+  --danger-foreground: #2a0a0a;
+  --info: #4b91f7;
+  --info-foreground: #061122;
 }
 
 * {

@@ -4,27 +4,20 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { HomeIcon, TrophyIcon, UsersIcon, UserIcon } from "./icons";
+import { NAV_ITEMS } from "./nav-items";
 
-const TABS = [
-  { href: "/today", label: "Today", Icon: HomeIcon },
-  { href: "/leaderboard", label: "Board", Icon: TrophyIcon },
-  { href: "/group", label: "Group", Icon: UsersIcon },
-  { href: "/profile", label: "Profile", Icon: UserIcon },
-] as const;
-
-/** Mobile tab bar pinned to the bottom of the app column. */
+/** Mobile tab bar pinned to the bottom of the app column (hidden on desktop). */
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
     <nav
       aria-label="Primary"
-      className="sticky bottom-0 z-[var(--z-sticky)] border-t border-border bg-card/95 backdrop-blur"
+      className="sticky bottom-0 z-[var(--z-sticky)] border-t border-border bg-card/95 backdrop-blur lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="mx-auto grid max-w-[28rem] grid-cols-4">
-        {TABS.map(({ href, label, Icon }) => {
+        {NAV_ITEMS.map(({ href, shortLabel, Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <li key={href}>
@@ -39,7 +32,7 @@ export function BottomNav() {
                 )}
               >
                 <Icon className={cn("size-6", active && "stroke-[2.4]")} />
-                {label}
+                {shortLabel}
               </Link>
             </li>
           );

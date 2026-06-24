@@ -48,7 +48,7 @@ export default function TodayPage() {
           </h2>
           <span className="text-xs text-muted-foreground">tap to count</span>
         </div>
-        <ul className="flex flex-col gap-2.5">
+        <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {tasks.map((t) => {
             const count = sel.todayCount(state, me.id, t.id);
             const done = count >= t.targetCount;

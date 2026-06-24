@@ -3,6 +3,10 @@ import { Geist, Quicksand } from "next/font/google";
 import "./globals.css";
 import { BRAND_THEME_COLOR } from "@/lib/brand";
 import { ServiceWorkerRegister } from "./sw-register";
+import {
+  ThemeProvider,
+  THEME_NO_FLASH_SCRIPT,
+} from "@/components/theme/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,8 +51,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${quicksand.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        {children}
-        <ServiceWorkerRegister />
+        <script dangerouslySetInnerHTML={{ __html: THEME_NO_FLASH_SCRIPT }} />
+        <ThemeProvider>
+          {children}
+          <ServiceWorkerRegister />
+        </ThemeProvider>
       </body>
     </html>
   );
