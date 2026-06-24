@@ -1,0 +1,422 @@
+"use client";
+
+/**
+ * Mock store for the clickable prototype (CET-14) — the reactive heart.
+ *
+ * React Context + useReducer, persisted to localStorage. No backend: a tap here
+ * really moves the leaderboard and the live group total, and a setInterval
+ * "realtime" ticker nudges peers so the collective counter climbs on its own.
+ * When requirements lock, a real Supabase layer replaces this behind the same
+ * hooks and selectors.
+ */
+
+import * as React from "react";
+import { createInitialState, isoDate, STORAGE_KEY } from "./data";
+import type {
+  Group,
+  Log,
+  MemberRole,
+  MockState,
+  Task,
+  User,
+  ViewRole,
+} from "./types";
+
+// ---------------------------------------------------------------------------
+// Actions
+// ---------------------------------------------------------------------------
+
+type Action =
+  | { type: "hydrate"; state: MockState }
+  | { type: "reset" }
+  | { type: "increment"; userId: string; taskId: string; by: number }
+  | { type: "setViewRole"; role: ViewRole }
+  | { type: "setActiveGroup"; groupId: string }
+  | { type: "toggleRibbon" }
+  | { type: "addTask"; task: Omit<Task, "id" | "sortOrder"> }
+  | {
+      type: "editTask";
+      taskId: string;
+      patch: Partial<Pick<Task, "label" | "subtitle" | "targetCount">>;
+    }
+  | { type: "removeTask"; taskId: string }
+  | { type: "inviteMember"; name: string; groupId: string }
+  | { type: "removeMember"; userId: string; groupId: string }
+  | { type: "setMemberRole"; userId: string; groupId: string; role: MemberRole }
+  | { type: "fastForwardDay" };
+
+let idSeq = 1000;
+const nextId = (p: string) => `${p}-${++idSeq}`;
+
+function reducer(state: MockState, action: Action): MockState {
+  switch (action.type) {
+    case "hydrate":
+      return action.state;
+
+    case "reset":
+      return createInitialState();
+
+    case "increment": {
+      const today = isoDate(0);
+      const existing = state.logs.find(
+        (l) =>
+          l.userId === action.userId &&
+          l.taskId === action.taskId &&
+          l.date === today,
+      );
+      if (existing) {
+        return {
+          ...state,
+          logs: state.logs.map((l) =>
+            l === existing ? { ...l, count: l.count + action.by } : l,
+          ),
+        };
+      }
+      const log: Log = {
+        id: nextId("l"),
+        userId: action.userId,
+        taskId: action.taskId,
+        date: today,
+        count: Math.max(0, action.by),
+      };
+      return { ...state, logs: [...state.logs, log] };
+    }
+
+    case "setViewRole":
+      return { ...state, session: { ...state.session, viewRole: action.role } };
+
+    case "setActiveGroup":
+      return {
+        ...state,
+        session: { ...state.session, activeGroupId: action.groupId },
+      };
+
+    case "toggleRibbon":
+      return {
+        ...state,
+        ui: { ...state.ui, showRibbon: !state.ui.showRibbon },
+      };
+
+    case "addTask": {
+      const siblings = state.tasks.filter(
+        (t) => t.groupId === action.task.groupId,
+      );
+      const task: Task = {
+        ...action.task,
+        id: nextId("t"),
+        sortOrder: siblings.length,
+      };
+      return { ...state, tasks: [...state.tasks, task] };
+    }
+
+    case "editTask":
+      return {
+        ...state,
+        tasks: state.tasks.map((t) =>
+          t.id === action.taskId ? { ...t, ...action.patch } : t,
+        ),
+      };
+
+    case "removeTask":
+      return {
+        ...state,
+        tasks: state.tasks.filter((t) => t.id !== action.taskId),
+        logs: state.logs.filter((l) => l.taskId !== action.taskId),
+      };
+
+    case "inviteMember": {
+      const user: User = { id: nextId("u"), name: action.name, isAdmin: false };
+      return {
+        ...state,
+        users: [...state.users, user],
+        memberships: [
+          ...state.memberships,
+          { userId: user.id, groupId: action.groupId, role: "member" },
+        ],
+        streaks: [
+          ...state.streaks,
+          {
+            userId: user.id,
+            current: 0,
+            longest: 0,
+            freezesLeft: 1,
+            lastActive: isoDate(0),
+          },
+        ],
+      };
+    }
+
+    case "removeMember":
+      return {
+        ...state,
+        memberships: state.memberships.filter(
+          (m) => !(m.userId === action.userId && m.groupId === action.groupId),
+        ),
+      };
+
+    case "setMemberRole":
+      return {
+        ...state,
+        memberships: state.memberships.map((m) =>
+          m.userId === action.userId && m.groupId === action.groupId
+            ? { ...m, role: action.role }
+            : m,
+        ),
+      };
+
+    case "fastForwardDay": {
+      // Demo: advance one day for the logged-in user, applying the
+      // "never miss twice" forgiveness rule, then reset today's rings.
+      const uid = state.session.currentUserId;
+      const gid = state.session.activeGroupId;
+      const today = isoDate(0);
+      const tasks = state.tasks.filter((t) => t.groupId === gid);
+      const allComplete = tasks.every((t) => {
+        const c = state.logs
+          .filter(
+            (l) => l.userId === uid && l.taskId === t.id && l.date === today,
+          )
+          .reduce((s, l) => s + l.count, 0);
+        return c >= t.targetCount;
+      });
+      const streaks = state.streaks.map((s) => {
+        if (s.userId !== uid) return s;
+        if (allComplete) {
+          const current = s.current + 1;
+          return { ...s, current, longest: Math.max(current, s.longest) };
+        }
+        // Missed: spend a freeze if available (streak survives), else reset.
+        if (s.freezesLeft > 0) return { ...s, freezesLeft: s.freezesLeft - 1 };
+        return { ...s, current: 0 };
+      });
+      // Clear the logged-in user's today logs so rings reset for the "new day".
+      const logs = state.logs.filter(
+        (l) => !(l.userId === uid && l.date === today),
+      );
+      return { ...state, streaks, logs };
+    }
+
+    default:
+      return state;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Context + provider
+// ---------------------------------------------------------------------------
+
+interface MockContextValue {
+  state: MockState;
+  actions: {
+    reset: () => void;
+    increment: (taskId: string, by?: number, userId?: string) => void;
+    setViewRole: (role: ViewRole) => void;
+    setActiveGroup: (groupId: string) => void;
+    toggleRibbon: () => void;
+    addTask: (task: Omit<Task, "id" | "sortOrder">) => void;
+    editTask: (
+      taskId: string,
+      patch: Partial<Pick<Task, "label" | "subtitle" | "targetCount">>,
+    ) => void;
+    removeTask: (taskId: string) => void;
+    inviteMember: (name: string, groupId: string) => void;
+    removeMember: (userId: string, groupId: string) => void;
+    setMemberRole: (userId: string, groupId: string, role: MemberRole) => void;
+    fastForwardDay: () => void;
+  };
+}
+
+const MockContext = React.createContext<MockContextValue | null>(null);
+
+export function MockStateProvider({ children }: { children: React.ReactNode }) {
+  const [state, dispatch] = React.useReducer(
+    reducer,
+    undefined,
+    createInitialState,
+  );
+  const [hydrated, setHydrated] = React.useState(false);
+
+  // Hydrate from localStorage once on the client (avoids SSR mismatch).
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw)
+        dispatch({ type: "hydrate", state: JSON.parse(raw) as MockState });
+    } catch {
+      // ignore corrupt/absent storage — fall back to the seed
+    }
+    // Intentional one-shot hydration gate (client-only); not a render sync loop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(true);
+  }, []);
+
+  // Persist on every change after hydration.
+  React.useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // ignore quota/serialisation errors in the demo
+    }
+  }, [state, hydrated]);
+
+  // Simulated realtime: nudge a couple of peers' counts so the collective
+  // counter and leaderboard move on their own during the demo.
+  React.useEffect(() => {
+    if (!hydrated) return;
+    const id = window.setInterval(() => {
+      const gid = state.session.activeGroupId;
+      const today = isoDate(0);
+      const peers = state.memberships
+        .filter(
+          (m) => m.groupId === gid && m.userId !== state.session.currentUserId,
+        )
+        .map((m) => m.userId);
+      const tasks = state.tasks.filter((t) => t.groupId === gid);
+      if (!peers.length || !tasks.length) return;
+      const uid = peers[Math.floor(Math.random() * peers.length)];
+      const task = tasks[Math.floor(Math.random() * tasks.length)];
+      const current = state.logs
+        .filter(
+          (l) => l.userId === uid && l.taskId === task.id && l.date === today,
+        )
+        .reduce((s, l) => s + l.count, 0);
+      if (current >= task.targetCount) return; // already done today
+      const bump = Math.max(
+        1,
+        Math.round(task.targetCount * (0.01 + Math.random() * 0.04)),
+      );
+      dispatch({ type: "increment", userId: uid, taskId: task.id, by: bump });
+    }, 3500);
+    return () => window.clearInterval(id);
+    // Re-arm when the active group changes; reads of state inside are fine.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, state.session.activeGroupId]);
+
+  const actions = React.useMemo<MockContextValue["actions"]>(
+    () => ({
+      reset: () => dispatch({ type: "reset" }),
+      increment: (taskId, by = 1, userId) =>
+        dispatch({
+          type: "increment",
+          taskId,
+          by,
+          userId: userId ?? state.session.currentUserId,
+        }),
+      setViewRole: (role) => dispatch({ type: "setViewRole", role }),
+      setActiveGroup: (groupId) =>
+        dispatch({ type: "setActiveGroup", groupId }),
+      toggleRibbon: () => dispatch({ type: "toggleRibbon" }),
+      addTask: (task) => dispatch({ type: "addTask", task }),
+      editTask: (taskId, patch) =>
+        dispatch({ type: "editTask", taskId, patch }),
+      removeTask: (taskId) => dispatch({ type: "removeTask", taskId }),
+      inviteMember: (name, groupId) =>
+        dispatch({ type: "inviteMember", name, groupId }),
+      removeMember: (userId, groupId) =>
+        dispatch({ type: "removeMember", userId, groupId }),
+      setMemberRole: (userId, groupId, role) =>
+        dispatch({ type: "setMemberRole", userId, groupId, role }),
+      fastForwardDay: () => dispatch({ type: "fastForwardDay" }),
+    }),
+    [state.session.currentUserId],
+  );
+
+  const value = React.useMemo(() => ({ state, actions }), [state, actions]);
+
+  if (!hydrated) return null;
+  return <MockContext.Provider value={value}>{children}</MockContext.Provider>;
+}
+
+export function useMock(): MockContextValue {
+  const ctx = React.useContext(MockContext);
+  if (!ctx) throw new Error("useMock must be used within <MockStateProvider>");
+  return ctx;
+}
+
+// ---------------------------------------------------------------------------
+// Selectors (pure — operate on a MockState snapshot)
+// ---------------------------------------------------------------------------
+
+export const sel = {
+  user: (s: MockState, userId: string): User | undefined =>
+    s.users.find((u) => u.id === userId),
+
+  currentUser: (s: MockState): User =>
+    s.users.find((u) => u.id === s.session.currentUserId)!,
+
+  activeGroup: (s: MockState): Group =>
+    s.groups.find((g) => g.id === s.session.activeGroupId)!,
+
+  groupTasks: (s: MockState, groupId: string): Task[] =>
+    s.tasks
+      .filter((t) => t.groupId === groupId)
+      .sort((a, b) => a.sortOrder - b.sortOrder),
+
+  /** Memberships of a group, joined with the user record. */
+  groupMembers: (s: MockState, groupId: string) =>
+    s.memberships
+      .filter((m) => m.groupId === groupId)
+      .map((m) => ({ ...m, user: s.users.find((u) => u.id === m.userId)! }))
+      .filter((m) => m.user),
+
+  membershipRole: (
+    s: MockState,
+    userId: string,
+    groupId: string,
+  ): MemberRole | undefined =>
+    s.memberships.find((m) => m.userId === userId && m.groupId === groupId)
+      ?.role,
+
+  /** One user's total count for one task today. */
+  todayCount: (s: MockState, userId: string, taskId: string): number =>
+    s.logs
+      .filter(
+        (l) =>
+          l.userId === userId && l.taskId === taskId && l.date === isoDate(0),
+      )
+      .reduce((sum, l) => sum + l.count, 0),
+
+  /** Collective progress today across all members + tasks of a group. */
+  groupToday: (
+    s: MockState,
+    groupId: string,
+  ): { total: number; goal: number } => {
+    const today = isoDate(0);
+    const tasks = s.tasks.filter((t) => t.groupId === groupId);
+    const taskIds = new Set(tasks.map((t) => t.id));
+    const memberCount = s.memberships.filter(
+      (m) => m.groupId === groupId,
+    ).length;
+    const total = s.logs
+      .filter((l) => taskIds.has(l.taskId) && l.date === today)
+      .reduce((sum, l) => sum + l.count, 0);
+    const goal = tasks.reduce((sum, t) => sum + t.targetCount, 0) * memberCount;
+    return { total, goal };
+  },
+
+  /** Weekly leaderboard: rank by days-active then total count over 7 days. */
+  leaderboard: (s: MockState, groupId: string) => {
+    const dates = new Set(Array.from({ length: 7 }, (_, i) => isoDate(i)));
+    const taskIds = new Set(
+      s.tasks.filter((t) => t.groupId === groupId).map((t) => t.id),
+    );
+    return sel
+      .groupMembers(s, groupId)
+      .map((m) => {
+        const mine = s.logs.filter(
+          (l) =>
+            l.userId === m.userId && taskIds.has(l.taskId) && dates.has(l.date),
+        );
+        const total = mine.reduce((sum, l) => sum + l.count, 0);
+        const daysActive = new Set(mine.map((l) => l.date)).size;
+        const streak =
+          s.streaks.find((x) => x.userId === m.userId)?.current ?? 0;
+        return { ...m, total, daysActive, streak };
+      })
+      .sort((a, b) => b.daysActive - a.daysActive || b.total - a.total);
+  },
+
+  streak: (s: MockState, userId: string) =>
+    s.streaks.find((x) => x.userId === userId),
+};

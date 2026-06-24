@@ -227,3 +227,38 @@ body {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* ---- Prototype motion (CET-14) ---- */
+@keyframes celebrate-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes count-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ticker-up {
+  0% {
+    opacity: 0;
+    transform: translateY(0.4em);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
