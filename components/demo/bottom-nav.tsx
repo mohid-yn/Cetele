@@ -13,10 +13,10 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="sticky bottom-0 z-[var(--z-sticky)] border-t border-border bg-card/95 backdrop-blur lg:hidden"
+      className="sticky bottom-0 z-[var(--z-sticky)] border-t border-border bg-card/95 shadow-up backdrop-blur lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="mx-auto grid max-w-[28rem] grid-cols-4">
+      <ul className="mx-auto grid max-w-[28rem] grid-cols-5">
         {NAV_ITEMS.map(({ href, shortLabel, Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (

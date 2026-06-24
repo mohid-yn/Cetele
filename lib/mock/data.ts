@@ -26,7 +26,7 @@ function mulberry32(seed: number) {
   };
 }
 
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 export const STORAGE_KEY = `cetele-mock-v${STORAGE_VERSION}`;
 
 let logSeq = 0;
@@ -169,16 +169,29 @@ export function createInitialState(): MockState {
     }
   }
 
-  // Past 6 days of history for all Fajr members → a meaningful weekly board.
-  for (let d = 1; d <= 6; d++) {
+  // Past ~90 days of history per Fajr member, with a distinct per-member
+  // "diligence" so the consistency tracker (CET-16) shows real variation —
+  // some members near-perfect, some patchy. `active` = chance they showed up
+  // that day; `quality` = chance a given task got fully closed when they did.
+  // Deterministic via the PRNG so every load looks the same.
+  const HISTORY_DAYS = 90;
+  const profile: Record<string, { active: number; quality: number }> = {
+    "u-1": { active: 0.86, quality: 0.8 }, // Ahmad — solid (streak 12 / best 21)
+    "u-2": { active: 0.72, quality: 0.7 }, // Yusuf — good but skips
+    "u-3": { active: 0.95, quality: 0.92 }, // Aisha — near-perfect (streak 23)
+    "u-4": { active: 0.6, quality: 0.65 }, // Bilal — patchy
+    "u-5": { active: 0.97, quality: 0.95 }, // Fatima — the steadfast one (31)
+    "u-6": { active: 0.45, quality: 0.6 }, // Omar — fell off lately (streak 2)
+  };
+  for (let d = 1; d <= HISTORY_DAYS; d++) {
     const date = isoDate(d);
     for (const u of ["u-1", "u-2", "u-3", "u-4", "u-5", "u-6"]) {
-      // ~80% chance a member was active on a given past day (consistency varies).
-      if (rand() < 0.8) {
-        for (const t of fajrTasks) {
-          const frac = 0.4 + rand() * 0.6;
-          logs.push(log(u, t.id, date, Math.round(t.targetCount * frac)));
-        }
+      const p = profile[u];
+      if (rand() >= p.active) continue; // inactive that day → a "missed" cell
+      for (const t of fajrTasks) {
+        const full = rand() < p.quality;
+        const frac = full ? 1 : 0.3 + rand() * 0.55;
+        logs.push(log(u, t.id, date, Math.round(t.targetCount * frac)));
       }
     }
   }

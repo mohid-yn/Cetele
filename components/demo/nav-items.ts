@@ -1,4 +1,4 @@
-import { HomeIcon, TrophyIcon, UsersIcon, UserIcon } from "./icons";
+import { HomeIcon, TrophyIcon, GridIcon, UsersIcon, UserIcon } from "./icons";
 
 /** Primary navigation, shared by the mobile bottom bar and the desktop sidebar. */
 export const NAV_ITEMS = [
@@ -8,6 +8,12 @@ export const NAV_ITEMS = [
     label: "Leaderboard",
     shortLabel: "Board",
     Icon: TrophyIcon,
+  },
+  {
+    href: "/progress",
+    label: "Consistency",
+    shortLabel: "Progress",
+    Icon: GridIcon,
   },
   { href: "/group", label: "Group", shortLabel: "Group", Icon: UsersIcon },
   { href: "/profile", label: "Profile", shortLabel: "Profile", Icon: UserIcon },

@@ -53,6 +53,11 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **Live collective counter** — real-time group total ("41,300 / 100,000 today") via Supabase Realtime
 - **Streaks** — personal daily streak; **"never miss twice"** forgiveness (1 streak-freeze)
 - **Group leaderboard** — rank members by consistency/completion this week
+- **Consistency tracker** — the longitudinal view of _how steadfast_ each member is (the in-app surface for our North Star). A GitHub-style **calendar heatmap** of daily completion (green intensity = % of that day's tasks closed) + a headline **consistency score** (% of days fully completed over **7 / 30 / 90 days**) + **longest streak**. Three views:
+  - **Personal** — each member sees their own history (self-reflection, identity reinforcement)
+  - **Group-admin oversight** — group admins see every member's consistency, to spot who's slipping and follow up (real accountability)
+  - **Group collective rollup** — the group's 90-day consistency figure, shown to the whole group (the North Star, made visible)
+  - _Distinct from streaks (current momentum) and the leaderboard (this-week ranking): this is the **pattern over time**. Derived from `logs` vs targets — no streak/FOMO pressure, framed by **forgiveness** (a single missed day is a lighter cell, never an alarm)._
 - **Variable-reward milestones** — occasional surprise animation / du'a at random milestones
 
 ### 🔜 v1.1 (fast-follow)
@@ -69,14 +74,15 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 ## 5. Retention mechanics (where each lever lives)
 
-| Lever               | Source         | Implementation                                |
-| ------------------- | -------------- | --------------------------------------------- |
-| Completion drive    | dopamine       | Progress rings + confetti                     |
-| Variable reward     | dopamine       | Surprise milestone reveals                    |
-| Social proof        | accountability | Live group counter + leaderboard              |
-| Identity            | durable        | "You're someone who does dhikr daily" framing |
-| Forgiveness         | durable        | Never-miss-twice + streak freeze              |
-| Real accountability | durable        | Visible group peers (the _cetele_ itself)     |
+| Lever               | Source         | Implementation                                                                 |
+| ------------------- | -------------- | ------------------------------------------------------------------------------ |
+| Completion drive    | dopamine       | Progress rings + confetti                                                      |
+| Variable reward     | dopamine       | Surprise milestone reveals                                                     |
+| Social proof        | accountability | Live group counter + leaderboard                                               |
+| Identity            | durable        | "You're someone who does dhikr daily" framing                                  |
+| Steadfastness       | durable        | **Consistency tracker** — heatmap + 7/30/90-day score (personal, admin, group) |
+| Forgiveness         | durable        | Never-miss-twice + streak freeze                                               |
+| Real accountability | durable        | Visible group peers (the _cetele_ itself)                                      |
 
 ---
 
@@ -91,6 +97,8 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **push_subscriptions** — user_id, endpoint, keys (for Web Push; see §4 v1.1)
 
 > Row-Level Security on every table: members read their group, admins write their group.
+
+**Consistency tracker** needs **no new table** — it is derived from `logs` (count per user / item / date) vs each item's `target_count`: a day's completion % = closed-rings ÷ total-tasks; the 7/30/90-day score = % of days fully completed; the group rollup aggregates across members. For performance at scale, optionally precompute a `daily_completion` view/materialized view (user_id, group_id, date, pct). RLS mirrors the rest: members read their own + group rollups; group admins read all members in their group.
 
 ---
 
@@ -123,3 +131,5 @@ Native iOS/Android apps · payments · multiple languages · in-app messaging/ch
 | **Group liveness**        | groups with daily collective activity |
 
 > North star: **70%+ consistency** across a group over 90 days — showing up, not perfection.
+
+The **consistency tracker** (§4) is the in-app surface for these metrics — what's measured for success is also what members and admins see, so the product and the goal stay aligned.

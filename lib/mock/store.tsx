@@ -43,10 +43,34 @@ type Action =
   | { type: "inviteMember"; name: string; groupId: string }
   | { type: "removeMember"; userId: string; groupId: string }
   | { type: "setMemberRole"; userId: string; groupId: string; role: MemberRole }
+  | {
+      type: "addUserToGroup";
+      userId: string;
+      groupId: string;
+      role: MemberRole;
+    }
+  | { type: "createGroup"; name: string; firstAdminId?: string }
+  | { type: "renameGroup"; groupId: string; name: string }
+  | { type: "deleteGroup"; groupId: string }
+  | { type: "setAppAdmin"; userId: string; value: boolean }
   | { type: "fastForwardDay" };
 
 let idSeq = 1000;
 const nextId = (p: string) => `${p}-${++idSeq}`;
+
+// Friendly, unambiguous invite codes (no 0/O/1/I): "FAJR-7K2".
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function makeInviteCode(name: string): string {
+  const prefix = name
+    .replace(/[^A-Za-z]/g, "")
+    .slice(0, 4)
+    .toUpperCase()
+    .padEnd(4, "X");
+  let suffix = "";
+  for (let i = 0; i < 3; i++)
+    suffix += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  return `${prefix}-${suffix}`;
+}
 
 function reducer(state: MockState, action: Action): MockState {
   switch (action.type) {
@@ -164,6 +188,86 @@ function reducer(state: MockState, action: Action): MockState {
         ),
       };
 
+    case "addUserToGroup": {
+      const existing = state.memberships.find(
+        (m) => m.userId === action.userId && m.groupId === action.groupId,
+      );
+      if (existing)
+        return {
+          ...state,
+          memberships: state.memberships.map((m) =>
+            m === existing ? { ...m, role: action.role } : m,
+          ),
+        };
+      return {
+        ...state,
+        memberships: [
+          ...state.memberships,
+          { userId: action.userId, groupId: action.groupId, role: action.role },
+        ],
+      };
+    }
+
+    case "createGroup": {
+      const id = nextId("g");
+      const group: Group = {
+        id,
+        name: action.name,
+        inviteCode: makeInviteCode(action.name),
+        createdBy: state.session.currentUserId,
+      };
+      const memberships = action.firstAdminId
+        ? [
+            ...state.memberships,
+            {
+              userId: action.firstAdminId,
+              groupId: id,
+              role: "group_admin" as MemberRole,
+            },
+          ]
+        : state.memberships;
+      return { ...state, groups: [...state.groups, group], memberships };
+    }
+
+    case "renameGroup":
+      return {
+        ...state,
+        groups: state.groups.map((g) =>
+          g.id === action.groupId ? { ...g, name: action.name || g.name } : g,
+        ),
+      };
+
+    case "deleteGroup": {
+      const groups = state.groups.filter((g) => g.id !== action.groupId);
+      const removedTaskIds = new Set(
+        state.tasks
+          .filter((t) => t.groupId === action.groupId)
+          .map((t) => t.id),
+      );
+      const activeGroupId =
+        state.session.activeGroupId === action.groupId
+          ? (groups[0]?.id ?? "")
+          : state.session.activeGroupId;
+      return {
+        ...state,
+        groups,
+        memberships: state.memberships.filter(
+          (m) => m.groupId !== action.groupId,
+        ),
+        tasks: state.tasks.filter((t) => t.groupId !== action.groupId),
+        logs: state.logs.filter((l) => !removedTaskIds.has(l.taskId)),
+        session: { ...state.session, activeGroupId },
+      };
+    }
+
+    case "setAppAdmin":
+      return {
+        ...state,
+        users: state.users.map((u) =>
+          u.id === action.userId ? { ...u, isAdmin: action.value } : u,
+        ),
+      };
+
     case "fastForwardDay": {
       // Demo: advance one day for the logged-in user, applying the
       // "never miss twice" forgiveness rule, then reset today's rings.
@@ -222,6 +326,11 @@ interface MockContextValue {
     inviteMember: (name: string, groupId: string) => void;
     removeMember: (userId: string, groupId: string) => void;
     setMemberRole: (userId: string, groupId: string, role: MemberRole) => void;
+    addUserToGroup: (userId: string, groupId: string, role: MemberRole) => void;
+    createGroup: (name: string, firstAdminId?: string) => void;
+    renameGroup: (groupId: string, name: string) => void;
+    deleteGroup: (groupId: string) => void;
+    setAppAdmin: (userId: string, value: boolean) => void;
     fastForwardDay: () => void;
   };
 }
@@ -317,6 +426,15 @@ export function MockStateProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: "removeMember", userId, groupId }),
       setMemberRole: (userId, groupId, role) =>
         dispatch({ type: "setMemberRole", userId, groupId, role }),
+      addUserToGroup: (userId, groupId, role) =>
+        dispatch({ type: "addUserToGroup", userId, groupId, role }),
+      createGroup: (name, firstAdminId) =>
+        dispatch({ type: "createGroup", name, firstAdminId }),
+      renameGroup: (groupId, name) =>
+        dispatch({ type: "renameGroup", groupId, name }),
+      deleteGroup: (groupId) => dispatch({ type: "deleteGroup", groupId }),
+      setAppAdmin: (userId, value) =>
+        dispatch({ type: "setAppAdmin", userId, value }),
       fastForwardDay: () => dispatch({ type: "fastForwardDay" }),
     }),
     [state.session.currentUserId],
@@ -419,4 +537,106 @@ export const sel = {
 
   streak: (s: MockState, userId: string) =>
     s.streaks.find((x) => x.userId === userId),
+
+  /** Every group a user belongs to, joined with their role in it (person-centric). */
+  userGroups: (s: MockState, userId: string) =>
+    s.memberships
+      .filter((m) => m.userId === userId)
+      .map((m) => ({ ...m, group: s.groups.find((g) => g.id === m.groupId)! }))
+      .filter((m) => m.group),
+
+  /** Users not currently in a group (candidates to add). */
+  nonMembers: (s: MockState, groupId: string): User[] =>
+    s.users.filter(
+      (u) =>
+        !s.memberships.some((m) => m.userId === u.id && m.groupId === groupId),
+    ),
+
+  /** Count of group_admins in a group (to protect the last admin). */
+  adminCount: (s: MockState, groupId: string): number =>
+    s.memberships.filter(
+      (m) => m.groupId === groupId && m.role === "group_admin",
+    ).length,
+
+  // ---- Consistency tracker (CET-16) ----------------------------------------
+
+  /** One user's completion for one date: how many of the group's tasks they
+   *  fully closed (rings completed), plus whether the whole day was complete. */
+  dayCompletion: (
+    s: MockState,
+    userId: string,
+    groupId: string,
+    date: string,
+  ): {
+    closed: number;
+    total: number;
+    pct: number;
+    full: boolean;
+    active: boolean;
+  } => {
+    const tasks = s.tasks.filter((t) => t.groupId === groupId);
+    if (!tasks.length)
+      return { closed: 0, total: 0, pct: 0, full: false, active: false };
+    let closed = 0;
+    let active = false;
+    for (const t of tasks) {
+      const c = s.logs
+        .filter(
+          (l) => l.userId === userId && l.taskId === t.id && l.date === date,
+        )
+        .reduce((sum, l) => sum + l.count, 0);
+      if (c > 0) active = true;
+      if (c >= t.targetCount) closed++;
+    }
+    return {
+      closed,
+      total: tasks.length,
+      pct: closed / tasks.length,
+      full: closed === tasks.length,
+      active,
+    };
+  },
+
+  /** Last `days` days of completion, oldest → newest (for the heatmap). */
+  heatmap: (s: MockState, userId: string, groupId: string, days: number) =>
+    Array.from({ length: days }, (_, i) => {
+      const date = isoDate(days - 1 - i);
+      return { date, ...sel.dayCompletion(s, userId, groupId, date) };
+    }),
+
+  /** Consistency = % of the last `days` days fully completed (all rings closed). */
+  consistency: (
+    s: MockState,
+    userId: string,
+    groupId: string,
+    days: number,
+  ): number => {
+    let full = 0;
+    for (let i = 0; i < days; i++) {
+      if (sel.dayCompletion(s, userId, groupId, isoDate(i)).full) full++;
+    }
+    return Math.round((full / days) * 100);
+  },
+
+  /** Per-member consistency for the group-admin oversight view (sorted desc). */
+  memberConsistency: (s: MockState, groupId: string, days: number) =>
+    sel
+      .groupMembers(s, groupId)
+      .map((m) => ({
+        ...m,
+        score: sel.consistency(s, m.userId, groupId, days),
+        streak: s.streaks.find((x) => x.userId === m.userId)?.current ?? 0,
+      }))
+      .sort((a, b) => b.score - a.score),
+
+  /** Group collective consistency = mean of members' scores over `days`. */
+  groupConsistency: (s: MockState, groupId: string, days: number): number => {
+    const members = sel.groupMembers(s, groupId);
+    if (!members.length) return 0;
+    const sum = members.reduce(
+      (acc, m) => acc + sel.consistency(s, m.userId, groupId, days),
+      0,
+    );
+    return Math.round(sum / members.length);
+  },
 };

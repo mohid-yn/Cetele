@@ -171,6 +171,7 @@ for t in [
     ("Live collective counter", "real-time group total (\"41,300 / 100,000 today\") via Supabase Realtime"),
     ("Streaks", "personal daily streak; \"never miss twice\" forgiveness (1 streak-freeze)"),
     ("Group leaderboard", "rank members by consistency/completion this week"),
+    ("Consistency tracker", "how steadfast each member is over time (the North Star, made visible in-app): a GitHub-style calendar heatmap of daily completion (green intensity = % of that day's tasks closed) + a headline consistency score (% of days fully completed over 7 / 30 / 90 days) + longest streak. Three views — personal (self-reflection), group-admin oversight (every member's consistency, to spot who's slipping and follow up), and group collective rollup (the group's 90-day figure, shown to all). Distinct from streaks (momentum) and the leaderboard (this-week rank): the pattern over time. Derived from logs vs targets; forgiveness-framed, no FOMO."),
     ("Variable-reward milestones", "occasional surprise animation / du'a at random milestones"),
 ]:
     A(bullet([B(t[0] + " — "), N(t[1])]))
@@ -189,6 +190,7 @@ A(table([
     ["Variable reward", "dopamine", "Surprise milestone reveals"],
     ["Social proof", "accountability", "Live group counter + leaderboard"],
     ["Identity", "durable", "\"You're someone who does dhikr daily\" framing"],
+    ["Steadfastness", "durable", "Consistency tracker — heatmap + 7/30/90-day score (personal, admin, group)"],
     ["Forgiveness", "durable", "Never-miss-twice + streak freeze"],
     ["Real accountability", "durable", "Visible group peers (the cetele itself)"],
 ], widths=[2600, 2200, 4560]))
@@ -206,6 +208,8 @@ for t in [
 ]:
     A(bullet([B(t[0] + " — "), N(t[1])]))
 A(normal([I("Row-Level Security on every table: members read their group, admins write their group.")],
+         spacing_before=60))
+A(normal([B("Consistency tracker"), N(" needs no new table — derived from logs (count per user / item / date) vs each item's target_count: a day's completion % = closed rings ÷ total tasks; the 7/30/90-day score = % of days fully completed; the group rollup aggregates across members. Optionally precompute a daily_completion materialized view (user_id, group_id, date, pct) for scale.")],
          spacing_before=60))
 A(hrule())
 
@@ -236,6 +240,8 @@ A(table([
 ], widths=[3400, 5960]))
 A(normal([B("North star: "), N("70%+ consistency across a group over 90 days — showing up, not perfection.")],
          shading=ACCENT_LT, spacing_before=40))
+A(normal([N("The consistency tracker (§4) is the in-app surface for these metrics — what's measured for success is also what members and admins see, so the product and the goal stay aligned.")],
+         spacing_before=40))
 
 document_body = "".join(body)
 
