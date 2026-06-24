@@ -179,8 +179,19 @@ A(heading("v1.1 — fast-follow", 2))
 A(bullet([B("Push notifications — "), N("daily nudges via Web Push + service worker (VAPID keys), sent from a Vercel cron / Supabase Edge Function. Works on Android & desktop; iOS only on 16.4+ as an installed PWA")]))
 A(bullet([B("Email reminders — "), N("reliable fallback (Supabase/Resend) for users who don't install or are on older iOS")]))
 A(bullet([B("Habit-stacking reminders — "), N("\"After Fajr…\"")]))
+A(heading("v2 — retention deepening (research-backed)", 2))
+A(normal([N("From research/03-feature-recommendations.md (links the motivation science in research/02 to the competitive gaps in research/01). Top priority is to promote two already-scoped items: variable-reward milestones (v1) and reminders + habit-stacking (v1.1).")]))
+for t in [
+    ("Group garden (collective living artefact)", "a shared garden per circle that grows as the group completes its rings and goes calmly dormant (never shaming) when activity drops. The emotional/identity layer Cetele lacks — built on the group, not a solo avatar, so it reinforces accountability; jannah/garden imagery suits a worship app. Optional personal “your corner” plant. Levers: ownership + relatedness; precedent: Finch / Forest."),
+    ("One-tap peer reactions", "send a quick dua / “barakAllahu feek” / heart when a peer closes their rings. Near-zero-effort relatedness spark. Precedent: Strava kudos."),
+    ("Fresh-start re-engagement", "re-invite lapsed members on temporal landmarks (Hijri new month, Ramadan, week start) with a clean-slate framing. Lever: fresh-start effect."),
+    ("Achievement badges", "streak landmarks (7 / 30 / 100 days) + monthly awards; earned and escalating, never saturating. Precedent: Apple Fitness awards."),
+    ("Endowed-progress onboarding", "new members/groups start visibly “part-way” so day one feels like momentum, not a cold start. Lever: endowed-progress effect."),
+    ("Winnable sub-group / pair goals", "shared goals for two friends or a sub-group instead of one whole-group ranking, keeping competition winnable and intrinsic."),
+]:
+    A(bullet([B(t[0] + " — "), N(t[1])]))
 A(heading("Later / maybe", 2))
-A(bullet("Multiple groups per user · weekly group goals · history/stats charts · Ramadan mode · audio dhikr"))
+A(bullet("Multiple groups per user · weekly group goals · history/stats charts · Ramadan mode · audio dhikr · levels/XP · avatar & theme customisation"))
 A(hrule())
 
 A(heading("5. Retention mechanics (where each lever lives)", 1))
@@ -193,6 +204,10 @@ A(table([
     ["Steadfastness", "durable", "Consistency tracker — heatmap + 7/30/90-day score (personal, admin, group)"],
     ["Forgiveness", "durable", "Never-miss-twice + streak freeze"],
     ["Real accountability", "durable", "Visible group peers (the cetele itself)"],
+    ["Trigger", "dopamine", "(v1.1) Daily reminders + habit-stacking (\"after Fajr…\")"],
+    ["Ownership", "durable", "(v2) Group garden — a collective artefact that grows with the group"],
+    ["Peer encouragement", "accountability", "(v2) One-tap dua / kudos reactions on a peer's completion"],
+    ["Re-engagement", "durable", "(v2) Fresh-start prompts (Hijri new month, Ramadan, week start)"],
 ], widths=[2600, 2200, 4560]))
 A(hrule())
 

@@ -83,6 +83,12 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 | 10  | [CET-10](https://linear.app/mohidkz/issue/CET-10) | Variable-reward milestones                            | ⏸️ deferred                     |
 | 16  | [CET-16](https://linear.app/mohidkz/issue/CET-16) | Consistency tracker (heatmap + 7/30/90 score) — D21   | 🟡 mock built; backend deferred |
 | —   | [CET-11](https://linear.app/mohidkz/issue/CET-11) | _(v1.1)_ Push notifications + email reminders         | ⏸️ deferred                     |
+| 17  | [CET-17](https://linear.app/mohidkz/issue/CET-17) | _(v2)_ Group garden — collective living artefact      | 📋 backlog (research-backed)    |
+| 18  | [CET-18](https://linear.app/mohidkz/issue/CET-18) | _(v2)_ One-tap peer reactions (dua / kudos)           | 📋 backlog                      |
+| 19  | [CET-19](https://linear.app/mohidkz/issue/CET-19) | _(v2)_ Fresh-start re-engagement                      | 📋 backlog                      |
+| 20  | [CET-20](https://linear.app/mohidkz/issue/CET-20) | _(v2)_ Achievement badges (streak + monthly)          | 📋 backlog                      |
+| 21  | [CET-21](https://linear.app/mohidkz/issue/CET-21) | _(v2)_ Endowed-progress onboarding                    | 📋 backlog                      |
+| 22  | [CET-22](https://linear.app/mohidkz/issue/CET-22) | _(v2)_ Winnable sub-group / pair goals                | 📋 backlog                      |
 
 ---
 
@@ -94,4 +100,5 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 
 ## Open questions / parking lot
 
+- **Retention research → `research/`** (2026-06-25): `01-competitive-landscape.md` (gap analysis vs Duolingo/Habitica/Finch/Forest/Streaks + Muslim Salah apps), `02-motivation-and-reward-design.md` (dopamine/SDT/Fogg/Hook/Octalysis → reward ladder + level-of-abstraction rules + ethics), and `03-feature-recommendations.md` (the synthesis/decision doc → prioritised "what to build", incl. the **group garden** = the "accountability pet" evolved to a collective form). **Now documented as features:** `docs/PRD.md` §4 (new **v2 — retention deepening** section) + §5 levers, and **Linear CET-17…CET-22**. Top priority per research = promote the already-scoped **CET-10** (variable-reward milestones) + **CET-11** (reminders + habit-stacking). Still TODO: fold the abstraction rules (research/02 §C) into `docs/UI_PRACTICES.md`.
 - Deployment Protection is **on** for project-scoped / branch-preview URLs (they 401/redirect to SSO unless signed in to Vercel) — fine for solo review; to share a preview with the **product owner**, either disable it (Vercel → Settings → Deployment Protection), use a Protection-Bypass shareable link, or merge to `main` (prod is public). **Production now serves the full 2nd-round mock** (emerald/gold re-theme, consistency tracker, admin + group-admin flows) at [cetele-iota.vercel.app](https://cetele-iota.vercel.app).

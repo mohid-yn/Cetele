@@ -66,9 +66,20 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **Email reminders** — reliable fallback (Supabase/Resend) for users who don't install or are on older iOS
 - Habit-stacking reminders ("After Fajr…")
 
+### 🌱 v2 — retention deepening (research-backed)
+
+> From [`research/03-feature-recommendations.md`](../research/03-feature-recommendations.md), which links the motivation science (`research/02`) to the competitive gaps (`research/01`). Ordered by impact ÷ effort. **Two already-scoped items are the research's _top_ priority — promote them:** variable-reward milestones (strongest dopamine lever, v1) and reminders + habit-stacking (the missing trigger, v1.1).
+
+- **Group garden (collective living artefact)** — a shared garden per circle that **grows as the group completes its rings** and goes calmly dormant (never shaming) when activity drops. The emotional/identity layer Cetele lacks — built on the **group**, not a solo avatar, so it reinforces accountability; _jannah_/garden imagery suits a worship app. Optional personal "your corner" plant feeds the shared garden. _Levers: ownership + relatedness; precedent: Finch / Forest._
+- **One-tap peer reactions** — send a quick **dua / "barakAllahu feek" / ❤️** when a peer closes their rings. Near-zero-effort relatedness spark. _Precedent: Strava kudos._
+- **Fresh-start re-engagement** — re-invite lapsed members on temporal landmarks (**Hijri new month, Ramadan, week start**) with a clean-slate framing. _Lever: fresh-start effect._
+- **Achievement badges** — streak landmarks (7 / 30 / 100 days) + monthly awards; earned and escalating, never saturating. _Precedent: Apple Fitness awards._
+- **Endowed-progress onboarding** — new members/groups start visibly **"part-way"** (a pre-filled first contribution, the group goal already moving) so day one feels like momentum, not a cold start. _Lever: endowed-progress effect._
+- **Winnable sub-group / pair goals** — shared goals for two friends or a sub-group instead of one whole-group ranking, keeping competition **winnable** and intrinsic.
+
 ### 💡 Later / maybe
 
-- Multiple groups per user · weekly group goals · history/stats charts · ramadan mode · audio dhikr
+- Multiple groups per user · weekly group goals · history/stats charts · ramadan mode · audio dhikr · levels/XP · avatar & theme customisation
 
 ---
 
@@ -83,6 +94,10 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 | Steadfastness       | durable        | **Consistency tracker** — heatmap + 7/30/90-day score (personal, admin, group) |
 | Forgiveness         | durable        | Never-miss-twice + streak freeze                                               |
 | Real accountability | durable        | Visible group peers (the _cetele_ itself)                                      |
+| Trigger             | dopamine       | _(v1.1)_ Daily reminders + habit-stacking ("after Fajr…")                      |
+| Ownership           | durable        | _(v2)_ Group garden — a collective artefact that grows with the group          |
+| Peer encouragement  | accountability | _(v2)_ One-tap dua / kudos reactions on a peer's completion                    |
+| Re-engagement       | durable        | _(v2)_ Fresh-start prompts (Hijri new month, Ramadan, week start)              |
 
 ---
 
