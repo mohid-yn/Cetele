@@ -54,32 +54,35 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 - [x] Automated linting — **husky** pre-commit (`lint-staged` → `eslint --fix` on staged files) + **GitHub Actions CI** (`.github/workflows/ci.yml`: lint + typecheck + build on push/PR). Token contract now blocks bad commits locally _and_ in CI.
 - [x] **CET-13** — Dev tooling & workflow: **Prettier** + tailwind class sort wired into lint-staged & CI `format:check`; `gh` 2.95.0 + Vercel CLI 54.15.0 installed; solo branch-per-issue / PRs-optional workflow adopted (D16); `cet-12` merged → `main` and branches deleted. **Vercel linked** (project `cetele`, GitHub repo connected → auto-deploy on push + branch previews). **Live:** [cetele-iota.vercel.app](https://cetele-iota.vercel.app) (production, public, HTTP 200).
 - [x] **CET-14** — **Clickable frontend mock (no backend)** for product validation (D18). In-memory + `localStorage` store (`lib/mock/{types,data,store}`), simulated Realtime ticker. Screens: login + onboarding, `/today` (rings + streak + live counter), `/count/[taskId]` (tap pad + haptics + sound + confetti/milestone), `/leaderboard`, `/group` + `/group/manage` (task & member editor), `/admin` console. **Demo Controls** panel (role switcher, reset, fast-forward day, trigger milestone, ribbon). `build`/`lint`/`tsc`/`format:check` green. **Merged → `main`, branch deleted; live in production** at [cetele-iota.vercel.app](https://cetele-iota.vercel.app) (public) for product-owner review.
-- [ ] **CET-15** — **Responsive + theming + colour research** (D19, amends D13). Research-backed `docs/UI_PRACTICES.md`; responsive shell (mobile bottom-nav ↔ desktop sidebar, 2-col on `lg`); light/dark theme toggle (system/light/dark, no-flash, persisted) + desaturated dark hues; green promoted to the completion/growth semantic. `build`/`lint`/`tsc`/`format:check` green. _(branch `mohidkhanzada/cet-15-responsive-theming` — awaiting review before merge)_
-- [ ] **Admin & group-admin flows fleshed out in the mock** (product-owner feedback; CET-4/CET-5 surfaces, role system D9). New `Dialog`/`ConfirmDialog` primitives (`components/ui/dialog.tsx`) replace native `confirm()`. **App admin console** (`/admin`) rebuilt: group **create / rename / delete**, assign group-admins, + a person-centric **PersonDialog** to manage any user's roles/memberships/app-admin across groups. **Group-admin manage** (`/group/manage`) rebuilt: Member/Admin `RoleToggle` with **self + last-admin guards**, realistic invite (share link + code + add-existing/add-new), tasks scoped to the group, rename. New store actions `createGroup`/`renameGroup`/`deleteGroup`/`setAppAdmin`/`addUserToGroup` + selectors `userGroups`/`nonMembers`/`adminCount`. Verified via Playwright (mobile + desktop, dialogs). `build`/`lint`/`tsc`/`format:check` green. _(on the `cet-15` branch with the rest of this session's work)_
+- [x] **CET-15 + 2nd UI-feedback round** — **Merged → `main`, branch deleted; live in production.** Shipped together (3 commits):
+  - **CET-15 / D20** — responsive shell + **re-theme to emerald + gold on white** (light-first; Youth Nexus dropped). Research in `docs/UI_PRACTICES.md`; deepened elevation; emerald progress rings; PWA icons re-skinned.
+  - **CET-16 / D21** — **consistency tracker** mock: `/progress` heatmap + 7/30/90 score + group rollup + admin oversight; 90-day seed; PRD §4/§5/§6/§9 + `.docx`.
+  - **Admin & group-admin flows** (CET-4/CET-5 surfaces, role system D9): `Dialog`/`ConfirmDialog` primitives replace `confirm()`; **app admin console** (`/admin`) create/rename/delete groups + assign admins + person-centric **PersonDialog**; **group-admin manage** (`/group/manage`) Member/Admin `RoleToggle` with self + last-admin guards, realistic invite (link + code + add existing/new), scoped tasks, rename. Store actions `createGroup`/`renameGroup`/`deleteGroup`/`setAppAdmin`/`addUserToGroup` + selectors `userGroups`/`nonMembers`/`adminCount`.
+  - All verified via Playwright (mobile 390 + desktop 1280, incl. dialogs); `build`/`lint`/`tsc`/`format:check` green.
 
 ### Next steps (ordered) — tracked in Linear
 
-> **Pivot (D18) — current focus:** we are in the **mock-first validation** loop, _not_ backend yet. **CET-14** mock shipped to production. **CET-15** (responsive + theming + colour, from the first UI-feedback round) is **awaiting review/merge**. The immediate path is: merge CET-15 → **product-owner review of the live mock** → fold requirement changes into `docs/PRD.md`. **CET-2 (Supabase) onward resumes only after requirements lock.**
+> **Pivot (D18) — current focus:** we are in the **mock-first validation** loop, _not_ backend yet. **CET-14**, **CET-15**, the **consistency tracker (CET-16)**, and the **admin/group-admin flows** are all **merged and live in production**. The immediate path is now: **product-owner review of the live mock** (all roles + the new admin/consistency screens) → fold requirement changes into `docs/PRD.md` → **lock requirements**. **CET-2 (Supabase) onward resumes only after requirements lock.**
 
-| #   | Issue                                             | Feature                                             | State                           |
-| --- | ------------------------------------------------- | --------------------------------------------------- | ------------------------------- |
-| —   | [CET-1](https://linear.app/mohidkz/issue/CET-1)   | Scaffold Next.js app + PWA                          | ✅ Done                         |
-| —   | CET-12                                            | Youth Nexus design system                           | ✅ Done                         |
-| —   | CET-13                                            | Dev tooling & workflow; Vercel linked               | ✅ Done                         |
-| —   | CET-14                                            | Clickable frontend mock (no backend) — D18          | ✅ Done (live in prod)          |
-| —   | CET-15                                            | Responsive + theming + colour research — D19        | 🟣 In review (branch pushed)    |
-| →   | _product-owner review → PRD updates_              | gauge reactions on the live mock; lock requirements | ⏭️ **next**                     |
-| 2   | [CET-2](https://linear.app/mohidkz/issue/CET-2)   | Supabase: schema + Row-Level Security               | ⏸️ deferred until req. lock     |
-| 3   | [CET-3](https://linear.app/mohidkz/issue/CET-3)   | Auth: Google OAuth + email magic link               | ⏸️ deferred                     |
-| 4   | [CET-4](https://linear.app/mohidkz/issue/CET-4)   | Groups: create / invite / join + roles              | ⏸️ deferred                     |
-| 5   | [CET-5](https://linear.app/mohidkz/issue/CET-5)   | Admin task-list editor                              | ⏸️ deferred                     |
-| 6   | [CET-6](https://linear.app/mohidkz/issue/CET-6)   | Tap counter + progress rings                        | ⏸️ deferred                     |
-| 7   | [CET-7](https://linear.app/mohidkz/issue/CET-7)   | Live collective group counter (Realtime)            | ⏸️ deferred                     |
-| 8   | [CET-8](https://linear.app/mohidkz/issue/CET-8)   | Streaks + never-miss-twice forgiveness              | ⏸️ deferred                     |
-| 9   | [CET-9](https://linear.app/mohidkz/issue/CET-9)   | Group leaderboard                                   | ⏸️ deferred                     |
-| 10  | [CET-10](https://linear.app/mohidkz/issue/CET-10) | Variable-reward milestones                          | ⏸️ deferred                     |
-| 16  | [CET-16](https://linear.app/mohidkz/issue/CET-16) | Consistency tracker (heatmap + 7/30/90 score) — D21 | 🟡 mock built; backend deferred |
-| —   | [CET-11](https://linear.app/mohidkz/issue/CET-11) | _(v1.1)_ Push notifications + email reminders       | ⏸️ deferred                     |
+| #   | Issue                                             | Feature                                               | State                           |
+| --- | ------------------------------------------------- | ----------------------------------------------------- | ------------------------------- |
+| —   | [CET-1](https://linear.app/mohidkz/issue/CET-1)   | Scaffold Next.js app + PWA                            | ✅ Done                         |
+| —   | CET-12                                            | Youth Nexus design system                             | ✅ Done                         |
+| —   | CET-13                                            | Dev tooling & workflow; Vercel linked                 | ✅ Done                         |
+| —   | CET-14                                            | Clickable frontend mock (no backend) — D18            | ✅ Done (live in prod)          |
+| —   | CET-15                                            | Responsive + theming; re-theme emerald/gold — D19/D20 | ✅ Done (live in prod)          |
+| →   | _product-owner review → PRD updates_              | gauge reactions on the live mock; lock requirements   | ⏭️ **next**                     |
+| 2   | [CET-2](https://linear.app/mohidkz/issue/CET-2)   | Supabase: schema + Row-Level Security                 | ⏸️ deferred until req. lock     |
+| 3   | [CET-3](https://linear.app/mohidkz/issue/CET-3)   | Auth: Google OAuth + email magic link                 | ⏸️ deferred                     |
+| 4   | [CET-4](https://linear.app/mohidkz/issue/CET-4)   | Groups: create / invite / join + roles                | ⏸️ deferred                     |
+| 5   | [CET-5](https://linear.app/mohidkz/issue/CET-5)   | Admin task-list editor                                | ⏸️ deferred                     |
+| 6   | [CET-6](https://linear.app/mohidkz/issue/CET-6)   | Tap counter + progress rings                          | ⏸️ deferred                     |
+| 7   | [CET-7](https://linear.app/mohidkz/issue/CET-7)   | Live collective group counter (Realtime)              | ⏸️ deferred                     |
+| 8   | [CET-8](https://linear.app/mohidkz/issue/CET-8)   | Streaks + never-miss-twice forgiveness                | ⏸️ deferred                     |
+| 9   | [CET-9](https://linear.app/mohidkz/issue/CET-9)   | Group leaderboard                                     | ⏸️ deferred                     |
+| 10  | [CET-10](https://linear.app/mohidkz/issue/CET-10) | Variable-reward milestones                            | ⏸️ deferred                     |
+| 16  | [CET-16](https://linear.app/mohidkz/issue/CET-16) | Consistency tracker (heatmap + 7/30/90 score) — D21   | 🟡 mock built; backend deferred |
+| —   | [CET-11](https://linear.app/mohidkz/issue/CET-11) | _(v1.1)_ Push notifications + email reminders         | ⏸️ deferred                     |
 
 ---
 
@@ -87,8 +90,8 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 
 - Team: **`CET`** — https://linear.app/mohidkz/team/CET/overview
 - Track every v1 feature as an issue; update issue state as work completes.
-- **⚠️ Out of sync — needs action:** **CET-14** and **CET-15** are **not yet created in Linear** (the work shipped/branched ahead of the issue). The Linear MCP needs authorising first — run `/mcp` → **"claude.ai Linear"**. Once authed: create **CET-14** (Done) and **CET-15** (In Review), and flip CET-2…CET-11 to a "deferred / blocked on requirements lock" state to match D18.
+- **In sync (2026-06-24):** Linear MCP authed; CET-14 (Done), CET-15 (Done), CET-16 (consistency tracker — In Progress, mock built) all present. Admin/group-admin flow notes added as a comment on CET-14.
 
 ## Open questions / parking lot
 
-- Deployment Protection is **on** for project-scoped / branch-preview URLs (they 401/redirect to SSO unless signed in to Vercel) — fine for solo review; to share a preview with the **product owner**, either disable it (Vercel → Settings → Deployment Protection), use a Protection-Bypass shareable link, or merge to `main` (prod is public). Production currently serves the **CET-14** mock; **CET-15** lands in prod on merge.
+- Deployment Protection is **on** for project-scoped / branch-preview URLs (they 401/redirect to SSO unless signed in to Vercel) — fine for solo review; to share a preview with the **product owner**, either disable it (Vercel → Settings → Deployment Protection), use a Protection-Bypass shareable link, or merge to `main` (prod is public). **Production now serves the full 2nd-round mock** (emerald/gold re-theme, consistency tracker, admin + group-admin flows) at [cetele-iota.vercel.app](https://cetele-iota.vercel.app).
