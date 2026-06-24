@@ -13,3 +13,9 @@ export { Avatar, avatarVariants, type AvatarProps } from "./avatar";
 export { ProgressRing, type ProgressRingProps } from "./progress-ring";
 export { Stat, type StatProps } from "./stat";
 export { Spinner } from "./spinner";
+export {
+  Dialog,
+  ConfirmDialog,
+  type DialogProps,
+  type ConfirmDialogProps,
+} from "./dialog";
