@@ -5,6 +5,7 @@ import { Avatar, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
 import { FlameIcon } from "@/components/demo/icons";
+import { PairGoal } from "@/components/demo/pair-goal";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -24,6 +25,14 @@ export default function LeaderboardPage() {
           {group.name} · this week · by consistency
         </p>
       </header>
+
+      {/* Winnable pair goal (CET-22) — the intrinsic counterpart to the rank */}
+      <PairGoal />
+
+      <p className="text-xs text-muted-foreground">
+        The ranking is for fun — the pair goal above is the one you win
+        together.
+      </p>
 
       <ol className="flex flex-col gap-2">
         {rows.map((row, i) => {
