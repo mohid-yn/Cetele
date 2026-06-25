@@ -64,6 +64,8 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 - [x] **CET-23** — **Group switcher** (multi-group context for group-admins / app-admins). Slack/Notion workspace-switcher pattern on the active-group name; role chips; single-group → plain label. Seed: `u-1` admins both circles. **Merged → `main`, branch deleted; live in production.**
 - [x] **Retention features built into the mock (D22 — CET-11, CET-17…CET-22).** Store foundations (reactions, badges, pair, garden selectors; `STORAGE_VERSION`→4), reminders + habit-stacking, group garden, peer reactions, fresh-start banner, badges, endowed-progress onboarding, winnable pair goals, abstraction-pass GLANCE headline. Plus a **resilient-hydration fix** (backfill missing localStorage keys) and a **motion + life pass** (garden grows/sways/blooms; `rise-in` reveals; count-ups; `prefers-reduced-motion` guard).
 - [x] **IA restructure → professional tier (D23).** Each screen given one job; shared primitives extracted (`PageHeader`/`SectionHeading`/`StreakChip`/`MemberRow`/`Segmented`); nav → 4 tabs. **Merged → `main`, branch deleted; live in production** at [cetele-iota.vercel.app](https://cetele-iota.vercel.app).
+- [x] **Count-screen UX fix** (product-owner feedback). `/count/[taskId]`: **"Done" → "Mark done"** that fills the ring to target, celebrates, and returns (one tap actually completes a task); **"+10" only shown when >10 remain** so it can never overshoot; convenience buttons snap exactly to target; manual taps stay uncapped; closed ring → single "Back to today". **Merged → `main`, branch deleted; live in production.**
+- [ ] **Hydration-warning fix** — `suppressHydrationWarning` on `<html>` (the no-flash theme script intentionally toggles `.dark` pre-hydration; standard theme-script fix, dev-only console noise). `build`/`lint`/`tsc` green. _(branch `mohidkhanzada/hydration-fix`, pushed — **awaiting product-owner confirm before merge → prod**, per D16)_
 
 ### Next steps (ordered) — tracked in Linear
 
@@ -102,7 +104,7 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 
 - Team: **`CET`** — https://linear.app/mohidkz/team/CET/overview
 - Track every v1 feature as an issue; update issue state as work completes.
-- **In sync (2026-06-24):** Linear MCP authed; CET-14 (Done), CET-15 (Done), CET-16 (consistency tracker — In Progress, mock built) all present. Admin/group-admin flow notes added as a comment on CET-14.
+- **In sync (2026-06-25):** CET-23 (group switcher) **Done**; CET-11 + CET-17…CET-22 (retention features) **In Progress** (mock built, backend deferred). D22 (retention mock), D23 (IA restructure), the count-screen UX fix, and the hydration fix recorded as comments on **CET-14** (the mock issue). Small mock fixes (count UX, hydration) are tracked under CET-14 rather than new issues — they're refinements to the prototype, not new features.
 
 ## Open questions / parking lot
 
