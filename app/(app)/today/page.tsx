@@ -23,6 +23,21 @@ export default function TodayPage() {
 
   const firstName = me.name.split(" ")[0];
 
+  // Abstraction pass (UI_PRACTICES §C / research 02 §C): one GLANCE headline
+  // that turns the raw counts into meaning and leads with the *unfinished*.
+  const closed = tasks.filter(
+    (t) => sel.todayCount(state, me.id, t.id) >= t.targetCount,
+  ).length;
+  const left = tasks.length - closed;
+  const glance =
+    tasks.length === 0
+      ? "No tasks yet"
+      : left === 0
+        ? "All rings closed today — mashaAllah 🎉"
+        : closed === 0
+          ? "A fresh page — start with one ring"
+          : `${left} ring${left === 1 ? "" : "s"} to close — you're almost there`;
+
   return (
     <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
       {/* Fresh-start re-engagement (CET-19) — shows on temporal landmarks */}
@@ -35,7 +50,9 @@ export default function TodayPage() {
           <h1 className="font-display text-2xl font-bold text-foreground">
             {firstName}
           </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{group.name}</p>
+          {/* GLANCE headline — meaning, not raw numbers */}
+          <p className="mt-0.5 text-sm font-medium text-foreground">{glance}</p>
+          <p className="text-xs text-muted-foreground">{group.name}</p>
         </div>
         <Badge variant="accent" size="md" className="gap-1 px-3 py-1.5 text-sm">
           <FlameIcon className="size-4" />
