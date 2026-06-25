@@ -2,14 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, Input } from "@/components/ui";
-import { UsersIcon, PlusIcon } from "@/components/demo/icons";
+import { Button, Card, Input, ProgressRing } from "@/components/ui";
+import { UsersIcon, PlusIcon, CheckIcon } from "@/components/demo/icons";
+
+type Mode = "choose" | "join" | "create" | "welcome";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [mode, setMode] = React.useState<"choose" | "join" | "create">(
-    "choose",
-  );
+  const [mode, setMode] = React.useState<Mode>("choose");
   const [code, setCode] = React.useState("FAJR-7K2");
   const [name, setName] = React.useState("");
 
@@ -76,7 +76,7 @@ export default function OnboardingPage() {
           <Button
             variant="accent"
             className="mt-3 w-full"
-            onClick={() => router.push("/today")}
+            onClick={() => setMode("welcome")}
           >
             Join group
           </Button>
@@ -104,7 +104,7 @@ export default function OnboardingPage() {
             variant="accent"
             className="mt-3 w-full"
             disabled={!name.trim()}
-            onClick={() => router.push("/today")}
+            onClick={() => setMode("welcome")}
           >
             Create &amp; continue
           </Button>
@@ -114,6 +114,57 @@ export default function OnboardingPage() {
             onClick={() => setMode("choose")}
           >
             Back
+          </Button>
+        </Card>
+      )}
+
+      {/* Endowed-progress onboarding (CET-21): day one already has momentum. */}
+      {mode === "welcome" && (
+        <Card className="p-5 text-center">
+          <p className="font-display text-lg font-bold text-foreground">
+            You&apos;re in! 🎉
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            And you&apos;re not starting from zero.
+          </p>
+
+          <div className="my-5 flex justify-center">
+            <ProgressRing value={2} max={5} size={120} thickness={12}>
+              <div className="text-center">
+                <span className="font-display text-2xl font-bold text-foreground tabular-nums">
+                  40%
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  today
+                </span>
+              </div>
+            </ProgressRing>
+          </div>
+
+          <p className="text-sm text-balance text-muted-foreground">
+            Your circle is already <strong>40% toward today&apos;s goal</strong>
+            , and we&apos;ve credited your first <strong>10 SubhanAllah</strong>{" "}
+            to get you moving. The chain has begun — keep it going.
+          </p>
+
+          <ul className="mt-4 flex flex-col gap-1.5 text-left text-sm">
+            {[
+              "Your first contribution is logged",
+              "Today's streak is started",
+            ].map((line) => (
+              <li key={line} className="flex items-center gap-2">
+                <CheckIcon className="size-4 shrink-0 text-success" />
+                <span className="text-muted-foreground">{line}</span>
+              </li>
+            ))}
+          </ul>
+
+          <Button
+            variant="accent"
+            className="mt-5 w-full"
+            onClick={() => router.push("/today")}
+          >
+            Start counting
           </Button>
         </Card>
       )}
