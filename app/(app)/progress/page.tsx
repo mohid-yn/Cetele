@@ -1,10 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardContent, Avatar } from "@/components/ui";
+import { Card, CardContent, Badge } from "@/components/ui";
 import { useMock, sel } from "@/lib/mock/store";
 import { ConsistencyHeatmap } from "@/components/demo/consistency-heatmap";
-import { FlameIcon } from "@/components/demo/icons";
+import { PageHeader } from "@/components/demo/page-header";
+import { SectionHeading } from "@/components/demo/section-heading";
+import { MemberRow } from "@/components/demo/member-row";
+import { BadgesGrid } from "@/components/demo/badges";
+import { FlameIcon, ShieldIcon } from "@/components/demo/icons";
 import { useAnimatedNumber } from "@/components/demo/use-animated-number";
 
 /** Small labelled metric used across the consistency views. */
@@ -51,7 +55,9 @@ export default function ProgressPage() {
   }, [state, me.id, group.id]);
 
   // Count-up on first paint so the page feels alive, not a static dashboard.
+  const c7Shown = useAnimatedNumber(c7, 600, true);
   const c30Shown = useAnimatedNumber(c30, 700, true);
+  const c90Shown = useAnimatedNumber(c90, 800, true);
   const groupShown = useAnimatedNumber(groupC90, 800, true);
 
   // GLANCE headline (abstraction rule): one warm, human takeaway up top.
@@ -67,54 +73,80 @@ export default function ProgressPage() {
 
   return (
     <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
-      <header>
-        <h1 className="font-display text-2xl font-bold text-foreground">
-          Consistency
-        </h1>
-        <p className="mt-0.5 text-sm text-balance text-muted-foreground">
-          You&apos;ve fully completed{" "}
-          <span className="font-semibold text-foreground">
-            {daysComplete30} of the last 30 days
-          </span>{" "}
-          — {tone}.
-        </p>
-      </header>
+      <PageHeader
+        title="Progress"
+        subtitle={
+          <span className="text-balance">
+            You&apos;ve fully completed{" "}
+            <span className="font-semibold text-foreground">
+              {daysComplete30} of the last 30 days
+            </span>{" "}
+            — {tone}.
+          </span>
+        }
+      />
+
+      {/* Streak hero — the motivational anchor (moved here from Profile) */}
+      <Card className="bg-primary p-5 text-primary-foreground">
+        <div className="flex items-center gap-4">
+          <div className="grid size-16 shrink-0 place-items-center rounded-full bg-primary-foreground/10">
+            <FlameIcon className="size-8 text-accent" />
+          </div>
+          <div>
+            <p className="font-display text-4xl font-bold tabular-nums">
+              {streak?.current ?? 0}
+            </p>
+            <p className="text-sm text-primary-foreground/70">day streak</p>
+          </div>
+          <div className="ml-auto text-right">
+            <p className="font-display text-2xl font-bold tabular-nums">
+              {streak?.longest ?? 0}
+            </p>
+            <p className="text-xs text-primary-foreground/70">longest</p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Never miss twice — forgiveness (moved here from Profile) */}
+      <Card className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-success-500/15 text-success">
+            <ShieldIcon className="size-5" />
+          </div>
+          <div className="flex-1">
+            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              Never miss twice
+              <Badge variant="success" size="sm">
+                {streak?.freezesLeft ?? 0} freeze
+                {(streak?.freezesLeft ?? 0) === 1 ? "" : "s"} left
+              </Badge>
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Miss a day and a streak-freeze keeps your streak alive — once. The
+              point is to come back, not to be perfect.
+            </p>
+          </div>
+        </div>
+      </Card>
 
       {/* Personal — heatmap + scores */}
       <Card>
         <CardContent className="flex flex-col gap-5 pt-6">
           <div className="grid grid-cols-3 gap-3">
+            <Score label="7-day" value={`${c7Shown}%`} sub="days completed" />
             <Score label="30-day" value={`${c30Shown}%`} sub="days completed" />
-            <Score
-              label="Current"
-              value={
-                <span className="flex items-center gap-1">
-                  <FlameIcon className="size-5 text-accent" />
-                  {streak?.current ?? 0}
-                </span>
-              }
-              sub="day streak"
-            />
-            <Score
-              label="Longest"
-              value={streak?.longest ?? 0}
-              sub="day streak"
-            />
+            <Score label="90-day" value={`${c90Shown}%`} sub="days completed" />
           </div>
 
           <div>
-            <div className="mb-2 flex items-baseline justify-between">
-              <h2 className="text-sm font-semibold text-foreground">
-                Last 90 days
-              </h2>
-              <span className="text-xs text-muted-foreground tabular-nums">
-                7d {c7}% · 30d {c30}% · 90d {c90}%
-              </span>
-            </div>
+            <SectionHeading>Last 90 days</SectionHeading>
             <ConsistencyHeatmap data={heat} />
           </div>
         </CardContent>
       </Card>
+
+      {/* Achievement badges (CET-20) — moved here from Profile */}
+      <BadgesGrid />
 
       {/* Group collective rollup — shown to everyone (the North Star, visible) */}
       <Card>
@@ -144,36 +176,28 @@ export default function ProgressPage() {
       {/* Group-admin oversight — every member's consistency (accountability) */}
       {showOversight && (
         <section>
-          <h2 className="mb-2 text-sm font-semibold text-foreground">
-            Member consistency · last 30 days
-          </h2>
+          <SectionHeading>Member consistency · last 30 days</SectionHeading>
           <Card>
             <CardContent className="flex flex-col gap-3 pt-6">
               {members.map((m) => (
-                <div key={m.userId} className="flex items-center gap-3">
-                  <Avatar name={m.user.name} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium text-foreground">
-                        {m.user.name.split(" ")[0]}
-                        {m.userId === me.id && (
-                          <span className="ml-1.5 text-xs text-muted-foreground">
-                            (you)
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-sm font-semibold text-foreground tabular-nums">
-                        {m.score}%
-                      </span>
-                    </div>
-                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+                <MemberRow
+                  key={m.userId}
+                  name={m.user.name.split(" ")[0]}
+                  you={m.userId === me.id}
+                  status={
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full bg-primary"
                         style={{ width: `${m.score}%` }}
                       />
                     </div>
-                  </div>
-                </div>
+                  }
+                  trailing={
+                    <span className="text-sm font-semibold text-foreground tabular-nums">
+                      {m.score}%
+                    </span>
+                  }
+                />
               ))}
             </CardContent>
           </Card>

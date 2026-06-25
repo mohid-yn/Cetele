@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar, Badge, Button, Card } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
-import { FlameIcon, ShieldIcon } from "@/components/demo/icons";
+import { FlameIcon, ChevronRightIcon } from "@/components/demo/icons";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Reminders } from "@/components/demo/reminders";
-import { BadgesGrid } from "@/components/demo/badges";
 
 function Toggle({
   label,
@@ -77,51 +77,29 @@ export default function ProfilePage() {
         </p>
       </header>
 
-      {/* Streak hero */}
-      <Card className="bg-primary p-5 text-primary-foreground">
-        <div className="flex items-center gap-4">
-          <div className="grid size-16 shrink-0 place-items-center rounded-full bg-primary-foreground/10">
-            <FlameIcon className="size-8 text-accent" />
+      {/* Streak / badges / consistency now live on Progress — link there */}
+      <Link
+        href="/progress"
+        className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:bg-muted/50"
+      >
+        <div className="flex items-center gap-3">
+          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-primary-700">
+            <FlameIcon className="size-5" />
           </div>
           <div>
-            <p className="font-display text-4xl font-bold tabular-nums">
-              {streak?.current ?? 0}
+            <p className="text-sm font-semibold text-foreground">
+              Streak, badges &amp; consistency
             </p>
-            <p className="text-sm text-primary-foreground/70">day streak</p>
-          </div>
-          <div className="ml-auto text-right">
-            <p className="font-display text-2xl font-bold tabular-nums">
-              {streak?.longest ?? 0}
-            </p>
-            <p className="text-xs text-primary-foreground/70">longest</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Achievement badges (CET-20) */}
-      <BadgesGrid />
-
-      {/* Never miss twice */}
-      <Card className="p-4">
-        <div className="flex items-start gap-3">
-          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-success-500/15 text-success">
-            <ShieldIcon className="size-5" />
-          </div>
-          <div className="flex-1">
-            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              Never miss twice
-              <Badge variant="success" size="sm">
-                {streak?.freezesLeft ?? 0} freeze
-                {(streak?.freezesLeft ?? 0) === 1 ? "" : "s"} left
-              </Badge>
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Miss a day and a streak-freeze keeps your streak alive — once. The
-              point is to come back, not to be perfect.
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {streak?.current ?? 0}-day streak · view your Progress
             </p>
           </div>
         </div>
-      </Card>
+        <ChevronRightIcon className="size-5 text-muted-foreground" />
+      </Link>
+
+      {/* Reminders + habit-stacking (CET-11) */}
+      <Reminders />
 
       {/* Appearance */}
       <section>
@@ -138,9 +116,6 @@ export default function ProfilePage() {
           <ThemeToggle />
         </Card>
       </section>
-
-      {/* Reminders + habit-stacking (CET-11) */}
-      <Reminders />
 
       {/* Settings (mock) */}
       <section>
