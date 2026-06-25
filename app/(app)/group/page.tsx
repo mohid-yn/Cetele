@@ -2,35 +2,45 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Avatar, Badge, buttonVariants } from "@/components/ui";
+import { buttonVariants } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
+import { PageHeader } from "@/components/demo/page-header";
+import { SectionHeading } from "@/components/demo/section-heading";
 import { GroupSwitcher } from "@/components/demo/group-switcher";
 import { GroupGarden } from "@/components/demo/group-garden";
 import { LiveCounter } from "@/components/demo/live-counter";
-import { CheckIcon } from "@/components/demo/icons";
+import { PairGoal } from "@/components/demo/pair-goal";
+import { MemberRow } from "@/components/demo/member-row";
+import { Segmented } from "@/components/demo/segmented";
+import { CheckIcon, FlameIcon, SettingsIcon } from "@/components/demo/icons";
 import { isoDate } from "@/lib/mock/data";
+
+type Tab = "overview" | "standings" | "members";
+const MEDALS = ["🥇", "🥈", "🥉"];
 
 export default function GroupPage() {
   const { state } = useMock();
   const group = sel.activeGroup(state);
   const tasks = sel.groupTasks(state, group.id);
   const members = sel.groupMembers(state, group.id);
+  const meId = state.session.currentUserId;
   const today = isoDate(0);
   const canManage =
     state.session.viewRole === "group_admin" ||
     state.session.viewRole === "admin";
+
+  const [tab, setTab] = React.useState<Tab>("overview");
 
   // Per-task collective progress: everyone's counts today vs target × members.
   const taskTotals = tasks.map((t) => {
     const total = state.logs
       .filter((l) => l.taskId === t.id && l.date === today)
       .reduce((s, l) => s + l.count, 0);
-    const goal = t.targetCount * members.length;
-    return { task: t, total, goal };
+    return { task: t, total, goal: t.targetCount * members.length };
   });
 
-  // Today's contributions per member (drives a lively, real activity panel).
+  // Today's contributions per member (the Members view).
   const taskIds = new Set(tasks.map((t) => t.id));
   const contributions = members
     .map((m) => ({
@@ -44,106 +54,193 @@ export default function GroupPage() {
     }))
     .sort((a, b) => b.today - a.today);
 
+  const standings = sel.leaderboard(state, group.id);
+
   return (
     <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
-      <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <PageHeader
+        title={
           <GroupSwitcher className="-ml-2 px-2 py-0.5 font-display text-2xl font-bold" />
-          <p className="px-0.5 text-sm text-muted-foreground">
-            {members.length} members
-          </p>
-        </div>
-        <Badge variant="outline" className="font-mono">
-          {group.inviteCode}
-        </Badge>
-      </header>
+        }
+        subtitle={
+          <span className="px-0.5">
+            {members.length} members ·{" "}
+            <span className="font-mono">{group.inviteCode}</span>
+          </span>
+        }
+        action={
+          canManage ? (
+            <Link
+              href="/group/manage"
+              aria-label="Manage group"
+              className={buttonVariants({ variant: "outline", size: "icon" })}
+            >
+              <SettingsIcon className="size-5" />
+            </Link>
+          ) : undefined
+        }
+      />
 
-      <LiveCounter />
+      <Segmented<Tab>
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "overview", label: "Overview" },
+          { value: "standings", label: "Standings" },
+          { value: "members", label: "Members" },
+        ]}
+      />
 
-      <GroupGarden />
+      {/* ---- Overview: the collective hero ---- */}
+      {tab === "overview" && (
+        <>
+          <GroupGarden />
+          <LiveCounter />
 
-      {canManage && (
-        <Link
-          href="/group/manage"
-          className={buttonVariants({
-            variant: "outline",
-            className: "w-full",
-          })}
-        >
-          Manage group &amp; tasks
-        </Link>
+          <section>
+            <SectionHeading>Collective progress</SectionHeading>
+            <ul className="flex flex-col gap-3">
+              {taskTotals.map(({ task, total, goal }) => {
+                const pct = goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
+                const met = goal > 0 && total >= goal;
+                return (
+                  <li key={task.id}>
+                    <div className="mb-1 flex items-baseline justify-between text-sm">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        {task.label}
+                        {met && (
+                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
+                            <CheckIcon className="size-3.5" />
+                            met
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {total.toLocaleString()} / {goal.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]",
+                          met ? "bg-success" : "bg-primary",
+                        )}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </>
       )}
 
-      {/* Collective progress per task */}
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-foreground">
-          Collective progress
-        </h2>
-        <ul className="flex flex-col gap-3">
-          {taskTotals.map(({ task, total, goal }) => {
-            const pct = goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
-            const met = goal > 0 && total >= goal;
-            return (
-              <li key={task.id}>
-                <div className="mb-1 flex items-baseline justify-between text-sm">
-                  <span className="flex items-center gap-1.5 font-medium text-foreground">
-                    {task.label}
-                    {/* Green = completion (UI_PRACTICES §1); glyph+label too (§5). */}
-                    {met && (
-                      <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
-                        <CheckIcon className="size-3.5" />
-                        met
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {total.toLocaleString()} / {goal.toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]",
-                      met ? "bg-success" : "bg-primary",
-                    )}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      {/* Today's contributions */}
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-foreground">
-          Today&apos;s contributions
-        </h2>
-        <ul className="flex flex-col gap-1.5">
-          {contributions.map((m) => (
-            <li
-              key={m.userId}
-              className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2"
-            >
-              <Avatar name={m.user.name} size="sm" />
-              <div className="flex-1">
-                <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                  {m.user.name}
-                  {m.role === "group_admin" && (
-                    <Badge variant="primary" size="sm">
-                      admin
-                    </Badge>
+      {/* ---- Standings: winnable pair goal + the (for-fun) ranking ---- */}
+      {tab === "standings" && (
+        <>
+          <PairGoal />
+          <p className="text-xs text-muted-foreground">
+            The ranking is for fun — the pair goal above is the one you win
+            together.
+          </p>
+          <ol className="flex flex-col gap-2">
+            {standings.map((row, i) => {
+              const isMe = row.userId === meId;
+              return (
+                <li
+                  key={row.userId}
+                  className={cn(
+                    "rounded-2xl border p-3 shadow-sm",
+                    isMe
+                      ? "border-accent-300 bg-accent-50"
+                      : "border-border bg-card",
                   )}
-                </p>
-              </div>
-              <span className="font-display text-sm font-bold text-foreground tabular-nums">
-                {m.today.toLocaleString()}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+                >
+                  <MemberRow
+                    name={row.user.name}
+                    you={isMe}
+                    leading={
+                      <span className="w-7 shrink-0 text-center font-display text-lg font-bold text-muted-foreground tabular-nums">
+                        {i < 3 ? MEDALS[i] : i + 1}
+                      </span>
+                    }
+                    status={
+                      <span className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-0.5">
+                          <FlameIcon className="size-3.5 text-accent" />
+                          {row.streak}d
+                        </span>
+                        <span>· {row.daysActive}/7 days active</span>
+                      </span>
+                    }
+                    trailing={
+                      <div className="text-right">
+                        <p className="font-display text-base font-bold text-foreground tabular-nums">
+                          {row.total.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">counts</p>
+                      </div>
+                    }
+                  />
+                </li>
+              );
+            })}
+          </ol>
+        </>
+      )}
+
+      {/* ---- Members: who's in the circle + today's contribution ---- */}
+      {tab === "members" && (
+        <section>
+          <SectionHeading
+            action={
+              canManage ? (
+                <Link href="/group/manage" className="font-medium text-primary">
+                  Manage
+                </Link>
+              ) : undefined
+            }
+          >
+            {members.length} members
+          </SectionHeading>
+          <ul className="flex flex-col gap-1.5">
+            {contributions.map((m) => (
+              <li
+                key={m.userId}
+                className="rounded-xl border border-border bg-card px-3 py-2"
+              >
+                <MemberRow
+                  name={m.user.name}
+                  role={m.role}
+                  you={m.userId === meId}
+                  trailing={
+                    <div className="text-right">
+                      <p className="font-display text-sm font-bold text-foreground tabular-nums">
+                        {m.today.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">today</p>
+                    </div>
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+          {canManage && (
+            <div className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              Invite with code{" "}
+              <span className="font-mono font-semibold text-foreground">
+                {group.inviteCode}
+              </span>{" "}
+              — or add members from{" "}
+              <Link href="/group/manage" className="font-medium text-primary">
+                Manage
+              </Link>
+              .
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
