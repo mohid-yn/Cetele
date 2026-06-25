@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ProgressRing, Badge, Avatar } from "@/components/ui";
 import { useMock, sel } from "@/lib/mock/store";
 import { LiveCounter } from "@/components/demo/live-counter";
+import { CheerCircle } from "@/components/demo/peer-reactions";
 import {
   FlameIcon,
   CheckIcon,
@@ -117,6 +118,9 @@ export default function TodayPage() {
           ))}
         </div>
       </section>
+
+      {/* One-tap peer reactions (CET-18) */}
+      <CheerCircle />
     </div>
   );
 }

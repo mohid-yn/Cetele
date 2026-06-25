@@ -241,9 +241,12 @@ export function createInitialState(): MockState {
   logs.push(log("u-1", "t-5", today, 96)); // 4 taps from completion
 
   // Today, the peers: varied partial progress so the live counter looks alive.
+  // Aisha (u-3) & Fatima (u-5) have *closed every ring* already today, so the
+  // "cheer your circle" reactions surface (CET-18) has someone to celebrate.
+  const doneToday = new Set(["u-3", "u-5"]);
   for (const u of ["u-2", "u-3", "u-4", "u-5", "u-6"]) {
     for (const t of fajrTasks) {
-      const frac = 0.2 + rand() * 0.8;
+      const frac = doneToday.has(u) ? 1 : 0.2 + rand() * 0.7;
       logs.push(log(u, t.id, today, Math.round(t.targetCount * frac)));
     }
   }
