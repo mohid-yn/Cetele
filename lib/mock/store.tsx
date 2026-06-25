@@ -11,12 +11,14 @@
  */
 
 import * as React from "react";
-import { createInitialState, isoDate, STORAGE_KEY } from "./data";
+import { BADGES, createInitialState, isoDate, STORAGE_KEY } from "./data";
 import type {
   Group,
   Log,
   MemberRole,
   MockState,
+  Reaction,
+  ReactionKind,
   Task,
   User,
   ViewRole,
@@ -53,6 +55,14 @@ type Action =
   | { type: "renameGroup"; groupId: string; name: string }
   | { type: "deleteGroup"; groupId: string }
   | { type: "setAppAdmin"; userId: string; value: boolean }
+  | {
+      type: "sendReaction";
+      fromUserId: string;
+      toUserId: string;
+      groupId: string;
+      kind: ReactionKind;
+    }
+  | { type: "setFreshStart"; value: boolean }
   | { type: "fastForwardDay" };
 
 let idSeq = 1000;
@@ -268,6 +278,35 @@ function reducer(state: MockState, action: Action): MockState {
         ),
       };
 
+    case "sendReaction": {
+      const today = isoDate(0);
+      // One reaction of each kind per sender→peer per day (tap again to undo).
+      const existing = state.reactions.find(
+        (r) =>
+          r.fromUserId === action.fromUserId &&
+          r.toUserId === action.toUserId &&
+          r.kind === action.kind &&
+          r.date === today,
+      );
+      if (existing)
+        return {
+          ...state,
+          reactions: state.reactions.filter((r) => r !== existing),
+        };
+      const r: Reaction = {
+        id: nextId("r"),
+        fromUserId: action.fromUserId,
+        toUserId: action.toUserId,
+        groupId: action.groupId,
+        kind: action.kind,
+        date: today,
+      };
+      return { ...state, reactions: [...state.reactions, r] };
+    }
+
+    case "setFreshStart":
+      return { ...state, ui: { ...state.ui, freshStart: action.value } };
+
     case "fastForwardDay": {
       // Demo: advance one day for the logged-in user, applying the
       // "never miss twice" forgiveness rule, then reset today's rings.
@@ -331,6 +370,12 @@ interface MockContextValue {
     renameGroup: (groupId: string, name: string) => void;
     deleteGroup: (groupId: string) => void;
     setAppAdmin: (userId: string, value: boolean) => void;
+    sendReaction: (
+      toUserId: string,
+      kind: ReactionKind,
+      fromUserId?: string,
+    ) => void;
+    setFreshStart: (value: boolean) => void;
     fastForwardDay: () => void;
   };
 }
@@ -435,9 +480,18 @@ export function MockStateProvider({ children }: { children: React.ReactNode }) {
       deleteGroup: (groupId) => dispatch({ type: "deleteGroup", groupId }),
       setAppAdmin: (userId, value) =>
         dispatch({ type: "setAppAdmin", userId, value }),
+      sendReaction: (toUserId, kind, fromUserId) =>
+        dispatch({
+          type: "sendReaction",
+          toUserId,
+          kind,
+          fromUserId: fromUserId ?? state.session.currentUserId,
+          groupId: state.session.activeGroupId,
+        }),
+      setFreshStart: (value) => dispatch({ type: "setFreshStart", value }),
       fastForwardDay: () => dispatch({ type: "fastForwardDay" }),
     }),
-    [state.session.currentUserId],
+    [state.session.currentUserId, state.session.activeGroupId],
   );
 
   const value = React.useMemo(() => ({ state, actions }), [state, actions]);
@@ -638,5 +692,106 @@ export const sel = {
       0,
     );
     return Math.round(sum / members.length);
+  },
+
+  // ---- Peer reactions (CET-18) ---------------------------------------------
+
+  /** Has this user closed *every* ring today (the trigger for a reaction)? */
+  doneToday: (s: MockState, userId: string, groupId: string): boolean =>
+    sel.dayCompletion(s, userId, groupId, isoDate(0)).full,
+
+  /**
+   * Reactions for one peer on a date, grouped by kind with a count and whether
+   * the current viewer has already sent that kind (for the toggle state).
+   */
+  reactionsTo: (s: MockState, toUserId: string, date = isoDate(0)) => {
+    const mine = s.session.currentUserId;
+    const here = s.reactions.filter(
+      (r) => r.toUserId === toUserId && r.date === date,
+    );
+    const byKind = new Map<string, { count: number; reacted: boolean }>();
+    for (const r of here) {
+      const cur = byKind.get(r.kind) ?? { count: 0, reacted: false };
+      cur.count += 1;
+      if (r.fromUserId === mine) cur.reacted = true;
+      byKind.set(r.kind, cur);
+    }
+    return byKind;
+  },
+
+  /** Total encouragements a user has received today (for a glance badge). */
+  reactionCount: (s: MockState, toUserId: string, date = isoDate(0)): number =>
+    s.reactions.filter((r) => r.toUserId === toUserId && r.date === date)
+      .length,
+
+  // ---- Achievement badges (CET-20) -----------------------------------------
+
+  /** Every badge with its earned-state for a user (earned ones first). */
+  badges: (s: MockState, userId: string, groupId: string) => {
+    const st = s.streaks.find((x) => x.userId === userId);
+    return BADGES.map((b) => {
+      let earned = false;
+      if (b.kind === "streakLongest")
+        earned = (st?.longest ?? 0) >= b.threshold;
+      else if (b.kind === "streakCurrent")
+        earned = (st?.current ?? 0) >= b.threshold;
+      else if (b.kind === "consistency")
+        earned =
+          sel.consistency(s, userId, groupId, b.window ?? 30) >= b.threshold;
+      return { ...b, earned };
+    }).sort((a, b) => Number(b.earned) - Number(a.earned));
+  },
+
+  // ---- Winnable pair goals (CET-22) ----------------------------------------
+
+  /** A deterministic accountability buddy for a user within their group. */
+  buddy: (s: MockState, userId: string, groupId: string) => {
+    const others = sel
+      .groupMembers(s, groupId)
+      .filter((m) => m.userId !== userId);
+    if (!others.length) return undefined;
+    // Stable pairing: pick by a hash of the user id so it never reshuffles.
+    const h = userId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    return others[h % others.length];
+  },
+
+  /**
+   * A winnable shared goal: the pair's combined days-active this week vs a
+   * modest target (so two friends win together rather than out-ranking a group).
+   */
+  pairGoal: (s: MockState, userId: string, groupId: string) => {
+    const buddy = sel.buddy(s, userId, groupId);
+    if (!buddy) return undefined;
+    const dates = Array.from({ length: 7 }, (_, i) => isoDate(i));
+    const daysFor = (uid: string) =>
+      dates.filter((d) => sel.dayCompletion(s, uid, groupId, d).active).length;
+    const mine = daysFor(userId);
+    const theirs = daysFor(buddy.userId);
+    const target = 10; // combined active-days this week to "win" together
+    return {
+      buddy,
+      mine,
+      theirs,
+      combined: mine + theirs,
+      target,
+      met: mine + theirs >= target,
+    };
+  },
+
+  // ---- Group garden (CET-17) -----------------------------------------------
+
+  /**
+   * The collective garden's growth, driven by the group's 30-day consistency.
+   * Returns a 0..4 stage and today's contribution so the garden visibly reacts
+   * to *today's* effort too. Low stages are calm/dormant — never shaming (D8).
+   */
+  gardenStage: (s: MockState, groupId: string) => {
+    const score = sel.groupConsistency(s, groupId, 30);
+    const today = sel.groupToday(s, groupId);
+    const todayPct = today.goal ? today.total / today.goal : 0;
+    // Blend the durable 30-day signal with a small nudge from today's progress.
+    const blended = Math.min(100, score + todayPct * 12);
+    const stage = blended < 20 ? 0 : blended < 40 ? 1 : blended < 65 ? 2 : 3;
+    return { stage, score, todayPct: Math.min(1, todayPct) };
   },
 };

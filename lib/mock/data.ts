@@ -6,7 +6,16 @@
  * the demo always opens mid-day with partial progress to tap toward.
  */
 
-import type { MockState, Log } from "./types";
+import type { MockState, Log, Reaction, ReactionKind } from "./types";
+
+/** The one-tap peer encouragements (CET-18) — glyph + label, worship-appropriate. */
+export const REACTIONS: { kind: ReactionKind; glyph: string; label: string }[] =
+  [
+    { kind: "dua", glyph: "🤲", label: "Dua" },
+    { kind: "mashaAllah", glyph: "✨", label: "MashaAllah" },
+    { kind: "heart", glyph: "❤️", label: "Heart" },
+    { kind: "fire", glyph: "🔥", label: "On fire" },
+  ];
 
 /** Local ISO date (YYYY-MM-DD) for `daysAgo` days before today. */
 export function isoDate(daysAgo = 0): string {
@@ -26,7 +35,7 @@ function mulberry32(seed: number) {
   };
 }
 
-const STORAGE_VERSION = 3;
+const STORAGE_VERSION = 4;
 export const STORAGE_KEY = `cetele-mock-v${STORAGE_VERSION}`;
 
 let logSeq = 0;
@@ -42,6 +51,73 @@ const log = (
   date,
   count,
 });
+
+/**
+ * Achievement badges (CET-20) — earned and *escalating*, never saturating.
+ * `kind` selects how the selector evaluates earned-state against a user's
+ * streak history; `threshold` is the bar to clear.
+ */
+export const BADGES: {
+  id: string;
+  glyph: string;
+  label: string;
+  description: string;
+  kind: "streakCurrent" | "streakLongest" | "consistency";
+  threshold: number;
+  /** For `consistency` badges: the look-back window in days. */
+  window?: number;
+}[] = [
+  {
+    id: "spark",
+    glyph: "🌱",
+    label: "First week",
+    description: "A 7-day streak — the habit is taking root",
+    kind: "streakLongest",
+    threshold: 7,
+  },
+  {
+    id: "steadfast",
+    glyph: "🌿",
+    label: "Steadfast",
+    description: "A 30-day streak — a month of showing up",
+    kind: "streakLongest",
+    threshold: 30,
+  },
+  {
+    id: "rooted",
+    glyph: "🌳",
+    label: "Deeply rooted",
+    description: "A 100-day streak — this is who you are now",
+    kind: "streakLongest",
+    threshold: 100,
+  },
+  {
+    id: "consistent",
+    glyph: "📿",
+    label: "Consistent",
+    description: "80%+ of the last 30 days fully completed",
+    kind: "consistency",
+    threshold: 80,
+    window: 30,
+  },
+  {
+    id: "alight",
+    glyph: "🔥",
+    label: "On fire",
+    description: "A current streak of 14 days or more",
+    kind: "streakCurrent",
+    threshold: 14,
+  },
+  {
+    id: "devoted",
+    glyph: "⭐",
+    label: "Devoted",
+    description: "Near-perfect — 95%+ over the last 90 days",
+    kind: "consistency",
+    threshold: 95,
+    window: 90,
+  },
+];
 
 export function createInitialState(): MockState {
   logSeq = 0;
@@ -273,6 +349,30 @@ export function createInitialState(): MockState {
     },
   ];
 
+  // ---- Reactions ------------------------------------------------------------
+  // A few peer encouragements already waiting today, so the social layer feels
+  // alive on first load (CET-18). Aisha (u-3) finished early and got cheered.
+  let reactionSeq = 0;
+  const reaction = (
+    fromUserId: string,
+    toUserId: string,
+    kind: ReactionKind,
+  ): Reaction => ({
+    id: `r-${++reactionSeq}`,
+    fromUserId,
+    toUserId,
+    groupId: "g-1",
+    kind,
+    date: today,
+  });
+  const reactions: Reaction[] = [
+    reaction("u-1", "u-3", "dua"),
+    reaction("u-2", "u-3", "mashaAllah"),
+    reaction("u-5", "u-3", "heart"),
+    reaction("u-1", "u-5", "fire"),
+    reaction("u-3", "u-5", "dua"),
+  ];
+
   return {
     users,
     groups,
@@ -280,7 +380,8 @@ export function createInitialState(): MockState {
     tasks,
     logs,
     streaks,
+    reactions,
     session: { currentUserId: "u-1", activeGroupId: "g-1", viewRole: "member" },
-    ui: { showRibbon: true },
+    ui: { showRibbon: true, freshStart: false },
   };
 }

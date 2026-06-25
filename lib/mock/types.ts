@@ -67,6 +67,22 @@ export interface Streak {
   lastActive: string;
 }
 
+/** A one-tap peer encouragement (CET-18) — a dua / kudos on a peer's day. */
+export interface Reaction {
+  id: string;
+  /** Who sent it. */
+  fromUserId: string;
+  /** The peer being encouraged. */
+  toUserId: string;
+  groupId: string;
+  /** Reaction kind — maps to a label + glyph (see REACTIONS in data). */
+  kind: ReactionKind;
+  /** ISO date the encouragement is for (usually today). */
+  date: string;
+}
+
+export type ReactionKind = "dua" | "heart" | "fire" | "mashaAllah";
+
 /** The full mock universe persisted to localStorage. */
 export interface MockState {
   users: User[];
@@ -75,6 +91,8 @@ export interface MockState {
   tasks: Task[];
   logs: Log[];
   streaks: Streak[];
+  /** One-tap peer encouragements (CET-18). */
+  reactions: Reaction[];
   session: {
     currentUserId: string;
     activeGroupId: string;
@@ -84,5 +102,7 @@ export interface MockState {
   ui: {
     /** Subtle "DEMO · mock data" ribbon. */
     showRibbon: boolean;
+    /** Demo affordance: force the fresh-start re-engagement banner (CET-19). */
+    freshStart: boolean;
   };
 }

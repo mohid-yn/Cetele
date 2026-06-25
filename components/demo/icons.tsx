@@ -102,6 +102,34 @@ export const ChevronDownIcon = (p: IconProps) => (
   </svg>
 );
 
+export const BellIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+  </svg>
+);
+
+export const SproutIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 20v-8" />
+    <path d="M12 12C12 8 9 6 5 6c0 4 3 6 7 6Z" />
+    <path d="M12 13c0-3 2.5-5 6-5 0 3.5-2.5 5-6 5Z" />
+  </svg>
+);
+
+export const HeartIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 20s-7-4.5-9.5-9A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 9.5 5c-2.5 4.5-9.5 9-9.5 9Z" />
+  </svg>
+);
+
+export const AwardIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="9" r="6" />
+    <path d="M9 14.5 8 22l4-2 4 2-1-7.5" />
+  </svg>
+);
+
 export const ArrowLeftIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M19 12H5M12 19l-7-7 7-7" />
