@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
 import { FlameIcon, ShieldIcon } from "@/components/demo/icons";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { Reminders } from "@/components/demo/reminders";
 
 function Toggle({
   label,
@@ -134,15 +135,13 @@ export default function ProfilePage() {
         </Card>
       </section>
 
+      {/* Reminders + habit-stacking (CET-11) */}
+      <Reminders />
+
       {/* Settings (mock) */}
       <section>
         <h2 className="mb-1 text-sm font-semibold text-foreground">Settings</h2>
         <Card className="divide-y divide-border px-4 py-1">
-          <Toggle
-            label="Daily reminder"
-            hint="Push when you haven't logged today"
-            defaultOn
-          />
           <Toggle label="Tap sound" defaultOn />
           <Toggle label="Haptics" defaultOn />
         </Card>
