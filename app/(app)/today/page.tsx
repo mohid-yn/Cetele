@@ -2,16 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ProgressRing, Badge, Avatar } from "@/components/ui";
+import { ProgressRing, buttonVariants } from "@/components/ui";
 import { useMock, sel } from "@/lib/mock/store";
-import { LiveCounter } from "@/components/demo/live-counter";
-import { CheerCircle } from "@/components/demo/peer-reactions";
+import { PageHeader } from "@/components/demo/page-header";
+import { SectionHeading } from "@/components/demo/section-heading";
+import { StreakChip } from "@/components/demo/streak-chip";
+import { CircleToday } from "@/components/demo/peer-reactions";
 import { FreshStartBanner } from "@/components/demo/fresh-start";
-import {
-  FlameIcon,
-  CheckIcon,
-  ChevronRightIcon,
-} from "@/components/demo/icons";
+import { CheckIcon, ChevronRightIcon } from "@/components/demo/icons";
 
 export default function TodayPage() {
   const { state } = useMock();
@@ -19,18 +17,20 @@ export default function TodayPage() {
   const group = sel.activeGroup(state);
   const tasks = sel.groupTasks(state, group.id);
   const streak = sel.streak(state, me.id);
-  const members = sel.groupMembers(state, group.id);
 
   const firstName = me.name.split(" ")[0];
 
-  // Abstraction pass (UI_PRACTICES §C / research 02 §C): one GLANCE headline
-  // that turns the raw counts into meaning and leads with the *unfinished*.
-  const closed = tasks.filter(
-    (t) => sel.todayCount(state, me.id, t.id) >= t.targetCount,
-  ).length;
-  const left = tasks.length - closed;
+  // Each ring's progress today (computed once, reused for the headline + CTA).
+  const rings = tasks.map((t) => {
+    const count = sel.todayCount(state, me.id, t.id);
+    return { task: t, count, done: count >= t.targetCount };
+  });
+  const closed = rings.filter((r) => r.done).length;
+  const left = rings.length - closed;
+
+  // Abstraction (GLANCE): one human headline that leads with the unfinished.
   const glance =
-    tasks.length === 0
+    rings.length === 0
       ? "No tasks yet"
       : left === 0
         ? "All rings closed today — mashaAllah 🎉"
@@ -38,110 +38,111 @@ export default function TodayPage() {
           ? "A fresh page — start with one ring"
           : `${left} ring${left === 1 ? "" : "s"} to close — you're almost there`;
 
+  // One primary action (goal-gradient): continue the ring closest to done.
+  const next = rings
+    .filter((r) => !r.done)
+    .sort(
+      (a, b) => b.count / b.task.targetCount - a.count / a.task.targetCount,
+    )[0];
+
+  // Collective presence — a slim line, not a second counter (that lives on Group).
+  const collective = sel.groupToday(state, group.id);
+  const collectivePct = collective.goal
+    ? Math.round((collective.total / collective.goal) * 100)
+    : 0;
+
   return (
     <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
       {/* Fresh-start re-engagement (CET-19) — shows on temporal landmarks */}
       <FreshStartBanner />
 
-      {/* Greeting + streak */}
-      <header className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-muted-foreground">Assalamu alaykum,</p>
-          <h1 className="font-display text-2xl font-bold text-foreground">
-            {firstName}
-          </h1>
-          {/* GLANCE headline — meaning, not raw numbers */}
-          <p className="mt-0.5 text-sm font-medium text-foreground">{glance}</p>
-          <p className="text-xs text-muted-foreground">{group.name}</p>
-        </div>
-        <Badge variant="accent" size="md" className="gap-1 px-3 py-1.5 text-sm">
-          <FlameIcon className="size-4" />
-          {streak?.current ?? 0} day streak
-        </Badge>
-      </header>
+      <PageHeader
+        title={
+          <div>
+            <p className="text-sm text-muted-foreground">Assalamu alaykum,</p>
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              {firstName}
+            </h1>
+          </div>
+        }
+        subtitle={<span className="font-medium text-foreground">{glance}</span>}
+        action={<StreakChip current={streak?.current ?? 0} />}
+      />
 
-      <LiveCounter />
+      {/* Primary action — one gold CTA, the nearest-to-done ring */}
+      {next && (
+        <Link
+          href={`/count/${next.task.id}`}
+          className={buttonVariants({ variant: "accent", className: "w-full" })}
+        >
+          Continue {next.task.label} ·{" "}
+          <span className="tabular-nums">
+            {next.count}/{next.task.targetCount}
+          </span>
+        </Link>
+      )}
 
       {/* Rings */}
       <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">
-            Your rings today
-          </h2>
-          <span className="text-xs text-muted-foreground">tap to count</span>
-        </div>
+        <SectionHeading action="tap to count">Your rings today</SectionHeading>
         <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-          {tasks.map((t) => {
-            const count = sel.todayCount(state, me.id, t.id);
-            const done = count >= t.targetCount;
-            return (
-              <li key={t.id}>
-                <Link
-                  href={`/count/${t.id}`}
-                  className="flex items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none"
+          {rings.map(({ task: t, count, done }) => (
+            <li key={t.id}>
+              <Link
+                href={`/count/${t.id}`}
+                className="flex items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none"
+              >
+                <ProgressRing
+                  value={count}
+                  max={t.targetCount}
+                  size={60}
+                  thickness={7}
                 >
-                  <ProgressRing
-                    value={count}
-                    max={t.targetCount}
-                    size={60}
-                    thickness={7}
-                  >
-                    {done ? (
-                      <CheckIcon className="size-5 text-success" />
-                    ) : (
-                      <span className="text-xs font-bold text-foreground tabular-nums">
-                        {Math.round((count / t.targetCount) * 100)}%
-                      </span>
-                    )}
-                  </ProgressRing>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-display text-base font-semibold text-foreground">
-                      {t.label}
+                  {done ? (
+                    <CheckIcon className="size-5 text-success" />
+                  ) : (
+                    <span className="text-xs font-bold text-foreground tabular-nums">
+                      {Math.round((count / t.targetCount) * 100)}%
+                    </span>
+                  )}
+                </ProgressRing>
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-base font-semibold text-foreground">
+                    {t.label}
+                  </p>
+                  {t.subtitle && (
+                    <p
+                      className="truncate text-sm text-muted-foreground"
+                      dir="rtl"
+                      lang="ar"
+                    >
+                      {t.subtitle}
                     </p>
-                    {t.subtitle && (
-                      <p
-                        className="truncate text-sm text-muted-foreground"
-                        dir="rtl"
-                        lang="ar"
-                      >
-                        {t.subtitle}
-                      </p>
-                    )}
-                    <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-                      {count.toLocaleString()} /{" "}
-                      {t.targetCount.toLocaleString()}
-                    </p>
-                  </div>
-                  <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      {/* Peer strip */}
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-foreground">
-          Your circle
-        </h2>
-        <div className="flex flex-wrap gap-3">
-          {members.map((m) => (
-            <div
-              key={m.userId}
-              className="flex w-14 flex-col items-center gap-1"
-            >
-              <Avatar name={m.user.name} size="md" />
-              <span className="w-full truncate text-center text-xs text-muted-foreground">
-                {m.user.name.split(" ")[0]}
-              </span>
-            </div>
+                  )}
+                  <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+                    {count.toLocaleString()} / {t.targetCount.toLocaleString()}
+                  </p>
+                </div>
+                <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
+        <p className="mt-2.5 text-xs text-muted-foreground">
+          Your circle is{" "}
+          <span className="font-medium text-foreground tabular-nums">
+            {collectivePct}%
+          </span>{" "}
+          toward today&apos;s goal — see the garden on{" "}
+          <Link href="/group" className="font-medium text-primary underline">
+            Group
+          </Link>
+          .
+        </p>
       </section>
 
-      {/* One-tap peer reactions (CET-18) */}
-      <CheerCircle />
+      {/* One-tap peer reactions (CET-18) — unified circle view */}
+      <CircleToday />
     </div>
   );
 }

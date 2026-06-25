@@ -10,11 +10,13 @@
  */
 
 import * as React from "react";
-import { Avatar } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
-import { REACTIONS } from "@/lib/mock/data";
+import { REACTIONS, isoDate } from "@/lib/mock/data";
 import type { ReactionKind } from "@/lib/mock/types";
+import { MemberRow } from "./member-row";
+import { SectionHeading } from "./section-heading";
+import { CheckIcon } from "./icons";
 
 /** The tappable glyph row for one peer. */
 export function PeerReactions({ toUserId }: { toUserId: string }) {
@@ -57,61 +59,71 @@ export function PeerReactions({ toUserId }: { toUserId: string }) {
 }
 
 /**
- * The /today "cheer your circle" section: peers who have closed all their rings
- * today, each with a reaction row. Calm empty-state when nobody's finished yet.
+ * The /today "Your circle today" section — one unified view of the circle
+ * (replacing the old separate avatar strip + cheer list). Members who've
+ * finished are shown first with a one-tap reaction row; everyone else shows
+ * their progress. Calm — no shaming empty-state.
  */
-export function CheerCircle() {
+export function CircleToday() {
   const { state } = useMock();
   const me = state.session.currentUserId;
   const group = sel.activeGroup(state);
-  const members = sel.groupMembers(state, group.id);
-
-  const done = members.filter(
-    (m) => m.userId !== me && sel.doneToday(state, m.userId, group.id),
-  );
   const myCheers = sel.reactionCount(state, me);
+
+  const members = sel
+    .groupMembers(state, group.id)
+    .filter((m) => m.userId !== me)
+    .map((m) => ({
+      ...m,
+      done: sel.doneToday(state, m.userId, group.id),
+      pct: sel.dayCompletion(state, m.userId, group.id, isoDate(0)).pct,
+    }))
+    // Finished members first, then by progress — leads with the celebratable.
+    .sort((a, b) => Number(b.done) - Number(a.done) || b.pct - a.pct);
+
+  if (!members.length) return null;
 
   return (
     <section>
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">
-          Cheer your circle
-        </h2>
-        {myCheers > 0 && (
-          <span className="text-xs text-muted-foreground">
-            you received {myCheers} today 🤲
-          </span>
-        )}
-      </div>
-
-      {done.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          Nobody&apos;s closed all their rings yet today — be the first, and
-          your circle can cheer you on.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {done.map((m) => (
-            <li
-              key={m.userId}
-              className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <Avatar name={m.user.name} size="sm" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {m.user.name.split(" ")[0]}
-                  </p>
-                  <p className="text-xs font-medium text-success">
+      <SectionHeading
+        action={myCheers > 0 ? `you received ${myCheers} today 🤲` : undefined}
+      >
+        Your circle today
+      </SectionHeading>
+      <ul className="flex flex-col gap-2">
+        {members.map((m) => (
+          <li
+            key={m.userId}
+            className="rounded-2xl border border-border bg-card p-3 shadow-sm"
+          >
+            <MemberRow
+              name={m.user.name}
+              role={m.role}
+              status={
+                m.done ? (
+                  <span className="font-medium text-success">
                     all rings closed
-                  </p>
-                </div>
+                  </span>
+                ) : (
+                  <span className="tabular-nums">
+                    {Math.round(m.pct * 100)}% today
+                  </span>
+                )
+              }
+              trailing={
+                m.done ? (
+                  <CheckIcon className="size-5 text-success" />
+                ) : undefined
+              }
+            />
+            {m.done && (
+              <div className="mt-2.5 pl-11">
+                <PeerReactions toUserId={m.userId} />
               </div>
-              <PeerReactions toUserId={m.userId} />
-            </li>
-          ))}
-        </ul>
-      )}
+            )}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
