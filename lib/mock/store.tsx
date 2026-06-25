@@ -792,6 +792,11 @@ export const sel = {
     // Blend the durable 30-day signal with a small nudge from today's progress.
     const blended = Math.min(100, score + todayPct * 12);
     const stage = blended < 20 ? 0 : blended < 40 ? 1 : blended < 65 ? 2 : 3;
-    return { stage, score, todayPct: Math.min(1, todayPct) };
+    return {
+      stage,
+      score,
+      todayPct: Math.min(1, todayPct),
+      vitality: blended / 100,
+    };
   },
 };

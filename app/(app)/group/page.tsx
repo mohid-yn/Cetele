@@ -6,6 +6,7 @@ import { Avatar, Badge, buttonVariants } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
 import { GroupSwitcher } from "@/components/demo/group-switcher";
+import { GroupGarden } from "@/components/demo/group-garden";
 import { LiveCounter } from "@/components/demo/live-counter";
 import { CheckIcon } from "@/components/demo/icons";
 import { isoDate } from "@/lib/mock/data";
@@ -58,6 +59,8 @@ export default function GroupPage() {
       </header>
 
       <LiveCounter />
+
+      <GroupGarden />
 
       {canManage && (
         <Link
