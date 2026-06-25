@@ -6,14 +6,14 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
 import { ShieldIcon } from "./icons";
+import { GroupSwitcher } from "./group-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { useMock, sel } from "@/lib/mock/store";
+import { useMock } from "@/lib/mock/store";
 
 /** Persistent left nav for desktop (≥lg). Mirrors the mobile bottom bar. */
 export function Sidebar() {
   const pathname = usePathname();
   const { state } = useMock();
-  const group = sel.activeGroup(state);
   const showAdmin = state.session.viewRole === "admin";
 
   const items = [
@@ -44,10 +44,8 @@ export function Sidebar() {
         </span>
       </Link>
 
-      {/* Active group */}
-      <p className="mb-2 px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {group.name}
-      </p>
+      {/* Active group (switcher when the user belongs to more than one) */}
+      <GroupSwitcher className="mb-2 w-full justify-between px-2 py-1.5 text-sm font-semibold" />
 
       {/* Nav */}
       <nav aria-label="Primary" className="flex flex-col gap-1">

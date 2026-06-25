@@ -26,7 +26,7 @@ function mulberry32(seed: number) {
   };
 }
 
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 3;
 export const STORAGE_KEY = `cetele-mock-v${STORAGE_VERSION}`;
 
 let logSeq = 0;
@@ -84,6 +84,9 @@ export function createInitialState(): MockState {
     { userId: "u-4", groupId: "g-1", role: "member" },
     { userId: "u-5", groupId: "g-1", role: "member" },
     { userId: "u-6", groupId: "g-1", role: "member" },
+    // u-1 also runs Maghrib Circle → demonstrates a group admin of *multiple*
+    // groups (the group switcher lets them manage each).
+    { userId: "u-1", groupId: "g-2", role: "group_admin" },
     { userId: "u-7", groupId: "g-2", role: "group_admin" },
     { userId: "u-8", groupId: "g-2", role: "member" },
   ];
@@ -192,6 +195,34 @@ export function createInitialState(): MockState {
         const full = rand() < p.quality;
         const frac = full ? 1 : 0.3 + rand() * 0.55;
         logs.push(log(u, t.id, date, Math.round(t.targetCount * frac)));
+      }
+    }
+  }
+
+  // Maghrib Circle (g-2) — lighter activity so it feels alive when an admin
+  // who runs both circles switches into it. Today + ~21 days of history.
+  const maghribTasks = tasks.filter((t) => t.groupId === "g-2");
+  for (const u of ["u-1", "u-7", "u-8"]) {
+    for (const t of maghribTasks) {
+      logs.push(
+        log(u, t.id, today, Math.round(t.targetCount * (0.3 + rand() * 0.6))),
+      );
+    }
+  }
+  for (let d = 1; d <= 21; d++) {
+    const date = isoDate(d);
+    for (const u of ["u-1", "u-7", "u-8"]) {
+      if (rand() >= 0.75) continue;
+      for (const t of maghribTasks) {
+        const full = rand() < 0.8;
+        logs.push(
+          log(
+            u,
+            t.id,
+            date,
+            Math.round(t.targetCount * (full ? 1 : 0.4 + rand() * 0.5)),
+          ),
+        );
       }
     }
   }

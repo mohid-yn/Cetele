@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Avatar, Badge, buttonVariants } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
+import { GroupSwitcher } from "@/components/demo/group-switcher";
 import { LiveCounter } from "@/components/demo/live-counter";
 import { CheckIcon } from "@/components/demo/icons";
 import { isoDate } from "@/lib/mock/data";
@@ -45,11 +46,9 @@ export default function GroupPage() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
       <header className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">
-            {group.name}
-          </h1>
-          <p className="text-sm text-muted-foreground">
+        <div className="min-w-0">
+          <GroupSwitcher className="-ml-2 px-2 py-0.5 font-display text-2xl font-bold" />
+          <p className="px-0.5 text-sm text-muted-foreground">
             {members.length} members
           </p>
         </div>

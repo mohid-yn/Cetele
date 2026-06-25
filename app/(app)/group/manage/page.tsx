@@ -13,6 +13,7 @@ import {
 import { useMock, sel } from "@/lib/mock/store";
 import { ArrowLeftIcon, PlusIcon, CheckIcon } from "@/components/demo/icons";
 import { RoleToggle, selectCls } from "@/components/demo/role-toggle";
+import { GroupSwitcher } from "@/components/demo/group-switcher";
 import type { Task } from "@/lib/mock/types";
 
 function TaskRow({
@@ -208,11 +209,14 @@ export default function ManageGroupPage() {
           leadingIcon={<ArrowLeftIcon />}
           onClick={() => router.push("/group")}
         >
-          {group.name}
+          Back
         </Button>
-        <h1 className="mt-1 font-display text-2xl font-bold text-foreground">
-          Manage group
-        </h1>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
+          <h1 className="font-display text-2xl font-bold text-foreground">
+            Manage
+          </h1>
+          <GroupSwitcher className="-ml-1 px-2 py-0.5 font-display text-2xl font-bold text-primary" />
+        </div>
       </div>
 
       {/* Members --------------------------------------------------------- */}
