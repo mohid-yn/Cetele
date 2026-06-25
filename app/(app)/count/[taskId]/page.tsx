@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
 import { useCelebration } from "@/components/demo/celebration";
 import { TapPad } from "@/components/demo/tap-pad";
@@ -37,14 +38,28 @@ export default function CountPage() {
     );
   }
 
-  const handleTap = () => {
-    const next = count + 1;
-    actions.increment(task.id, 1);
-    // Fire the celebration exactly once, on the tap that closes the ring.
+  const remaining = Math.max(0, task.targetCount - count);
+
+  // Fire the celebration exactly once — on whichever action closes the ring.
+  const celebrateIfClosed = (next: number) => {
     if (next >= task.targetCount && !justCompleted.current) {
       justCompleted.current = true;
       celebrate({ title: "Ring closed! 🎉" });
     }
+  };
+
+  // Manual taps count one at a time, uncapped (you may go past the target).
+  const handleTap = () => {
+    actions.increment(task.id, 1);
+    celebrateIfClosed(count + 1);
+  };
+
+  // The convenience buttons snap *to* the target — never past it.
+  const addCapped = (n: number) => {
+    const step = Math.min(n, remaining);
+    if (step <= 0) return;
+    actions.increment(task.id, step);
+    celebrateIfClosed(count + step);
   };
 
   return (
@@ -83,24 +98,40 @@ export default function CountPage() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      {remaining === 0 ? (
+        // Ring already closed — just a way back.
         <Button
           variant="outline"
-          onClick={() => {
-            const next = count + 10;
-            actions.increment(task.id, 10);
-            if (next >= task.targetCount && !justCompleted.current) {
-              justCompleted.current = true;
-              celebrate({ title: "Ring closed! 🎉" });
-            }
-          }}
+          className="w-full"
+          onClick={() => router.push("/today")}
         >
-          +10
+          Back to today
         </Button>
-        <Button variant="accent" onClick={() => router.push("/today")}>
-          Done
-        </Button>
-      </div>
+      ) : (
+        <div
+          className={cn(
+            "grid gap-2",
+            // Only offer +10 when it can't overshoot the target.
+            remaining > 10 ? "grid-cols-2" : "grid-cols-1",
+          )}
+        >
+          {remaining > 10 && (
+            <Button variant="outline" onClick={() => addCapped(10)}>
+              +10
+            </Button>
+          )}
+          {/* One tap to finish: fill to the target, celebrate, and head back. */}
+          <Button
+            variant="accent"
+            onClick={() => {
+              addCapped(remaining);
+              router.push("/today");
+            }}
+          >
+            Mark done
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
