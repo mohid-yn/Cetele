@@ -6,6 +6,7 @@ import { ProgressRing, Badge, Avatar } from "@/components/ui";
 import { useMock, sel } from "@/lib/mock/store";
 import { LiveCounter } from "@/components/demo/live-counter";
 import { CheerCircle } from "@/components/demo/peer-reactions";
+import { FreshStartBanner } from "@/components/demo/fresh-start";
 import {
   FlameIcon,
   CheckIcon,
@@ -24,6 +25,9 @@ export default function TodayPage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+      {/* Fresh-start re-engagement (CET-19) — shows on temporal landmarks */}
+      <FreshStartBanner />
+
       {/* Greeting + streak */}
       <header className="flex items-start justify-between gap-3">
         <div>

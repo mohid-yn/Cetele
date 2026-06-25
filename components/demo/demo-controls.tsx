@@ -66,6 +66,13 @@ export function DemoControls() {
             >
               Fast-forward a day
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => actions.setFreshStart(!state.ui.freshStart)}
+            >
+              {state.ui.freshStart ? "Clear" : "Trigger"} fresh-start
+            </Button>
             <Button size="sm" variant="ghost" onClick={actions.toggleRibbon}>
               {state.ui.showRibbon ? "Hide" : "Show"} demo ribbon
             </Button>
