@@ -8,6 +8,7 @@ import { useMock, sel } from "@/lib/mock/store";
 import { FlameIcon, ShieldIcon } from "@/components/demo/icons";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Reminders } from "@/components/demo/reminders";
+import { BadgesGrid } from "@/components/demo/badges";
 
 function Toggle({
   label,
@@ -96,6 +97,9 @@ export default function ProfilePage() {
           </div>
         </div>
       </Card>
+
+      {/* Achievement badges (CET-20) */}
+      <BadgesGrid />
 
       {/* Never miss twice */}
       <Card className="p-4">
