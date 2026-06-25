@@ -5,6 +5,7 @@ import { Card, CardContent, Avatar } from "@/components/ui";
 import { useMock, sel } from "@/lib/mock/store";
 import { ConsistencyHeatmap } from "@/components/demo/consistency-heatmap";
 import { FlameIcon } from "@/components/demo/icons";
+import { useAnimatedNumber } from "@/components/demo/use-animated-number";
 
 /** Small labelled metric used across the consistency views. */
 function Score({
@@ -49,14 +50,33 @@ export default function ProgressPage() {
     };
   }, [state, me.id, group.id]);
 
+  // Count-up on first paint so the page feels alive, not a static dashboard.
+  const c30Shown = useAnimatedNumber(c30, 700, true);
+  const groupShown = useAnimatedNumber(groupC90, 800, true);
+
+  // GLANCE headline (abstraction rule): one warm, human takeaway up top.
+  const daysComplete30 = Math.round((c30 / 100) * 30);
+  const tone =
+    c30 >= 80
+      ? "steadfast, mashaAllah"
+      : c30 >= 50
+        ? "a strong rhythm — keep building"
+        : c30 >= 25
+          ? "you're finding your rhythm"
+          : "every day is a fresh start";
+
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+    <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
       <header>
         <h1 className="font-display text-2xl font-bold text-foreground">
           Consistency
         </h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {group.name} · how steadfast you are over time
+        <p className="mt-0.5 text-sm text-balance text-muted-foreground">
+          You&apos;ve fully completed{" "}
+          <span className="font-semibold text-foreground">
+            {daysComplete30} of the last 30 days
+          </span>{" "}
+          — {tone}.
         </p>
       </header>
 
@@ -64,7 +84,7 @@ export default function ProgressPage() {
       <Card>
         <CardContent className="flex flex-col gap-5 pt-6">
           <div className="grid grid-cols-3 gap-3">
-            <Score label="30-day" value={`${c30}%`} sub="days completed" />
+            <Score label="30-day" value={`${c30Shown}%`} sub="days completed" />
             <Score
               label="Current"
               value={
@@ -100,7 +120,7 @@ export default function ProgressPage() {
       <Card>
         <CardContent className="flex items-center justify-between gap-4 pt-6">
           <div>
-            <Score label="Group · 90 days" value={`${groupC90}%`} />
+            <Score label="Group · 90 days" value={`${groupShown}%`} />
             <p className="mt-1 max-w-xs text-xs text-muted-foreground">
               The circle&rsquo;s collective consistency. Goal:{" "}
               <span className="font-semibold text-foreground">70%+</span>{" "}
@@ -110,12 +130,12 @@ export default function ProgressPage() {
           <div
             className="grid size-16 shrink-0 place-items-center rounded-full text-lg font-bold text-primary tabular-nums"
             style={{
-              background: `conic-gradient(var(--primary) ${groupC90 * 3.6}deg, var(--muted) 0)`,
+              background: `conic-gradient(var(--primary) ${groupShown * 3.6}deg, var(--muted) 0)`,
             }}
             aria-hidden
           >
             <span className="grid size-12 place-items-center rounded-full bg-card">
-              {groupC90}%
+              {groupShown}%
             </span>
           </div>
         </CardContent>

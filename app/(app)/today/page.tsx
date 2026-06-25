@@ -39,7 +39,7 @@ export default function TodayPage() {
           : `${left} ring${left === 1 ? "" : "s"} to close — you're almost there`;
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+    <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
       {/* Fresh-start re-engagement (CET-19) — shows on temporal landmarks */}
       <FreshStartBanner />
 

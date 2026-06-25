@@ -16,7 +16,7 @@ export default function LeaderboardPage() {
   const meId = state.session.currentUserId;
 
   return (
-    <div className="flex flex-col gap-4 px-4 pt-5 pb-6">
+    <div className="rise-in flex flex-col gap-4 px-4 pt-5 pb-6">
       <header>
         <h1 className="font-display text-2xl font-bold text-foreground">
           Leaderboard

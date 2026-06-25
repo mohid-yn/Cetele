@@ -805,8 +805,9 @@ export const sel = {
     const score = sel.groupConsistency(s, groupId, 30);
     const today = sel.groupToday(s, groupId);
     const todayPct = today.goal ? today.total / today.goal : 0;
-    // Blend the durable 30-day signal with a small nudge from today's progress.
-    const blended = Math.min(100, score + todayPct * 12);
+    // Blend the durable 30-day signal with a nudge from today's progress, so
+    // tapping toward today's goal visibly grows the garden in-session.
+    const blended = Math.min(100, score + todayPct * 18);
     const stage = blended < 20 ? 0 : blended < 40 ? 1 : blended < 65 ? 2 : 3;
     return {
       stage,

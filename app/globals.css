@@ -287,3 +287,65 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Calm staggered entrance for page sections. */
+@keyframes rise-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise-in {
+  animation: rise-in var(--duration-slow) var(--ease-brand) both;
+}
+
+/* Garden: plants grow up from the soil on first paint. */
+@keyframes garden-grow {
+  0% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* Garden: a gentle ambient breeze so it feels alive, not diagrammatic. */
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-1.6deg);
+  }
+  50% {
+    transform: rotate(1.6deg);
+  }
+}
+
+/* Garden: a flower pops when a plant crosses into bloom. */
+@keyframes bloom-pop {
+  0% {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Honour reduced-motion: keep meaning, drop the movement (a11y + worship-calm). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

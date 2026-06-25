@@ -6,9 +6,14 @@ import * as React from "react";
  * Tween a displayed number toward `value` whenever it changes — used for the
  * live group counter and tap totals so jumps feel alive rather than snapping.
  */
-export function useAnimatedNumber(value: number, durationMs = 500): number {
-  const [display, setDisplay] = React.useState(value);
-  const fromRef = React.useRef(value);
+export function useAnimatedNumber(
+  value: number,
+  durationMs = 500,
+  animateOnMount = false,
+): number {
+  // When animateOnMount, start at 0 so the first effect tweens 0 → value.
+  const [display, setDisplay] = React.useState(animateOnMount ? 0 : value);
+  const fromRef = React.useRef(animateOnMount ? 0 : value);
   const rafRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {

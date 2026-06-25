@@ -45,7 +45,7 @@ export default function GroupPage() {
     .sort((a, b) => b.today - a.today);
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+    <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <GroupSwitcher className="-ml-2 px-2 py-0.5 font-display text-2xl font-bold" />
