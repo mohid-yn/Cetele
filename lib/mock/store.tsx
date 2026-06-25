@@ -280,8 +280,9 @@ function reducer(state: MockState, action: Action): MockState {
 
     case "sendReaction": {
       const today = isoDate(0);
+      const reactions = state.reactions ?? [];
       // One reaction of each kind per sender→peer per day (tap again to undo).
-      const existing = state.reactions.find(
+      const existing = reactions.find(
         (r) =>
           r.fromUserId === action.fromUserId &&
           r.toUserId === action.toUserId &&
@@ -291,7 +292,7 @@ function reducer(state: MockState, action: Action): MockState {
       if (existing)
         return {
           ...state,
-          reactions: state.reactions.filter((r) => r !== existing),
+          reactions: reactions.filter((r) => r !== existing),
         };
       const r: Reaction = {
         id: nextId("r"),
@@ -301,7 +302,7 @@ function reducer(state: MockState, action: Action): MockState {
         kind: action.kind,
         date: today,
       };
-      return { ...state, reactions: [...state.reactions, r] };
+      return { ...state, reactions: [...reactions, r] };
     }
 
     case "setFreshStart":
@@ -394,8 +395,22 @@ export function MockStateProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw)
-        dispatch({ type: "hydrate", state: JSON.parse(raw) as MockState });
+      if (raw) {
+        // Merge over a fresh seed so a partial/older-shaped persisted blob
+        // (e.g. one saved before a field existed) backfills missing keys
+        // instead of crashing selectors. Cheap forward-compatibility for the
+        // localStorage-backed mock.
+        const seed = createInitialState();
+        const saved = JSON.parse(raw) as Partial<MockState>;
+        const merged: MockState = {
+          ...seed,
+          ...saved,
+          reactions: saved.reactions ?? seed.reactions,
+          session: { ...seed.session, ...(saved.session ?? {}) },
+          ui: { ...seed.ui, ...(saved.ui ?? {}) },
+        };
+        dispatch({ type: "hydrate", state: merged });
+      }
     } catch {
       // ignore corrupt/absent storage — fall back to the seed
     }
@@ -706,7 +721,7 @@ export const sel = {
    */
   reactionsTo: (s: MockState, toUserId: string, date = isoDate(0)) => {
     const mine = s.session.currentUserId;
-    const here = s.reactions.filter(
+    const here = (s.reactions ?? []).filter(
       (r) => r.toUserId === toUserId && r.date === date,
     );
     const byKind = new Map<string, { count: number; reacted: boolean }>();
@@ -721,8 +736,9 @@ export const sel = {
 
   /** Total encouragements a user has received today (for a glance badge). */
   reactionCount: (s: MockState, toUserId: string, date = isoDate(0)): number =>
-    s.reactions.filter((r) => r.toUserId === toUserId && r.date === date)
-      .length,
+    (s.reactions ?? []).filter(
+      (r) => r.toUserId === toUserId && r.date === date,
+    ).length,
 
   // ---- Achievement badges (CET-20) -----------------------------------------
 
