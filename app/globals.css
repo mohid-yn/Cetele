@@ -162,16 +162,17 @@
 }
 
 :root {
-  /* Pure white surface — clean, calm, maximal text contrast. Cards are also
-     white and separate from the page by border + soft shadow (not a fill). */
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --muted: #f1f5f9; /* light slate — chips, fills, hover states */
-  --muted-foreground: #64748b; /* slate-500 ≈ 4.6:1 on white — passes AA */
-  --border: #e2e8f0;
-  --input: #e2e8f0;
+  /* Warm cream surface — softer and calmer than stark white for a worship app.
+     Cards stay pure white so they lift off the cream by tone + border + shadow;
+     muted fills/borders are warmed to match so nothing reads cool-grey. */
+  --background: #faf6ec; /* cream page */
+  --foreground: #1c1814; /* warm near-black — high contrast on cream */
+  --card: #ffffff; /* white cards lift off the cream */
+  --card-foreground: #1c1814;
+  --muted: #f0eadd; /* warm fill — chips, hover, recessed states */
+  --muted-foreground: #6f675a; /* warm grey ≈ 5.6:1 on cream/white — passes AA */
+  --border: #e7e0d0; /* warm hairline */
+  --input: #e7e0d0;
   --ring: #047857; /* emerald focus ring — calm & on-brand */
 
   --primary: #047857; /* emerald: brand, calm/spiritual, completion/growth */
@@ -211,17 +212,17 @@
   /* Tuned per UI_PRACTICES §2: never pure black, off-white text, calm hues, and
      — because shadows barely register on dark — a real *elevation ladder* where
      each raised surface is lighter than the one below it (background < card <
-     muted), with a visible border so cards still separate. Emerald-tinted
-     neutrals keep the night surface on-brand rather than a flat grey invert.
-     Surfaces sit at/above the research floor (~#101a28 luminance), not darker. */
-  --background: #0f1a15; /* deep emerald-black — calm, above the glare floor */
-  --foreground: #e8f0ec; /* off-white (slight green tint), not pure #fff */
-  --card: #16241d; /* raised: clearly lighter than the page */
-  --card-foreground: #e8f0ec;
-  --muted: #1e2e26; /* chips / fills / hover — lighter again so states read */
-  --muted-foreground: #97aca2; /* ≈6.7:1 on card — passes AA */
-  --border: #2c3f35; /* visible separator (shadows are weak on dark) */
-  --input: #2c3f35;
+     muted), with a visible border so cards still separate. Warm brown-tinted
+     neutrals give an earthy night surface (emerald + gold pop warmly on it).
+     Surfaces sit above pure black so they never glare. */
+  --background: #1a140f; /* deep warm brown — calm, not pure black */
+  --foreground: #f0e9dd; /* warm off-white, not pure #fff */
+  --card: #241c14; /* raised: clearly lighter/warmer than the page */
+  --card-foreground: #f0e9dd;
+  --muted: #2e2419; /* chips / fills / hover — lighter again so states read */
+  --muted-foreground: #b3a691; /* warm ≈7:1 on card — passes AA */
+  --border: #3d3122; /* visible warm separator (shadows are weak on dark) */
+  --input: #3d3122;
   --ring: #34d399; /* bright emerald focus — high-visibility on dark */
 
   --primary: #10b981; /* lighter emerald so fills + rings read on dark */

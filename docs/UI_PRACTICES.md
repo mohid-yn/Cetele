@@ -60,14 +60,14 @@ doc open.
 > brand itself** — which collapses three jobs (brand, calm surface, completion)
 > into one culturally-resonant hue. Give each colour **one consistent job**:
 
-| Token                 | Colour    | Job (consistent everywhere)                                                                                                                                 |
-| --------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--primary` (emerald) | `#047857` | **Brand + calm/spiritual surface + completion/growth.** Headers, structure, default buttons, closed rings, "done". The workhorse _and_ the progress signal. |
-| `--accent` (gold)     | `#F59E0B` | **Earned action + celebration spark.** One primary CTA per view; confetti; "tap to count". Dark text for AA. Never body, never decoration.                  |
-| `--success` (emerald) | `#059669` | **Completion / streak-alive / goal met.** Same family as brand, a touch brighter so "done" pops. Always with a ✓ glyph.                                     |
-| `--warning` (orange)  | `#EA580C` | **At risk / caution.** True orange, distinct from the gold accent. Paired with text.                                                                        |
-| `--danger` (red)      | `#DC2626` | **Errors only.** Never urgency/FOMO ("streak about to die!") — that breaks D8 and is bad colour practice.                                                   |
-| surface (white)       | `#FFFFFF` | **Pure white** — max contrast, clean and calm. Cards separate by border + soft shadow, not a fill.                                                          |
+| Token                 | Colour        | Job (consistent everywhere)                                                                                                                                                                                                   |
+| --------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--primary` (emerald) | `#047857`     | **Brand + calm/spiritual surface + completion/growth.** Headers, structure, default buttons, closed rings, "done". The workhorse _and_ the progress signal.                                                                   |
+| `--accent` (gold)     | `#F59E0B`     | **Earned action + celebration spark.** One primary CTA per view; confetti; "tap to count". Dark text for AA. Never body, never decoration.                                                                                    |
+| `--success` (emerald) | `#059669`     | **Completion / streak-alive / goal met.** Same family as brand, a touch brighter so "done" pops. Always with a ✓ glyph.                                                                                                       |
+| `--warning` (orange)  | `#EA580C`     | **At risk / caution.** True orange, distinct from the gold accent. Paired with text.                                                                                                                                          |
+| `--danger` (red)      | `#DC2626`     | **Errors only.** Never urgency/FOMO ("streak about to die!") — that breaks D8 and is bad colour practice.                                                                                                                     |
+| surface (warm)        | cream / brown | **Warm, not stark.** `--background` = cream `#FAF6EC` (light) / deep brown `#1A140F` (dark); cards stay white / lighter-brown so they lift off by tone + border + shadow. Softer & calmer than white/black for a worship app. |
 
 This makes the retention-correct choice and the audience-expected choice the
 **same colour**: green is simultaneously the spiritual hue a dhikr community

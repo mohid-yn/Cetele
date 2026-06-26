@@ -79,7 +79,7 @@ retention-correct "done" colour. Map meaning once and never reassign it:
 | **Orange** `warning`  | At risk / needs attention                                                                      | True orange (distinct from gold accent) — caution without alarm, paired with text                                       |
 | **Red** `danger`      | Errors & destructive actions **only**                                                          | Red = "this is wrong/destructive", never urgency or FOMO marketing                                                      |
 
-- **Clean white surface:** `--background` is **pure white `#FFFFFF`** for maximal text contrast and a calm, uncluttered feel. Cards are also white and separate by border + soft shadow (not a fill).
+- **Warm surface:** `--background` is a **cream `#FAF6EC`** (light) / **deep warm brown `#1A140F`** (dark) — softer and calmer than stark white/black for a worship app. Cards stay **white** (light) / a lighter brown (dark) so they **lift off** the page by tone + border + shadow; muted fills/borders are warmed to match.
 - **Contrast is non-negotiable (WCAG AA ≥ 4.5:1).** That's why `accent-foreground` is **dark, not white** — white-on-gold is only ~1.9:1 (fails); dark-on-gold is ~8:1.
 - **One accent per view, ≤ ~3 hues per view.** If everything is coloured, nothing stands out and retention drops.
 
