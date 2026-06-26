@@ -315,6 +315,7 @@ function reducer(state: MockState, action: Action): MockState {
       const gid = state.session.activeGroupId;
       const today = isoDate(0);
       const tasks = state.tasks.filter((t) => t.groupId === gid);
+      const taskIds = new Set(tasks.map((t) => t.id));
       const allComplete = tasks.every((t) => {
         const c = state.logs
           .filter(
@@ -333,10 +334,53 @@ function reducer(state: MockState, action: Action): MockState {
         if (s.freezesLeft > 0) return { ...s, freezesLeft: s.freezesLeft - 1 };
         return { ...s, current: 0 };
       });
+
+      // Garden progression demo: a day passes in which the whole circle does
+      // well. The garden is driven by *durable* 30-day group consistency, so we
+      // complete each member's most-recent not-yet-full past day — one notch per
+      // press — making the garden visibly grow over time as you fast-forward.
+      let logs = state.logs;
+      const members = state.memberships
+        .filter((m) => m.groupId === gid)
+        .map((m) => m.userId);
+      const dayFull = (uId: string, date: string) =>
+        tasks.every(
+          (t) =>
+            logs
+              .filter(
+                (l) => l.userId === uId && l.taskId === t.id && l.date === date,
+              )
+              .reduce((s, l) => s + l.count, 0) >= t.targetCount,
+        );
+      for (const m of members) {
+        // Most recent past day (yesterday → 29 days ago) not yet fully closed.
+        let fillDate: string | null = null;
+        for (let d = 1; d <= 29; d++) {
+          const date = isoDate(d);
+          if (!dayFull(m, date)) {
+            fillDate = date;
+            break;
+          }
+        }
+        if (!fillDate) continue; // already perfect across the window
+        // Top that day up to a full set of closed rings for this member.
+        logs = logs.filter(
+          (l) =>
+            !(l.userId === m && l.date === fillDate && taskIds.has(l.taskId)),
+        );
+        for (const t of tasks) {
+          logs.push({
+            id: nextId("l"),
+            userId: m,
+            taskId: t.id,
+            date: fillDate,
+            count: t.targetCount,
+          });
+        }
+      }
+
       // Clear the logged-in user's today logs so rings reset for the "new day".
-      const logs = state.logs.filter(
-        (l) => !(l.userId === uid && l.date === today),
-      );
+      logs = logs.filter((l) => !(l.userId === uid && l.date === today));
       return { ...state, streaks, logs };
     }
 
@@ -697,6 +741,41 @@ export const sel = {
         streak: s.streaks.find((x) => x.userId === m.userId)?.current ?? 0,
       }))
       .sort((a, b) => b.score - a.score),
+
+  /**
+   * Per-task completion grid for one member over the last `days` days — the
+   * admin "ask about specific days" breakdown. Rows = the group's tasks; each
+   * row carries a cell per day (oldest → newest) with the raw count vs target
+   * and whether the ring closed. Kept fortnight-sized by callers so it's cheap
+   * to store/query; behind a real backend this is one `logs` range scan.
+   */
+  taskBreakdown: (
+    s: MockState,
+    userId: string,
+    groupId: string,
+    days: number,
+  ) => {
+    const tasks = sel.groupTasks(s, groupId);
+    const dates = Array.from({ length: days }, (_, i) => isoDate(days - 1 - i));
+    const rows = tasks.map((t) => ({
+      task: t,
+      cells: dates.map((date) => {
+        const count = s.logs
+          .filter(
+            (l) => l.userId === userId && l.taskId === t.id && l.date === date,
+          )
+          .reduce((sum, l) => sum + l.count, 0);
+        return {
+          date,
+          count,
+          target: t.targetCount,
+          pct: t.targetCount ? Math.min(1, count / t.targetCount) : 0,
+          full: count >= t.targetCount,
+        };
+      }),
+    }));
+    return { dates, rows };
+  },
 
   /** Group collective consistency = mean of members' scores over `days`. */
   groupConsistency: (s: MockState, groupId: string, days: number): number => {

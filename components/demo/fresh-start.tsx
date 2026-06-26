@@ -66,7 +66,7 @@ export function FreshStartBanner() {
   };
 
   return (
-    <Card className="relative border-primary-200 bg-primary-50 p-4">
+    <Card className="relative border-primary-500/30 bg-primary-500/10 p-4">
       <button
         type="button"
         aria-label="Dismiss"

@@ -62,7 +62,7 @@ All tokens live in `app/globals.css`. Tailwind 4 generates utilities from them.
 
 - Generates `bg-*`, `text-*`, `border-*`, `ring-*`, `fill-*`, etc.
 - `--ring` is **emerald** — focus is high-visibility, calm, and on-brand.
-- Dark mode is automatic via `prefers-color-scheme`; only semantic tokens flip. Light mode is the priority; dark is kept coherent but secondary.
+- Dark mode = a **persisted System/Light/Dark toggle** (a `.dark` class on `<html>` set before paint, so the choice beats the OS query); only semantic tokens flip. Light is still the priority, but dark is now **tuned** per `docs/UI_PRACTICES.md §2`: elevation comes from a surface ladder (`background` < `card` < `muted`, lighter = raised) + a visible `--border` (shadows barely register on dark), with calmed accent/status hues.
 
 #### Colour psychology & meaning (why these colours)
 

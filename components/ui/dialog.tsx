@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
@@ -42,9 +43,13 @@ export function Dialog({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  // Portal to <body> so the modal escapes any transformed ancestor (e.g. a page
+  // wrapper left with a `transform` by its entrance animation) — otherwise
+  // `position: fixed` resolves against that ancestor and the dialog/backdrop are
+  // offset instead of covering the whole viewport.
+  return createPortal(
     <div className="fixed inset-0 z-[var(--z-modal)] grid place-items-center p-4">
       <div
         className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
@@ -76,7 +81,8 @@ export function Dialog({
         {children && <div className="mt-4">{children}</div>}
         {footer && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

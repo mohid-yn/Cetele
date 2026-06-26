@@ -155,7 +155,7 @@ export function GroupGarden({ className }: { className?: string }) {
           y={0}
           width={320}
           height={130}
-          className="fill-primary-50"
+          className="garden-sky fill-primary-50"
         />
         {/* sun, only once the garden is thriving */}
         {stage >= 3 && (
@@ -164,11 +164,11 @@ export function GroupGarden({ className }: { className?: string }) {
         {/* ground */}
         <path
           d="M0 110 Q 160 96 320 110 V130 H0 Z"
-          className="fill-primary-200/60"
+          className="garden-ground fill-primary-200/60"
         />
         <path
           d="M0 118 Q 160 106 320 118 V130 H0 Z"
-          className="fill-primary-300/50"
+          className="garden-soil fill-primary-300/50"
         />
         {plants.map((p, i) => (
           <Plant key={p.x} x={p.x} v={p.v} i={i} />

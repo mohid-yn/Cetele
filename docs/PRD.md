@@ -55,7 +55,7 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **Group leaderboard** — rank members by consistency/completion this week
 - **Consistency tracker** — the longitudinal view of _how steadfast_ each member is (the in-app surface for our North Star). A GitHub-style **calendar heatmap** of daily completion (green intensity = % of that day's tasks closed) + a headline **consistency score** (% of days fully completed over **7 / 30 / 90 days**) + **longest streak**. Three views:
   - **Personal** — each member sees their own history (self-reflection, identity reinforcement)
-  - **Group-admin oversight** — group admins see every member's consistency, to spot who's slipping and follow up (real accountability)
+  - **Group-admin oversight** — group admins see every member's consistency, to spot who's slipping and follow up (real accountability). Tapping a member opens a **per-task fortnight breakdown** (each task × the last 14 days, with the exact count vs target per day) so an admin can ask about _specific days_ ("you missed Salawat Tue–Thu — everything ok?"). Read-only and forgiveness-framed (a missed day is a calm neutral cell, never a red alarm)
   - **Group collective rollup** — the group's 90-day consistency figure, shown to the whole group (the North Star, made visible)
   - _Distinct from streaks (current momentum) and the leaderboard (this-week ranking): this is the **pattern over time**. Derived from `logs` vs targets — no streak/FOMO pressure, framed by **forgiveness** (a single missed day is a lighter cell, never an alarm)._
 - **Variable-reward milestones** — occasional surprise animation / du'a at random milestones
@@ -113,7 +113,7 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 > Row-Level Security on every table: members read their group, admins write their group.
 
-**Consistency tracker** needs **no new table** — it is derived from `logs` (count per user / item / date) vs each item's `target_count`: a day's completion % = closed-rings ÷ total-tasks; the 7/30/90-day score = % of days fully completed; the group rollup aggregates across members. For performance at scale, optionally precompute a `daily_completion` view/materialized view (user_id, group_id, date, pct). RLS mirrors the rest: members read their own + group rollups; group admins read all members in their group.
+**Consistency tracker** needs **no new table** — it is derived from `logs` (count per user / item / date) vs each item's `target_count`: a day's completion % = closed-rings ÷ total-tasks; the 7/30/90-day score = % of days fully completed; the group rollup aggregates across members. For performance at scale, optionally precompute a `daily_completion` view/materialized view (user_id, group_id, date, pct). RLS mirrors the rest: members read their own + group rollups; group admins read all members in their group. The **admin per-task fortnight breakdown** (§4) is just a bounded `logs` range scan (one member × group tasks × last 14 days) — a short, fixed window, so it stays cheap to query and store without any new table.
 
 ---
 

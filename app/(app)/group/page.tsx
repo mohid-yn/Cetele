@@ -12,8 +12,14 @@ import { GroupGarden } from "@/components/demo/group-garden";
 import { LiveCounter } from "@/components/demo/live-counter";
 import { PairGoal } from "@/components/demo/pair-goal";
 import { MemberRow } from "@/components/demo/member-row";
+import { MemberBreakdownDialog } from "@/components/demo/member-breakdown";
 import { Segmented } from "@/components/demo/segmented";
-import { CheckIcon, FlameIcon, SettingsIcon } from "@/components/demo/icons";
+import {
+  CheckIcon,
+  ChevronRightIcon,
+  FlameIcon,
+  SettingsIcon,
+} from "@/components/demo/icons";
 import { isoDate } from "@/lib/mock/data";
 
 type Tab = "overview" | "standings" | "members";
@@ -31,6 +37,10 @@ export default function GroupPage() {
     state.session.viewRole === "admin";
 
   const [tab, setTab] = React.useState<Tab>("overview");
+  // Admin oversight: which member's fortnight breakdown is open (null = none).
+  const [breakdownUserId, setBreakdownUserId] = React.useState<string | null>(
+    null,
+  );
 
   // Per-task collective progress: everyone's counts today vs target × members.
   const taskTotals = tasks.map((t) => {
@@ -152,8 +162,10 @@ export default function GroupPage() {
                   key={row.userId}
                   className={cn(
                     "rounded-2xl border p-3 shadow-sm",
+                    // Opacity-tint (not a fixed light step) so the "you" highlight
+                    // stays readable in dark too — bg-accent-50 was white-on-white.
                     isMe
-                      ? "border-accent-300 bg-accent-50"
+                      ? "border-accent-500/40 bg-accent-500/10"
                       : "border-border bg-card",
                   )}
                 >
@@ -204,27 +216,52 @@ export default function GroupPage() {
           >
             {members.length} members
           </SectionHeading>
+          {canManage && (
+            <p className="mb-2 text-xs text-muted-foreground">
+              Tap a member to see their last 14 days, task by task.
+            </p>
+          )}
           <ul className="flex flex-col gap-1.5">
-            {contributions.map((m) => (
-              <li
-                key={m.userId}
-                className="rounded-xl border border-border bg-card px-3 py-2"
-              >
+            {contributions.map((m) => {
+              const row = (
                 <MemberRow
                   name={m.user.name}
                   role={m.role}
                   you={m.userId === meId}
                   trailing={
-                    <div className="text-right">
-                      <p className="font-display text-sm font-bold text-foreground tabular-nums">
-                        {m.today.toLocaleString()}
-                      </p>
-                      <p className="text-xs text-muted-foreground">today</p>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="font-display text-sm font-bold text-foreground tabular-nums">
+                          {m.today.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">today</p>
+                      </div>
+                      {canManage && (
+                        <ChevronRightIcon className="size-4 text-muted-foreground" />
+                      )}
                     </div>
                   }
                 />
-              </li>
-            ))}
+              );
+              return (
+                <li key={m.userId}>
+                  {canManage ? (
+                    <button
+                      type="button"
+                      onClick={() => setBreakdownUserId(m.userId)}
+                      aria-label={`See ${m.user.name}'s last 14 days`}
+                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-muted/50"
+                    >
+                      {row}
+                    </button>
+                  ) : (
+                    <div className="rounded-xl border border-border bg-card px-3 py-2">
+                      {row}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
           {canManage && (
             <div className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
@@ -240,6 +277,16 @@ export default function GroupPage() {
             </div>
           )}
         </section>
+      )}
+
+      {canManage && (
+        <MemberBreakdownDialog
+          key={breakdownUserId ?? "none"}
+          userId={breakdownUserId}
+          groupId={group.id}
+          open={breakdownUserId !== null}
+          onClose={() => setBreakdownUserId(null)}
+        />
       )}
     </div>
   );

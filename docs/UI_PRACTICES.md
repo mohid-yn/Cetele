@@ -20,15 +20,15 @@ doc open.
 
 ## Implementation tracker (research → work)
 
-| §   | Finding / shortcoming                                                                                                                                                                                                                       | Action                                                                                       | Priority |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------- |
-| §1  | Green is underused. For a _dhikr_ audience it carries cultural+psychological weight (growth, calm, spirituality). Promote to a semantic.                                                                                                    | Elevate `--success`/new `--growth` to completion/streak role; decision needed (touches D13). | High     |
-| §2  | App follows OS theme only — **no manual light/dark toggle.** Dhikr peaks at night (82.7% enable dark after 10pm); dhikr ≈ Isha/Tahajjud/pre-Fajr.                                                                                           | Add persisted theme toggle (system / light / dark); `class` strategy.                        | High     |
-| §2  | Dark accent orange is fully saturated → "vibrates" on dark surfaces. Off-white text is good; verify no pure black.                                                                                                                          | Desaturate/lighten accent + status hues in the dark block.                                   | Medium   |
-| §3  | **Not responsive** — hard-capped at `max-w-[28rem]` with a phone bottom-nav. Unusable as a real layout on laptop/desktop.                                                                                                                   | Responsive shell: bottom-nav (mobile) → sidebar + wider/multi-col (≥`lg`).                   | High     |
-| §4  | Motion budget + earned-celebration model **validated** — keep within 150–300ms / spring only on celebration.                                                                                                                                | — (review-time bar)                                                                          | —        |
-| §5  | Status today leans on colour; some states (rings, leaderboard) need a second channel for colour-blind safety.                                                                                                                               | Glyph/label beside every status colour; never colour-alone.                                  | Medium   |
-| §1  | ~~Navy+orange validated — no re-theme needed.~~ **Reversed (D20):** product owner found navy/orange ugly + too corporate for a calm dhikr app. Re-themed to **emerald + gold on white** — green becomes the brand _and_ the completion hue. | Done — see §1 synthesis (updated).                                                           | —        |
+| §   | Finding / shortcoming                                                                                                                                                                                                                       | Action                                                                                                                                | Priority |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| §1  | Green is underused. For a _dhikr_ audience it carries cultural+psychological weight (growth, calm, spirituality). Promote to a semantic.                                                                                                    | Elevate `--success`/new `--growth` to completion/streak role; decision needed (touches D13).                                          | High     |
+| §2  | ~~App follows OS theme only — **no manual light/dark toggle.**~~ Dhikr peaks at night (82.7% enable dark after 10pm); dhikr ≈ Isha/Tahajjud/pre-Fajr.                                                                                       | **Done (D19):** persisted System/Light/Dark toggle via a `.dark` class set before paint.                                              | —        |
+| §2  | ~~Dark accent + status hues need calming; surfaces need a real elevation ladder (shadows barely register on dark); garden sky glares at night.~~                                                                                            | **Done:** dark block tuned — surface ladder (lighter = raised) + visible border; gold/status softened; garden re-tinted deep-emerald. | —        |
+| §3  | **Not responsive** — hard-capped at `max-w-[28rem]` with a phone bottom-nav. Unusable as a real layout on laptop/desktop.                                                                                                                   | Responsive shell: bottom-nav (mobile) → sidebar + wider/multi-col (≥`lg`).                                                            | High     |
+| §4  | Motion budget + earned-celebration model **validated** — keep within 150–300ms / spring only on celebration.                                                                                                                                | — (review-time bar)                                                                                                                   | —        |
+| §5  | Status today leans on colour; some states (rings, leaderboard) need a second channel for colour-blind safety.                                                                                                                               | Glyph/label beside every status colour; never colour-alone.                                                                           | Medium   |
+| §1  | ~~Navy+orange validated — no re-theme needed.~~ **Reversed (D20):** product owner found navy/orange ugly + too corporate for a calm dhikr app. Re-themed to **emerald + gold on white** — green becomes the brand _and_ the completion hue. | Done — see §1 synthesis (updated).                                                                                                    | —        |
 
 ---
 
@@ -114,12 +114,25 @@ moment a user is most likely to open Cetele is exactly when a glaring white
 screen is most punishing. Dark mode here isn't cosmetic; it's aligned with the
 core use moment. A calm, true-dark night surface _is_ retention.
 
-### Current state (good bones, two gaps)
+### Current state (tuned)
 
-`app/globals.css` is **already fully tokenised** with a complete
-`@media (prefers-color-scheme: dark)` block — light/dark values both exist, all
-semantic. Gaps: (a) **no manual toggle** (OS-only); (b) the dark **accent stays
-fully saturated** `#F26522` and should soften.
+`app/globals.css` is **fully tokenised**; the `:root.dark` block is now tuned to
+the rules below (it was previously "kept coherent but not finely tuned"):
+
+- **Manual toggle** — System / Light / Dark, applied via a `.dark` class set
+  before paint so the choice always beats the OS query (D19).
+- **Elevation ladder, not shadows** — on a dark field the soft slate shadow
+  tokens are near-invisible (and Tailwind v4 inlines them per-utility, so they
+  can't be re-tinted per-theme). Dark elevation instead comes from a deliberate
+  surface ladder (`background` < `card` < `muted`, each lighter = more raised) +
+  a **visible `--border`**. Surfaces sit at/above the ~`#101a28` glare floor.
+- **Calmed hues** — gold accent lightened (`#fbbf24`) so it doesn't vibrate;
+  status hues softened (success `#34d399`, warning `#fb923c`, danger `#f87171`);
+  `muted-foreground` lifted to keep ≥4.5:1 on the dark card.
+- **Garden re-tinted** — the group garden's fixed mint sky/ground (which don't
+  flip with the theme) are overridden to deep-emerald scale tokens under
+  `:root.dark`, so it reads as a calm lit garden at night instead of a glare
+  panel. Light is untouched.
 
 ### Rules to hold
 

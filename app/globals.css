@@ -208,31 +208,57 @@
    so they sit calmly on dark rather than vibrating.
    ---------------------------------------------------------------------------- */
 :root.dark {
-  /* Light mode is the priority (per product call); these keep dark coherent
-     with the emerald/gold system so a toggle isn't broken — not finely tuned. */
-  --background: #0a1410; /* deep emerald-black, not pure #000 (avoids glare) */
-  --foreground: #ecf3ef; /* off-white, not pure #fff (avoids halation) */
-  --card: #11201a;
-  --card-foreground: #ecf3ef;
-  --muted: #16271f;
-  --muted-foreground: #9bb0a6; /* lifted for ≥4.5:1 on the dark surface */
-  --border: #20372d;
-  --input: #20372d;
-  --ring: #34d399;
+  /* Tuned per UI_PRACTICES §2: never pure black, off-white text, calm hues, and
+     — because shadows barely register on dark — a real *elevation ladder* where
+     each raised surface is lighter than the one below it (background < card <
+     muted), with a visible border so cards still separate. Emerald-tinted
+     neutrals keep the night surface on-brand rather than a flat grey invert.
+     Surfaces sit at/above the research floor (~#101a28 luminance), not darker. */
+  --background: #0f1a15; /* deep emerald-black — calm, above the glare floor */
+  --foreground: #e8f0ec; /* off-white (slight green tint), not pure #fff */
+  --card: #16241d; /* raised: clearly lighter than the page */
+  --card-foreground: #e8f0ec;
+  --muted: #1e2e26; /* chips / fills / hover — lighter again so states read */
+  --muted-foreground: #97aca2; /* ≈6.7:1 on card — passes AA */
+  --border: #2c3f35; /* visible separator (shadows are weak on dark) */
+  --input: #2c3f35;
+  --ring: #34d399; /* bright emerald focus — high-visibility on dark */
 
-  --primary: #10b981; /* lighter emerald so buttons read on dark */
-  --primary-foreground: #04130d;
+  --primary: #10b981; /* lighter emerald so fills + rings read on dark */
+  --primary-foreground: #04130d; /* dark text on the brighter emerald (AA) */
   --accent: #fbbf24; /* lightened gold so it won't vibrate on dark */
   --accent-foreground: #422006;
 
-  --success: #34d399;
+  --success: #34d399; /* brighter "done" green, distinct from the brand fill */
   --success-foreground: #04130d;
-  --warning: #fb923c;
+  --warning: #fb923c; /* softened orange — caution without glare */
   --warning-foreground: #2a1402;
-  --danger: #f87171;
+  --danger: #f87171; /* desaturated red so errors don't alarm-vibrate */
   --danger-foreground: #2a0a0a;
   --info: #60a5fa;
   --info-foreground: #061122;
+  /* NB: elevation on dark comes from the surface ladder above (lighter = raised)
+     + the visible --border, not shadows — the soft slate shadow tokens are
+     near-invisible on a dark field, and Tailwind v4 inlines them per-utility so
+     they can't be re-tinted here. Keep raised surfaces lighter, not shadowed. */
+}
+
+/* Group garden (components/demo/group-garden.tsx): its sky/ground are fixed
+   emerald *scale* tints (so the light look the owner approved is untouched), but
+   those don't flip with the theme — leaving a bright mint glare panel at night,
+   exactly what UI_PRACTICES §2 says to avoid. The app themes via the `.dark`
+   class + semantic vars (not Tailwind `dark:`, which tracks the OS not the
+   toggle), so re-tint the garden here with deep-emerald scale tokens: a calm,
+   dark sky that still reads as a lit garden. Plants stay emerald/gold (legible
+   on both). Specificity (:root.dark .x) beats the single utility class. */
+:root.dark .garden-sky {
+  fill: var(--color-primary-950);
+}
+:root.dark .garden-ground {
+  fill: var(--color-primary-900);
+}
+:root.dark .garden-soil {
+  fill: var(--color-primary-800);
 }
 
 * {
