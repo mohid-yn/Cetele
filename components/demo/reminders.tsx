@@ -1,68 +1,54 @@
 "use client";
 
 /**
- * Reminders + habit-stacking (CET-11) — the missing *trigger*.
+ * Reminders (CET-11) — the missing *trigger*.
  *
  * The Hook loop and Fogg's B=MAP both start with a prompt at the moment
- * motivation and ability align. Rather than a vague "don't forget!", each
- * reminder is *stacked on an existing anchor* ("After Fajr, complete your
- * SubhanAllah ×100") — the Tiny-Habits pattern, far stickier.
+ * motivation and ability align. Each task can carry its own daily reminder at a
+ * **custom clock time the member sets** — flexibility over a fixed prayer anchor
+ * (product-owner call; prayer-time quick-fill presets could layer on later).
  *
- * Mock only: toggles are local state and the "test" button shows a simulated
- * push notification. A real build sends Web Push from a cron (D10).
+ * Mock only: times + on/off persist to the store (so they stick across reloads);
+ * the "Preview" button shows a simulated push. A real build sends Web Push from
+ * a cron (D10).
  */
 
 import * as React from "react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
 import { BellIcon } from "./icons";
 
-/** Prayer anchors to stack reminders on, in daily order. */
-const ANCHORS = [
-  { anchor: "After Fajr", time: "5:10 AM" },
-  { anchor: "After Dhuhr", time: "1:15 PM" },
-  { anchor: "After Asr", time: "4:45 PM" },
-  { anchor: "After Maghrib", time: "8:30 PM" },
-  { anchor: "After Isha", time: "10:00 PM" },
-];
-
-interface ReminderRow {
-  taskId: string;
-  label: string;
-  target: number;
-  anchor: string;
-  time: string;
-  on: boolean;
+/** "HH:MM" (24h) → "h:MM AM/PM" for display. */
+function fmt12(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const period = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
 export function Reminders() {
-  const { state } = useMock();
+  const { state, actions } = useMock();
   const group = sel.activeGroup(state);
-  const tasks = sel.groupTasks(state, group.id);
+  const me = sel.currentUser(state);
+  const rows = sel.remindersFor(state, me.id, group.id);
 
-  const [rows, setRows] = React.useState<ReminderRow[]>(() =>
-    tasks.map((t, i) => ({
-      taskId: t.id,
-      label: t.label,
-      target: t.targetCount,
-      anchor: ANCHORS[i % ANCHORS.length].anchor,
-      time: ANCHORS[i % ANCHORS.length].time,
-      on: i < 2, // a couple on by default, so it's not noisy
-    })),
-  );
-  const [preview, setPreview] = React.useState<ReminderRow | null>(null);
+  const [preview, setPreview] = React.useState<{
+    label: string;
+    target: number;
+    time: string;
+  } | null>(null);
   const timer = React.useRef<number | null>(null);
-
-  const toggle = (taskId: string) =>
-    setRows((rs) =>
-      rs.map((r) => (r.taskId === taskId ? { ...r, on: !r.on } : r)),
-    );
 
   const sendTest = () => {
     const active = rows.find((r) => r.on) ?? rows[0];
     if (!active) return;
-    setPreview(active);
+    setPreview({
+      label: active.task.label,
+      target: active.task.targetCount,
+      time: active.time,
+    });
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setPreview(null), 4200);
     if (typeof navigator !== "undefined" && "vibrate" in navigator)
@@ -83,13 +69,13 @@ export function Reminders() {
       <div className="mb-1 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-foreground">Reminders</h2>
         <span className="text-xs text-muted-foreground">
-          {activeCount} on · stacked on prayer
+          {activeCount} on · your times
         </span>
       </div>
 
       <Card className="divide-y divide-border p-0">
         {rows.map((r) => (
-          <div key={r.taskId} className="flex items-center gap-3 px-4 py-3">
+          <div key={r.task.id} className="flex items-center gap-3 px-4 py-3">
             <div
               className={cn(
                 "grid size-9 shrink-0 place-items-center rounded-full",
@@ -102,20 +88,41 @@ export function Reminders() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-foreground">
-                {r.anchor} —{" "}
+                {r.task.label}{" "}
                 <span className="text-muted-foreground">
-                  {r.label} ×{r.target}
+                  ×{r.task.targetCount}
                 </span>
               </p>
-              <p className="text-xs text-muted-foreground tabular-nums">
-                {r.time}
+              <p
+                className={cn(
+                  "text-xs tabular-nums",
+                  r.on ? "text-muted-foreground" : "text-muted-foreground/60",
+                )}
+              >
+                {fmt12(r.time)}
+                {!r.on && " · off"}
               </p>
             </div>
+
+            {/* Editable custom time (CET-11) */}
+            <Input
+              type="time"
+              value={r.time}
+              onChange={(e) =>
+                actions.setReminderTime(r.task.id, e.target.value)
+              }
+              aria-label={`${r.task.label} reminder time`}
+              className={cn(
+                "h-9 w-[7.5rem] shrink-0 tabular-nums",
+                !r.on && "opacity-60",
+              )}
+            />
+
             <button
               role="switch"
               aria-checked={r.on}
-              aria-label={`${r.anchor} reminder`}
-              onClick={() => toggle(r.taskId)}
+              aria-label={`${r.task.label} reminder`}
+              onClick={() => actions.toggleReminder(r.task.id)}
               className={cn(
                 "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-[var(--duration-fast)]",
                 r.on ? "bg-primary" : "bg-neutral-300",
@@ -133,7 +140,7 @@ export function Reminders() {
 
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <p className="text-xs text-muted-foreground">
-            Smart timing learns when you usually log and nudges just before.
+            Pick a time that fits your day — change it whenever you like.
           </p>
           <Button
             size="sm"
@@ -161,14 +168,14 @@ export function Reminders() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-muted-foreground">
-              Cetele · now
+              Cetele · {fmt12(preview.time)}
             </p>
             <p className="text-sm font-semibold text-foreground">
-              {preview.anchor} 🤲
+              Time for {preview.label} 🤲
             </p>
             <p className="text-sm text-muted-foreground">
-              Time for {preview.label} ×{preview.target}. Your circle is
-              counting with you.
+              {preview.label} ×{preview.target}. Your circle is counting with
+              you.
             </p>
           </div>
         </button>

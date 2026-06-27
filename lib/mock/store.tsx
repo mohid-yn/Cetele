@@ -96,6 +96,9 @@ type Action =
       kind: ReactionKind;
     }
   | { type: "setFreshStart"; value: boolean }
+  // CET-11: edit a personal reminder's custom time / on-off (current user).
+  | { type: "setReminderTime"; taskId: string; time: string }
+  | { type: "toggleReminder"; taskId: string }
   | { type: "fastForwardDay" };
 
 let idSeq = 1000;
@@ -488,6 +491,44 @@ function reducer(state: MockState, action: Action): MockState {
     case "setFreshStart":
       return { ...state, ui: { ...state.ui, freshStart: action.value } };
 
+    case "setReminderTime": {
+      // CET-11: set this user's reminder time for a task; create the row (on)
+      // if they hadn't customised it yet.
+      const uid = state.session.currentUserId;
+      const has = state.reminders.some(
+        (r) => r.userId === uid && r.taskId === action.taskId,
+      );
+      const reminders = has
+        ? state.reminders.map((r) =>
+            r.userId === uid && r.taskId === action.taskId
+              ? { ...r, time: action.time }
+              : r,
+          )
+        : [
+            ...state.reminders,
+            { userId: uid, taskId: action.taskId, time: action.time, on: true },
+          ];
+      return { ...state, reminders };
+    }
+
+    case "toggleReminder": {
+      const uid = state.session.currentUserId;
+      const has = state.reminders.some(
+        (r) => r.userId === uid && r.taskId === action.taskId,
+      );
+      const reminders = has
+        ? state.reminders.map((r) =>
+            r.userId === uid && r.taskId === action.taskId
+              ? { ...r, on: !r.on }
+              : r,
+          )
+        : [
+            ...state.reminders,
+            { userId: uid, taskId: action.taskId, time: "09:00", on: true },
+          ];
+      return { ...state, reminders };
+    }
+
     case "fastForwardDay": {
       // Demo: advance one day for the logged-in user, applying the
       // "never miss twice" forgiveness rule, then reset today's rings.
@@ -627,6 +668,10 @@ interface MockContextValue {
       fromUserId?: string,
     ) => void;
     setFreshStart: (value: boolean) => void;
+    /** CET-11: set the current user's reminder time (24h "HH:MM") for a task. */
+    setReminderTime: (taskId: string, time: string) => void;
+    /** CET-11: toggle the current user's reminder for a task on/off. */
+    toggleReminder: (taskId: string) => void;
     fastForwardDay: () => void;
   };
 }
@@ -656,6 +701,7 @@ export function MockStateProvider({ children }: { children: React.ReactNode }) {
           ...seed,
           ...saved,
           reactions: saved.reactions ?? seed.reactions,
+          reminders: saved.reminders ?? seed.reminders,
           pendingInvites: saved.pendingInvites ?? seed.pendingInvites,
           session: { ...seed.session, ...(saved.session ?? {}) },
           ui: { ...seed.ui, ...(saved.ui ?? {}) },
@@ -763,6 +809,9 @@ export function MockStateProvider({ children }: { children: React.ReactNode }) {
           groupId: state.session.activeGroupId,
         }),
       setFreshStart: (value) => dispatch({ type: "setFreshStart", value }),
+      setReminderTime: (taskId, time) =>
+        dispatch({ type: "setReminderTime", taskId, time }),
+      toggleReminder: (taskId) => dispatch({ type: "toggleReminder", taskId }),
       fastForwardDay: () => dispatch({ type: "fastForwardDay" }),
     }),
     [state.session.currentUserId, state.session.activeGroupId],
@@ -1151,4 +1200,17 @@ export const sel = {
       vitality: blended / 100,
     };
   },
+
+  /**
+   * CET-11: a user's reminders for a group's tasks — one row per task, joined
+   * with its current custom time + on/off (defaults for tasks not yet
+   * customised). Sorted by task order so the list reads top-to-bottom.
+   */
+  remindersFor: (s: MockState, userId: string, groupId: string) =>
+    sel.groupTasks(s, groupId).map((task) => {
+      const r = s.reminders.find(
+        (x) => x.userId === userId && x.taskId === task.id,
+      );
+      return { task, time: r?.time ?? "09:00", on: r?.on ?? false };
+    }),
 };

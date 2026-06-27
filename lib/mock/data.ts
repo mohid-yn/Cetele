@@ -6,7 +6,7 @@
  * the demo always opens mid-day with partial progress to tap toward.
  */
 
-import type { MockState, Log, Reaction, ReactionKind } from "./types";
+import type { MockState, Log, Reaction, ReactionKind, Reminder } from "./types";
 
 /** The one-tap peer encouragements (CET-18) — glyph + label, worship-appropriate. */
 export const REACTIONS: { kind: ReactionKind; glyph: string; label: string }[] =
@@ -35,7 +35,7 @@ function mulberry32(seed: number) {
   };
 }
 
-const STORAGE_VERSION = 8;
+const STORAGE_VERSION = 9;
 export const STORAGE_KEY = `cetele-mock-v${STORAGE_VERSION}`;
 
 let logSeq = 0;
@@ -389,6 +389,17 @@ export function createInitialState(): MockState {
     reaction("u-3", "u-5", "dua"),
   ];
 
+  // ---- Reminders (CET-11) ---------------------------------------------------
+  // The logged-in user starts with custom per-task times across the day (a
+  // couple on by default so it isn't noisy); fully editable on Profile.
+  const reminderDefaults = ["06:00", "13:30", "17:00", "20:30", "22:00"];
+  const reminders: Reminder[] = fajrTasks.map((t, i) => ({
+    userId: "u-1",
+    taskId: t.id,
+    time: reminderDefaults[i % reminderDefaults.length],
+    on: i < 2,
+  }));
+
   return {
     users,
     groups,
@@ -397,6 +408,7 @@ export function createInitialState(): MockState {
     logs,
     streaks,
     reactions,
+    reminders,
     pendingInvites,
     session: { currentUserId: "u-1", activeGroupId: "g-1" },
     ui: { showRibbon: true, freshStart: false, ownerDormant: false },

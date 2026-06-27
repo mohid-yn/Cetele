@@ -108,6 +108,21 @@ export interface Reaction {
 
 export type ReactionKind = "dua" | "heart" | "fire" | "mashaAllah";
 
+/**
+ * A personal per-task daily reminder (CET-11). The trigger that the Hook loop /
+ * Fogg B=MAP both start from. Custom **clock time**, fully user-set — flexibility
+ * over rigid prayer-anchoring (product-owner call; prayer-time quick-fill could
+ * layer on later). Real build sends Web Push from a cron (D10); the mock just
+ * persists the settings + shows a simulated notification.
+ */
+export interface Reminder {
+  userId: string;
+  taskId: string;
+  /** 24-hour local time, "HH:MM" (matches `<input type="time">`). */
+  time: string;
+  on: boolean;
+}
+
 /** The full mock universe persisted to localStorage. */
 export interface MockState {
   users: User[];
@@ -118,6 +133,8 @@ export interface MockState {
   streaks: Streak[];
   /** One-tap peer encouragements (CET-18). */
   reactions: Reaction[];
+  /** Personal per-task daily reminders (CET-11) — custom clock times. */
+  reminders: Reminder[];
   /** Outstanding email invites (D26 share-by-email). */
   pendingInvites: PendingInvite[];
   session: {
