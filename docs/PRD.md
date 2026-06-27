@@ -26,11 +26,11 @@ with others as a **co-admin**, and can **transfer ownership**. Roles are
 **per-group** (a person can be owner of one circle, co-admin of another, member
 of a third):
 
-| Role                   | Scope     | Can do                                                                                                                             |
-| ---------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Member**             | one group | Log tasks, see own streak + the group's activity, leaderboard & garden                                                             |
-| **Co-admin** (`admin`) | one group | Everything a member can + edit the group's **task list & targets**, invite/remove members, promote members, **re-share** the group |
-| **Owner**              | one group | Everything a co-admin can + **delete the group** and **transfer ownership** (one owner per group; the creator, until transferred)  |
+| Role                   | Scope     | Can do                                                                                                                                                                                                                                |
+| ---------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Member**             | one group | Log tasks, see own streak + the group's activity, leaderboard & garden                                                                                                                                                                |
+| **Co-admin** (`admin`) | one group | Everything a member can + edit the group's **task list & targets**, invite/remove members, promote members, **re-share** the group, and **log counts on a member's behalf** (attributed + audited — the in-person halaqah tally; D29) |
+| **Owner**              | one group | Everything a co-admin can + **delete the group** and **transfer ownership** (one owner per group; the creator, until transferred)                                                                                                     |
 
 There is no global "see every group" view — access is bounded entirely by
 ownership and sharing.
@@ -74,9 +74,9 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **Live collective counter** — real-time group total ("41,300 / 100,000 today") via Supabase Realtime
 - **Streaks** — personal daily streak; **"never miss twice"** forgiveness (1 streak-freeze)
 - **Group leaderboard** — rank members by consistency/completion this week
-- **Consistency tracker** — the longitudinal view of _how steadfast_ each member is (the in-app surface for our North Star). A GitHub-style **calendar heatmap** of daily completion (green intensity = % of that day's tasks closed) + a headline **consistency score** (% of days fully completed over **7 / 30 / 90 days**) + **longest streak**. Three views:
-  - **Personal** — each member sees their own history (self-reflection, identity reinforcement)
-  - **Group-admin oversight** — group admins see every member's consistency, to spot who's slipping and follow up (real accountability). Tapping a member opens a **per-task fortnight breakdown** (each task × the last 14 days, with the exact count vs target per day) so an admin can ask about _specific days_ ("you missed Salawat Tue–Thu — everything ok?"). Read-only and forgiveness-framed (a missed day is a calm neutral cell, never a red alarm)
+- **Consistency tracker** — the longitudinal view of _how steadfast_ each member is (the in-app surface for our North Star). A **14-day task-by-task grid** (each task × day, green intensity = % of that day's target hit) + a headline **30-day consistency band** (a calm word + %, abstracted — _"Steady · 83%"_ — not a raw 7/30/90 grade; D28) + **longest streak**. Three views:
+  - **Personal** — each member sees their own history (self-reflection, identity reinforcement); they can also **correct their own past counts** in the grid (D29)
+  - **Group-admin oversight** — group admins see every member's 30-day consistency, to spot who's slipping and follow up (real accountability). Tapping a member opens a **per-task fortnight breakdown** (each task × the last 14 days, with the exact count vs target per day) so an admin can ask about _specific days_ ("you missed Salawat Tue–Thu — everything ok?"). Forgiveness-framed (a missed day is a calm neutral cell, never a red alarm). Admins may also **log on the member's behalf** from this grid — every proxy entry is **attributed** ("logged by …") and **audited** (D29); plus a **"log for the group"** quick action marks a task done for the whole circle (the in-person halaqah)
   - **Group collective rollup** — the group's 90-day consistency figure, shown to the whole group (the North Star, made visible)
   - _Distinct from streaks (current momentum) and the leaderboard (this-week ranking): this is the **pattern over time**. Derived from `logs` vs targets — no streak/FOMO pressure, framed by **forgiveness** (a single missed day is a lighter cell, never an alarm)._
 - **Variable-reward milestones** — occasional surprise animation / du'a at random milestones
@@ -85,7 +85,7 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 - **Push notifications** — daily nudges via **Web Push + service worker** (VAPID keys), sent from a Vercel cron / Supabase Edge Function. Works on Android & desktop; iOS only on 16.4+ as an installed PWA
 - **Email reminders** — reliable fallback (Supabase/Resend) for users who don't install or are on older iOS
-- Habit-stacking reminders ("After Fajr…")
+- **Custom daily reminders (D30)** — each member sets a **per-task reminder time** (their own clock time, toggle on/off), not a fixed prayer anchor — _flexibility over rigid habit-stacking_. The in-app timing UI ships now; delivery rides the Web Push / email above. **Prayer-time quick-fill presets** can layer on later as an optional shortcut.
 
 ### 🌱 v2 — retention deepening (research-backed)
 
@@ -106,19 +106,19 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 ## 5. Retention mechanics (where each lever lives)
 
-| Lever               | Source         | Implementation                                                                 |
-| ------------------- | -------------- | ------------------------------------------------------------------------------ |
-| Completion drive    | dopamine       | Progress rings + confetti                                                      |
-| Variable reward     | dopamine       | Surprise milestone reveals                                                     |
-| Social proof        | accountability | Live group counter + leaderboard                                               |
-| Identity            | durable        | "You're someone who does dhikr daily" framing                                  |
-| Steadfastness       | durable        | **Consistency tracker** — heatmap + 7/30/90-day score (personal, admin, group) |
-| Forgiveness         | durable        | Never-miss-twice + streak freeze                                               |
-| Real accountability | durable        | Visible group peers (the _cetele_ itself)                                      |
-| Trigger             | dopamine       | _(v1.1)_ Daily reminders + habit-stacking ("after Fajr…")                      |
-| Ownership           | durable        | _(v2)_ Group garden — a collective artefact that grows with the group          |
-| Peer encouragement  | accountability | _(v2)_ One-tap dua / kudos reactions on a peer's completion                    |
-| Re-engagement       | durable        | _(v2)_ Fresh-start prompts (Hijri new month, Ramadan, week start)              |
+| Lever               | Source         | Implementation                                                                             |
+| ------------------- | -------------- | ------------------------------------------------------------------------------------------ |
+| Completion drive    | dopamine       | Progress rings + confetti                                                                  |
+| Variable reward     | dopamine       | Surprise milestone reveals                                                                 |
+| Social proof        | accountability | Live group counter + leaderboard                                                           |
+| Identity            | durable        | "You're someone who does dhikr daily" framing                                              |
+| Steadfastness       | durable        | **Consistency tracker** — 14-day grid + 30-day band (personal/admin) + 90-day group rollup |
+| Forgiveness         | durable        | Never-miss-twice + streak freeze                                                           |
+| Real accountability | durable        | Visible group peers (the _cetele_ itself)                                                  |
+| Trigger             | dopamine       | _(v1.1)_ Daily reminders — member-set custom per-task times (D30)                          |
+| Ownership           | durable        | _(v2)_ Group garden — a collective artefact that grows with the group                      |
+| Peer encouragement  | accountability | _(v2)_ One-tap dua / kudos reactions on a peer's completion                                |
+| Re-engagement       | durable        | _(v2)_ Fresh-start prompts (Hijri new month, Ramadan, week start)                          |
 
 ---
 
@@ -129,7 +129,8 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **memberships** — user_id, group_id, role (`owner` | `admin` | `member`); exactly one `owner` row per group
 - **invites** — id, group_id, email, role (`admin` | `member`), code — outstanding share-by-email invites (accept → a membership)
 - **tasks** — id, group_id, label, subtitle, target_count, order
-- **logs** — id, user_id, task_id, count, date
+- **logs** — id, user_id, task_id, count, date, `logged_by` (nullable — the admin who logged it on the member's behalf; null = self; D29)
+- **reminders** — user_id, task_id, time (`HH:MM`), on — personal per-task custom reminder times (D30)
 - **streaks** — user_id, current, longest, freezes_left, last_active
 - **push_subscriptions** — user_id, endpoint, keys (for Web Push; see §4 v1.1)
 - **reports** — id, reporter_id, group_id/target, reason, status (D27 moderation queue)
@@ -137,7 +138,7 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 > Row-Level Security on every table (D26 ownership): a row is visible only to people in that group (owner / co-admin / member); **writes** to group config (tasks, memberships, settings) require `owner` or `admin`; **delete group** and **transfer ownership** require `owner`. **Succession (D27):** a co-admin may claim ownership when the owner is dormant (no activity ≥ 14 days) or gone. **Super-admin (D27):** the only path that bypasses ownership — limited to recovery (reassign a dead group's owner) + moderation; no read access to group content; every action audited.
 
-**Consistency tracker** needs **no new table** — it is derived from `logs` (count per user / item / date) vs each item's `target_count`: a day's completion % = closed-rings ÷ total-tasks; the 7/30/90-day score = % of days fully completed; the group rollup aggregates across members. For performance at scale, optionally precompute a `daily_completion` view/materialized view (user_id, group_id, date, pct). RLS mirrors the rest: members read their own + group rollups; group admins read all members in their group. The **admin per-task fortnight breakdown** (§4) is just a bounded `logs` range scan (one member × group tasks × last 14 days) — a short, fixed window, so it stays cheap to query and store without any new table.
+**Consistency tracker** needs **no new table** — it is derived from `logs` (count per user / item / date) vs each item's `target_count`: a day's completion % = closed-rings ÷ total-tasks; the **30-day band** (personal/admin) = % of the last 30 days fully completed, the **90-day rollup** aggregates across members (the North Star). _(7-day and personal 90-day windows were dropped — D28.)_ The admin proxy-logging (D29) writes `logs.logged_by`; an `audit_log` row backs each proxy edit. For performance at scale, optionally precompute a `daily_completion` view/materialized view (user_id, group_id, date, pct). RLS mirrors the rest: members read their own + group rollups; group admins read all members in their group. The **admin per-task fortnight breakdown** (§4) is just a bounded `logs` range scan (one member × group tasks × last 14 days) — a short, fixed window, so it stays cheap to query and store without any new table.
 
 ---
 

@@ -86,32 +86,33 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 
 > **Pivot (D18) — current focus:** we are in the **mock-first validation** loop, _not_ backend yet. **CET-14**, **CET-15**, the **consistency tracker (CET-16)**, and the **admin/group-admin flows** are all **merged and live in production**. The immediate path is now: **product-owner review of the live mock** (all roles + the new admin/consistency screens) → fold requirement changes into `docs/PRD.md` → **lock requirements**. **CET-2 (Supabase) onward resumes only after requirements lock.**
 
-| #   | Issue                                             | Feature                                               | State                           |
-| --- | ------------------------------------------------- | ----------------------------------------------------- | ------------------------------- |
-| —   | [CET-1](https://linear.app/mohidkz/issue/CET-1)   | Scaffold Next.js app + PWA                            | ✅ Done                         |
-| —   | CET-12                                            | Youth Nexus design system                             | ✅ Done                         |
-| —   | CET-13                                            | Dev tooling & workflow; Vercel linked                 | ✅ Done                         |
-| —   | CET-14                                            | Clickable frontend mock (no backend) — D18            | ✅ Done (live in prod)          |
-| —   | CET-15                                            | Responsive + theming; re-theme emerald/gold — D19/D20 | ✅ Done (live in prod)          |
-| →   | _product-owner review → PRD updates_              | gauge reactions on the live mock; lock requirements   | ⏭️ **next**                     |
-| 2   | [CET-2](https://linear.app/mohidkz/issue/CET-2)   | Supabase: schema + Row-Level Security                 | ⏸️ deferred until req. lock     |
-| 3   | [CET-3](https://linear.app/mohidkz/issue/CET-3)   | Auth: Google OAuth + email magic link                 | ⏸️ deferred                     |
-| 4   | [CET-4](https://linear.app/mohidkz/issue/CET-4)   | Groups: create / invite / join + roles                | ⏸️ deferred                     |
-| 5   | [CET-5](https://linear.app/mohidkz/issue/CET-5)   | Admin task-list editor                                | ⏸️ deferred                     |
-| 6   | [CET-6](https://linear.app/mohidkz/issue/CET-6)   | Tap counter + progress rings                          | ⏸️ deferred                     |
-| 7   | [CET-7](https://linear.app/mohidkz/issue/CET-7)   | Live collective group counter (Realtime)              | ⏸️ deferred                     |
-| 8   | [CET-8](https://linear.app/mohidkz/issue/CET-8)   | Streaks + never-miss-twice forgiveness                | ⏸️ deferred                     |
-| 9   | [CET-9](https://linear.app/mohidkz/issue/CET-9)   | Group leaderboard                                     | ⏸️ deferred                     |
-| 10  | [CET-10](https://linear.app/mohidkz/issue/CET-10) | Variable-reward milestones                            | ⏸️ deferred                     |
-| 16  | [CET-16](https://linear.app/mohidkz/issue/CET-16) | Consistency tracker (heatmap + 7/30/90 score) — D21   | 🟡 mock built; backend deferred |
-| —   | CET-23                                            | Group switcher (multi-group admins)                   | ✅ Done (live in prod)          |
-| 11  | [CET-11](https://linear.app/mohidkz/issue/CET-11) | Reminders + habit-stacking _(was v1.1)_               | 🟡 mock built; backend deferred |
-| 17  | [CET-17](https://linear.app/mohidkz/issue/CET-17) | _(v2)_ Group garden — collective living artefact      | 🟡 mock built; backend deferred |
-| 18  | [CET-18](https://linear.app/mohidkz/issue/CET-18) | _(v2)_ One-tap peer reactions (dua / kudos)           | 🟡 mock built; backend deferred |
-| 19  | [CET-19](https://linear.app/mohidkz/issue/CET-19) | _(v2)_ Fresh-start re-engagement                      | 🟡 mock built; backend deferred |
-| 20  | [CET-20](https://linear.app/mohidkz/issue/CET-20) | _(v2)_ Achievement badges (streak + monthly)          | 🟡 mock built; backend deferred |
-| 21  | [CET-21](https://linear.app/mohidkz/issue/CET-21) | _(v2)_ Endowed-progress onboarding                    | 🟡 mock built; backend deferred |
-| 22  | [CET-22](https://linear.app/mohidkz/issue/CET-22) | _(v2)_ Winnable sub-group / pair goals                | 🟡 mock built; backend deferred |
+| #   | Issue                                             | Feature                                                           | State                                           |
+| --- | ------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------- |
+| —   | [CET-1](https://linear.app/mohidkz/issue/CET-1)   | Scaffold Next.js app + PWA                                        | ✅ Done                                         |
+| —   | CET-12                                            | Youth Nexus design system                                         | ✅ Done                                         |
+| —   | CET-13                                            | Dev tooling & workflow; Vercel linked                             | ✅ Done                                         |
+| —   | CET-14                                            | Clickable frontend mock (no backend) — D18                        | ✅ Done (live in prod)                          |
+| —   | CET-15                                            | Responsive + theming; re-theme emerald/gold — D19/D20             | ✅ Done (live in prod)                          |
+| →   | _product-owner review → PRD updates_              | gauge reactions on the live mock; lock requirements               | ⏭️ **next**                                     |
+| 2   | [CET-2](https://linear.app/mohidkz/issue/CET-2)   | Supabase: schema + Row-Level Security                             | ⏸️ deferred until req. lock                     |
+| 3   | [CET-3](https://linear.app/mohidkz/issue/CET-3)   | Auth: Google OAuth + email magic link                             | ⏸️ deferred                                     |
+| 4   | [CET-4](https://linear.app/mohidkz/issue/CET-4)   | Groups: create / invite / join + roles                            | ⏸️ deferred                                     |
+| 5   | [CET-5](https://linear.app/mohidkz/issue/CET-5)   | Admin task-list editor                                            | ⏸️ deferred                                     |
+| 6   | [CET-6](https://linear.app/mohidkz/issue/CET-6)   | Tap counter + progress rings                                      | ⏸️ deferred                                     |
+| 7   | [CET-7](https://linear.app/mohidkz/issue/CET-7)   | Live collective group counter (Realtime)                          | ⏸️ deferred                                     |
+| 8   | [CET-8](https://linear.app/mohidkz/issue/CET-8)   | Streaks + never-miss-twice forgiveness                            | ⏸️ deferred                                     |
+| 9   | [CET-9](https://linear.app/mohidkz/issue/CET-9)   | Group leaderboard                                                 | ⏸️ deferred                                     |
+| 10  | [CET-10](https://linear.app/mohidkz/issue/CET-10) | Variable-reward milestones                                        | ⏸️ deferred                                     |
+| 16  | [CET-16](https://linear.app/mohidkz/issue/CET-16) | Consistency tracker — 30-day band + 14-day grid (D21·D28)         | 🟡 mock built (D28 trim live); backend deferred |
+| —   | CET-23                                            | Group switcher (multi-group admins)                               | ✅ Done (live in prod)                          |
+| —   | [CET-24](https://linear.app/mohidkz/issue/CET-24) | Drive-style ownership/sharing + admin proxy-logging (D26·D27·D29) | ✅ Done (live in prod)                          |
+| 11  | [CET-11](https://linear.app/mohidkz/issue/CET-11) | Reminders — member-set custom per-task times (D30)                | 🟡 mock built (D30 live); backend deferred      |
+| 17  | [CET-17](https://linear.app/mohidkz/issue/CET-17) | _(v2)_ Group garden — collective living artefact                  | 🟡 mock built; backend deferred                 |
+| 18  | [CET-18](https://linear.app/mohidkz/issue/CET-18) | _(v2)_ One-tap peer reactions (dua / kudos)                       | 🟡 mock built; backend deferred                 |
+| 19  | [CET-19](https://linear.app/mohidkz/issue/CET-19) | _(v2)_ Fresh-start re-engagement                                  | 🟡 mock built; backend deferred                 |
+| 20  | [CET-20](https://linear.app/mohidkz/issue/CET-20) | _(v2)_ Achievement badges (streak + monthly)                      | 🟡 mock built; backend deferred                 |
+| 21  | [CET-21](https://linear.app/mohidkz/issue/CET-21) | _(v2)_ Endowed-progress onboarding                                | 🟡 mock built; backend deferred                 |
+| 22  | [CET-22](https://linear.app/mohidkz/issue/CET-22) | _(v2)_ Winnable sub-group / pair goals                            | 🟡 mock built; backend deferred                 |
 
 ---
 
@@ -121,6 +122,7 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 - Track every v1 feature as an issue; update issue state as work completes.
 - **In sync (2026-06-25):** CET-23 (group switcher) **Done**; CET-11 + CET-17…CET-22 (retention features) **In Progress** (mock built, backend deferred). D22 (retention mock), D23 (IA restructure), the count-screen UX fix, and the hydration fix recorded as comments on **CET-14** (the mock issue). Small mock fixes (count UX, hydration) are tracked under CET-14 rather than new issues — they're refinements to the prototype, not new features.
 - **In sync (2026-06-26) — pre-demo polish batch, now MERGED → `main` & live in production** (`cetele-iota.vercel.app`; branch deleted): logged as comments on the relevant issues — **CET-16** (admin per-task fortnight member breakdown, extends the oversight view), **CET-15** (dark-mode tuning — elevation ladder + calmed hues, D19/D20), **CET-17** (group garden: fast-forward now drives 30-day-consistency growth + dark re-tint), and **CET-14** (cross-cutting mock refinements: dark white-on-white readability fixes + Dialog portal/responsive-width fix). No new issues — all refinements/extensions of existing ones.
+- **In sync (2026-06-27) — three features designed + shipped to prod** (all `build`/`lint`/`tsc`/`format:check` green, Playwright-verified, `main` @ live): **CET-24 → Done** (Drive-style ownership/sharing **+ D29 admin proxy-logging**: editable member grid with "logged by …" attribution + "log for the group" halaqah tally); **CET-16** (D28 — personal 7/30/90 consistency trio → one abstracted **30-day band**; dropped 7 + personal 90; kept 14-day grid + group 90-day North Star); **CET-11** (D30 — reminders → **member-set custom per-task times**, persisted; dropped fixed prayer-anchoring, presets optional later). Decisions **D28·D29·D30** logged; **D28 also rejected** a global-XP / cumulative / punishment ranking (rich-get-richer + riya' + black-hat). `docs/PRD.md` §2/§4/§5/§6 + `.docx` synced to all three.
 
 ## Open questions / parking lot
 

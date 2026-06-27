@@ -144,7 +144,7 @@ A(normal("Drive-style group ownership (D26). There is no app-level admin tier. A
 A(table([
     ["Role", "Scope", "Can do"],
     [[B("Member")], "one group", "Log tasks, see own streak + the group's activity, leaderboard & garden"],
-    [[B("Co-admin")], "one group", "Everything a member can + edit the group's task list & targets, invite/remove members, promote members, re-share the group"],
+    [[B("Co-admin")], "one group", "Everything a member can + edit the group's task list & targets, invite/remove members, promote members, re-share the group, and log counts on a member's behalf (attributed + audited — the in-person halaqah tally; D29)"],
     [[B("Owner")], "one group", "Everything a co-admin can + delete the group and transfer ownership (one owner per group; the creator, until transferred)"],
 ], widths=[1900, 1500, 5960]))
 A(normal("There is no global \"see every group\" view — access is bounded entirely by ownership and sharing."))
@@ -174,14 +174,14 @@ for t in [
     ("Live collective counter", "real-time group total (\"41,300 / 100,000 today\") via Supabase Realtime"),
     ("Streaks", "personal daily streak; \"never miss twice\" forgiveness (1 streak-freeze)"),
     ("Group leaderboard", "rank members by consistency/completion this week"),
-    ("Consistency tracker", "how steadfast each member is over time (the North Star, made visible in-app): a GitHub-style calendar heatmap of daily completion (green intensity = % of that day's tasks closed) + a headline consistency score (% of days fully completed over 7 / 30 / 90 days) + longest streak. Three views — personal (self-reflection), group-admin oversight (every member's consistency, to spot who's slipping and follow up — tapping a member opens a per-task fortnight breakdown, each task x the last 14 days with exact count vs target, so an admin can ask about specific days; read-only, forgiveness-framed), and group collective rollup (the group's 90-day figure, shown to all). Distinct from streaks (momentum) and the leaderboard (this-week rank): the pattern over time. Derived from logs vs targets; forgiveness-framed, no FOMO."),
+    ("Consistency tracker", "how steadfast each member is over time (the North Star, made visible in-app): a 14-day task-by-task grid (each task x day, green intensity = % of that day's target hit) + a headline 30-day consistency band (a calm word + %, abstracted — \"Steady · 83%\" — not a raw 7/30/90 grade; D28) + longest streak. Three views — personal (self-reflection; members can correct their own past counts in the grid), group-admin oversight (every member's 30-day consistency, to spot who's slipping — tapping a member opens a per-task fortnight breakdown, each task x the last 14 days with exact count vs target, so an admin can ask about specific days; forgiveness-framed; admins may also log on the member's behalf, every proxy entry attributed and audited — D29 — plus a 'log for the group' quick action for the in-person halaqah), and group collective rollup (the group's 90-day figure, shown to all). Distinct from streaks (momentum) and the leaderboard (this-week rank): the pattern over time. Derived from logs vs targets; forgiveness-framed, no FOMO."),
     ("Variable-reward milestones", "occasional surprise animation / du'a at random milestones"),
 ]:
     A(bullet([B(t[0] + " — "), N(t[1])]))
 A(heading("v1.1 — fast-follow", 2))
 A(bullet([B("Push notifications — "), N("daily nudges via Web Push + service worker (VAPID keys), sent from a Vercel cron / Supabase Edge Function. Works on Android & desktop; iOS only on 16.4+ as an installed PWA")]))
 A(bullet([B("Email reminders — "), N("reliable fallback (Supabase/Resend) for users who don't install or are on older iOS")]))
-A(bullet([B("Habit-stacking reminders — "), N("\"After Fajr…\"")]))
+A(bullet([B("Custom daily reminders (D30) — "), N("each member sets a per-task reminder time (their own clock time, toggle on/off), not a fixed prayer anchor — flexibility over rigid habit-stacking. The in-app timing UI ships now; delivery rides the Web Push / email above. Prayer-time quick-fill presets can layer on later as an optional shortcut.")]))
 A(heading("v2 — retention deepening (research-backed)", 2))
 A(normal([N("From research/03-feature-recommendations.md (links the motivation science in research/02 to the competitive gaps in research/01). Top priority is to promote two already-scoped items: variable-reward milestones (v1) and reminders + habit-stacking (v1.1).")]))
 for t in [
@@ -204,10 +204,10 @@ A(table([
     ["Variable reward", "dopamine", "Surprise milestone reveals"],
     ["Social proof", "accountability", "Live group counter + leaderboard"],
     ["Identity", "durable", "\"You're someone who does dhikr daily\" framing"],
-    ["Steadfastness", "durable", "Consistency tracker — heatmap + 7/30/90-day score (personal, admin, group)"],
+    ["Steadfastness", "durable", "Consistency tracker — 14-day grid + 30-day band (personal/admin) + 90-day group rollup"],
     ["Forgiveness", "durable", "Never-miss-twice + streak freeze"],
     ["Real accountability", "durable", "Visible group peers (the cetele itself)"],
-    ["Trigger", "dopamine", "(v1.1) Daily reminders + habit-stacking (\"after Fajr…\")"],
+    ["Trigger", "dopamine", "(v1.1) Daily reminders — member-set custom per-task times (D30)"],
     ["Ownership", "durable", "(v2) Group garden — a collective artefact that grows with the group"],
     ["Peer encouragement", "accountability", "(v2) One-tap dua / kudos reactions on a peer's completion"],
     ["Re-engagement", "durable", "(v2) Fresh-start prompts (Hijri new month, Ramadan, week start)"],
@@ -221,7 +221,8 @@ for t in [
     ("memberships", "user_id, group_id, role (owner | admin | member); exactly one owner row per group"),
     ("invites", "id, group_id, email, role (admin | member), code — outstanding share-by-email invites (accept → a membership)"),
     ("tasks", "id, group_id, label, subtitle, target_count, order"),
-    ("logs", "id, user_id, task_id, count, date"),
+    ("logs", "id, user_id, task_id, count, date, logged_by (nullable — the admin who logged it on the member's behalf; null = self; D29)"),
+    ("reminders", "user_id, task_id, time (HH:MM), on — personal per-task custom reminder times (D30)"),
     ("streaks", "user_id, current, longest, freezes_left, last_active"),
     ("push_subscriptions", "user_id, endpoint, keys (for Web Push; see §4 v1.1)"),
     ("reports", "id, reporter_id, group_id/target, reason, status (D27 moderation queue)"),
@@ -230,7 +231,7 @@ for t in [
     A(bullet([B(t[0] + " — "), N(t[1])]))
 A(normal([I("Row-Level Security on every table (D26 ownership): a row is visible only to people in that group (owner / co-admin / member); writes to group config require owner or admin; delete group and transfer ownership require owner. Succession (D27): a co-admin may claim ownership when the owner is dormant (no activity >= 14 days) or gone. Super-admin (D27): the only path that bypasses ownership — limited to recovery (reassign a dead group's owner) + moderation; no read access to group content; every action audited.")],
          spacing_before=60))
-A(normal([B("Consistency tracker"), N(" needs no new table — derived from logs (count per user / item / date) vs each item's target_count: a day's completion % = closed rings ÷ total tasks; the 7/30/90-day score = % of days fully completed; the group rollup aggregates across members. Optionally precompute a daily_completion materialized view (user_id, group_id, date, pct) for scale.")],
+A(normal([B("Consistency tracker"), N(" needs no new table — derived from logs (count per user / item / date) vs each item's target_count: a day's completion % = closed rings ÷ total tasks; the 30-day band (personal/admin) = % of the last 30 days fully completed, the 90-day rollup aggregates across members (the North Star). 7-day and personal 90-day windows were dropped (D28). Admin proxy-logging (D29) writes logs.logged_by, each proxy edit backed by an audit_log row. Optionally precompute a daily_completion materialized view (user_id, group_id, date, pct) for scale.")],
          spacing_before=60))
 A(hrule())
 
