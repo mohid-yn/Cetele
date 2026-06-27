@@ -42,20 +42,19 @@ export default function ProgressPage() {
   const showOversight = sel.canManageGroup(state, me.id, group.id);
 
   // Heavy-ish derived data — memoise so the realtime ticker doesn't recompute it.
-  const { c7, c30, c90, groupC90, members } = React.useMemo(() => {
+  // D28: 30-day is the personal steadfastness window (7-day was noisy, 90-day
+  // duplicated it — streak covers momentum); 90-day survives only as the group
+  // collective North Star (PRD §9). 14-day lives in the grid below.
+  const { c30, groupC90, members } = React.useMemo(() => {
     return {
-      c7: sel.consistency(state, me.id, group.id, 7),
       c30: sel.consistency(state, me.id, group.id, 30),
-      c90: sel.consistency(state, me.id, group.id, 90),
       groupC90: sel.groupConsistency(state, group.id, 90),
       members: sel.memberConsistency(state, group.id, 30),
     };
   }, [state, me.id, group.id]);
 
   // Count-up on first paint so the page feels alive, not a static dashboard.
-  const c7Shown = useAnimatedNumber(c7, 600, true);
   const c30Shown = useAnimatedNumber(c30, 700, true);
-  const c90Shown = useAnimatedNumber(c90, 800, true);
   const groupShown = useAnimatedNumber(groupC90, 800, true);
 
   // GLANCE headline (abstraction rule): one warm, human takeaway up top.
@@ -68,6 +67,15 @@ export default function ProgressPage() {
         : c30 >= 25
           ? "you're finding your rhythm"
           : "every day is a fresh start";
+  // The 30-day band abstracts the % into a calm word, not a raw grade (research §C).
+  const bandWord =
+    c30 >= 80
+      ? "Steadfast"
+      : c30 >= 50
+        ? "Steady"
+        : c30 >= 25
+          ? "Building"
+          : "Fresh start";
 
   return (
     <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
@@ -127,13 +135,28 @@ export default function ProgressPage() {
         </div>
       </Card>
 
-      {/* Personal — 7/30/90 scores + the last-14-days task grid */}
+      {/* Personal — one 30-day steadfastness band + the last-14-days task grid */}
       <Card>
         <CardContent className="flex flex-col gap-5 pt-6">
-          <div className="grid grid-cols-3 gap-3">
-            <Score label="7-day" value={`${c7Shown}%`} sub="days completed" />
-            <Score label="30-day" value={`${c30Shown}%`} sub="days completed" />
-            <Score label="90-day" value={`${c90Shown}%`} sub="days completed" />
+          {/* D28: a single abstracted 30-day band replaces the 7/30/90 trio. */}
+          <div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm font-semibold text-foreground">
+                {bandWord}
+              </span>
+              <span className="font-display text-2xl leading-none font-bold text-foreground tabular-nums">
+                {c30Shown}%
+              </span>
+            </div>
+            <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
+                style={{ width: `${c30Shown}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {daysComplete30} of the last 30 days fully completed
+            </p>
           </div>
 
           <div>
