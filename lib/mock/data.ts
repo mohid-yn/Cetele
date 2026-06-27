@@ -35,7 +35,7 @@ function mulberry32(seed: number) {
   };
 }
 
-const STORAGE_VERSION = 4;
+const STORAGE_VERSION = 8;
 export const STORAGE_KEY = `cetele-mock-v${STORAGE_VERSION}`;
 
 let logSeq = 0;
@@ -124,17 +124,18 @@ export function createInitialState(): MockState {
   const rand = mulberry32(42);
 
   // ---- People ---------------------------------------------------------------
-  // u-1 is the logged-in persona: group_admin of Fajr Circle AND app admin,
-  // so the demo's role switcher can reach all three views as one user.
+  // u-1 is the logged-in persona: he *owns* Fajr Circle and is a shared
+  // co-admin of Maghrib Circle (owned by u-7), so the Drive-style model (D26)
+  // shows both "My groups" and "Shared with me" out of the box.
   const users: MockState["users"] = [
-    { id: "u-1", name: "Ahmad Hassan", isAdmin: true },
-    { id: "u-2", name: "Yusuf Demir", isAdmin: false },
-    { id: "u-3", name: "Aisha Rahman", isAdmin: false },
-    { id: "u-4", name: "Bilal Osman", isAdmin: false },
-    { id: "u-5", name: "Fatima Noor", isAdmin: false },
-    { id: "u-6", name: "Omar Farooq", isAdmin: false },
-    { id: "u-7", name: "Zayd Malik", isAdmin: false },
-    { id: "u-8", name: "Layla Aziz", isAdmin: false },
+    { id: "u-1", name: "Ahmad Hassan" },
+    { id: "u-2", name: "Yusuf Demir" },
+    { id: "u-3", name: "Aisha Rahman" },
+    { id: "u-4", name: "Bilal Osman" },
+    { id: "u-5", name: "Fatima Noor" },
+    { id: "u-6", name: "Omar Farooq" },
+    { id: "u-7", name: "Zayd Malik" },
+    { id: "u-8", name: "Layla Aziz" },
   ];
 
   // ---- Groups ---------------------------------------------------------------
@@ -154,17 +155,29 @@ export function createInitialState(): MockState {
   ];
 
   const memberships: MockState["memberships"] = [
-    { userId: "u-1", groupId: "g-1", role: "group_admin" },
-    { userId: "u-2", groupId: "g-1", role: "member" },
-    { userId: "u-3", groupId: "g-1", role: "member" },
+    { userId: "u-1", groupId: "g-1", role: "owner" }, // Ahmad owns Fajr Circle
+    { userId: "u-2", groupId: "g-1", role: "member" }, // Yusuf — plain member
+    { userId: "u-3", groupId: "g-1", role: "admin" }, // Aisha — co-admin (helps run it)
     { userId: "u-4", groupId: "g-1", role: "member" },
     { userId: "u-5", groupId: "g-1", role: "member" },
     { userId: "u-6", groupId: "g-1", role: "member" },
-    // u-1 also runs Maghrib Circle → demonstrates a group admin of *multiple*
-    // groups (the group switcher lets them manage each).
-    { userId: "u-1", groupId: "g-2", role: "group_admin" },
-    { userId: "u-7", groupId: "g-2", role: "group_admin" },
+    // Maghrib Circle is owned by Zayd (u-7) and *shared* with Ahmad (u-1) as a
+    // co-admin → the "Shared with me" state in the Groups home.
+    { userId: "u-7", groupId: "g-2", role: "owner" },
+    { userId: "u-1", groupId: "g-2", role: "admin" },
     { userId: "u-8", groupId: "g-2", role: "member" },
+  ];
+
+  // One outstanding email invite on Fajr Circle so the "pending" share state is
+  // visible on first load (accept it from Demo Controls / Manage).
+  const pendingInvites: MockState["pendingInvites"] = [
+    {
+      id: "pi-1",
+      groupId: "g-1",
+      email: "khadija@example.com",
+      role: "member",
+      code: "FAJR-Q4M",
+    },
   ];
 
   // ---- Tasks (generic model, dhikr content) --------------------------------
@@ -384,7 +397,8 @@ export function createInitialState(): MockState {
     logs,
     streaks,
     reactions,
-    session: { currentUserId: "u-1", activeGroupId: "g-1", viewRole: "member" },
-    ui: { showRibbon: true, freshStart: false },
+    pendingInvites,
+    session: { currentUserId: "u-1", activeGroupId: "g-1" },
+    ui: { showRibbon: true, freshStart: false, ownerDormant: false },
   };
 }

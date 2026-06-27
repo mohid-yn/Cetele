@@ -140,13 +140,16 @@ A(normal([I("Dhikr is repetitive habit-maintenance, not skill mastery — the ex
 A(hrule())
 
 A(heading("2. Users & roles", 1))
-A(normal("Three roles:"))
+A(normal("Drive-style group ownership (D26). There is no app-level admin tier. Anyone can create a group and becomes its owner; groups are private by default and visible only to people in them. An owner can share a group with others as a co-admin, and can transfer ownership. Roles are per-group (a person can be owner of one circle, co-admin of another, member of a third):"))
 A(table([
     ["Role", "Scope", "Can do"],
-    [[B("Member")], "their groups", "Join a group, log dhikr, see own streak + group activity & leaderboard"],
-    [[B("Group Admin")], "one group", "Everything a member can + create/edit that group's dhikr list & targets, invite/remove members, promote members to group admin"],
-    [[B("Admin")], "whole app", "Everything above + create/manage all groups, assign group admins, app-level config"],
+    [[B("Member")], "one group", "Log tasks, see own streak + the group's activity, leaderboard & garden"],
+    [[B("Co-admin")], "one group", "Everything a member can + edit the group's task list & targets, invite/remove members, promote members, re-share the group"],
+    [[B("Owner")], "one group", "Everything a co-admin can + delete the group and transfer ownership (one owner per group; the creator, until transferred)"],
 ], widths=[1900, 1500, 5960]))
+A(normal("There is no global \"see every group\" view — access is bounded entirely by ownership and sharing."))
+A(normal("Succession (D27). So a single owner leaving never orphans a circle, a co-admin can claim ownership of a group whose owner is dormant (no activity >= 14 days) or gone. Forgiveness-framed, not a power grab."))
+A(normal("Super-admin (D27, backend-only). One out-of-band role exists for maintainability + safety: users.is_super_admin, grantable only directly in Supabase (no in-app UI; cannot be self-escalated). Its powers are limited to recovery (reassign a dead group's owner) and moderation (act on abuse reports) — not a browse-all-content god view, so the privacy promise above holds. Every super-admin action is written to an audit_log. This keeps the project maintainable without the original operator (hand the flag to a successor in Supabase)."))
 A(hrule())
 
 A(heading("3. The core loop", 1))
@@ -213,16 +216,19 @@ A(hrule())
 
 A(heading("6. Data model (sketch)", 1))
 for t in [
-    ("users", "id, name, avatar, is_admin (app-level admin flag) (Supabase Auth)"),
-    ("groups", "id, name, invite_code, created_by"),
-    ("memberships", "user_id, group_id, role (member | group_admin)"),
-    ("dhikr_items", "id, group_id, label, arabic, target_count, order"),
-    ("logs", "id, user_id, dhikr_item_id, count, date"),
+    ("users", "id, name, avatar (Supabase Auth). No app-level admin flag; one out-of-band is_super_admin (D27, granted only in Supabase — recovery + moderation)."),
+    ("groups", "id, name, invite_code, created_by = the owner (authoritative; updated on transfer / succession)"),
+    ("memberships", "user_id, group_id, role (owner | admin | member); exactly one owner row per group"),
+    ("invites", "id, group_id, email, role (admin | member), code — outstanding share-by-email invites (accept → a membership)"),
+    ("tasks", "id, group_id, label, subtitle, target_count, order"),
+    ("logs", "id, user_id, task_id, count, date"),
     ("streaks", "user_id, current, longest, freezes_left, last_active"),
     ("push_subscriptions", "user_id, endpoint, keys (for Web Push; see §4 v1.1)"),
+    ("reports", "id, reporter_id, group_id/target, reason, status (D27 moderation queue)"),
+    ("audit_log", "id, actor_id, action, target, at — every super-admin action is recorded (D27)"),
 ]:
     A(bullet([B(t[0] + " — "), N(t[1])]))
-A(normal([I("Row-Level Security on every table: members read their group, admins write their group.")],
+A(normal([I("Row-Level Security on every table (D26 ownership): a row is visible only to people in that group (owner / co-admin / member); writes to group config require owner or admin; delete group and transfer ownership require owner. Succession (D27): a co-admin may claim ownership when the owner is dormant (no activity >= 14 days) or gone. Super-admin (D27): the only path that bypasses ownership — limited to recovery (reassign a dead group's owner) + moderation; no read access to group content; every action audited.")],
          spacing_before=60))
 A(normal([B("Consistency tracker"), N(" needs no new table — derived from logs (count per user / item / date) vs each item's target_count: a day's completion % = closed rings ÷ total tasks; the 7/30/90-day score = % of days fully completed; the group rollup aggregates across members. Optionally precompute a daily_completion materialized view (user_id, group_id, date, pct) for scale.")],
          spacing_before=60))

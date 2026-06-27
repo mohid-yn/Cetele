@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   Avatar,
+  Badge,
   Button,
   Card,
   Field,
@@ -14,7 +15,7 @@ import { useMock, sel } from "@/lib/mock/store";
 import { ArrowLeftIcon, PlusIcon, CheckIcon } from "@/components/demo/icons";
 import { RoleToggle, selectCls } from "@/components/demo/role-toggle";
 import { GroupSwitcher } from "@/components/demo/group-switcher";
-import type { Task } from "@/lib/mock/types";
+import type { MemberRole, Task } from "@/lib/mock/types";
 
 function TaskRow({
   task,
@@ -148,24 +149,34 @@ export default function ManageGroupPage() {
   const tasks = sel.groupTasks(state, group.id);
   const members = sel.groupMembers(state, group.id);
   const nonMembers = sel.nonMembers(state, group.id);
-  const adminCount = sel.adminCount(state, group.id);
+  const pendingInvites = sel.pendingInvitesFor(state, group.id);
   const me = state.session.currentUserId;
-  const canManage =
-    state.session.viewRole === "group_admin" ||
-    state.session.viewRole === "admin";
+  const myRole = sel.membershipRole(state, me, group.id);
+  const isOwner = myRole === "owner";
+  const canManage = isOwner || myRole === "admin";
 
   const [newLabel, setNewLabel] = React.useState("");
   const [newSubtitle, setNewSubtitle] = React.useState("");
   const [newTarget, setNewTarget] = React.useState("100");
-  const [inviteName, setInviteName] = React.useState("");
+  const [inviteEmail, setInviteEmail] = React.useState("");
+  const [inviteRole, setInviteRole] = React.useState<MemberRole>("member");
   const [addExistingId, setAddExistingId] = React.useState("");
+  const [addExistingRole, setAddExistingRole] =
+    React.useState<MemberRole>("member");
   const [name, setName] = React.useState(group.name);
+  const [transferId, setTransferId] = React.useState("");
 
   const [removingMember, setRemovingMember] = React.useState<{
     userId: string;
     name: string;
   } | null>(null);
   const [removingTask, setRemovingTask] = React.useState<Task | null>(null);
+  const [transferOpen, setTransferOpen] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+
+  // Candidates ownership can pass to: any current member who isn't the owner.
+  const transferCandidates = members.filter((m) => m.role !== "owner");
+  const transferName = members.find((m) => m.userId === transferId)?.user.name;
 
   const addTask = () => {
     if (!newLabel.trim()) return;
@@ -185,8 +196,7 @@ export default function ManageGroupPage() {
       <div className="grid flex-1 place-items-center p-8 text-center">
         <div>
           <p className="text-muted-foreground">
-            Switch to <strong>Group admin</strong> in Demo Controls to manage
-            this group.
+            Only the owner or a co-admin can manage this group.
           </p>
           <Button
             className="mt-4"
@@ -227,8 +237,7 @@ export default function ManageGroupPage() {
         <ul className="flex flex-col gap-2">
           {members.map((m) => {
             const isSelf = m.userId === me;
-            const isLastAdmin = m.role === "group_admin" && adminCount <= 1;
-            const lockRole = isSelf || isLastAdmin;
+            const isOwnerRow = m.role === "owner";
             return (
               <li
                 key={m.userId}
@@ -244,100 +253,161 @@ export default function ManageGroupPage() {
                       </span>
                     )}
                   </p>
-                  {isLastAdmin && (
+                  {isOwnerRow && (
                     <p className="text-xs text-muted-foreground">
-                      only admin — promote someone before changing
+                      Owner — change via Transfer ownership below
                     </p>
                   )}
                 </div>
-                <RoleToggle
-                  value={m.role}
-                  disabled={lockRole}
-                  onChange={(r) => actions.setMemberRole(m.userId, group.id, r)}
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-danger hover:bg-danger-500/10 disabled:opacity-40"
-                  disabled={isSelf || isLastAdmin}
-                  onClick={() =>
-                    setRemovingMember({ userId: m.userId, name: m.user.name })
-                  }
-                >
-                  Remove
-                </Button>
+                {isOwnerRow ? (
+                  <Badge variant="accent" size="sm">
+                    owner
+                  </Badge>
+                ) : (
+                  <>
+                    <RoleToggle
+                      value={m.role}
+                      disabled={isSelf}
+                      onChange={(r) =>
+                        actions.setMemberRole(m.userId, group.id, r)
+                      }
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-danger hover:bg-danger-500/10 disabled:opacity-40"
+                      disabled={isSelf}
+                      onClick={() =>
+                        setRemovingMember({
+                          userId: m.userId,
+                          name: m.user.name,
+                        })
+                      }
+                    >
+                      Remove
+                    </Button>
+                  </>
+                )}
               </li>
             );
           })}
         </ul>
 
-        {/* Invite / add people */}
+        {/* Pending email invites (D26 share-by-email) */}
+        {pendingInvites.length > 0 && (
+          <div className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 p-3">
+            <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Pending invites ({pendingInvites.length})
+            </p>
+            <ul className="flex flex-col gap-1.5">
+              {pendingInvites.map((i) => (
+                <li
+                  key={i.id}
+                  className="flex items-center justify-between gap-2 text-sm"
+                >
+                  <span className="min-w-0 flex-1 truncate text-foreground">
+                    {i.email}
+                  </span>
+                  <Badge
+                    variant={i.role === "admin" ? "primary" : "neutral"}
+                    size="sm"
+                  >
+                    {i.role === "admin" ? "co-admin" : "member"}
+                  </Badge>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {i.code}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Invite / share */}
         <Card className="mt-3 flex flex-col gap-4 p-4">
           <p className="text-sm font-semibold text-foreground">Add people</p>
 
+          {/* Invite by email — choose participant or shared co-admin */}
+          <Field label="Invite by email" htmlFor="invite-email">
+            <div className="flex flex-wrap gap-2">
+              <Input
+                id="invite-email"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="name@example.com"
+                className="min-w-[12rem] flex-1"
+              />
+              <RoleToggle
+                value={inviteRole}
+                onChange={(r) => setInviteRole(r)}
+              />
+              <Button
+                variant="primary"
+                disabled={!inviteEmail.includes("@")}
+                onClick={() => {
+                  if (!inviteEmail.includes("@")) return;
+                  actions.inviteByEmail(
+                    group.id,
+                    inviteEmail.trim(),
+                    inviteRole === "admin" ? "admin" : "member",
+                  );
+                  setInviteEmail("");
+                  setInviteRole("member");
+                }}
+              >
+                Send invite
+              </Button>
+            </div>
+          </Field>
+
           <CopyField
-            label="Share invite link"
+            label="Or share an invite link"
             value={`https://cetele.app/join/${group.inviteCode}`}
           />
           <CopyField label="Or invite code" value={group.inviteCode} />
 
-          <div className="border-t border-border pt-3">
-            <Field label="Add an existing person" htmlFor="add-existing">
-              <div className="flex gap-2">
-                <select
-                  id="add-existing"
-                  className={selectCls}
-                  value={addExistingId}
-                  onChange={(e) => setAddExistingId(e.target.value)}
-                  disabled={nonMembers.length === 0}
-                >
-                  <option value="">
-                    {nonMembers.length
-                      ? "Choose a person…"
-                      : "Everyone's already in"}
-                  </option>
-                  {nonMembers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  variant="outline"
-                  disabled={!addExistingId}
-                  onClick={() => {
-                    if (!addExistingId) return;
-                    actions.addUserToGroup(addExistingId, group.id, "member");
-                    setAddExistingId("");
-                  }}
-                >
-                  Add
-                </Button>
-              </div>
-            </Field>
-          </div>
-
-          <Field label="Or add someone new" htmlFor="invite-name">
-            <div className="flex gap-2">
-              <Input
-                id="invite-name"
-                value={inviteName}
-                onChange={(e) => setInviteName(e.target.value)}
-                placeholder="Full name"
-              />
-              <Button
-                variant="primary"
-                disabled={!inviteName.trim()}
-                onClick={() => {
-                  if (!inviteName.trim()) return;
-                  actions.inviteMember(inviteName.trim(), group.id);
-                  setInviteName("");
-                }}
-              >
-                Add
-              </Button>
+          {nonMembers.length > 0 && (
+            <div className="border-t border-border pt-3">
+              <Field label="Add an existing person" htmlFor="add-existing">
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    id="add-existing"
+                    className={selectCls + " min-w-[10rem] flex-1"}
+                    value={addExistingId}
+                    onChange={(e) => setAddExistingId(e.target.value)}
+                  >
+                    <option value="">Choose a person…</option>
+                    {nonMembers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </select>
+                  <RoleToggle
+                    value={addExistingRole}
+                    onChange={(r) => setAddExistingRole(r)}
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={!addExistingId}
+                    onClick={() => {
+                      if (!addExistingId) return;
+                      actions.addUserToGroup(
+                        addExistingId,
+                        group.id,
+                        addExistingRole,
+                      );
+                      setAddExistingId("");
+                      setAddExistingRole("member");
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </Field>
             </div>
-          </Field>
+          )}
         </Card>
       </section>
 
@@ -417,7 +487,119 @@ export default function ManageGroupPage() {
         </Card>
       </section>
 
+      {/* Ownership ------------------------------------------------------- */}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-foreground">
+          Ownership
+        </h2>
+        {isOwner ? (
+          <Card className="flex flex-col gap-4 p-4">
+            <Field
+              label="Transfer ownership"
+              htmlFor="transfer-owner"
+              hint="The new owner gains full control; you become a co-admin."
+            >
+              <div className="flex flex-wrap gap-2">
+                <select
+                  id="transfer-owner"
+                  className={selectCls + " min-w-[10rem] flex-1"}
+                  value={transferId}
+                  onChange={(e) => setTransferId(e.target.value)}
+                  disabled={transferCandidates.length === 0}
+                >
+                  <option value="">
+                    {transferCandidates.length
+                      ? "Choose a member…"
+                      : "No one to transfer to yet"}
+                  </option>
+                  {transferCandidates.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.user.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="outline"
+                  disabled={!transferId}
+                  onClick={() => setTransferOpen(true)}
+                >
+                  Transfer
+                </Button>
+              </div>
+            </Field>
+
+            <div className="border-t border-border pt-3">
+              <p className="mb-1 text-sm font-medium text-danger">
+                Delete this group
+              </p>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Removes the group, its tasks, and all member records. This
+                can&rsquo;t be undone.
+              </p>
+              <Button
+                variant="ghost"
+                className="text-danger hover:bg-danger-500/10"
+                onClick={() => setDeleteOpen(true)}
+              >
+                Delete group
+              </Button>
+            </div>
+          </Card>
+        ) : sel.isOwnerDormant(state, group.id) ? (
+          <Card className="flex flex-col gap-3 border-accent-500/40 bg-accent-500/10 p-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                This circle&rsquo;s owner has gone quiet
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {sel.groupOwner(state, group.id)?.name ?? "The owner"}{" "}
+                hasn&rsquo;t been active here recently. As a co-admin you can
+                take over so the circle keeps running — they stay on as a
+                co-admin.
+              </p>
+            </div>
+            <Button
+              variant="accent"
+              className="self-start"
+              onClick={() => actions.claimOwnership(group.id)}
+            >
+              Claim ownership
+            </Button>
+          </Card>
+        ) : (
+          <Card className="p-4 text-sm text-muted-foreground">
+            Owned by{" "}
+            <span className="font-medium text-foreground">
+              {sel.groupOwner(state, group.id)?.name ?? "—"}
+            </span>
+            . Only the owner can transfer or delete this group.
+          </Card>
+        )}
+      </section>
+
       {/* Confirms -------------------------------------------------------- */}
+      <ConfirmDialog
+        open={transferOpen}
+        onClose={() => setTransferOpen(false)}
+        onConfirm={() => {
+          if (transferId) actions.transferOwnership(group.id, transferId);
+          setTransferId("");
+        }}
+        title={`Make ${transferName ?? "this member"} the owner?`}
+        description="They gain full control of the group — including the ability to delete it. You'll stay on as a co-admin."
+        confirmLabel="Transfer ownership"
+      />
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={() => {
+          actions.deleteGroup(group.id);
+          router.push("/groups");
+        }}
+        title={`Delete "${group.name}"?`}
+        description="This removes the group, its tasks, and all member records. This can't be undone."
+        confirmLabel="Delete group"
+      />
       <ConfirmDialog
         open={!!removingMember}
         onClose={() => setRemovingMember(null)}

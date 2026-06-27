@@ -17,11 +17,11 @@ import type {
   Log,
   MemberRole,
   MockState,
+  PendingInvite,
   Reaction,
   ReactionKind,
   Task,
   User,
-  ViewRole,
 } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -31,8 +31,33 @@ import type {
 type Action =
   | { type: "hydrate"; state: MockState }
   | { type: "reset" }
-  | { type: "increment"; userId: string; taskId: string; by: number }
-  | { type: "setViewRole"; role: ViewRole }
+  | {
+      type: "increment";
+      userId: string;
+      taskId: string;
+      by: number;
+      /** Which day to log for — defaults to today (D8: back-fill a missed day). */
+      date?: string;
+    }
+  | {
+      // Admin proxy-logging (D29): set the *exact* count for one member/task/day
+      // (the editable breakdown grid). Attribution is derived in the reducer.
+      type: "setCount";
+      userId: string;
+      taskId: string;
+      date: string;
+      count: number;
+    }
+  | {
+      // Admin proxy-logging (D29): mark a task done for the *whole circle* today
+      // (the in-person halaqah "log for the group" quick action).
+      type: "logForGroup";
+      groupId: string;
+      taskId: string;
+      date: string;
+      count: number;
+    }
+  | { type: "setCurrentUser"; userId: string }
   | { type: "setActiveGroup"; groupId: string }
   | { type: "toggleRibbon" }
   | { type: "addTask"; task: Omit<Task, "id" | "sortOrder"> }
@@ -42,7 +67,6 @@ type Action =
       patch: Partial<Pick<Task, "label" | "subtitle" | "targetCount">>;
     }
   | { type: "removeTask"; taskId: string }
-  | { type: "inviteMember"; name: string; groupId: string }
   | { type: "removeMember"; userId: string; groupId: string }
   | { type: "setMemberRole"; userId: string; groupId: string; role: MemberRole }
   | {
@@ -51,10 +75,19 @@ type Action =
       groupId: string;
       role: MemberRole;
     }
-  | { type: "createGroup"; name: string; firstAdminId?: string }
+  | {
+      type: "inviteByEmail";
+      groupId: string;
+      email: string;
+      role: PendingInvite["role"];
+    }
+  | { type: "acceptInvite"; inviteId: string }
+  | { type: "transferOwnership"; groupId: string; newOwnerId: string }
+  | { type: "claimOwnership"; groupId: string }
+  | { type: "toggleOwnerDormant" }
+  | { type: "createGroup"; name: string }
   | { type: "renameGroup"; groupId: string; name: string }
   | { type: "deleteGroup"; groupId: string }
-  | { type: "setAppAdmin"; userId: string; value: boolean }
   | {
       type: "sendReaction";
       fromUserId: string;
@@ -91,12 +124,12 @@ function reducer(state: MockState, action: Action): MockState {
       return createInitialState();
 
     case "increment": {
-      const today = isoDate(0);
+      const date = action.date ?? isoDate(0);
       const existing = state.logs.find(
         (l) =>
           l.userId === action.userId &&
           l.taskId === action.taskId &&
-          l.date === today,
+          l.date === date,
       );
       if (existing) {
         return {
@@ -110,14 +143,77 @@ function reducer(state: MockState, action: Action): MockState {
         id: nextId("l"),
         userId: action.userId,
         taskId: action.taskId,
-        date: today,
+        date,
         count: Math.max(0, action.by),
       };
       return { ...state, logs: [...state.logs, log] };
     }
 
-    case "setViewRole":
-      return { ...state, session: { ...state.session, viewRole: action.role } };
+    case "setCount": {
+      // D29 proxy-logging: collapse any logs for this member/task/day into one
+      // authoritative row at the given count. Attributed to the acting user
+      // unless they're editing their *own* record (self-correct → no "logged by").
+      const { userId, taskId, date } = action;
+      const count = Math.max(0, Math.round(action.count));
+      const loggedBy =
+        userId === state.session.currentUserId
+          ? undefined
+          : state.session.currentUserId;
+      const logs = state.logs.filter(
+        (l) => !(l.userId === userId && l.taskId === taskId && l.date === date),
+      );
+      if (count > 0) {
+        logs.push({ id: nextId("l"), userId, taskId, date, count, loggedBy });
+      }
+      return { ...state, logs };
+    }
+
+    case "logForGroup": {
+      // D29: the halaqah "log for the group" — set one task's count for every
+      // member on a day, each row attributed to the acting admin (self = none).
+      const { groupId, taskId, date } = action;
+      const count = Math.max(0, Math.round(action.count));
+      const memberIds = state.memberships
+        .filter((m) => m.groupId === groupId)
+        .map((m) => m.userId);
+      const memberSet = new Set(memberIds);
+      const logs = state.logs.filter(
+        (l) =>
+          !(memberSet.has(l.userId) && l.taskId === taskId && l.date === date),
+      );
+      if (count > 0) {
+        for (const uid of memberIds) {
+          logs.push({
+            id: nextId("l"),
+            userId: uid,
+            taskId,
+            date,
+            count,
+            loggedBy:
+              uid === state.session.currentUserId
+                ? undefined
+                : state.session.currentUserId,
+          });
+        }
+      }
+      return { ...state, logs };
+    }
+
+    case "setCurrentUser": {
+      // Demo affordance: "act as" another person. Snap the active group to one
+      // they actually belong to so every screen stays in a valid context.
+      const theirGroup = state.memberships.find(
+        (m) => m.userId === action.userId,
+      )?.groupId;
+      return {
+        ...state,
+        session: {
+          ...state.session,
+          currentUserId: action.userId,
+          activeGroupId: theirGroup ?? state.session.activeGroupId,
+        },
+      };
+    }
 
     case "setActiveGroup":
       return {
@@ -158,14 +254,33 @@ function reducer(state: MockState, action: Action): MockState {
         logs: state.logs.filter((l) => l.taskId !== action.taskId),
       };
 
-    case "inviteMember": {
-      const user: User = { id: nextId("u"), name: action.name, isAdmin: false };
+    case "inviteByEmail": {
+      // Mock of Drive's share-by-email: record a pending invite (no real mail).
+      const invite: PendingInvite = {
+        id: nextId("pi"),
+        groupId: action.groupId,
+        email: action.email,
+        role: action.role,
+        code: makeInviteCode(action.email.split("@")[0] || "JOIN"),
+      };
+      return { ...state, pendingInvites: [...state.pendingInvites, invite] };
+    }
+
+    case "acceptInvite": {
+      const invite = state.pendingInvites.find((i) => i.id === action.inviteId);
+      if (!invite) return state;
+      // Create a lightweight user from the email's local-part (demo onboarding).
+      const name = invite.email
+        .split("@")[0]
+        .replace(/[._-]+/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      const user: User = { id: nextId("u"), name };
       return {
         ...state,
         users: [...state.users, user],
         memberships: [
           ...state.memberships,
-          { userId: user.id, groupId: action.groupId, role: "member" },
+          { userId: user.id, groupId: invite.groupId, role: invite.role },
         ],
         streaks: [
           ...state.streaks,
@@ -177,26 +292,95 @@ function reducer(state: MockState, action: Action): MockState {
             lastActive: isoDate(0),
           },
         ],
+        pendingInvites: state.pendingInvites.filter((i) => i !== invite),
       };
     }
 
-    case "removeMember":
+    case "transferOwnership": {
+      // Owner-only (UI-gated): the old owner steps down to co-admin, the new
+      // owner is promoted, and `createdBy` follows so ownership has one source.
+      const oldOwnerId = state.groups.find(
+        (g) => g.id === action.groupId,
+      )?.createdBy;
+      return {
+        ...state,
+        groups: state.groups.map((g) =>
+          g.id === action.groupId ? { ...g, createdBy: action.newOwnerId } : g,
+        ),
+        memberships: state.memberships.map((m) => {
+          if (m.groupId !== action.groupId) return m;
+          if (m.userId === action.newOwnerId) return { ...m, role: "owner" };
+          if (m.userId === oldOwnerId) return { ...m, role: "admin" };
+          return m;
+        }),
+      };
+    }
+
+    case "claimOwnership": {
+      // D27 succession: a co-admin takes over a group whose owner is dormant or
+      // gone, so a single owner leaving never orphans the circle. Guarded so
+      // only a co-admin can claim, and only when the owner really is away.
+      const me = state.session.currentUserId;
+      const myRole = state.memberships.find(
+        (m) => m.userId === me && m.groupId === action.groupId,
+      )?.role;
+      const oldOwnerId = state.groups.find(
+        (g) => g.id === action.groupId,
+      )?.createdBy;
+      const ownerGone = !state.memberships.some(
+        (m) => m.userId === oldOwnerId && m.groupId === action.groupId,
+      );
+      if (myRole !== "admin" || !(state.ui.ownerDormant || ownerGone))
+        return state;
+      return {
+        ...state,
+        groups: state.groups.map((g) =>
+          g.id === action.groupId ? { ...g, createdBy: me } : g,
+        ),
+        memberships: state.memberships.map((m) => {
+          if (m.groupId !== action.groupId) return m;
+          if (m.userId === me) return { ...m, role: "owner" };
+          if (m.userId === oldOwnerId) return { ...m, role: "admin" };
+          return m;
+        }),
+        ui: { ...state.ui, ownerDormant: false },
+      };
+    }
+
+    case "toggleOwnerDormant":
+      return {
+        ...state,
+        ui: { ...state.ui, ownerDormant: !state.ui.ownerDormant },
+      };
+
+    case "removeMember": {
+      // Never remove the owner — they must transfer ownership first.
+      const target = state.memberships.find(
+        (m) => m.userId === action.userId && m.groupId === action.groupId,
+      );
+      if (target?.role === "owner") return state;
       return {
         ...state,
         memberships: state.memberships.filter(
           (m) => !(m.userId === action.userId && m.groupId === action.groupId),
         ),
       };
+    }
 
-    case "setMemberRole":
+    case "setMemberRole": {
+      // Owner role is set only via transfer; never toggle to/from it here.
+      if (action.role === "owner") return state;
       return {
         ...state,
         memberships: state.memberships.map((m) =>
-          m.userId === action.userId && m.groupId === action.groupId
+          m.userId === action.userId &&
+          m.groupId === action.groupId &&
+          m.role !== "owner"
             ? { ...m, role: action.role }
             : m,
         ),
       };
+    }
 
     case "addUserToGroup": {
       const existing = state.memberships.find(
@@ -219,24 +403,25 @@ function reducer(state: MockState, action: Action): MockState {
     }
 
     case "createGroup": {
+      // Self-serve (D26): whoever creates a group becomes its owner.
       const id = nextId("g");
+      const owner = state.session.currentUserId;
       const group: Group = {
         id,
         name: action.name,
         inviteCode: makeInviteCode(action.name),
-        createdBy: state.session.currentUserId,
+        createdBy: owner,
       };
-      const memberships = action.firstAdminId
-        ? [
-            ...state.memberships,
-            {
-              userId: action.firstAdminId,
-              groupId: id,
-              role: "group_admin" as MemberRole,
-            },
-          ]
-        : state.memberships;
-      return { ...state, groups: [...state.groups, group], memberships };
+      return {
+        ...state,
+        groups: [...state.groups, group],
+        memberships: [
+          ...state.memberships,
+          { userId: owner, groupId: id, role: "owner" as MemberRole },
+        ],
+        // Drop the creator straight into their new group.
+        session: { ...state.session, activeGroupId: id },
+      };
     }
 
     case "renameGroup":
@@ -266,17 +451,12 @@ function reducer(state: MockState, action: Action): MockState {
         ),
         tasks: state.tasks.filter((t) => t.groupId !== action.groupId),
         logs: state.logs.filter((l) => !removedTaskIds.has(l.taskId)),
+        pendingInvites: state.pendingInvites.filter(
+          (i) => i.groupId !== action.groupId,
+        ),
         session: { ...state.session, activeGroupId },
       };
     }
-
-    case "setAppAdmin":
-      return {
-        ...state,
-        users: state.users.map((u) =>
-          u.id === action.userId ? { ...u, isAdmin: action.value } : u,
-        ),
-      };
 
     case "sendReaction": {
       const today = isoDate(0);
@@ -397,8 +577,27 @@ interface MockContextValue {
   state: MockState;
   actions: {
     reset: () => void;
-    increment: (taskId: string, by?: number, userId?: string) => void;
-    setViewRole: (role: ViewRole) => void;
+    increment: (
+      taskId: string,
+      by?: number,
+      userId?: string,
+      date?: string,
+    ) => void;
+    /** D29: set the exact count for one member/task/day (editable breakdown). */
+    setCount: (
+      userId: string,
+      taskId: string,
+      date: string,
+      count: number,
+    ) => void;
+    /** D29: mark one task done for the whole circle on a day (halaqah log). */
+    logForGroup: (
+      groupId: string,
+      taskId: string,
+      date: string,
+      count: number,
+    ) => void;
+    setCurrentUser: (userId: string) => void;
     setActiveGroup: (groupId: string) => void;
     toggleRibbon: () => void;
     addTask: (task: Omit<Task, "id" | "sortOrder">) => void;
@@ -407,14 +606,21 @@ interface MockContextValue {
       patch: Partial<Pick<Task, "label" | "subtitle" | "targetCount">>,
     ) => void;
     removeTask: (taskId: string) => void;
-    inviteMember: (name: string, groupId: string) => void;
     removeMember: (userId: string, groupId: string) => void;
     setMemberRole: (userId: string, groupId: string, role: MemberRole) => void;
     addUserToGroup: (userId: string, groupId: string, role: MemberRole) => void;
-    createGroup: (name: string, firstAdminId?: string) => void;
+    inviteByEmail: (
+      groupId: string,
+      email: string,
+      role: PendingInvite["role"],
+    ) => void;
+    acceptInvite: (inviteId: string) => void;
+    transferOwnership: (groupId: string, newOwnerId: string) => void;
+    claimOwnership: (groupId: string) => void;
+    toggleOwnerDormant: () => void;
+    createGroup: (name: string) => void;
     renameGroup: (groupId: string, name: string) => void;
     deleteGroup: (groupId: string) => void;
-    setAppAdmin: (userId: string, value: boolean) => void;
     sendReaction: (
       toUserId: string,
       kind: ReactionKind,
@@ -450,6 +656,7 @@ export function MockStateProvider({ children }: { children: React.ReactNode }) {
           ...seed,
           ...saved,
           reactions: saved.reactions ?? seed.reactions,
+          pendingInvites: saved.pendingInvites ?? seed.pendingInvites,
           session: { ...seed.session, ...(saved.session ?? {}) },
           ui: { ...seed.ui, ...(saved.ui ?? {}) },
         };
@@ -509,14 +716,19 @@ export function MockStateProvider({ children }: { children: React.ReactNode }) {
   const actions = React.useMemo<MockContextValue["actions"]>(
     () => ({
       reset: () => dispatch({ type: "reset" }),
-      increment: (taskId, by = 1, userId) =>
+      increment: (taskId, by = 1, userId, date) =>
         dispatch({
           type: "increment",
           taskId,
           by,
           userId: userId ?? state.session.currentUserId,
+          date,
         }),
-      setViewRole: (role) => dispatch({ type: "setViewRole", role }),
+      setCount: (userId, taskId, date, count) =>
+        dispatch({ type: "setCount", userId, taskId, date, count }),
+      logForGroup: (groupId, taskId, date, count) =>
+        dispatch({ type: "logForGroup", groupId, taskId, date, count }),
+      setCurrentUser: (userId) => dispatch({ type: "setCurrentUser", userId }),
       setActiveGroup: (groupId) =>
         dispatch({ type: "setActiveGroup", groupId }),
       toggleRibbon: () => dispatch({ type: "toggleRibbon" }),
@@ -524,21 +736,24 @@ export function MockStateProvider({ children }: { children: React.ReactNode }) {
       editTask: (taskId, patch) =>
         dispatch({ type: "editTask", taskId, patch }),
       removeTask: (taskId) => dispatch({ type: "removeTask", taskId }),
-      inviteMember: (name, groupId) =>
-        dispatch({ type: "inviteMember", name, groupId }),
       removeMember: (userId, groupId) =>
         dispatch({ type: "removeMember", userId, groupId }),
       setMemberRole: (userId, groupId, role) =>
         dispatch({ type: "setMemberRole", userId, groupId, role }),
       addUserToGroup: (userId, groupId, role) =>
         dispatch({ type: "addUserToGroup", userId, groupId, role }),
-      createGroup: (name, firstAdminId) =>
-        dispatch({ type: "createGroup", name, firstAdminId }),
+      inviteByEmail: (groupId, email, role) =>
+        dispatch({ type: "inviteByEmail", groupId, email, role }),
+      acceptInvite: (inviteId) => dispatch({ type: "acceptInvite", inviteId }),
+      transferOwnership: (groupId, newOwnerId) =>
+        dispatch({ type: "transferOwnership", groupId, newOwnerId }),
+      claimOwnership: (groupId) =>
+        dispatch({ type: "claimOwnership", groupId }),
+      toggleOwnerDormant: () => dispatch({ type: "toggleOwnerDormant" }),
+      createGroup: (name) => dispatch({ type: "createGroup", name }),
       renameGroup: (groupId, name) =>
         dispatch({ type: "renameGroup", groupId, name }),
       deleteGroup: (groupId) => dispatch({ type: "deleteGroup", groupId }),
-      setAppAdmin: (userId, value) =>
-        dispatch({ type: "setAppAdmin", userId, value }),
       sendReaction: (toUserId, kind, fromUserId) =>
         dispatch({
           type: "sendReaction",
@@ -599,12 +814,16 @@ export const sel = {
     s.memberships.find((m) => m.userId === userId && m.groupId === groupId)
       ?.role,
 
-  /** One user's total count for one task today. */
-  todayCount: (s: MockState, userId: string, taskId: string): number =>
+  /** One user's total count for one task on a given day (defaults to today). */
+  countOn: (
+    s: MockState,
+    userId: string,
+    taskId: string,
+    date: string = isoDate(0),
+  ): number =>
     s.logs
       .filter(
-        (l) =>
-          l.userId === userId && l.taskId === taskId && l.date === isoDate(0),
+        (l) => l.userId === userId && l.taskId === taskId && l.date === date,
       )
       .reduce((sum, l) => sum + l.count, 0),
 
@@ -658,18 +877,61 @@ export const sel = {
       .map((m) => ({ ...m, group: s.groups.find((g) => g.id === m.groupId)! }))
       .filter((m) => m.group),
 
-  /** Users not currently in a group (candidates to add). */
+  /** Groups a user *owns* — their "My groups" (Drive's My Drive). */
+  myGroups: (s: MockState, userId: string) =>
+    sel.userGroups(s, userId).filter((m) => m.role === "owner"),
+
+  /** Groups *shared with* a user as a co-admin — Drive's "Shared with me". */
+  sharedWithMe: (s: MockState, userId: string) =>
+    sel.userGroups(s, userId).filter((m) => m.role === "admin"),
+
+  /** The owner of a group (from `createdBy`). */
+  groupOwner: (s: MockState, groupId: string): User | undefined => {
+    const ownerId = s.groups.find((g) => g.id === groupId)?.createdBy;
+    return s.users.find((u) => u.id === ownerId);
+  },
+
+  /** Can this user manage the group? (owner or shared co-admin) */
+  canManageGroup: (s: MockState, userId: string, groupId: string): boolean => {
+    const r = sel.membershipRole(s, userId, groupId);
+    return r === "owner" || r === "admin";
+  },
+
+  /**
+   * Is the group's owner dormant or gone? (D27 succession) — true if the demo
+   * "owner dormant" switch is on, the owner has left the group, or the owner
+   * hasn't logged anything here in ≥ 14 days. When true, a co-admin may claim
+   * ownership so the circle never orphans.
+   */
+  isOwnerDormant: (s: MockState, groupId: string): boolean => {
+    if (s.ui.ownerDormant) return true;
+    const ownerId = s.groups.find((g) => g.id === groupId)?.createdBy;
+    if (!ownerId) return true;
+    const inGroup = s.memberships.some(
+      (m) => m.userId === ownerId && m.groupId === groupId,
+    );
+    if (!inGroup) return true; // owner left → gone
+    const taskIds = new Set(
+      s.tasks.filter((t) => t.groupId === groupId).map((t) => t.id),
+    );
+    const recent = new Set(Array.from({ length: 14 }, (_, i) => isoDate(i)));
+    const activeLately = s.logs.some(
+      (l) =>
+        l.userId === ownerId && taskIds.has(l.taskId) && recent.has(l.date),
+    );
+    return !activeLately;
+  },
+
+  /** Outstanding email invites for a group (D26 share-by-email). */
+  pendingInvitesFor: (s: MockState, groupId: string) =>
+    s.pendingInvites.filter((i) => i.groupId === groupId),
+
+  /** Users not currently in a group (candidates to add directly). */
   nonMembers: (s: MockState, groupId: string): User[] =>
     s.users.filter(
       (u) =>
         !s.memberships.some((m) => m.userId === u.id && m.groupId === groupId),
     ),
-
-  /** Count of group_admins in a group (to protect the last admin). */
-  adminCount: (s: MockState, groupId: string): number =>
-    s.memberships.filter(
-      (m) => m.groupId === groupId && m.role === "group_admin",
-    ).length,
 
   // ---- Consistency tracker (CET-16) ----------------------------------------
 
@@ -709,13 +971,6 @@ export const sel = {
       active,
     };
   },
-
-  /** Last `days` days of completion, oldest → newest (for the heatmap). */
-  heatmap: (s: MockState, userId: string, groupId: string, days: number) =>
-    Array.from({ length: days }, (_, i) => {
-      const date = isoDate(days - 1 - i);
-      return { date, ...sel.dayCompletion(s, userId, groupId, date) };
-    }),
 
   /** Consistency = % of the last `days` days fully completed (all rings closed). */
   consistency: (
@@ -760,17 +1015,18 @@ export const sel = {
     const rows = tasks.map((t) => ({
       task: t,
       cells: dates.map((date) => {
-        const count = s.logs
-          .filter(
-            (l) => l.userId === userId && l.taskId === t.id && l.date === date,
-          )
-          .reduce((sum, l) => sum + l.count, 0);
+        const matches = s.logs.filter(
+          (l) => l.userId === userId && l.taskId === t.id && l.date === date,
+        );
+        const count = matches.reduce((sum, l) => sum + l.count, 0);
         return {
           date,
           count,
           target: t.targetCount,
           pct: t.targetCount ? Math.min(1, count / t.targetCount) : 0,
           full: count >= t.targetCount,
+          // D29: who logged this on the member's behalf, if anyone.
+          loggedBy: matches.find((l) => l.loggedBy)?.loggedBy,
         };
       }),
     }));

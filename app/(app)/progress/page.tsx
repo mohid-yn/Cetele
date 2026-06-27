@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Card, CardContent, Badge } from "@/components/ui";
 import { useMock, sel } from "@/lib/mock/store";
-import { ConsistencyHeatmap } from "@/components/demo/consistency-heatmap";
+import { TaskBreakdownGrid } from "@/components/demo/task-breakdown-grid";
 import { PageHeader } from "@/components/demo/page-header";
 import { SectionHeading } from "@/components/demo/section-heading";
 import { MemberRow } from "@/components/demo/member-row";
@@ -39,13 +39,11 @@ export default function ProgressPage() {
   const me = sel.currentUser(state);
   const group = sel.activeGroup(state);
   const streak = sel.streak(state, me.id);
-  const role = state.session.viewRole;
-  const showOversight = role === "group_admin" || role === "admin";
+  const showOversight = sel.canManageGroup(state, me.id, group.id);
 
   // Heavy-ish derived data — memoise so the realtime ticker doesn't recompute it.
-  const { heat, c7, c30, c90, groupC90, members } = React.useMemo(() => {
+  const { c7, c30, c90, groupC90, members } = React.useMemo(() => {
     return {
-      heat: sel.heatmap(state, me.id, group.id, 90),
       c7: sel.consistency(state, me.id, group.id, 7),
       c30: sel.consistency(state, me.id, group.id, 30),
       c90: sel.consistency(state, me.id, group.id, 90),
@@ -129,7 +127,7 @@ export default function ProgressPage() {
         </div>
       </Card>
 
-      {/* Personal — heatmap + scores */}
+      {/* Personal — 7/30/90 scores + the last-14-days task grid */}
       <Card>
         <CardContent className="flex flex-col gap-5 pt-6">
           <div className="grid grid-cols-3 gap-3">
@@ -139,8 +137,18 @@ export default function ProgressPage() {
           </div>
 
           <div>
-            <SectionHeading>Last 90 days</SectionHeading>
-            <ConsistencyHeatmap data={heat} />
+            <SectionHeading>Last 14 days · task by task</SectionHeading>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Each row is a task; tap any square to see or correct that
+              day&rsquo;s count.
+            </p>
+            {/* Your own record — editable so you can correct it (D29). */}
+            <TaskBreakdownGrid
+              userId={me.id}
+              groupId={group.id}
+              days={14}
+              editable
+            />
           </div>
         </CardContent>
       </Card>

@@ -19,13 +19,34 @@ People don't quit dhikr because they don't want to — they quit because **nothi
 
 ## 2. Users & roles
 
-Three roles:
+**Drive-style group ownership (D26).** There is **no app-level admin tier**.
+Anyone can create a group and becomes its **owner**; groups are **private by
+default** and visible only to people in them. An owner can **share** a group
+with others as a **co-admin**, and can **transfer ownership**. Roles are
+**per-group** (a person can be owner of one circle, co-admin of another, member
+of a third):
 
-| Role            | Scope        | Can do                                                                                                                             |
-| --------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Member**      | their groups | Join a group, log dhikr, see own streak + group activity & leaderboard                                                             |
-| **Group Admin** | one group    | Everything a member can + create/edit that group's **dhikr list & targets**, invite/remove members, promote members to group admin |
-| **Admin**       | whole app    | Everything above + create/manage **all** groups, assign group admins, app-level config                                             |
+| Role                   | Scope     | Can do                                                                                                                             |
+| ---------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Member**             | one group | Log tasks, see own streak + the group's activity, leaderboard & garden                                                             |
+| **Co-admin** (`admin`) | one group | Everything a member can + edit the group's **task list & targets**, invite/remove members, promote members, **re-share** the group |
+| **Owner**              | one group | Everything a co-admin can + **delete the group** and **transfer ownership** (one owner per group; the creator, until transferred)  |
+
+There is no global "see every group" view — access is bounded entirely by
+ownership and sharing.
+
+**Succession (D27).** So a single owner leaving never orphans a circle, a
+**co-admin can claim ownership** of a group whose owner is **dormant** (no
+activity ≥ 14 days) or gone. Forgiveness-framed, not a power grab.
+
+**Super-admin (D27, backend-only).** One out-of-band role exists for
+maintainability + safety: `users.is_super_admin`, grantable **only directly in
+Supabase** (no in-app UI; cannot be self-escalated). Its powers are limited to
+**recovery** (reassign a dead group's owner) and **moderation** (act on abuse
+reports) — **not** a browse-all-content god view, so the privacy promise above
+holds. Every super-admin action is written to an `audit_log`. This keeps the
+project maintainable without the original operator (hand the flag to a successor
+in Supabase).
 
 ---
 
@@ -103,15 +124,18 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 ## 6. Data model (sketch)
 
-- **users** — id, name, avatar, `is_admin` (app-level admin flag) (Supabase Auth)
-- **groups** — id, name, invite_code, created_by
-- **memberships** — user_id, group_id, role (`member` | `group_admin`)
-- **dhikr_items** — id, group_id, label, arabic, target_count, order
-- **logs** — id, user_id, dhikr_item_id, count, date
+- **users** — id, name, avatar (Supabase Auth). No app-level admin flag; one out-of-band `is_super_admin` (D27, granted only in Supabase — recovery + moderation)
+- **groups** — id, name, invite_code, `created_by` = **the owner** (authoritative; updated on transfer / succession)
+- **memberships** — user_id, group_id, role (`owner` | `admin` | `member`); exactly one `owner` row per group
+- **invites** — id, group_id, email, role (`admin` | `member`), code — outstanding share-by-email invites (accept → a membership)
+- **tasks** — id, group_id, label, subtitle, target_count, order
+- **logs** — id, user_id, task_id, count, date
 - **streaks** — user_id, current, longest, freezes_left, last_active
 - **push_subscriptions** — user_id, endpoint, keys (for Web Push; see §4 v1.1)
+- **reports** — id, reporter_id, group_id/target, reason, status (D27 moderation queue)
+- **audit_log** — id, actor_id, action, target, at — every super-admin action is recorded (D27)
 
-> Row-Level Security on every table: members read their group, admins write their group.
+> Row-Level Security on every table (D26 ownership): a row is visible only to people in that group (owner / co-admin / member); **writes** to group config (tasks, memberships, settings) require `owner` or `admin`; **delete group** and **transfer ownership** require `owner`. **Succession (D27):** a co-admin may claim ownership when the owner is dormant (no activity ≥ 14 days) or gone. **Super-admin (D27):** the only path that bypasses ownership — limited to recovery (reassign a dead group's owner) + moderation; no read access to group content; every action audited.
 
 **Consistency tracker** needs **no new table** — it is derived from `logs` (count per user / item / date) vs each item's `target_count`: a day's completion % = closed-rings ÷ total-tasks; the 7/30/90-day score = % of days fully completed; the group rollup aggregates across members. For performance at scale, optionally precompute a `daily_completion` view/materialized view (user_id, group_id, date, pct). RLS mirrors the rest: members read their own + group rollups; group admins read all members in their group. The **admin per-task fortnight breakdown** (§4) is just a bounded `logs` range scan (one member × group tasks × last 14 days) — a short, fixed window, so it stays cheap to query and store without any new table.
 

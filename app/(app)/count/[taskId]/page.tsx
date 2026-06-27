@@ -1,24 +1,38 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
+import { isoDate } from "@/lib/mock/data";
 import { useCelebration } from "@/components/demo/celebration";
 import { TapPad } from "@/components/demo/tap-pad";
+import { DayStrip, fmtLongDate } from "@/components/demo/day-strip";
 import { ArrowLeftIcon } from "@/components/demo/icons";
 
-export default function CountPage() {
+const TODAY = isoDate(0);
+const PAST_DAYS = 14; // how far back you can back-fill a missed day (D8)
+
+function CountScreen() {
   const router = useRouter();
   const { taskId } = useParams<{ taskId: string }>();
+  const search = useSearchParams();
   const { state, actions } = useMock();
   const { celebrate } = useCelebration();
   const [sound, setSound] = React.useState(true);
+  // Which day we're logging for — honour a ?date from Today, else today (D8).
+  const paramDate = search.get("date");
+  const initialDate =
+    paramDate && paramDate <= TODAY && paramDate >= isoDate(PAST_DAYS - 1)
+      ? paramDate
+      : TODAY;
+  const [date, setDate] = React.useState(initialDate);
+  const isToday = date === TODAY;
 
   const me = sel.currentUser(state);
   const task = state.tasks.find((t) => t.id === taskId);
-  const count = task ? sel.todayCount(state, me.id, task.id) : 0;
+  const count = task ? sel.countOn(state, me.id, task.id, date) : 0;
   const justCompleted = React.useRef(false);
 
   if (!task) {
@@ -50,7 +64,7 @@ export default function CountPage() {
 
   // Manual taps count one at a time, uncapped (you may go past the target).
   const handleTap = () => {
-    actions.increment(task.id, 1);
+    actions.increment(task.id, 1, undefined, date);
     celebrateIfClosed(count + 1);
   };
 
@@ -58,7 +72,7 @@ export default function CountPage() {
   const addCapped = (n: number) => {
     const step = Math.min(n, remaining);
     if (step <= 0) return;
-    actions.increment(task.id, step);
+    actions.increment(task.id, step, undefined, date);
     celebrateIfClosed(count + step);
   };
 
@@ -88,6 +102,28 @@ export default function CountPage() {
           </p>
         )}
       </div>
+
+      {/* Day picker — log for today, or back-fill a day that's gone by (D8) */}
+      <DayStrip
+        className="mt-3"
+        value={date}
+        days={PAST_DAYS}
+        isDone={(d) =>
+          sel.countOn(state, me.id, task.id, d) >= task.targetCount
+        }
+        onChange={(d) => {
+          justCompleted.current = false;
+          setDate(d);
+        }}
+      />
+      {!isToday && (
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          Logging for{" "}
+          <span className="font-medium text-foreground">
+            {fmtLongDate(date)}
+          </span>
+        </p>
+      )}
 
       <div className="flex flex-1 flex-col items-center justify-center">
         <TapPad
@@ -133,5 +169,14 @@ export default function CountPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CountPage() {
+  // useSearchParams (read in CountScreen) must sit under a Suspense boundary.
+  return (
+    <React.Suspense fallback={null}>
+      <CountScreen />
+    </React.Suspense>
   );
 }

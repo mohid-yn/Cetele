@@ -38,9 +38,14 @@ export function MemberRow({
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
           {name}
-          {role === "group_admin" && (
+          {role === "owner" && (
+            <Badge variant="accent" size="sm">
+              owner
+            </Badge>
+          )}
+          {role === "admin" && (
             <Badge variant="primary" size="sm">
-              admin
+              co-admin
             </Badge>
           )}
           {you && (

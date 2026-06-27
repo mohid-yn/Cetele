@@ -5,30 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
-import { ShieldIcon } from "./icons";
 import { GroupSwitcher } from "./group-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { useMock } from "@/lib/mock/store";
 
 /** Persistent left nav for desktop (≥lg). Mirrors the mobile bottom bar. */
 export function Sidebar() {
   const pathname = usePathname();
-  const { state } = useMock();
-  const showAdmin = state.session.viewRole === "admin";
-
-  const items = [
-    ...NAV_ITEMS,
-    ...(showAdmin
-      ? [
-          {
-            href: "/admin",
-            label: "Admin",
-            shortLabel: "Admin",
-            Icon: ShieldIcon,
-          } as const,
-        ]
-      : []),
-  ];
+  const items = NAV_ITEMS;
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-card p-4 lg:flex">

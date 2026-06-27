@@ -65,10 +65,8 @@ export default function ProfilePage() {
             {me.name}
           </h1>
           <div className="mt-1 flex flex-wrap justify-center gap-1.5">
-            {role === "group_admin" && (
-              <Badge variant="primary">Group admin</Badge>
-            )}
-            {me.isAdmin && <Badge variant="accent">App admin</Badge>}
+            {role === "owner" && <Badge variant="accent">Owner</Badge>}
+            {role === "admin" && <Badge variant="primary">Co-admin</Badge>}
             <Badge variant="neutral">{group.name}</Badge>
           </div>
         </div>

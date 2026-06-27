@@ -7,7 +7,11 @@ import type { MemberRole } from "@/lib/mock/types";
 export const selectCls =
   "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-50";
 
-/** Member / Admin segmented control — clearer than a dropdown for a binary role. */
+/**
+ * Member / Co-admin segmented control — clearer than a dropdown for a binary
+ * role. Only ever toggles between `member` and `admin` (co-admin); ownership is
+ * changed via transfer, never here (D26).
+ */
 export function RoleToggle({
   value,
   onChange,
@@ -19,7 +23,7 @@ export function RoleToggle({
 }) {
   return (
     <div className="inline-flex rounded-lg border border-border p-0.5">
-      {(["member", "group_admin"] as MemberRole[]).map((r) => (
+      {(["member", "admin"] as MemberRole[]).map((r) => (
         <button
           key={r}
           type="button"
@@ -33,7 +37,7 @@ export function RoleToggle({
               : "text-muted-foreground hover:text-foreground")
           }
         >
-          {r === "member" ? "Member" : "Admin"}
+          {r === "member" ? "Member" : "Co-admin"}
         </button>
       ))}
     </div>

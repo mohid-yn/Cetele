@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { buttonVariants } from "@/components/ui";
+import { buttonVariants, Button, Dialog } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
 import { PageHeader } from "@/components/demo/page-header";
@@ -18,6 +18,7 @@ import {
   CheckIcon,
   ChevronRightIcon,
   FlameIcon,
+  GridIcon,
   SettingsIcon,
 } from "@/components/demo/icons";
 import { isoDate } from "@/lib/mock/data";
@@ -26,21 +27,21 @@ type Tab = "overview" | "standings" | "members";
 const MEDALS = ["🥇", "🥈", "🥉"];
 
 export default function GroupPage() {
-  const { state } = useMock();
+  const { state, actions } = useMock();
   const group = sel.activeGroup(state);
   const tasks = sel.groupTasks(state, group.id);
   const members = sel.groupMembers(state, group.id);
   const meId = state.session.currentUserId;
   const today = isoDate(0);
-  const canManage =
-    state.session.viewRole === "group_admin" ||
-    state.session.viewRole === "admin";
+  const canManage = sel.canManageGroup(state, meId, group.id);
 
   const [tab, setTab] = React.useState<Tab>("overview");
   // Admin oversight: which member's fortnight breakdown is open (null = none).
   const [breakdownUserId, setBreakdownUserId] = React.useState<string | null>(
     null,
   );
+  // D29: the in-person halaqah "log for the group" quick-action dialog.
+  const [groupLogOpen, setGroupLogOpen] = React.useState(false);
 
   // Per-task collective progress: everyone's counts today vs target × members.
   const taskTotals = tasks.map((t) => {
@@ -79,15 +80,24 @@ export default function GroupPage() {
           </span>
         }
         action={
-          canManage ? (
+          <div className="flex items-center gap-1.5">
             <Link
-              href="/group/manage"
-              aria-label="Manage group"
-              className={buttonVariants({ variant: "outline", size: "icon" })}
+              href="/groups"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
-              <SettingsIcon className="size-5" />
+              <GridIcon className="size-4" />
+              Groups
             </Link>
-          ) : undefined
+            {canManage && (
+              <Link
+                href="/group/manage"
+                aria-label="Manage group"
+                className={buttonVariants({ variant: "outline", size: "icon" })}
+              >
+                <SettingsIcon className="size-5" />
+              </Link>
+            )}
+          </div>
         }
       />
 
@@ -208,9 +218,21 @@ export default function GroupPage() {
           <SectionHeading
             action={
               canManage ? (
-                <Link href="/group/manage" className="font-medium text-primary">
-                  Manage
-                </Link>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setGroupLogOpen(true)}
+                    className="font-medium text-primary"
+                  >
+                    Log for group
+                  </button>
+                  <Link
+                    href="/group/manage"
+                    className="font-medium text-primary"
+                  >
+                    Manage
+                  </Link>
+                </div>
               ) : undefined
             }
           >
@@ -218,7 +240,7 @@ export default function GroupPage() {
           </SectionHeading>
           {canManage && (
             <p className="mb-2 text-xs text-muted-foreground">
-              Tap a member to see their last 14 days, task by task.
+              Tap a member to view or log their last 14 days, task by task.
             </p>
           )}
           <ul className="flex flex-col gap-1.5">
@@ -287,6 +309,61 @@ export default function GroupPage() {
           open={breakdownUserId !== null}
           onClose={() => setBreakdownUserId(null)}
         />
+      )}
+
+      {/* D29: log a task for the whole circle today (in-person halaqah tally) */}
+      {canManage && (
+        <Dialog
+          open={groupLogOpen}
+          onClose={() => setGroupLogOpen(false)}
+          title="Log for the group"
+          description="Mark a task done for everyone today — for an in-person session. Each entry is recorded as logged by you."
+          className="max-w-md"
+        >
+          <ul className="flex flex-col gap-2">
+            {tasks.map((t) => {
+              const done = taskTotals.find((x) => x.task.id === t.id);
+              const allDone = done ? done.total >= done.goal : false;
+              return (
+                <li
+                  key={t.id}
+                  className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {t.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground tabular-nums">
+                      target {t.targetCount.toLocaleString()} · ×
+                      {members.length} members
+                    </p>
+                  </div>
+                  {allDone ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+                      <CheckIcon className="size-4" />
+                      all done
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        actions.logForGroup(
+                          group.id,
+                          t.id,
+                          today,
+                          t.targetCount,
+                        )
+                      }
+                    >
+                      Mark all done
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Dialog>
       )}
     </div>
   );

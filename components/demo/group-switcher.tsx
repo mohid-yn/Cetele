@@ -1,38 +1,34 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui";
 import { useMock, sel } from "@/lib/mock/store";
-import { ChevronDownIcon, CheckIcon } from "./icons";
+import { ChevronDownIcon, CheckIcon, GridIcon } from "./icons";
 import type { MemberRole } from "@/lib/mock/types";
 
 /**
  * Group switcher (the Slack/Notion workspace-switcher pattern). The active group
- * name is a dropdown of every group the user belongs to — each with its role —
- * so a group admin who runs **multiple** circles can switch context and manage
- * each. App admins (who can reach every group) see all of them here too.
- *
- * If the user only has one group, it renders as a plain, non-interactive label.
+ * name is a dropdown of every group the user belongs to — each with its role
+ * (owner / co-admin / member) — plus a link to the Groups home (Drive's "My
+ * Drive"). Under the D26 ownership model a user only ever sees their own
+ * groups, so there is no special app-admin "see everything" branch.
  */
 export function GroupSwitcher({ className }: { className?: string }) {
   const { state, actions } = useMock();
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
   const me = state.session.currentUserId;
   const active = sel.activeGroup(state);
-  const isAppAdmin = state.session.viewRole === "admin";
 
   const memberships = sel.userGroups(state, me);
   const roleFor = (gid: string): MemberRole | undefined =>
     memberships.find((m) => m.groupId === gid)?.role;
 
-  // App admins can switch to any group; everyone else, only their own.
-  const groups = isAppAdmin
-    ? state.groups
-    : memberships.map((m) => m.group).filter(Boolean);
-  const single = groups.length <= 1;
+  const groups = memberships.map((m) => m.group).filter(Boolean);
 
   React.useEffect(() => {
     if (!open) return;
@@ -53,18 +49,11 @@ export function GroupSwitcher({ className }: { className?: string }) {
 
   const roleLabel = (gid: string): string => {
     const r = roleFor(gid);
-    if (r === "group_admin") return "Admin";
+    if (r === "owner") return "Owner";
+    if (r === "admin") return "Co-admin";
     if (r === "member") return "Member";
-    return isAppAdmin ? "App admin" : "";
+    return "";
   };
-
-  if (single) {
-    return (
-      <span className={cn("inline-flex items-center", className)}>
-        {active.name}
-      </span>
-    );
-  }
 
   return (
     <div ref={ref} className="relative">
@@ -113,7 +102,13 @@ export function GroupSwitcher({ className }: { className?: string }) {
                 </span>
                 {label && (
                   <Badge
-                    variant={label === "Member" ? "neutral" : "primary"}
+                    variant={
+                      label === "Member"
+                        ? "neutral"
+                        : label === "Owner"
+                          ? "accent"
+                          : "primary"
+                    }
                     size="sm"
                   >
                     {label}
@@ -122,6 +117,21 @@ export function GroupSwitcher({ className }: { className?: string }) {
               </button>
             );
           })}
+
+          {/* Drive-style "My Drive" entry — manage / create groups */}
+          <div className="mt-1 border-t border-border pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                router.push("/groups");
+                setOpen(false);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-muted"
+            >
+              <GridIcon className="size-4" />
+              All my groups
+            </button>
+          </div>
         </div>
       )}
     </div>
