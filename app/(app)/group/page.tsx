@@ -13,6 +13,7 @@ import { LiveCounter } from "@/components/demo/live-counter";
 import { PairGoal } from "@/components/demo/pair-goal";
 import { MemberRow } from "@/components/demo/member-row";
 import { MemberBreakdownDialog } from "@/components/demo/member-breakdown";
+import { SteadfastnessBoard } from "@/components/demo/steadfastness-board";
 import { Segmented } from "@/components/demo/segmented";
 import {
   CheckIcon,
@@ -214,91 +215,95 @@ export default function GroupPage() {
 
       {/* ---- Members: who's in the circle + today's contribution ---- */}
       {tab === "members" && (
-        <section>
-          <SectionHeading
-            action={
-              canManage ? (
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setGroupLogOpen(true)}
-                    className="font-medium text-primary"
-                  >
-                    Log for group
-                  </button>
-                  <Link
-                    href="/group/manage"
-                    className="font-medium text-primary"
-                  >
-                    Manage
-                  </Link>
-                </div>
-              ) : undefined
-            }
-          >
-            {members.length} members
-          </SectionHeading>
-          {canManage && (
-            <p className="mb-2 text-xs text-muted-foreground">
-              Tap a member to view or log their last 14 days, task by task.
-            </p>
-          )}
-          <ul className="flex flex-col gap-1.5">
-            {contributions.map((m) => {
-              const row = (
-                <MemberRow
-                  name={m.user.name}
-                  role={m.role}
-                  you={m.userId === meId}
-                  trailing={
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <p className="font-display text-sm font-bold text-foreground tabular-nums">
-                          {m.today.toLocaleString()}
-                        </p>
-                        <p className="text-xs text-muted-foreground">today</p>
-                      </div>
-                      {canManage && (
-                        <ChevronRightIcon className="size-4 text-muted-foreground" />
-                      )}
-                    </div>
-                  }
-                />
-              );
-              return (
-                <li key={m.userId}>
-                  {canManage ? (
+        <>
+          <section>
+            <SectionHeading
+              action={
+                canManage ? (
+                  <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setBreakdownUserId(m.userId)}
-                      aria-label={`See ${m.user.name}'s last 14 days`}
-                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-muted/50"
+                      onClick={() => setGroupLogOpen(true)}
+                      className="font-medium text-primary"
                     >
-                      {row}
+                      Log for group
                     </button>
-                  ) : (
-                    <div className="rounded-xl border border-border bg-card px-3 py-2">
-                      {row}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          {canManage && (
-            <div className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-              Invite with code{" "}
-              <span className="font-mono font-semibold text-foreground">
-                {group.inviteCode}
-              </span>{" "}
-              — or add members from{" "}
-              <Link href="/group/manage" className="font-medium text-primary">
-                Manage
-              </Link>
-              .
-            </div>
-          )}
-        </section>
+                    <Link
+                      href="/group/manage"
+                      className="font-medium text-primary"
+                    >
+                      Manage
+                    </Link>
+                  </div>
+                ) : undefined
+              }
+            >
+              {members.length} members
+            </SectionHeading>
+            {canManage && (
+              <p className="mb-2 text-xs text-muted-foreground">
+                Tap a member to view or log their last 14 days, task by task.
+              </p>
+            )}
+            <ul className="flex flex-col gap-1.5">
+              {contributions.map((m) => {
+                const row = (
+                  <MemberRow
+                    name={m.user.name}
+                    role={m.role}
+                    you={m.userId === meId}
+                    trailing={
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <p className="font-display text-sm font-bold text-foreground tabular-nums">
+                            {m.today.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">today</p>
+                        </div>
+                        {canManage && (
+                          <ChevronRightIcon className="size-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    }
+                  />
+                );
+                return (
+                  <li key={m.userId}>
+                    {canManage ? (
+                      <button
+                        type="button"
+                        onClick={() => setBreakdownUserId(m.userId)}
+                        aria-label={`See ${m.user.name}'s last 14 days`}
+                        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-muted/50"
+                      >
+                        {row}
+                      </button>
+                    ) : (
+                      <div className="rounded-xl border border-border bg-card px-3 py-2">
+                        {row}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {canManage && (
+              <div className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                Invite with code{" "}
+                <span className="font-mono font-semibold text-foreground">
+                  {group.inviteCode}
+                </span>{" "}
+                — or add members from{" "}
+                <Link href="/group/manage" className="font-medium text-primary">
+                  Manage
+                </Link>
+                .
+              </div>
+            )}
+          </section>
+          {/* Steadfastness recognition — admin/owner-only, group-scoped (D31) */}
+          {canManage && <SteadfastnessBoard groupId={group.id} />}
+        </>
       )}
 
       {canManage && (

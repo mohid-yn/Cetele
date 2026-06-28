@@ -6,7 +6,8 @@
 > written so the switch is a known quantity before we start spending on backend.
 >
 > **Read together with:** `docs/PRD.md` §6 (data model), `.claude/STATUS.md`
-> (decisions D2/D9/D17/D18), and the mock it replaces: `lib/mock/{types,data,store}`.
+> (decisions D2/D17/D18 + the Drive-style ownership model **D26/D27/D29/D30**),
+> and the mock it replaces: `lib/mock/{types,data,store}`.
 
 ---
 
@@ -21,7 +22,7 @@ not a rewrite — it's:
 2. Replace **reads** (`sel.*`) with SQL queries, run in **Server Components**.
 3. Replace **writes** (reducer actions) with **Server Actions**.
 4. Replace the **simulated realtime** (`setInterval`) with Supabase Realtime.
-5. Replace the **fake session** (`viewRole` switch) with Supabase Auth.
+5. Replace the **fake session** (the demo "act as" persona switch) with Supabase Auth.
 
 The UI primitives (`components/ui/*`), design tokens, routing, and layouts **do
 not change**. Most feature components change only in _where their data comes from_.
@@ -30,15 +31,15 @@ not change**. Most feature components change only in _where their data comes fro
 
 ## 2. The two shifts happening at once
 
-|                        | Today (mock)                                                                                                         | Target (production)                                                                                            |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **Data source**        | one React Context + `useReducer` + `localStorage` (`MockStateProvider`)                                              | Supabase Postgres, via `@supabase/ssr` clients                                                                 |
-| **Rendering**          | 9/11 pages are `"use client"` (the whole `(app)` subtree is client, because the layout wraps it in a client Context) | **Server Components fetch data**; `"use client"` drops to leaves (tap pad, dialogs, toggles, realtime counter) |
-| **Reads**              | `sel.foo(state, …)` pure selectors                                                                                   | `await supabase.from(...).select(...)` in Server Components / RSC helpers                                      |
-| **Writes**             | `dispatch({ type: "increment", … })`                                                                                 | **Server Actions** (`"use server"`) → `supabase…upsert/insert` → `revalidatePath`                              |
-| **Realtime**           | `setInterval` nudging peer counts                                                                                    | Supabase Realtime channel on `logs` (postgres_changes)                                                         |
-| **Identity / roles**   | `session.currentUserId` + demo `viewRole` switch                                                                     | Supabase Auth session; role derived from `memberships.role` + `profiles.is_admin`                              |
-| **Streaks / rollover** | `fastForwardDay` demo action                                                                                         | Scheduled job (Vercel cron or `pg_cron`/Edge Function) at day boundary                                         |
+|                        | Today (mock)                                                                                                          | Target (production)                                                                                                 |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Data source**        | one React Context + `useReducer` + `localStorage` (`MockStateProvider`)                                               | Supabase Postgres, via `@supabase/ssr` clients                                                                      |
+| **Rendering**          | 12/16 pages are `"use client"` (the whole `(app)` subtree is client, because the layout wraps it in a client Context) | **Server Components fetch data**; `"use client"` drops to leaves (tap pad, dialogs, toggles, realtime counter)      |
+| **Reads**              | `sel.foo(state, …)` pure selectors                                                                                    | `await supabase.from(...).select(...)` in Server Components / RSC helpers                                           |
+| **Writes**             | `dispatch({ type: "increment", … })`                                                                                  | **Server Actions** (`"use server"`) → `supabase…upsert/insert` → `revalidatePath`                                   |
+| **Realtime**           | `setInterval` nudging peer counts                                                                                     | Supabase Realtime channel on `logs` (postgres_changes)                                                              |
+| **Identity / roles**   | `session.currentUserId` + demo "act as" persona switch                                                                | Supabase Auth session; role derived from `memberships.role` (`owner`/`admin`/`member`, D26) — **no app-admin flag** |
+| **Streaks / rollover** | `fastForwardDay` demo action                                                                                          | Scheduled job (Vercel cron or `pg_cron`/Edge Function) at day boundary                                              |
 
 > The client-heavy shape is **not** the production shape. The idiomatic Next.js
 > move is server-fetching with client leaves — don't port "everything behind one
@@ -53,30 +54,35 @@ App data lives in `public.*`; Supabase Auth owns `auth.users`. `User` (mock) →
 `dhikr_items`).
 
 ```sql
--- profiles: 1:1 with auth.users; app-level admin flag (D9)
+-- profiles: 1:1 with auth.users. NO app-admin flag (D26 removed the tier).
+-- One out-of-band recovery/moderation flag, set ONLY in Supabase (D27).
 create table profiles (
-  id          uuid primary key references auth.users on delete cascade,
-  name        text not null,
-  avatar_url  text,
-  is_admin    boolean not null default false,
-  created_at  timestamptz not null default now()
+  id             uuid primary key references auth.users on delete cascade,
+  name           text not null,
+  avatar_url     text,
+  is_super_admin boolean not null default false,  -- D27: recovery + moderation only, no in-app UI
+  created_at     timestamptz not null default now()
 );
 
 create table groups (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
   invite_code text not null unique,
-  created_by  uuid references profiles on delete set null,
+  created_by  uuid references profiles on delete set null,  -- D26: the OWNER (authoritative; follows transfer/succession)
   created_at  timestamptz not null default now()
 );
 
+-- D26 Drive-style roles: owner | admin (co-admin) | member. Exactly one
+-- `owner` row per group (= groups.created_by, kept in sync on transfer).
 create table memberships (
   id        uuid primary key default gen_random_uuid(),
   user_id   uuid not null references profiles on delete cascade,
   group_id  uuid not null references groups on delete cascade,
-  role      text not null default 'member' check (role in ('member','group_admin')),
+  role      text not null default 'member' check (role in ('owner','admin','member')),
   unique (user_id, group_id)
 );
+-- enforce one owner per group
+create unique index one_owner_per_group on memberships (group_id) where role = 'owner';
 
 create table tasks (                      -- D17: replaces dhikr_items
   id           uuid primary key default gen_random_uuid(),
@@ -93,11 +99,31 @@ create table logs (
   task_id    uuid not null references tasks on delete cascade,
   date       date not null,
   count      integer not null default 0 check (count >= 0),
+  logged_by  uuid references profiles on delete set null,  -- D29: admin who proxy-logged; null = self
   updated_at timestamptz not null default now(),
   unique (user_id, task_id, date)         -- enables the increment upsert
 );
 create index on logs (task_id, date);     -- collective counter
 create index on logs (user_id, date);     -- consistency / breakdown scans
+
+-- D26: outstanding share-by-email invites (accept → a membership row).
+create table invites (
+  id        uuid primary key default gen_random_uuid(),
+  group_id  uuid not null references groups on delete cascade,
+  email     text not null,
+  role      text not null check (role in ('admin','member')),  -- can't invite straight to owner
+  code      text not null unique,
+  created_at timestamptz not null default now()
+);
+
+-- D30: personal per-task custom reminder times (member-set clock time + on/off).
+create table reminders (
+  user_id uuid not null references profiles on delete cascade,
+  task_id uuid not null references tasks on delete cascade,
+  time    text not null,                  -- "HH:MM" 24h local
+  on      boolean not null default true,
+  primary key (user_id, task_id)
+);
 
 create table streaks (
   user_id      uuid primary key references profiles on delete cascade,
@@ -123,6 +149,26 @@ create table push_subscriptions (          -- v1.1 (CET-10/D10)
   keys     jsonb not null,
   primary key (user_id, endpoint)
 );
+
+-- D27: moderation queue + tamper-evident audit trail.
+create table reports (
+  id          uuid primary key default gen_random_uuid(),
+  reporter_id uuid references profiles on delete set null,
+  group_id    uuid references groups on delete cascade,
+  target      text,                        -- free-form: what's being reported
+  reason      text not null,
+  status      text not null default 'open' check (status in ('open','resolved','dismissed')),
+  created_at  timestamptz not null default now()
+);
+
+-- D27/D29: every super-admin action AND every proxy-log edit lands here.
+create table audit_log (
+  id       uuid primary key default gen_random_uuid(),
+  actor_id uuid references profiles on delete set null,
+  action   text not null,                  -- e.g. 'proxy_log', 'reassign_owner', 'resolve_report'
+  target   text,
+  at       timestamptz not null default now()
+);
 ```
 
 **No table for the derived views.** Consistency, heatmap, the admin fortnight
@@ -145,32 +191,51 @@ create or replace function is_group_member(g uuid) returns boolean
                  where m.group_id = g and m.user_id = auth.uid());
 $$;
 
+-- "Can manage" = owner OR co-admin (D26 — both hold full management authority).
 create or replace function is_group_admin(g uuid) returns boolean
   language sql security definer stable as $$
   select exists (select 1 from memberships m
                  where m.group_id = g and m.user_id = auth.uid()
-                   and m.role = 'group_admin');
+                   and m.role in ('owner','admin'));
 $$;
 
-create or replace function is_app_admin() returns boolean
+-- Owner-only powers: delete group + transfer ownership (D26).
+create or replace function is_group_owner(g uuid) returns boolean
   language sql security definer stable as $$
-  select coalesce((select is_admin from profiles where id = auth.uid()), false);
+  select exists (select 1 from groups gr
+                 where gr.id = g and gr.created_by = auth.uid());
+$$;
+
+-- D27: the out-of-band recovery/moderation flag (set only in Supabase).
+create or replace function is_super_admin() returns boolean
+  language sql security definer stable as $$
+  select coalesce((select is_super_admin from profiles where id = auth.uid()), false);
 $$;
 ```
 
-| Table         | Read                                                                                 | Write                                                                                          |
-| ------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `profiles`    | self + anyone sharing a group                                                        | update self; `is_app_admin()` any                                                              |
-| `groups`      | `is_group_member(id)` or `is_app_admin()`                                            | insert: authenticated; update/delete: `is_group_admin(id)` or app admin                        |
-| `memberships` | `is_group_member(group_id)` or app admin                                             | `is_group_admin(group_id)` or app admin (with last-admin / self guards mirrored from the mock) |
-| `tasks`       | `is_group_member(group_id)`                                                          | `is_group_admin(group_id)` or app admin                                                        |
-| `logs`        | `is_group_member(group_id of task)` — peers' logs power the live counter + oversight | `user_id = auth.uid()` only (you log your own)                                                 |
-| `streaks`     | self + `is_group_admin` of a shared group                                            | self (or the scheduled job, service role)                                                      |
-| `reactions`   | `is_group_member(group_id)`                                                          | insert/delete where `from_user_id = auth.uid()`                                                |
+> **Note:** `is_super_admin()` is **not** a god-view. It gates only **recovery**
+> (reassign a dead group's owner) + **moderation** (act on `reports`) — it does
+> **not** grant read access to group content, so D26's privacy promise holds.
 
-> The mock's `removeMember`/`setMemberRole` already encode the **last-admin** and
-> **can't-demote-self** guards — re-implement those as Server Action checks **and**
-> as a DB trigger/policy so they hold even if a client misbehaves.
+| Table         | Read                                                                                 | Write                                                                                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles`    | self + anyone sharing a group                                                        | update self (`is_super_admin` is **not** self-writable — set in Supabase only)                                                                                               |
+| `groups`      | `is_group_member(id)`                                                                | insert: authenticated; update: `is_group_admin(id)`; **delete / transfer (`created_by`): `is_group_owner(id)`**; super-admin may reassign `created_by` (recovery)            |
+| `memberships` | `is_group_member(group_id)`                                                          | `is_group_admin(group_id)` (last-admin / self / owner-row guards from the mock); **succession**: a co-admin may claim ownership when the owner is dormant ≥14d or gone (D27) |
+| `tasks`       | `is_group_member(group_id)`                                                          | `is_group_admin(group_id)`                                                                                                                                                   |
+| `logs`        | `is_group_member(group_id of task)` — peers' logs power the live counter + oversight | self (`user_id = auth.uid()`) **OR** `is_group_admin(group_id of task)` — D29 proxy-logging (sets `logged_by`, writes an `audit_log` row)                                    |
+| `invites`     | `is_group_admin(group_id)`                                                           | `is_group_admin(group_id)` (owner or co-admin re-shares; D26)                                                                                                                |
+| `reminders`   | self                                                                                 | self only (`user_id = auth.uid()`)                                                                                                                                           |
+| `streaks`     | self + `is_group_admin` of a shared group                                            | self (or the scheduled job, service role)                                                                                                                                    |
+| `reactions`   | `is_group_member(group_id)`                                                          | insert/delete where `from_user_id = auth.uid()`                                                                                                                              |
+| `reports`     | reporter + `is_super_admin()`                                                        | insert: any member; resolve/dismiss: `is_super_admin()` (D27)                                                                                                                |
+| `audit_log`   | `is_super_admin()`                                                                   | append-only (service role / the proxy-log + super-admin actions)                                                                                                             |
+
+> The mock's `removeMember`/`setMemberRole`/`transferOwnership`/`claimOwnership`
+> already encode the guards (never remove/demote the owner; one owner per group;
+> succession only when the owner is dormant/gone) — re-implement those as Server
+> Action checks **and** as a DB trigger/policy so they hold even if a client
+> misbehaves.
 
 ---
 
@@ -179,20 +244,25 @@ $$;
 Every `sel.*` becomes a query (in a Server Component or a `lib/queries/*` helper).
 Shapes stay the same so components barely change.
 
-| Mock selector                               | Becomes                                                                 |
-| ------------------------------------------- | ----------------------------------------------------------------------- |
-| `currentUser`                               | `auth.getUser()` + `profiles` row                                       |
-| `activeGroup` / `userGroups`                | `memberships` join `groups` for `auth.uid()`                            |
-| `groupTasks`                                | `select * from tasks where group_id = … order by sort_order`            |
-| `groupMembers`                              | `memberships` join `profiles`                                           |
-| `todayCount`                                | `select count from logs where user/task/date`                           |
-| `groupToday` (live counter)                 | `select sum(count) … where task in group and date = today`              |
-| `leaderboard`                               | grouped aggregate over `logs` for the last 7 days                       |
-| `dayCompletion` / `heatmap` / `consistency` | `logs` vs `tasks.target_count` over a date range (one query, grouped)   |
-| `taskBreakdown` (admin fortnight)           | `logs` range scan: one member × group tasks × 14 days                   |
-| `memberConsistency` / `groupConsistency`    | aggregate the above across members                                      |
-| `gardenStage`                               | `groupConsistency(30)` + today's pct (same formula, server-side)        |
-| `badges` / `buddy` / `pairGoal`             | pure derivations — keep as TS over fetched rows, or a Postgres function |
+| Mock selector                            | Becomes                                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------------------ |
+| `currentUser`                            | `auth.getUser()` + `profiles` row                                                    |
+| `activeGroup` / `userGroups`             | `memberships` join `groups` for `auth.uid()`                                         |
+| `myGroups` / `sharedWithMe`              | `userGroups` filtered by `role = 'owner'` / `role = 'admin'` (D26 Groups home)       |
+| `groupOwner` / `canManageGroup`          | `groups.created_by` join `profiles` / `is_group_admin(group_id)`                     |
+| `isOwnerDormant`                         | owner gone from `memberships`, or no owner `logs` in ≥14 days (D27 succession)       |
+| `pendingInvitesFor` / `nonMembers`       | `select … from invites where group_id = …` / members not in the group                |
+| `groupTasks`                             | `select * from tasks where group_id = … order by sort_order`                         |
+| `groupMembers`                           | `memberships` join `profiles`                                                        |
+| `countOn`                                | `select count from logs where user/task/date`                                        |
+| `groupToday` (live counter)              | `select sum(count) … where task in group and date = today`                           |
+| `leaderboard`                            | grouped aggregate over `logs` for the last 7 days                                    |
+| `dayCompletion` / `consistency`          | `logs` vs `tasks.target_count` over a date range (one query, grouped)                |
+| `taskBreakdown` (admin fortnight)        | `logs` range scan: one member × group tasks × 14 days; cells carry `logged_by` (D29) |
+| `memberConsistency` / `groupConsistency` | aggregate the above across members                                                   |
+| `remindersFor`                           | `reminders` left-join `tasks` for the user (D30; default off where no row)           |
+| `gardenStage`                            | `groupConsistency(30)` + today's pct (same formula, server-side)                     |
+| `badges` / `buddy` / `pairGoal`          | pure derivations — keep as TS over fetched rows, or a Postgres function              |
 
 Heavy aggregates (consistency, garden, leaderboard) are good candidates for
 **Postgres functions / RPC** (`supabase.rpc('group_consistency', …)`) so the math
@@ -225,15 +295,20 @@ export async function increment(taskId: string, by: number) {
 }
 ```
 
-| Reducer action                                                 | Server Action / SQL                                                                      |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `increment`                                                    | `increment_log` RPC (atomic `insert … on conflict … do update set count = count + p_by`) |
-| `addTask`/`editTask`/`removeTask`                              | `tasks` insert/update/delete (RLS: group admin)                                          |
-| `inviteMember`/`addUserToGroup`/`removeMember`/`setMemberRole` | `memberships` writes + guards                                                            |
-| `createGroup`/`renameGroup`/`deleteGroup`                      | `groups` writes (cascade handles tasks/logs)                                             |
-| `setAppAdmin`                                                  | `profiles.is_admin` update (app admin only)                                              |
-| `sendReaction`                                                 | `reactions` insert/delete (toggle)                                                       |
-| `fastForwardDay`, `setViewRole`, `toggleRibbon`, `reset`       | **demo-only — deleted.** Real day-rollover is a scheduled job; role comes from auth      |
+| Reducer action                                                                                               | Server Action / SQL                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `increment`                                                                                                  | `increment_log` RPC (atomic `insert … on conflict … do update set count = count + p_by`)                                |
+| `setCount` (D29 proxy edit)                                                                                  | `logs` upsert with `logged_by = auth.uid()` when editing another member + `audit_log` insert (RLS: self or group admin) |
+| `logForGroup` (D29 halaqah tally)                                                                            | upsert one task's count for every member of the group, each attributed + audited (RLS: group admin)                     |
+| `addTask`/`editTask`/`removeTask`                                                                            | `tasks` insert/update/delete (RLS: group admin)                                                                         |
+| `inviteByEmail`/`acceptInvite`                                                                               | `invites` insert (group admin) → on accept, create `membership` + delete the invite (D26)                               |
+| `addUserToGroup`/`removeMember`/`setMemberRole`                                                              | `memberships` writes + guards (never the owner row; last-admin / self guards)                                           |
+| `transferOwnership`                                                                                          | set `groups.created_by` + swap owner/admin rows (RLS: `is_group_owner`)                                                 |
+| `claimOwnership` (D27 succession)                                                                            | co-admin sets `created_by` to self when owner dormant ≥14d / gone + `audit_log` insert                                  |
+| `createGroup`/`renameGroup`/`deleteGroup`                                                                    | `groups` writes; create also inserts the owner `membership` (cascade handles tasks/logs)                                |
+| `setReminderTime`/`toggleReminder` (D30)                                                                     | `reminders` upsert for `auth.uid()` (self only)                                                                         |
+| `sendReaction`                                                                                               | `reactions` insert/delete (toggle)                                                                                      |
+| `fastForwardDay`, `setCurrentUser` (persona), `toggleRibbon`, `toggleOwnerDormant`, `setFreshStart`, `reset` | **demo-only — deleted.** Real day-rollover is a scheduled job; identity/role come from auth                             |
 
 For snappy taps, wrap `increment` in **`useOptimistic`** on the client leaf so the
 ring fills instantly, then reconcile with the server result.
@@ -253,7 +328,7 @@ app/auth/callback/route.ts // OAuth/magic-link code exchange (Route Handler)
 
 - **Login** (`app/page.tsx`): real `supabase.auth.signInWithOAuth({ provider: 'google' })` + `signInWithOtp({ email })` (D4) — replaces the faked buttons.
 - **Gating**: `middleware.ts` checks the session and redirects unauthenticated users hitting `(app)/*` back to `/`. (Replaces "Skip into the demo".)
-- **Roles**: `viewRole` switch is gone; the real role is read from `memberships.role` (+ `profiles.is_admin`) for the active group. Admin-only UI (the member breakdown, manage gear) keys off that.
+- **Roles**: the demo "act as" persona switch is gone; the real role is read from `memberships.role` (`owner`/`admin`/`member`, D26) for the active group — there is **no** app-admin flag. Manage UI (member breakdown, manage gear, share, proxy-log) keys off `is_group_admin`; delete/transfer key off `is_group_owner`. The `is_super_admin` flag is backend-only (recovery + moderation), never surfaced as in-app role UI.
 
 ---
 

@@ -6,7 +6,6 @@ import { useMock, sel } from "@/lib/mock/store";
 import { TaskBreakdownGrid } from "@/components/demo/task-breakdown-grid";
 import { PageHeader } from "@/components/demo/page-header";
 import { SectionHeading } from "@/components/demo/section-heading";
-import { MemberRow } from "@/components/demo/member-row";
 import { BadgesGrid } from "@/components/demo/badges";
 import { FlameIcon, ShieldIcon } from "@/components/demo/icons";
 import { useAnimatedNumber } from "@/components/demo/use-animated-number";
@@ -39,17 +38,16 @@ export default function ProgressPage() {
   const me = sel.currentUser(state);
   const group = sel.activeGroup(state);
   const streak = sel.streak(state, me.id);
-  const showOversight = sel.canManageGroup(state, me.id, group.id);
 
   // Heavy-ish derived data — memoise so the realtime ticker doesn't recompute it.
   // D28: 30-day is the personal steadfastness window (7-day was noisy, 90-day
   // duplicated it — streak covers momentum); 90-day survives only as the group
   // collective North Star (PRD §9). 14-day lives in the grid below.
-  const { c30, groupC90, members } = React.useMemo(() => {
+  // (Admin member-oversight lives under Group → Members, not on this personal tab.)
+  const { c30, groupC90 } = React.useMemo(() => {
     return {
       c30: sel.consistency(state, me.id, group.id, 30),
       groupC90: sel.groupConsistency(state, group.id, 90),
-      members: sel.memberConsistency(state, group.id, 30),
     };
   }, [state, me.id, group.id]);
 
@@ -203,37 +201,6 @@ export default function ProgressPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Group-admin oversight — every member's consistency (accountability) */}
-      {showOversight && (
-        <section>
-          <SectionHeading>Member consistency · last 30 days</SectionHeading>
-          <Card>
-            <CardContent className="flex flex-col gap-3 pt-6">
-              {members.map((m) => (
-                <MemberRow
-                  key={m.userId}
-                  name={m.user.name.split(" ")[0]}
-                  you={m.userId === me.id}
-                  status={
-                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${m.score}%` }}
-                      />
-                    </div>
-                  }
-                  trailing={
-                    <span className="text-sm font-semibold text-foreground tabular-nums">
-                      {m.score}%
-                    </span>
-                  }
-                />
-              ))}
-            </CardContent>
-          </Card>
-        </section>
-      )}
     </div>
   );
 }

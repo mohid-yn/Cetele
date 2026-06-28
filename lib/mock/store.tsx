@@ -1093,6 +1093,81 @@ export const sel = {
     return Math.round(sum / members.length);
   },
 
+  // ---- Steadfastness recognition (D31) -------------------------------------
+
+  /**
+   * D31 — steadfastness = average daily completion % over a *sliding* window
+   * (default 90 days), with **partial credit** per day (mean ring-fill, so a
+   * member at ~95% every day scores ~95, not 0). A **rate**, never cumulative
+   * volume or tenure → catchable, recency-bounded, seniority-invisible. The
+   * average is taken over the member's enrolled span (earliest activity → today,
+   * capped at the window) so missed days count against frequency but pre-join
+   * days don't drag them down. Returns the % + active-day count for the ≥14-day
+   * eligibility floor. Admin/owner-only surface (no member-facing board → no
+   * riya'); any reward is the group's own, handled outside the app.
+   */
+  steadfastness: (
+    s: MockState,
+    userId: string,
+    groupId: string,
+    windowDays = 90,
+  ): { pct: number; measuredDays: number; eligible: boolean } => {
+    const tasks = s.tasks.filter((t) => t.groupId === groupId);
+    const mine = s.logs.filter((l) => l.userId === userId);
+    if (!tasks.length || !mine.length)
+      return { pct: 0, measuredDays: 0, eligible: false };
+    // Enrolled span ≈ days from the member's earliest activity to today (capped
+    // at the window) — stands in for a real join date the mock doesn't store.
+    const today = Date.parse(isoDate(0));
+    let oldest = 0;
+    for (const l of mine) {
+      const dago = Math.round((today - Date.parse(l.date)) / 86_400_000);
+      if (dago > oldest && dago < 365) oldest = dago;
+    }
+    const span = Math.min(windowDays, oldest + 1);
+    let sum = 0;
+    let activeDays = 0;
+    for (let i = 0; i < span; i++) {
+      const date = isoDate(i);
+      let fill = 0;
+      let active = false;
+      for (const t of tasks) {
+        const c = s.logs
+          .filter(
+            (l) => l.userId === userId && l.taskId === t.id && l.date === date,
+          )
+          .reduce((a, l) => a + l.count, 0);
+        if (c > 0) active = true;
+        fill += t.targetCount ? Math.min(1, c / t.targetCount) : 0;
+      }
+      if (active) activeDays++;
+      sum += fill / tasks.length; // a missed day contributes 0 → rewards frequency
+    }
+    const pct = span ? Math.round((sum / span) * 100) : 0;
+    return { pct, measuredDays: activeDays, eligible: activeDays >= 14 };
+  },
+
+  /**
+   * D31 — the admin/owner-only steadfastness board: every member's recent
+   * consistency rate (sliding window, partial credit), with the ≥14-day
+   * eligibility floor and a recognition **bar** (not a single winner). Sorted
+   * eligible-first, then by %. Private to managers — never a member-facing
+   * leaderboard.
+   */
+  steadfastnessBoard: (
+    s: MockState,
+    groupId: string,
+    windowDays = 90,
+    barPct = 85,
+  ) =>
+    sel
+      .groupMembers(s, groupId)
+      .map((m) => {
+        const r = sel.steadfastness(s, m.userId, groupId, windowDays);
+        return { ...m, ...r, meetsBar: r.eligible && r.pct >= barPct };
+      })
+      .sort((a, b) => Number(b.eligible) - Number(a.eligible) || b.pct - a.pct),
+
   // ---- Peer reactions (CET-18) ---------------------------------------------
 
   /** Has this user closed *every* ring today (the trigger for a reaction)? */
