@@ -23,7 +23,7 @@ doc open.
 | §   | Finding / shortcoming                                                                                                                                                                                                                       | Action                                                                                                                                | Priority |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | §1  | Green is underused. For a _dhikr_ audience it carries cultural+psychological weight (growth, calm, spirituality). Promote to a semantic.                                                                                                    | Elevate `--success`/new `--growth` to completion/streak role; decision needed (touches D13).                                          | High     |
-| §2  | ~~App follows OS theme only — **no manual light/dark toggle.**~~ Dhikr peaks at night (82.7% enable dark after 10pm); dhikr ≈ Isha/Tahajjud/pre-Fajr.                                                                                       | **Done (D19):** persisted System/Light/Dark toggle via a `.dark` class set before paint.                                              | —        |
+| §2  | ~~App follows OS theme only — **no manual light/dark toggle.**~~ Dhikr peaks at night (82.7% enable dark after 10pm); dhikr ≈ Isha/Tahajjud/pre-Fajr.                                                                                       | **Done (D19):** persisted Light/Dark toggle via a `.dark` class set before paint (System option dropped 2026-06-29 — default light).  | —        |
 | §2  | ~~Dark accent + status hues need calming; surfaces need a real elevation ladder (shadows barely register on dark); garden sky glares at night.~~                                                                                            | **Done:** dark block tuned — surface ladder (lighter = raised) + visible border; gold/status softened; garden re-tinted deep-emerald. | —        |
 | §3  | **Not responsive** — hard-capped at `max-w-[28rem]` with a phone bottom-nav. Unusable as a real layout on laptop/desktop.                                                                                                                   | Responsive shell: bottom-nav (mobile) → sidebar + wider/multi-col (≥`lg`).                                                            | High     |
 | §4  | Motion budget + earned-celebration model **validated** — keep within 150–300ms / spring only on celebration.                                                                                                                                | — (review-time bar)                                                                                                                   | —        |
@@ -119,8 +119,9 @@ core use moment. A calm, true-dark night surface _is_ retention.
 `app/globals.css` is **fully tokenised**; the `:root.dark` block is now tuned to
 the rules below (it was previously "kept coherent but not finely tuned"):
 
-- **Manual toggle** — System / Light / Dark, applied via a `.dark` class set
-  before paint so the choice always beats the OS query (D19).
+- **Manual toggle** — Light / Dark, applied via a `.dark` class set before paint
+  (D19; **System option dropped 2026-06-29** — product-owner call for a plain
+  light/dark switch; default is light, per the light-first posture D20/D25).
 - **Elevation ladder, not shadows** — on a dark field the soft slate shadow
   tokens are near-invisible (and Tailwind v4 inlines them per-utility, so they
   can't be re-tinted per-theme). Dark elevation instead comes from a deliberate
@@ -136,9 +137,10 @@ the rules below (it was previously "kept coherent but not finely tuned"):
 
 ### Rules to hold
 
-1. **System default + persisted manual override** (System / Light / Dark). Use a
-   `class` on `<html>` (`dark`) so the toggle wins over the media query; persist
-   to `localStorage`; set before paint to avoid a flash (FOUC).
+1. **Persisted manual light/dark choice** (Light / Dark; default light,
+   light-first per D20/D25 — System/OS-follow dropped 2026-06-29). Use a `class`
+   on `<html>` (`dark`); persist to `localStorage`; set before paint to avoid a
+   flash (FOUC). Only an explicit stored `"dark"` enables dark.
 2. **Every colour is a token** (already enforced, D14). A theme is a swap of CSS
    variables — never a per-component override.
 3. **Dark surface ≥ `#101a28`-ish navy-black, never `#000`; text off-white.**
