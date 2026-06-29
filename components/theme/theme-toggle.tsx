@@ -3,15 +3,14 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useTheme, type Theme } from "./theme-provider";
-import { SunIcon, MoonIcon, MonitorIcon } from "@/components/demo/icons";
+import { SunIcon, MoonIcon } from "@/components/demo/icons";
 
 const OPTIONS: { value: Theme; label: string; Icon: typeof SunIcon }[] = [
-  { value: "system", label: "System", Icon: MonitorIcon },
   { value: "light", label: "Light", Icon: SunIcon },
   { value: "dark", label: "Dark", Icon: MoonIcon },
 ];
 
-/** Segmented System / Light / Dark control. */
+/** Segmented Light / Dark control. */
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
 
