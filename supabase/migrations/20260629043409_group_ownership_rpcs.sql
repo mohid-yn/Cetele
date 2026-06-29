@@ -36,8 +36,9 @@ begin
     raise exception 'group name is required';
   end if;
 
-  -- owner row insert is sanctioned → allow it past the owner guards
-  perform set_config('app.allow_owner_change', 'on', true);
+  -- (No owner-guard bypass needed here: create_group only INSERTs — the groups
+  --  created_by guard is BEFORE UPDATE, and the owner membership insert bypasses
+  --  RLS by definer privilege.)
 
   loop
     -- 8 hex chars from a fresh uuid (no pgcrypto dependency); retry on collision
@@ -97,6 +98,10 @@ begin
     where group_id = p_group and user_id = p_new_owner;
   update public.groups set created_by = p_new_owner
     where id = p_group;
+
+  -- close the bypass window (txn-local already, but don't leave it 'on' in case
+  -- a same-transaction service-role path touches groups.created_by again)
+  perform set_config('app.allow_owner_change', 'off', true);
 end;
 $$;
 

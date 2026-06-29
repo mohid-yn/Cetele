@@ -97,8 +97,13 @@ $$;
 
 -- profiles: a client (role `authenticated`/`anon`) can never flip is_super_admin.
 -- The dashboard / service_role / postgres run as a different role → allowed (D27).
+-- MUST be SECURITY INVOKER (the default): the guard keys off `current_user`, and
+-- under SECURITY DEFINER that would resolve to the function owner (postgres), not
+-- the caller — the check would never fire and self-escalation would be open. The
+-- function only compares OLD/NEW + reads current_user, so it needs no elevated
+-- privilege.
 create or replace function public.guard_profile_super_admin() returns trigger
-  language plpgsql security definer set search_path = '' as $$
+  language plpgsql set search_path = '' as $$
 begin
   if new.is_super_admin is distinct from old.is_super_admin
      and current_user in ('authenticated', 'anon') then
