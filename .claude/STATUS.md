@@ -61,9 +61,9 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 
 - [x] **Deployed under the org Vercel team (`university-services`)** → **new production URL: [cetele-sable.vercel.app](https://cetele-sable.vercel.app)** (live, HTTP 200, public). Old `cetele-iota.vercel.app` (personal) is dead.
 - [x] _(me)_ **Updated STATUS URL refs** `cetele-iota` → `cetele-sable`.
-- [ ] ⚠️ _(you)_ **Repoint the Vercel project to `mohid-yn/Cetele`** — it currently shows `github/Mohidkz05`, i.e. it's wired to the **old personal repo**, so pushes to the org repo won't auto-deploy. Project → **Settings → Git** → connect `mohid-yn/Cetele` (authorise the Vercel app on the **mohid-yn** account, which owns it).
-- [ ] _(you)_ **Abort the pending transfer** on old `Mohidkz05/Cetele` (redundant; would conflict).
-- [ ] _(you)_ **Delete old `Mohidkz05/Cetele`** — **only AFTER** the Vercel project is repointed to `mohid-yn/Cetele` (else the live deploy breaks).
+- [x] **Vercel connection CONFIRMED on `mohid-yn/Cetele`** + auto-deploy verified — the prod deploy is commit `fadf325`, which exists **only** on the org repo (`Mohidkz05/Cetele` is at `e620a88`). The `github/Mohidkz05` label was the commit _author_, not the repo. No repoint needed.
+- [ ] _(you)_ **Abort the pending transfer** on old `Mohidkz05/Cetele` (redundant).
+- [ ] _(you)_ **Delete old `Mohidkz05/Cetele`** — now **safe** (Vercel reads the org repo, not this one; confirmed).
 - [ ] _(you, later)_ **Make `mohid-yn/Cetele` private** (no secrets in history — verified — so not urgent).
 
 **B. CET-2 Supabase backend (in progress — branch `mohidkhanzada/cet-2-…`)**
