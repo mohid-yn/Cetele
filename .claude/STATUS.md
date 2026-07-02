@@ -172,6 +172,29 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 - **In sync (2026-07-02) — CET-2 backend build started (foundation applied to live Supabase).** **CET-2 → In Progress**: 3 migrations applied to the live project — 0001 foundation (`profiles`/`groups`/`memberships` + RLS + `SECURITY DEFINER` helpers + owner-safety policies/guard + auto-profile trigger), 0002 ownership RPCs (`create_group`/`transfer_ownership`; `claim_ownership`/`reassign_owner` deferred until `logs`/`audit_log` exist), 0003 exposure hardening (helpers → `private` schema). Two review fixes folded in (is_super_admin escalation → SECURITY INVOKER; owner-safety RLS). Security advisor clean bar two accepted RPC WARNs. Branch `mohidkhanzada/cet-2-…` merged → `main`.
 - **In sync (2026-07-03) — owner-orphan fix + full-stack review + backend build plan.** Comment on **CET-2**: migration **0004** closes an owner-orphaning hole (a co-admin could `UPDATE groups SET created_by = NULL`; reproduced live, now `permission denied` at the column-privilege layer + guard; `transfer_ownership` still works) — applied, verified, `main` @ `8040d2c`. Then a **critical PRD ↔ frontend ↔ backend review** (verified against the live DB): only **3/12 tables**, no `tasks`/`logs`, app **not wired to Supabase**, **no tests**, realtime unconfigured, rollup job undesigned → problems **B1–B9 / F1–F6** → **[`docs/BACKEND_BUILD_PLAN.md`](../docs/BACKEND_BUILD_PLAN.md)** (milestones M0–M9, each finding mapped). CET-2 is ~⅓ done; next = **M0** (hygiene: drift + FK indexes + seed) then **M1** (wire app + real auth, CET-3).
 
+## Requires operator (human) action — I can't do these from the agent env
+
+> Things blocked on you: approvals, Supabase/Vercel dashboard config (not
+> expressible in migrations), secrets, and steps needing Docker/CLI. Kept here so
+> nothing important lives only in someone's head.
+
+**Now (pending):**
+
+- [ ] **Merge the CET-2 branch → `main`.** Everything since migration `0003` (the `0004` owner-orphan fix, the review + `BACKEND_BUILD_PLAN.md`, the IaC section, and **M0**) sits on `mohidkhanzada/cet-2-…`, pushed but **not on `main`** — merging to `main` is the approval gate (D16). Say "merge" and it's a fast-forward. _(The live **DB** is already fixed regardless; this is git catching up.)_
+- [ ] **Run `supabase db reset` once on a Docker-equipped machine** to verify the full reset→migrate→seed cycle (M0's one unverified exit criterion — no Docker/CLI in the agent env). Also installs the path for local dev + `supabase gen types`.
+
+**At M1 (auth / connect — do together with that milestone):**
+
+- [ ] **Supabase Auth dashboard config** (clickops, not in migrations): enable **Google OAuth** (client id/secret + consent screen) + set **redirect URLs**; configure **email magic-link** templates. Record the values in `config.toml`/a runbook per the IaC note.
+- [ ] **Env vars / secrets:** set `NEXT_PUBLIC_SUPABASE_URL` + the **publishable/anon key** (and any server key) in **Vercel** (all envs) and local `.env`; commit a `.env.example` (names only). Never put `service_role` in `NEXT_PUBLIC_*`.
+- [ ] **Custom SMTP = Resend** (build directive) — add Resend SMTP creds in Supabase Auth settings so real invite/magic-link email sends (default Supabase SMTP is rate-limited/dev-only).
+
+**Later:**
+
+- [ ] **Super-admin grant (D27):** `is_super_admin` is set **only directly in Supabase** (by design — no in-app path). Grant it to yourself/a successor by hand when moderation/recovery is needed.
+- [ ] **Web Push VAPID keys (v1.1 / M8):** generate + store as secrets for the notification sender.
+- [ ] **Production data = backups, not seed.** `seed.sql` is local/test only; set/verify Supabase's automated backups before real users arrive.
+
 ## Open questions / parking lot
 
 - **Backend migration plan written → [`docs/MIGRATION_MOCK_TO_SUPABASE.md`](../docs/MIGRATION_MOCK_TO_SUPABASE.md)** (2026-06-26): the concrete "how" for taking the mock to Supabase — schema (maps the mock types 1:1), RLS policies (with `SECURITY DEFINER` helpers), selector→query + action→Server-Action mappings, auth/realtime plumbing (`@supabase/ssr`), and a screen-by-screen strangler order mapped to CET-2/3/6/7/8/9. Headline: **stop carrying the client-Context shape forward — go server-first (Server Components fetch, `"use client"` on leaves)**; the pure selectors make the swap clean. Requirements now unlocked (D32); the **sequenced execution** of this plan lives in **[`docs/BACKEND_BUILD_PLAN.md`](../docs/BACKEND_BUILD_PLAN.md)** (milestones M0–M9, grounded in the 2026-07-03 review) — that's the "you are here" for the backend build; this migration doc stays the detailed "how" (schema/RLS/mappings).
