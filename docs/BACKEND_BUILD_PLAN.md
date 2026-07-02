@@ -166,3 +166,30 @@ M8 → CET-11 · M9 → CET-14 close-out.
 - **`logs` read scope** — group-wide `SELECT` (matches the mock, chosen) vs aggregate-only RPC.
 - **Rollup host** — `pg_cron` (in-DB) vs Vercel cron → Edge Function.
 - **Count-integrity thresholds** — max delta/call + rate window.
+
+---
+
+## Infra & reproducibility (IaC) — scope decision
+
+**Principle:** IaC the things that are (a) security-critical or (b) painful to
+rebuild by hand — the database + access rules and the list of required config.
+**Everything else stays dashboard config until the project grows.** Full
+Terraform/CDK is **deliberately out of scope** for now: it pays off with multiple
+environments / a team / frequent teardown, and this is a solo, single-environment,
+pre-launch app. The DB migrations already give the 80% that matters (reproducible,
+traceable schema + RLS). Revisit if a staging environment or a second developer
+appears.
+
+| Layer                                                                         | IaC today?                                                                            | Target                                                                                                                                                                                                                                                 |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Database** (tables, RLS, funcs, grants)                                     | ✅ `supabase/migrations/*.sql` (git-tracked, replayed in order — the source of truth) | Keep. **Fix the version drift (M0)** so "replay the files onto a fresh project" is clean — that's the guarantee. Optionally adopt **declarative schemas** (`supabase/schemas/*.sql` + `supabase db diff`) for a Terraform-like desired-state workflow. |
+| **Supabase auth / project** (OAuth providers, redirect URLs, email templates) | ⚠️ partial — `config.toml`                                                            | Move what `config.toml` supports into it; capture the rest in a short **setup runbook** so it isn't pure clickops. (An official **Supabase Terraform provider** exists if we ever want project settings under IaC too.)                                |
+| **Env vars / secrets**                                                        | ❌ dashboard                                                                          | Commit a **`.env.example`** (names only, never values) + manage real values via `vercel env`. Track _what's needed_, not the secrets.                                                                                                                  |
+| **Vercel hosting**                                                            | ❌ dashboard                                                                          | Fine as-is; a `vercel.json` / `vercel.ts` can capture build/cron/headers later.                                                                                                                                                                        |
+
+**What IaC does _not_ cover either way:** live **data** (schema ≠ data — `seed.sql`
+is local/test only; production data needs **backups**, a separate concern).
+
+**Concrete near-term actions (fold into M0/M1):** (1) M0 — fix migration drift so
+the DB is cleanly replayable; (2) M1 — as auth is wired, record the provider +
+redirect-URL config in `config.toml`/runbook and add `.env.example`. Stop there.
