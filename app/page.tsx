@@ -1,15 +1,39 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button, Input } from "@/components/ui";
 import { GoogleIcon, MailIcon } from "@/components/demo/icons";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [sent, setSent] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [pending, setPending] = React.useState(false);
+
+  async function signInWithGoogle() {
+    setError(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${location.origin}/auth/callback` },
+    });
+    if (error) setError(error.message);
+  }
+
+  async function sendMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setPending(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${location.origin}/auth/confirm` },
+    });
+    setPending(false);
+    if (error) setError(error.message);
+    else setSent(true);
+  }
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[28rem] flex-col justify-center gap-8 px-6 py-10">
@@ -31,13 +55,13 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Auth (faked) */}
+      {/* Auth */}
       <div className="flex flex-col gap-3">
         <Button
           variant="outline"
           className="w-full"
           leadingIcon={<GoogleIcon />}
-          onClick={() => router.push("/today")}
+          onClick={signInWithGoogle}
         >
           Continue with Google
         </Button>
@@ -55,26 +79,15 @@ export default function LoginPage() {
               Check your email
             </p>
             <p className="text-xs text-muted-foreground">
-              We sent a magic link to {email || "you"}.
+              We sent a magic link to {email || "you"}. Open it on this device
+              to sign in.
             </p>
-            <Button
-              variant="accent"
-              className="mt-3 w-full"
-              onClick={() => router.push("/onboarding")}
-            >
-              Open the link →
-            </Button>
           </div>
         ) : (
-          <form
-            className="flex flex-col gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSent(true);
-            }}
-          >
+          <form className="flex flex-col gap-2" onSubmit={sendMagicLink}>
             <Input
               type="email"
+              required
               placeholder="you@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -83,23 +96,20 @@ export default function LoginPage() {
               type="submit"
               variant="primary"
               className="w-full"
+              disabled={pending}
               leadingIcon={<MailIcon />}
             >
-              Email me a magic link
+              {pending ? "Sending…" : "Email me a magic link"}
             </Button>
           </form>
         )}
-      </div>
 
-      <p className="text-center text-xs text-muted-foreground">
-        Just exploring?{" "}
-        <Link
-          href="/today"
-          className="font-medium text-primary underline-offset-2 hover:underline"
-        >
-          Skip into the demo
-        </Link>
-      </p>
+        {error ? (
+          <p role="alert" className="text-center text-xs text-danger">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </main>
   );
 }

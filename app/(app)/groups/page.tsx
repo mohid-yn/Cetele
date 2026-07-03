@@ -1,91 +1,58 @@
-"use client";
-
-import * as React from "react";
-import { useRouter } from "next/navigation";
-import { Badge, Button, Card, Dialog, Field, Input } from "@/components/ui";
-import { useMock, sel } from "@/lib/mock/store";
+import { Badge, Card } from "@/components/ui";
 import { PageHeader } from "@/components/demo/page-header";
 import { SectionHeading } from "@/components/demo/section-heading";
-import { PlusIcon, ChevronRightIcon, UsersIcon } from "@/components/demo/icons";
-import type { Group } from "@/lib/mock/types";
+import { UsersIcon } from "@/components/demo/icons";
+import { createClient } from "@/lib/supabase/server";
+import { NewGroupButton } from "./new-group";
 
 /**
- * Groups home — the Drive-style "My Drive" for circles (D26). Replaces the old
- * app-level admin console: there is no global list, only *your* groups. Owned
- * groups sit under "My groups"; groups shared with you as a co-admin under
- * "Shared with me"; groups you simply belong to under "Member of".
+ * Groups home — the Drive-style "My Drive" for circles (D26). First screen
+ * served from the real database (M1): your memberships, grouped by role.
+ * Manage/open flows stay on the mock until M2 converts them.
  */
-export default function GroupsHomePage() {
-  const router = useRouter();
-  const { state, actions } = useMock();
-  const me = state.session.currentUserId;
+export default async function GroupsHomePage() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const me = data?.claims.sub;
 
-  const owned = sel.myGroups(state, me);
-  const shared = sel.sharedWithMe(state, me);
-  const memberOf = sel.userGroups(state, me).filter((m) => m.role === "member");
+  const { data: rows } = await supabase
+    .from("memberships")
+    .select("role, groups(id, name, invite_code, memberships(count))")
+    .eq("user_id", me ?? "")
+    .order("role");
 
-  const [createOpen, setCreateOpen] = React.useState(false);
-  const [newName, setNewName] = React.useState("");
+  const mine = (rows ?? []).filter((r) => r.groups != null);
+  const owned = mine.filter((r) => r.role === "owner");
+  const shared = mine.filter((r) => r.role === "admin");
+  const memberOf = mine.filter((r) => r.role === "member");
 
-  const open = (g: Group, manage: boolean) => {
-    actions.setActiveGroup(g.id);
-    router.push(manage ? "/group/manage" : "/group");
-  };
-
-  const create = () => {
-    if (!newName.trim()) return;
-    actions.createGroup(newName.trim());
-    setNewName("");
-    setCreateOpen(false);
-    // createGroup makes the new group active — land in its manage screen.
-    router.push("/group/manage");
-  };
-
-  const GroupCard = ({
-    group,
-    role,
-  }: {
-    group: Group;
-    role: "owner" | "admin" | "member";
-  }) => {
-    const members = sel.groupMembers(state, group.id);
-    const canManage = role === "owner" || role === "admin";
+  const GroupCard = ({ row }: { row: (typeof mine)[number] }) => {
+    const g = row.groups!;
+    const members = g.memberships?.[0]?.count ?? 0;
     return (
       <Card className="flex items-center gap-3 p-3">
         <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
           <UsersIcon className="size-5" />
         </div>
-        <button
-          type="button"
-          onClick={() => open(group, canManage)}
-          className="min-w-0 flex-1 text-left"
-        >
+        <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 font-semibold text-foreground">
-            <span className="truncate">{group.name}</span>
-            {role === "owner" && (
+            <span className="truncate">{g.name}</span>
+            {row.role === "owner" && (
               <Badge variant="accent" size="sm">
                 owner
               </Badge>
             )}
-            {role === "admin" && (
+            {row.role === "admin" && (
               <Badge variant="primary" size="sm">
                 co-admin
               </Badge>
             )}
           </p>
           <p className="text-xs text-muted-foreground">
-            {members.length} members ·{" "}
-            <span className="font-mono">{group.inviteCode}</span>
+            {members} {members === 1 ? "member" : "members"} ·{" "}
+            <span className="font-mono">{g.invite_code}</span>
           </p>
-        </button>
-        <Button
-          size="sm"
-          variant={canManage ? "outline" : "ghost"}
-          onClick={() => open(group, canManage)}
-        >
-          {canManage ? "Manage" : "Open"}
-          <ChevronRightIcon className="size-4" />
-        </Button>
+        </div>
       </Card>
     );
   };
@@ -95,16 +62,7 @@ export default function GroupsHomePage() {
       <PageHeader
         title="Groups"
         subtitle="Circles you own or help run"
-        action={
-          <Button
-            size="sm"
-            variant="accent"
-            leadingIcon={<PlusIcon />}
-            onClick={() => setCreateOpen(true)}
-          >
-            New group
-          </Button>
-        }
+        action={<NewGroupButton />}
       />
 
       <section>
@@ -115,9 +73,9 @@ export default function GroupsHomePage() {
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {owned.map((m) => (
-              <li key={m.groupId}>
-                <GroupCard group={m.group} role="owner" />
+            {owned.map((r) => (
+              <li key={r.groups!.id}>
+                <GroupCard row={r} />
               </li>
             ))}
           </ul>
@@ -128,9 +86,9 @@ export default function GroupsHomePage() {
         <section>
           <SectionHeading>Shared with me ({shared.length})</SectionHeading>
           <ul className="flex flex-col gap-2">
-            {shared.map((m) => (
-              <li key={m.groupId}>
-                <GroupCard group={m.group} role="admin" />
+            {shared.map((r) => (
+              <li key={r.groups!.id}>
+                <GroupCard row={r} />
               </li>
             ))}
           </ul>
@@ -141,45 +99,14 @@ export default function GroupsHomePage() {
         <section>
           <SectionHeading>Member of ({memberOf.length})</SectionHeading>
           <ul className="flex flex-col gap-2">
-            {memberOf.map((m) => (
-              <li key={m.groupId}>
-                <GroupCard group={m.group} role="member" />
+            {memberOf.map((r) => (
+              <li key={r.groups!.id}>
+                <GroupCard row={r} />
               </li>
             ))}
           </ul>
         </section>
       )}
-
-      <Dialog
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title="New group"
-        description="You'll be the owner — you can share it with co-admins afterwards."
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              disabled={!newName.trim()}
-              onClick={create}
-            >
-              Create group
-            </Button>
-          </>
-        }
-      >
-        <Field label="Group name" htmlFor="new-group-name" required>
-          <Input
-            id="new-group-name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="e.g. Isha Circle"
-            autoFocus
-          />
-        </Field>
-      </Dialog>
     </div>
   );
 }

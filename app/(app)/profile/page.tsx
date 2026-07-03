@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Avatar, Badge, Button, Card } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useMock, sel } from "@/lib/mock/store";
@@ -48,7 +47,6 @@ function Toggle({
 }
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { state } = useMock();
   const me = sel.currentUser(state);
   const group = sel.activeGroup(state);
@@ -124,13 +122,11 @@ export default function ProfilePage() {
         </Card>
       </section>
 
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={() => router.push("/")}
-      >
-        Sign out
-      </Button>
+      <form action="/auth/signout" method="post">
+        <Button type="submit" variant="outline" className="w-full">
+          Sign out
+        </Button>
+      </form>
     </div>
   );
 }
