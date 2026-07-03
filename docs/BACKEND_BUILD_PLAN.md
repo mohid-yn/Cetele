@@ -63,6 +63,11 @@ CET-2 is ~⅓ done.
 4. **Advisors clean.** Run `get_advisors` (security + performance) after every
    DDL change; the only accepted WARNs are the two intentional RPC exposures.
 5. **Verify, don't assume.** Exercise each policy/flow live before marking done.
+6. **Explicit grants with every table (migration `0006`).** Client roles inherit
+   **nothing** (default privileges revoked — platform defaults differ between
+   cloud and a fresh local stack, so implicit grants don't reproduce). Each new
+   table's migration `GRANT`s exactly the verbs its policies expect, column-scoped
+   where a column must never be client-writable; `anon` gets nothing.
 
 ---
 
@@ -88,7 +93,8 @@ Fix the three things that will otherwise break the next deploy or a fresh DB.
 ### M2 — Groups + tasks write path (CET-4, CET-5) · _first server-first screens_
 
 - Tables: **`tasks`**, **`invites`** (+ RLS + policy tests).
-- Server Actions: create/rename/delete group (RPCs exist), invite-by-email + accept, add/remove/promote member, task CRUD. Invite codes generated in the DB/Server Action, never the client.
+- Server Actions: create/rename/delete group (RPCs exist), invite-by-email + accept, remove/promote member, task CRUD. Invite codes generated in the DB/Server Action, never the client.
+- **D34 — invite/accept only:** tighten `memberships_insert_admin` so a membership row is only ever created by invite-accept (the mock's `addUserToGroup` direct-add is dropped).
 - Convert `/groups`, `/group/manage` to Server Components (F2); interactivity pushed to client leaves.
 - **Exit:** create a group, define its task list + targets, invite/add a member — all persisted, all RLS-guarded, all tested.
 
@@ -97,7 +103,7 @@ Fix the three things that will otherwise break the next deploy or a fresh DB.
 - Tables: **`logs`** (14-day raw; `logged_by` for D29), **`streaks`** (+ RLS + tests).
 - **Count-integrity / tap-rate guard (B4):** server-side increment RPC that validates the delta (bounds per call + per-window rate limit) so counts can't be inflated — they feed streaks/leaderboard/steadfastness.
 - `increment` Server Action with **optimistic** UI (`useOptimistic`) so the tap stays snappy; D29 admin proxy-log + self-correct within the 14-day window.
-- **Streaks + never-miss-twice** as a scheduled server job (`pg_cron`/Vercel cron), with a defined rollover time (decide: UTC for v1 vs per-user tz — see migration doc §11).
+- **Streaks + never-miss-twice** as a scheduled server job (**`pg_cron`**, D34), rollover at **each member's own midnight** (`profiles.timezone`, D34 — the column lands with this milestone or M1).
 - Convert `/today`, `/count/[taskId]`.
 - **Exit:** tap → count persists → ring fills → streak advances → never-miss-twice freeze consumes correctly; forged/oversized counts rejected (tested).
 
@@ -115,7 +121,7 @@ Fix the three things that will otherwise break the next deploy or a fresh DB.
 ### M6 — Retention rollup infra (B9) · _the longitudinal engine_
 
 - Table: **`daily_completion`** (90-day rollup, one row/member/day).
-- **Nightly job** that writes the rollup **before** the 14-day raw-`logs` prune (the ordering guarantee the retention design assumes; migration doc / PRD §6). `pg_cron` or an Edge Function.
+- **Nightly job** that writes the rollup **before** the 14-day raw-`logs` prune (the ordering guarantee the retention design assumes; migration doc / PRD §6). **`pg_cron`** (D34 — in-DB, one system).
 - Wire steadfastness (`AVG(completion%)` over last 90 rollup rows — a rate, no stored score), 30-day band, 90-day group rollup, and (v2) badges/garden to read the rollup.
 - **Exit:** rollup populates nightly; raw prune runs only after it; steadfastness board reads the rollup; re-verify the 14/90-day retention split.
 
@@ -160,12 +166,13 @@ M0 → CET-2 · M1 → CET-3 · M2 → CET-4/CET-5 · M3 → CET-6/CET-8 · M4 �
 M5 → CET-9/CET-16 · M6 → CET-16 (rollup) · M7 → CET-2 tail (D27 RPCs) + moderation ·
 M8 → CET-11 · M9 → CET-14 close-out.
 
-## Open decisions to lock before starting (migration doc §11)
+## Open decisions — all LOCKED (D34, 2026-07-03)
 
-- **Streak rollover time** — UTC (v1) vs per-user timezone.
-- **`logs` read scope** — group-wide `SELECT` (matches the mock, chosen) vs aggregate-only RPC.
-- **Rollup host** — `pg_cron` (in-DB) vs Vercel cron → Edge Function.
-- **Count-integrity thresholds** — max delta/call + rate window.
+- **Streak rollover time** → **per-user timezone** (`profiles.timezone`, auto-detected from browser, editable; a member's day closes at their own midnight).
+- **`logs` read scope** → group-wide `SELECT` (matches the mock; chosen earlier, unchanged).
+- **Rollup host** → **`pg_cron`** (in-DB; one system, the rollup-then-prune ordering can't miss an external caller).
+- **Count-integrity thresholds** → agent proposes defaults **at M3** (e.g. never past daily target + rate window); owner approves against the real UX.
+- **Joining model** → **invite/accept only** — a membership row is only created when the invitee accepts; the mock's `addUserToGroup` direct-add is dropped and `memberships_insert_admin` gets tightened at M2.
 
 ---
 

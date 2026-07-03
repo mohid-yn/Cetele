@@ -1,9 +1,11 @@
 # Migration plan — mock store → Supabase (and client-heavy → server-first)
 
-> **Status:** planning doc. Nothing here is built yet — it's deferred behind the
-> requirements-lock gate (**D18**). This is the concrete "how" for **CET-2**
-> (schema + RLS) → **CET-3** (auth) → **CET-6/7/8/9** (the real data features),
-> written so the switch is a known quantity before we start spending on backend.
+> **Status:** the detailed "how" for the backend build, now **in execution**
+> (requirements locked D32; sequence + live progress in
+> [`BACKEND_BUILD_PLAN.md`](./BACKEND_BUILD_PLAN.md) / `.claude/STATUS.md`).
+> The foundation slice of §3/§4 (identity/groups/memberships + RLS + ownership
+> RPCs + explicit grants, migrations 0001–0006) is **built**; the rest of this
+> doc describes what's still ahead for **CET-3** (auth) → **CET-6/7/8/9**.
 >
 > **Read together with:** `docs/PRD.md` §6 (data model), `.claude/STATUS.md`
 > (decisions D2/D17/D18 + the Drive-style ownership model **D26/D27/D29/D30**),
@@ -121,7 +123,7 @@ create table reminders (
   user_id uuid not null references profiles on delete cascade,
   task_id uuid not null references tasks on delete cascade,
   time    text not null,                  -- "HH:MM" 24h local
-  on      boolean not null default true,
+  enabled boolean not null default true,  -- (mock field `on` — renamed; `on` is a reserved word)
   primary key (user_id, task_id)
 );
 
@@ -171,45 +173,66 @@ create table audit_log (
 );
 ```
 
-**No table for the derived views.** Consistency, heatmap, the admin fortnight
-breakdown, the leaderboard, garden stage, badges, and the pair goal are all
-_computed from `logs` vs `tasks.target_count`_ — exactly as the selectors do
-today (PRD §6). At scale, optionally precompute a `daily_completion`
-materialized view `(user_id, group_id, date, pct)`; not needed for v1.
+**One real rollup table; everything else derived.** Consistency, heatmap, the
+admin fortnight breakdown, the leaderboard, garden stage, badges, and the pair
+goal are _computed from `logs` vs `tasks.target_count`_ — exactly as the
+selectors do today (PRD §6). The exception (**D31**, amends D28): **`daily_completion`
+is a real table, not an optional view** — `(user_id, group_id, date,
+completion_pct)`, one small row per member per day, kept **90 days**. A nightly
+**`pg_cron`** job (D34) writes it **before** raw `logs` are pruned to **14 days**
+— the ordering guarantee the whole retention split depends on. It powers the
+30-day band, the 90-day group rollup, streaks/badges/garden, and steadfastness
+(`AVG(completion_pct)` over a member's last 90 rows — a rate, never a stored
+score). Build: **M6** in [`BACKEND_BUILD_PLAN.md`](./BACKEND_BUILD_PLAN.md).
 
 ---
 
 ## 4. Row-Level Security (the part that's easy to get wrong)
 
-RLS on **every** table. Use `SECURITY DEFINER` helper functions so policies don't
-recurse on `memberships` (the standard Supabase pattern):
+RLS on **every** table, and **grants explicit, never inherited** (migration
+`0006`): platform default privileges **differ between cloud and a fresh local
+stack**, so every new table's migration must `GRANT` exactly the verbs its
+policies expect — column-scoped where a column must never be client-writable
+(`profiles.is_super_admin`, `groups.created_by`; `memberships.user_id/group_id`
+immutable on update). Client roles otherwise start from zero; `anon` gets
+nothing.
+
+Use `SECURITY DEFINER` helper functions so policies don't recurse on
+`memberships`. **As hardened in migration `0003`** (advisor lints 0028/0029):
+helpers live in a non-exposed **`private`** schema (callable inside policies,
+NOT reachable via `/rest/v1/rpc`) with `search_path` pinned — copy this pattern
+for new tables, not the plain-`public` form:
 
 ```sql
-create or replace function is_group_member(g uuid) returns boolean
-  language sql security definer stable as $$
-  select exists (select 1 from memberships m
-                 where m.group_id = g and m.user_id = auth.uid());
+create schema if not exists private;
+grant usage on schema private to authenticated;
+
+create function private.is_group_member(g uuid) returns boolean
+  language sql security definer stable set search_path = '' as $$
+  select exists (select 1 from public.memberships m
+                 where m.group_id = g and m.user_id = (select auth.uid()));
 $$;
 
 -- "Can manage" = owner OR co-admin (D26 — both hold full management authority).
-create or replace function is_group_admin(g uuid) returns boolean
-  language sql security definer stable as $$
-  select exists (select 1 from memberships m
-                 where m.group_id = g and m.user_id = auth.uid()
+create function private.is_group_admin(g uuid) returns boolean
+  language sql security definer stable set search_path = '' as $$
+  select exists (select 1 from public.memberships m
+                 where m.group_id = g and m.user_id = (select auth.uid())
                    and m.role in ('owner','admin'));
 $$;
 
 -- Owner-only powers: delete group + transfer ownership (D26).
-create or replace function is_group_owner(g uuid) returns boolean
-  language sql security definer stable as $$
-  select exists (select 1 from groups gr
-                 where gr.id = g and gr.created_by = auth.uid());
+create function private.is_group_owner(g uuid) returns boolean
+  language sql security definer stable set search_path = '' as $$
+  select exists (select 1 from public.groups gr
+                 where gr.id = g and gr.created_by = (select auth.uid()));
 $$;
 
 -- D27: the out-of-band recovery/moderation flag (set only in Supabase).
-create or replace function is_super_admin() returns boolean
-  language sql security definer stable as $$
-  select coalesce((select is_super_admin from profiles where id = auth.uid()), false);
+create function private.is_super_admin() returns boolean
+  language sql security definer stable set search_path = '' as $$
+  select coalesce((select is_super_admin from public.profiles
+                   where id = (select auth.uid())), false);
 $$;
 ```
 
@@ -217,19 +240,19 @@ $$;
 > (reassign a dead group's owner) + **moderation** (act on `reports`) — it does
 > **not** grant read access to group content, so D26's privacy promise holds.
 
-| Table         | Read                                                                                 | Write                                                                                                                                                                        |
-| ------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `profiles`    | self + anyone sharing a group                                                        | update self (`is_super_admin` is **not** self-writable — set in Supabase only)                                                                                               |
-| `groups`      | `is_group_member(id)`                                                                | insert: authenticated; update: `is_group_admin(id)`; **delete / transfer (`created_by`): `is_group_owner(id)`**; super-admin may reassign `created_by` (recovery)            |
-| `memberships` | `is_group_member(group_id)`                                                          | `is_group_admin(group_id)` (last-admin / self / owner-row guards from the mock); **succession**: a co-admin may claim ownership when the owner is dormant ≥14d or gone (D27) |
-| `tasks`       | `is_group_member(group_id)`                                                          | `is_group_admin(group_id)`                                                                                                                                                   |
-| `logs`        | `is_group_member(group_id of task)` — peers' logs power the live counter + oversight | self (`user_id = auth.uid()`) **OR** `is_group_admin(group_id of task)` — D29 proxy-logging (sets `logged_by`, writes an `audit_log` row)                                    |
-| `invites`     | `is_group_admin(group_id)`                                                           | `is_group_admin(group_id)` (owner or co-admin re-shares; D26)                                                                                                                |
-| `reminders`   | self                                                                                 | self only (`user_id = auth.uid()`)                                                                                                                                           |
-| `streaks`     | self + `is_group_admin` of a shared group                                            | self (or the scheduled job, service role)                                                                                                                                    |
-| `reactions`   | `is_group_member(group_id)`                                                          | insert/delete where `from_user_id = auth.uid()`                                                                                                                              |
-| `reports`     | reporter + `is_super_admin()`                                                        | insert: any member; resolve/dismiss: `is_super_admin()` (D27)                                                                                                                |
-| `audit_log`   | `is_super_admin()`                                                                   | append-only (service role / the proxy-log + super-admin actions)                                                                                                             |
+| Table         | Read                                                                                 | Write                                                                                                                                                                                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles`    | self + anyone sharing a group                                                        | update self (`is_super_admin` is **not** self-writable — set in Supabase only)                                                                                                                                                                                            |
+| `groups`      | `is_group_member(id)`                                                                | insert: **none — RPC `create_group` only** (atomic group + owner membership); update: `is_group_admin(id)`, **column-locked to `name, invite_code`** (0004); **delete / transfer (`created_by`): `is_group_owner(id)`**; super-admin may reassign `created_by` (recovery) |
+| `memberships` | `is_group_member(group_id)`                                                          | `is_group_admin(group_id)` (last-admin / self / owner-row guards from the mock); **succession**: a co-admin may claim ownership when the owner is dormant ≥14d or gone (D27)                                                                                              |
+| `tasks`       | `is_group_member(group_id)`                                                          | `is_group_admin(group_id)`                                                                                                                                                                                                                                                |
+| `logs`        | `is_group_member(group_id of task)` — peers' logs power the live counter + oversight | self (`user_id = auth.uid()`) **OR** `is_group_admin(group_id of task)` — D29 proxy-logging (sets `logged_by`, writes an `audit_log` row)                                                                                                                                 |
+| `invites`     | `is_group_admin(group_id)`                                                           | `is_group_admin(group_id)` (owner or co-admin re-shares; D26)                                                                                                                                                                                                             |
+| `reminders`   | self                                                                                 | self only (`user_id = auth.uid()`)                                                                                                                                                                                                                                        |
+| `streaks`     | self + `is_group_admin` of a shared group                                            | self (or the scheduled job, service role)                                                                                                                                                                                                                                 |
+| `reactions`   | `is_group_member(group_id)`                                                          | insert/delete where `from_user_id = auth.uid()`                                                                                                                                                                                                                           |
+| `reports`     | reporter + `is_super_admin()`                                                        | insert: any member; resolve/dismiss: `is_super_admin()` (D27)                                                                                                                                                                                                             |
+| `audit_log`   | `is_super_admin()`                                                                   | append-only (service role / the proxy-log + super-admin actions)                                                                                                                                                                                                          |
 
 > The mock's `removeMember`/`setMemberRole`/`transferOwnership`/`claimOwnership`
 > already encode the guards (never remove/demote the owner; one owner per group;
@@ -295,20 +318,20 @@ export async function increment(taskId: string, by: number) {
 }
 ```
 
-| Reducer action                                                                                               | Server Action / SQL                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `increment`                                                                                                  | `increment_log` RPC (atomic `insert … on conflict … do update set count = count + p_by`)                                |
-| `setCount` (D29 proxy edit)                                                                                  | `logs` upsert with `logged_by = auth.uid()` when editing another member + `audit_log` insert (RLS: self or group admin) |
-| `logForGroup` (D29 halaqah tally)                                                                            | upsert one task's count for every member of the group, each attributed + audited (RLS: group admin)                     |
-| `addTask`/`editTask`/`removeTask`                                                                            | `tasks` insert/update/delete (RLS: group admin)                                                                         |
-| `inviteByEmail`/`acceptInvite`                                                                               | `invites` insert (group admin) → on accept, create `membership` + delete the invite (D26)                               |
-| `addUserToGroup`/`removeMember`/`setMemberRole`                                                              | `memberships` writes + guards (never the owner row; last-admin / self guards)                                           |
-| `transferOwnership`                                                                                          | set `groups.created_by` + swap owner/admin rows (RLS: `is_group_owner`)                                                 |
-| `claimOwnership` (D27 succession)                                                                            | co-admin sets `created_by` to self when owner dormant ≥14d / gone + `audit_log` insert                                  |
-| `createGroup`/`renameGroup`/`deleteGroup`                                                                    | `groups` writes; create also inserts the owner `membership` (cascade handles tasks/logs)                                |
-| `setReminderTime`/`toggleReminder` (D30)                                                                     | `reminders` upsert for `auth.uid()` (self only)                                                                         |
-| `sendReaction`                                                                                               | `reactions` insert/delete (toggle)                                                                                      |
-| `fastForwardDay`, `setCurrentUser` (persona), `toggleRibbon`, `toggleOwnerDormant`, `setFreshStart`, `reset` | **demo-only — deleted.** Real day-rollover is a scheduled job; identity/role come from auth                             |
+| Reducer action                                                                                               | Server Action / SQL                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `increment`                                                                                                  | `increment_log` RPC (atomic `insert … on conflict … do update set count = count + p_by`)                                                |
+| `setCount` (D29 proxy edit)                                                                                  | `logs` upsert with `logged_by = auth.uid()` when editing another member + `audit_log` insert (RLS: self or group admin)                 |
+| `logForGroup` (D29 halaqah tally)                                                                            | upsert one task's count for every member of the group, each attributed + audited (RLS: group admin)                                     |
+| `addTask`/`editTask`/`removeTask`                                                                            | `tasks` insert/update/delete (RLS: group admin)                                                                                         |
+| `inviteByEmail`/`acceptInvite`                                                                               | `invites` insert (group admin) → on accept, create `membership` + delete the invite (D26)                                               |
+| ~~`addUserToGroup`~~ **dropped** (D34: invite/accept only) · `removeMember`/`setMemberRole`                  | `memberships` writes + guards (never the owner row; last-admin / self guards); a membership row is only ever _created_ by invite-accept |
+| `transferOwnership`                                                                                          | set `groups.created_by` + swap owner/admin rows (RLS: `is_group_owner`)                                                                 |
+| `claimOwnership` (D27 succession)                                                                            | co-admin sets `created_by` to self when owner dormant ≥14d / gone + `audit_log` insert                                                  |
+| `createGroup`/`renameGroup`/`deleteGroup`                                                                    | `groups` writes; create also inserts the owner `membership` (cascade handles tasks/logs)                                                |
+| `setReminderTime`/`toggleReminder` (D30)                                                                     | `reminders` upsert for `auth.uid()` (self only)                                                                                         |
+| `sendReaction`                                                                                               | `reactions` insert/delete (toggle)                                                                                                      |
+| `fastForwardDay`, `setCurrentUser` (persona), `toggleRibbon`, `toggleOwnerDormant`, `setFreshStart`, `reset` | **demo-only — deleted.** Real day-rollover is a scheduled job; identity/role come from auth                                             |
 
 For snappy taps, wrap `increment` in **`useOptimistic`** on the client leaf so the
 ring fills instantly, then reconcile with the server result.
@@ -382,7 +405,7 @@ serving the rest, until the mock is unused — then delete it.
 - **Type generation, not hand-rolling.** Generate `database.types.ts` from the schema so app types can't drift from the DB. The mock `types.ts` becomes the _target spec_, then is retired.
 - **RLS recursion.** Always go through the `SECURITY DEFINER` helpers; never write a `memberships` policy that selects `memberships`.
 - **`logs` read scope.** The collective counter needs peers' logs — decide group-wide `SELECT` on logs (chosen above) vs. exposing only an aggregate RPC. Group-wide read is simpler and matches the mock; revisit if privacy needs tighten.
-- **Streak / never-miss-twice** must run server-side on a schedule (Vercel cron or `pg_cron`), not on a client "fast-forward". Define the exact rollover time (per-user timezone? group timezone? UTC for v1).
+- **Streak / never-miss-twice** must run server-side on a schedule — **decided (D34): `pg_cron`** — not on a client "fast-forward". Rollover time **decided (D34): per-user timezone** (`profiles.timezone`, auto-detected from the browser, editable) — a member's day closes at _their own_ midnight.
 - **Optimistic writes** for the tap counter, or the dopamine loop feels laggy (`useOptimistic` + Server Action).
 - **Invite codes**: move `makeInviteCode` to the DB (default + unique retry) or a Server Action; don't generate on the client.
 - **Tests arrive here.** The pure selectors → port their logic into Postgres functions with SQL tests, and add a Vitest suite on any TS-side derivations + a Playwright e2e on the core loop (the one real gap vs. industry norms).

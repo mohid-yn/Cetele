@@ -217,13 +217,13 @@ A(hrule())
 
 A(heading("6. Data model (sketch)", 1))
 for t in [
-    ("users", "id, name, avatar (Supabase Auth). No app-level admin flag; one out-of-band is_super_admin (D27, granted only in Supabase — recovery + moderation)."),
+    ("users", "id, name, avatar, timezone (each member's day closes at their own midnight — D34) (Supabase Auth). No app-level admin flag; one out-of-band is_super_admin (D27, granted only in Supabase — recovery + moderation)."),
     ("groups", "id, name, invite_code, created_by = the owner (authoritative; updated on transfer / succession)"),
     ("memberships", "user_id, group_id, role (owner | admin | member); exactly one owner row per group"),
     ("invites", "id, group_id, email, role (admin | member), code — outstanding share-by-email invites (accept → a membership)"),
     ("tasks", "id, group_id, label, subtitle, target_count, order"),
     ("logs", "id, user_id, task_id, count, date, logged_by (nullable — the admin who logged it on the member's behalf; null = self; D29)"),
-    ("reminders", "user_id, task_id, time (HH:MM), on — personal per-task custom reminder times (D30)"),
+    ("reminders", "user_id, task_id, time (HH:MM), enabled — personal per-task custom reminder times (D30)"),
     ("streaks", "user_id, current, longest, freezes_left, last_active"),
     ("daily_completion (rollup)", "user_id, group_id, date, completion% — one small row per member per day, kept 90 days; powers the 30-day band, the 90-day rollup, and the steadfastness metric (D31). Lets raw logs be pruned at 14 days (amends D28)"),
     ("push_subscriptions", "user_id, endpoint, keys (for Web Push; see §4 v1.1)"),

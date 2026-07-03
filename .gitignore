@@ -54,3 +54,7 @@ yarn-error.log*
 
 # Microsoft Office lock/temp files
 ~$*
+
+# machine-local artifacts (agent-skill symlinks; local Studio scratch queries — root-owned via Docker)
+.claude/skills/
+supabase/snippets/
