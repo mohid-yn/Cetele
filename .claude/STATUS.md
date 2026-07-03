@@ -183,7 +183,7 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 **Now (pending):**
 
 - [x] **Migration `0006` applied to the live cloud DB (2026-07-03, owner-approved).** Cloud privilege matrix verified **identical to local** (row-for-row); history recorded under the matching version `20260703214500` (6 = 6, no drift); security advisor clean bar the 2 accepted RPC WARNs. **Cloud↔local grant drift is closed.**
-- [ ] **Merge the CET-2 clarity-check branch → `main`** (D16 gate — everything on the branch is verified; say "merge").
+- [x] **Merged the CET-2 clarity-check branch → `main` (2026-07-03)** — fast-forward to `695bfb3`, branch deleted. (Merge surfaced accidentally-committed machine-local files — a root-owned local-Studio scratch snippet + `.claude/skills` symlinks; branch history rewritten to exclude them and both paths gitignored.)
 
 - [x] **Merged the CET-2 branch → `main` (2026-07-03).** Everything since migration `0003` (the `0004` owner-orphan fix, the review + `BACKEND_BUILD_PLAN.md`, the IaC section, and **M0**) landed on `main` via fast-forward (`main` @ `9d0b264`); branch deleted local + remote. Docs/SQL only — no app-source change, so the build/lint/tsc bundle was unchanged.
 - [x] **Ran `supabase db reset` on the Docker-equipped machine (2026-07-03).** CLI `2.109.0` installed (official `.deb`) + Docker-Desktop WSL integration + user added to `docker` group; `supabase start` → `supabase db reset` clean (5 migrations + seed, no errors) → M0's full reset→migrate→seed cycle verified. Local dev stack + `supabase gen types` path now available.
