@@ -190,9 +190,9 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 
 **At M1 (auth / connect — do together with that milestone):**
 
-- [ ] **Supabase Auth dashboard config** (clickops, not in migrations): enable **Google OAuth** (client id/secret + consent screen) + set **redirect URLs**; configure **email magic-link** templates. Record the values in `config.toml`/a runbook per the IaC note.
-- [ ] **Env vars / secrets:** set `NEXT_PUBLIC_SUPABASE_URL` + the **publishable/anon key** (and any server key) in **Vercel** (all envs) and local `.env`; commit a `.env.example` (names only). Never put `service_role` in `NEXT_PUBLIC_*`.
-- [ ] **Custom SMTP = Resend** (build directive) — add Resend SMTP creds in Supabase Auth settings so real invite/magic-link email sends (default Supabase SMTP is rate-limited/dev-only).
+- [x] **Supabase Auth dashboard config DONE (2026-07-04):** Google OAuth enabled (Google Auth Platform project "Cetele" on the org-email account — standalone, not Workspace-managed; client id/secret in the provider; redirect URI `https://kwzlrztcwxjunvdhdoqu.supabase.co/auth/v1/callback`); Site URL + prod redirect URLs (`/auth/callback`, `/auth/confirm`) set. _Consent screen is in **Testing** mode — only listed test users can Google-sign-in until it's published (free)._
+- [x] **Env vars DONE (2026-07-04):** `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` + `NEXT_PUBLIC_AUTH_GOOGLE=1` set in Vercel (Prod + Preview; Development not tickable on this plan — local uses `.env.local`). `.env.example` committed.
+- [ ] **(deferred — needs a domain) Custom SMTP = Resend.** Resend's free 100 emails/day requires a verified domain the operator owns; can't verify `vercel.app` and no domain purchase for now (~$10–15/yr when wanted). **Until then:** Google OAuth = primary sign-in (zero emails); magic links ride Supabase's built-in sender (~2/hr — solo testing only, not for real invites). Revisit before inviting real users.
 
 **Later:**
 
