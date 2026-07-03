@@ -108,7 +108,9 @@ create table logs (
 create index on logs (task_id, date);     -- collective counter
 create index on logs (user_id, date);     -- consistency / breakdown scans
 
--- D26: outstanding share-by-email invites (accept → a membership row).
+-- D26/D34: shareable link/code invites (accept at /join/<code> → a membership
+-- row). `email` optional — locks the invite to a verified sign-in email,
+-- enforced at accept (no email is ever sent; delivery = later nice-to-have).
 create table invites (
   id        uuid primary key default gen_random_uuid(),
   group_id  uuid not null references groups on delete cascade,

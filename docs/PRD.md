@@ -129,7 +129,7 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **users** — id, name, avatar, timezone (each member's day closes at their own midnight — D34) (Supabase Auth). No app-level admin flag; one out-of-band `is_super_admin` (D27, granted only in Supabase — recovery + moderation)
 - **groups** — id, name, invite_code, `created_by` = **the owner** (authoritative; updated on transfer / succession)
 - **memberships** — user_id, group_id, role (`owner` | `admin` | `member`); exactly one `owner` row per group
-- **invites** — id, group_id, email, role (`admin` | `member`), code — outstanding share-by-email invites (accept → a membership)
+- **invites** — id, group*id, email (optional — locks the invite to a verified sign-in email, enforced without sending anything), role (`admin` | `member`), code — **shareable link/code invites** (`/join/<code>`; admin shares the link themselves; accept → a membership). Email \_delivery* of invites = later nice-to-have (needs Resend + a domain)
 - **tasks** — id, group_id, label, subtitle, target_count, order
 - **logs** — id, user_id, task_id, count, date, `logged_by` (nullable — the admin who logged it on the member's behalf; null = self; D29)
 - **reminders** — user_id, task_id, time (`HH:MM`), enabled — personal per-task custom reminder times (D30)

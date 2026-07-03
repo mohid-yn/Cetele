@@ -94,7 +94,7 @@ Fix the three things that will otherwise break the next deploy or a fresh DB.
 
 - Tables: **`tasks`**, **`invites`** (+ RLS + policy tests).
 - Server Actions: create/rename/delete group (RPCs exist), invite-by-email + accept, remove/promote member, task CRUD. Invite codes generated in the DB/Server Action, never the client.
-- **D34 — invite/accept only:** tighten `memberships_insert_admin` so a membership row is only ever created by invite-accept (the mock's `addUserToGroup` direct-add is dropped).
+- **D34 — invite/accept only, via shareable link/code (no email service needed):** admin creates an invite → an `invites` row (DB-generated code, role, optional locked email) → the UI shows a copyable/shareable link `https://<app>/join/<code>` — the admin shares it themselves (WhatsApp / in person). Invitee opens `/join/[code]` → signs in (Google gives a verified email, so an email-locked invite is enforced **without sending anything**) → taps Accept → membership created, invite deleted. Tighten `memberships_insert_admin` so a membership row is only ever created by invite-accept (the mock's `addUserToGroup` direct-add is dropped). **Email _delivery_ of invites = later nice-to-have** (rides Resend/M8 when a domain exists); zero third-party cost until then.
 - Convert `/groups`, `/group/manage` to Server Components (F2); interactivity pushed to client leaves.
 - **Exit:** create a group, define its task list + targets, invite/add a member — all persisted, all RLS-guarded, all tested.
 
@@ -172,7 +172,7 @@ M8 → CET-11 · M9 → CET-14 close-out.
 - **`logs` read scope** → group-wide `SELECT` (matches the mock; chosen earlier, unchanged).
 - **Rollup host** → **`pg_cron`** (in-DB; one system, the rollup-then-prune ordering can't miss an external caller).
 - **Count-integrity thresholds** → agent proposes defaults **at M3** (e.g. never past daily target + rate window); owner approves against the real UX.
-- **Joining model** → **invite/accept only** — a membership row is only created when the invitee accepts; the mock's `addUserToGroup` direct-add is dropped and `memberships_insert_admin` gets tightened at M2.
+- **Joining model** → **invite/accept only, link/code-based** — a membership row is only created when the invitee accepts at `/join/[code]`; invites are shareable links/codes the admin distributes themselves (no email service; optional email-lock enforced against the verified sign-in email). Email delivery = later nice-to-have (Resend/M8). `memberships_insert_admin` gets tightened at M2; the mock's `addUserToGroup` direct-add is dropped.
 
 ---
 
