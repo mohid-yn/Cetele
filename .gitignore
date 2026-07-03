@@ -58,3 +58,7 @@ yarn-error.log*
 # machine-local artifacts (agent-skill symlinks; local Studio scratch queries — root-owned via Docker)
 .claude/skills/
 supabase/snippets/
+
+# playwright artifacts
+test-results/
+playwright-report/
