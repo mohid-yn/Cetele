@@ -5,6 +5,14 @@ import { Button, Input } from "@/components/ui";
 import { GoogleIcon, MailIcon } from "@/components/demo/icons";
 import { createClient } from "@/lib/supabase/client";
 
+/**
+ * Google sign-in is hidden until the provider is actually configured
+ * (Supabase dashboard creds + local config.toml). Flipping it on without
+ * creds sends users to a raw GoTrue "provider is not enabled" JSON error.
+ * Enable by setting NEXT_PUBLIC_AUTH_GOOGLE=1 (env, per environment).
+ */
+const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_AUTH_GOOGLE === "1";
+
 export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [sent, setSent] = React.useState(false);
@@ -57,20 +65,24 @@ export default function LoginPage() {
 
       {/* Auth */}
       <div className="flex flex-col gap-3">
-        <Button
-          variant="outline"
-          className="w-full"
-          leadingIcon={<GoogleIcon />}
-          onClick={signInWithGoogle}
-        >
-          Continue with Google
-        </Button>
+        {GOOGLE_ENABLED && (
+          <>
+            <Button
+              variant="outline"
+              className="w-full"
+              leadingIcon={<GoogleIcon />}
+              onClick={signInWithGoogle}
+            >
+              Continue with Google
+            </Button>
 
-        <div className="flex items-center gap-3 py-1 text-xs text-muted-foreground">
-          <span className="h-px flex-1 bg-border" />
-          or
-          <span className="h-px flex-1 bg-border" />
-        </div>
+            <div className="flex items-center gap-3 py-1 text-xs text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />
+              or
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          </>
+        )}
 
         {sent ? (
           <div className="rounded-2xl border border-border bg-card p-4 text-center">
