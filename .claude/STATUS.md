@@ -180,7 +180,7 @@ A mobile-first **group dhikr tracker** (installable PWA) that uses dopamine hook
 
 **Now (pending):**
 
-- [ ] **Merge the CET-2 branch → `main`.** Everything since migration `0003` (the `0004` owner-orphan fix, the review + `BACKEND_BUILD_PLAN.md`, the IaC section, and **M0**) sits on `mohidkhanzada/cet-2-…`, pushed but **not on `main`** — merging to `main` is the approval gate (D16). Say "merge" and it's a fast-forward. _(The live **DB** is already fixed regardless; this is git catching up.)_
+- [x] **Merged the CET-2 branch → `main` (2026-07-03).** Everything since migration `0003` (the `0004` owner-orphan fix, the review + `BACKEND_BUILD_PLAN.md`, the IaC section, and **M0**) landed on `main` via fast-forward (`main` @ `9d0b264`); branch deleted local + remote. Docs/SQL only — no app-source change, so the build/lint/tsc bundle was unchanged.
 - [ ] **Run `supabase db reset` once on a Docker-equipped machine** to verify the full reset→migrate→seed cycle (M0's one unverified exit criterion — no Docker/CLI in the agent env). Also installs the path for local dev + `supabase gen types`.
 
 **At M1 (auth / connect — do together with that milestone):**
