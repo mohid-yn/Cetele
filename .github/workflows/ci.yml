@@ -1,14 +1,20 @@
 name: CI
 
-# Runs on every push to main and on every pull request.
+# Runs on every push to ANY branch (solo branch-per-issue workflow, D16 —
+# branch pushes are the backstop; PRs are ad-hoc so we don't double-run on them).
 on:
   push:
-    branches: [main]
-  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # Static checks + app build (no backend needed)
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -34,3 +40,50 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # Boots the real local Supabase stack:
+  #  1. migration replay + seed on a fresh Postgres (the IaC reproducibility gate)
+  #  2. pgTAP RLS/grants suite (supabase/tests)
+  #  3. Playwright e2e against the prod build (magic link via Mailpit → groups)
+  stack-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase stack (fresh migration replay + seed)
+        run: supabase start -x studio,imgproxy,vector,logflare
+
+      - name: RLS + grants tests (pgTAP)
+        run: supabase test db
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Well-known shared local-dev keys (identical on every machine — not secrets)
+      - name: Point the app at the CI stack
+        run: |
+          cat > .env.local <<'EOF'
+          NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+          EOF
+
+      - name: Build
+        run: pnpm build
+
+      - name: E2E (Playwright)
+        run: pnpm test:e2e
