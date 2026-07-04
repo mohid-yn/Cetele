@@ -45,3 +45,20 @@ on conflict (id) do nothing;
 insert into public.invites (id, group_id, email, role, code)
 values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000b1', null, 'member', 'FAJRSEED')
 on conflict (id) do nothing;
+
+-- A little core-loop history (M3): Ahmad closed everything yesterday and is
+-- part-way through Salawat today; Yusuf got half of one ring in yesterday.
+-- (Dates are relative so the seed never goes stale.)
+insert into public.logs (user_id, task_id, date, count)
+values
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000c1', current_date - 1, 100),
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000c2', current_date - 1, 100),
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000c3', current_date - 1,  33),
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000c1', current_date,      40),
+  ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000c1', current_date - 1,  50)
+on conflict (user_id, task_id, date) do nothing;
+
+-- Ahmad arrives with a live streak (kept through yesterday).
+update public.streaks
+set current = 3, longest = 5, last_active = current_date - 1
+where user_id = '00000000-0000-0000-0000-0000000000a1';
