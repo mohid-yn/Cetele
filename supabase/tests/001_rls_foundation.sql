@@ -28,8 +28,8 @@ insert into auth.users (id, email, raw_user_meta_data, aud, role) values
   ('f0000000-0000-0000-0000-000000000003', 'm@rls.test', '{"name":"M"}', 'authenticated', 'authenticated'),
   ('f0000000-0000-0000-0000-000000000004', 'x@rls.test', '{"name":"X"}', 'authenticated', 'authenticated');
 
-insert into public.groups (id, name, invite_code, created_by) values
-  ('f0000000-0000-0000-0000-0000000000b1', 'RLS Test Circle', 'RLSTEST1',
+insert into public.groups (id, name, created_by) values
+  ('f0000000-0000-0000-0000-0000000000b1', 'RLS Test Circle',
    'f0000000-0000-0000-0000-000000000001');
 
 insert into public.memberships (user_id, group_id, role) values
@@ -119,8 +119,8 @@ select throws_matching(
   'permission denied',
   'co-admin cannot seize the owner pointer');
 select throws_ok(
-  $$insert into public.groups (name, invite_code)
-    values ('rogue', 'ROGUE123')$$,
+  $$insert into public.groups (name)
+    values ('rogue')$$,
   '42501', null,
   'direct group INSERT denied — create_group RPC only');
 
@@ -229,9 +229,8 @@ select is(
     where g.name = 'X Circle'
       and m.user_id = 'f0000000-0000-0000-0000-000000000004'),
   'owner', 'create_group bootstraps creator as owner');
-select matches(
-  (select invite_code from public.groups where name = 'X Circle'),
-  '^[0-9A-F]{8}$', 'create_group generates an 8-hex invite code server-side');
+-- (create_group no longer mints a group-level invite code — joining is via the
+--  invites table, 0007/D35; covered in 002_rls_tasks_invites_join.sql)
 
 select pg_temp.impersonate('f0000000-0000-0000-0000-000000000002'); -- a (not owner)
 select throws_matching(

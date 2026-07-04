@@ -5,8 +5,8 @@
 -- fresh local/CI/preview DB some data to render.
 --
 -- Runs as the `postgres` superuser, so it bypasses RLS and the column locks.
--- Grows as tables land: identity + one group now; tasks/logs seed arrives with
--- M2/M3 (they don't exist yet). Idempotent (`on conflict … do nothing`) so a
+-- Grows as tables land: identity + one group + tasks + an open invite (M2);
+-- logs seed arrives with M3. Idempotent (`on conflict … do nothing`) so a
 -- re-run is safe.
 -- ============================================================================
 
@@ -21,8 +21,8 @@ on conflict (id) do nothing;
 
 -- One group owned by Ahmad (a1), with Zayd as co-admin and Yusuf as member.
 -- Inserted directly (not via create_group) because the seed has no auth session.
-insert into public.groups (id, name, invite_code, created_by)
-values ('00000000-0000-0000-0000-0000000000b1', 'Fajr Circle', 'FAJR2026', '00000000-0000-0000-0000-0000000000a1')
+insert into public.groups (id, name, created_by)
+values ('00000000-0000-0000-0000-0000000000b1', 'Fajr Circle', '00000000-0000-0000-0000-0000000000a1')
 on conflict (id) do nothing;
 
 insert into public.memberships (user_id, group_id, role)
@@ -31,3 +31,17 @@ values
   ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-0000000000b1', 'admin'),
   ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000b1', 'member')
 on conflict (user_id, group_id) do nothing;
+
+-- The group's task list (M2). Targets small so local testing closes rings fast.
+insert into public.tasks (id, group_id, label, subtitle, target_count, sort_order)
+values
+  ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000b1', 'Salawat',     'Allahumma salli ala Muhammad', 100, 0),
+  ('00000000-0000-0000-0000-0000000000c2', '00000000-0000-0000-0000-0000000000b1', 'Istighfar',   'Astaghfirullah',               100, 1),
+  ('00000000-0000-0000-0000-0000000000c3', '00000000-0000-0000-0000-0000000000b1', 'Subhanallah', null,                            33, 2)
+on conflict (id) do nothing;
+
+-- A standing OPEN invite (reusable member link, D35) with a fixed code so
+-- local dev / e2e can hit /join/FAJRSEED deterministically.
+insert into public.invites (id, group_id, email, role, code)
+values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000b1', null, 'member', 'FAJRSEED')
+on conflict (id) do nothing;
