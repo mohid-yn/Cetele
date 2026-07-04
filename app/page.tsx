@@ -4,6 +4,11 @@ import * as React from "react";
 import { Button, Input } from "@/components/ui";
 import { GoogleIcon, MailIcon } from "@/components/demo/icons";
 import { createClient } from "@/lib/supabase/client";
+import {
+  AUTH_NEXT_COOKIE,
+  AUTH_NEXT_MAX_AGE,
+  sanitizeNextPath,
+} from "@/lib/auth-next";
 
 /**
  * Google sign-in is hidden until the provider is actually configured
@@ -14,15 +19,19 @@ import { createClient } from "@/lib/supabase/client";
 const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_AUTH_GOOGLE === "1";
 
 /**
- * Post-sign-in destination, carried through the auth flow as `?next=` (set by
- * the proxy gate — e.g. an invite link /join/<code>). Same-origin paths only.
+ * Post-sign-in destination (set by the proxy gate as `/?next=` — e.g. an
+ * invite link /join/<code>), stashed in the AUTH_NEXT_COOKIE for the auth
+ * routes to consume. A cookie, not a ?next= on the redirect URL: Supabase's
+ * redirect allowlists are exact-match and would drop it (lib/auth-next.ts).
  * Read at call time so the client page needs no Suspense/useSearchParams.
  */
-function nextSuffix() {
-  const next = new URLSearchParams(location.search).get("next");
-  return next && next.startsWith("/") && !next.startsWith("//")
-    ? `?next=${encodeURIComponent(next)}`
-    : "";
+function stashNextPath() {
+  const next = sanitizeNextPath(
+    new URLSearchParams(location.search).get("next"),
+  );
+  if (next) {
+    document.cookie = `${AUTH_NEXT_COOKIE}=${encodeURIComponent(next)}; path=/; max-age=${AUTH_NEXT_MAX_AGE}; samesite=lax`;
+  }
 }
 
 export default function LoginPage() {
@@ -33,12 +42,11 @@ export default function LoginPage() {
 
   async function signInWithGoogle() {
     setError(null);
+    stashNextPath();
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${location.origin}/auth/callback${nextSuffix()}`,
-      },
+      options: { redirectTo: `${location.origin}/auth/callback` },
     });
     if (error) setError(error.message);
   }
@@ -47,12 +55,11 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setPending(true);
+    stashNextPath();
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: `${location.origin}/auth/confirm${nextSuffix()}`,
-      },
+      options: { emailRedirectTo: `${location.origin}/auth/confirm` },
     });
     setPending(false);
     if (error) setError(error.message);
