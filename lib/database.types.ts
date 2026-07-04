@@ -39,21 +39,18 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           id: string;
-          invite_code: string;
           name: string;
         };
         Insert: {
           created_at?: string;
           created_by?: string | null;
           id?: string;
-          invite_code: string;
           name: string;
         };
         Update: {
           created_at?: string;
           created_by?: string | null;
           id?: string;
-          invite_code?: string;
           name?: string;
         };
         Relationships: [
@@ -62,6 +59,41 @@ export type Database = {
             columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      invites: {
+        Row: {
+          code: string;
+          created_at: string;
+          email: string | null;
+          group_id: string;
+          id: string;
+          role: string;
+        };
+        Insert: {
+          code?: string;
+          created_at?: string;
+          email?: string | null;
+          group_id: string;
+          id?: string;
+          role?: string;
+        };
+        Update: {
+          code?: string;
+          created_at?: string;
+          email?: string | null;
+          group_id?: string;
+          id?: string;
+          role?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "invites_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
             referencedColumns: ["id"];
           },
         ];
@@ -102,6 +134,41 @@ export type Database = {
           },
         ];
       };
+      tasks: {
+        Row: {
+          group_id: string;
+          id: string;
+          label: string;
+          sort_order: number;
+          subtitle: string | null;
+          target_count: number;
+        };
+        Insert: {
+          group_id: string;
+          id?: string;
+          label: string;
+          sort_order?: number;
+          subtitle?: string | null;
+          target_count: number;
+        };
+        Update: {
+          group_id?: string;
+          id?: string;
+          label?: string;
+          sort_order?: number;
+          subtitle?: string | null;
+          target_count?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tasks_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           avatar_url: string | null;
@@ -131,13 +198,12 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      create_group: {
-        Args: { p_name: string };
+      accept_invite: {
+        Args: { p_code: string };
         Returns: {
           created_at: string;
           created_by: string | null;
           id: string;
-          invite_code: string;
           name: string;
         };
         SetofOptions: {
@@ -146,6 +212,32 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      create_group: {
+        Args: { p_name: string };
+        Returns: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          name: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "groups";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      lookup_invite: {
+        Args: { p_code: string };
+        Returns: {
+          already_member: boolean;
+          email_locked: boolean;
+          email_matches: boolean;
+          group_id: string;
+          group_name: string;
+          invite_role: string;
+        }[];
       };
       transfer_ownership: {
         Args: { p_group: string; p_new_owner: string };

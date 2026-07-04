@@ -13,6 +13,18 @@ import { createClient } from "@/lib/supabase/client";
  */
 const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_AUTH_GOOGLE === "1";
 
+/**
+ * Post-sign-in destination, carried through the auth flow as `?next=` (set by
+ * the proxy gate — e.g. an invite link /join/<code>). Same-origin paths only.
+ * Read at call time so the client page needs no Suspense/useSearchParams.
+ */
+function nextSuffix() {
+  const next = new URLSearchParams(location.search).get("next");
+  return next && next.startsWith("/") && !next.startsWith("//")
+    ? `?next=${encodeURIComponent(next)}`
+    : "";
+}
+
 export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [sent, setSent] = React.useState(false);
@@ -24,7 +36,9 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${location.origin}/auth/callback${nextSuffix()}`,
+      },
     });
     if (error) setError(error.message);
   }
@@ -36,7 +50,9 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/confirm` },
+      options: {
+        emailRedirectTo: `${location.origin}/auth/confirm${nextSuffix()}`,
+      },
     });
     setPending(false);
     if (error) setError(error.message);

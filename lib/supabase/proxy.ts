@@ -50,10 +50,13 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
 
   if (!data?.claims && !isPublic(request.nextUrl.pathname)) {
-    // Signed out on a protected route → back to the login page.
+    // Signed out on a protected route → back to the login page, carrying the
+    // intended destination so sign-in can land there (e.g. /join/<code>).
     const url = request.nextUrl.clone();
+    const dest = request.nextUrl.pathname;
     url.pathname = "/";
     url.search = "";
+    if (dest !== "/") url.searchParams.set("next", dest);
     return NextResponse.redirect(url);
   }
 
