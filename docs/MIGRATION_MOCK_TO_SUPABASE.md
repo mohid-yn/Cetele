@@ -69,7 +69,7 @@ create table profiles (
 create table groups (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
-  invite_code text not null unique,
+  -- no invite_code: joining goes through the `invites` table only (D35, 0007)
   created_by  uuid references profiles on delete set null,  -- D26: the OWNER (authoritative; follows transfer/succession)
   created_at  timestamptz not null default now()
 );
@@ -108,15 +108,18 @@ create table logs (
 create index on logs (task_id, date);     -- collective counter
 create index on logs (user_id, date);     -- consistency / breakdown scans
 
--- D26/D34: shareable link/code invites (accept at /join/<code> → a membership
--- row). `email` optional — locks the invite to a verified sign-in email,
--- enforced at accept (no email is ever sent; delivery = later nice-to-have).
+-- D26/D34/D35: shareable link/code invites (accept at /join/<code> → a
+-- membership row, via the accept_invite RPC — the ONLY client join path).
+-- `email` NULL = an OPEN invite, reusable until revoked (one link serves a
+-- whole halaqah); `email` set = LOCKED to that verified sign-in email and
+-- single-use (deleted on accept). No email is ever sent (delivery = later
+-- nice-to-have). `code` is DB-minted (column default; not client-insertable).
 create table invites (
   id        uuid primary key default gen_random_uuid(),
   group_id  uuid not null references groups on delete cascade,
-  email     text not null,
-  role      text not null check (role in ('admin','member')),  -- can't invite straight to owner
-  code      text not null unique,
+  email     text check (email is null or email = lower(email)),
+  role      text not null default 'member' check (role in ('admin','member')),  -- can't invite straight to owner
+  code      text not null unique default upper(substr(replace(gen_random_uuid()::text,'-',''),1,8)),
   created_at timestamptz not null default now()
 );
 
@@ -246,10 +249,10 @@ $$;
 | ------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `profiles`    | self + anyone sharing a group                                                        | update self (`is_super_admin` is **not** self-writable — set in Supabase only)                                                                                                                                                                                            |
 | `groups`      | `is_group_member(id)`                                                                | insert: **none — RPC `create_group` only** (atomic group + owner membership); update: `is_group_admin(id)`, **column-locked to `name, invite_code`** (0004); **delete / transfer (`created_by`): `is_group_owner(id)`**; super-admin may reassign `created_by` (recovery) |
-| `memberships` | `is_group_member(group_id)`                                                          | `is_group_admin(group_id)` (last-admin / self / owner-row guards from the mock); **succession**: a co-admin may claim ownership when the owner is dormant ≥14d or gone (D27)                                                                                              |
+| `memberships` | `is_group_member(group_id)`                                                          | **insert: none — RPCs only** (`create_group` owner bootstrap + `accept_invite`, D34/0007); update/delete: `is_group_admin(group_id)` on non-owner rows + self-leave; **succession**: a co-admin may claim ownership when the owner is dormant ≥14d or gone (D27)          |
 | `tasks`       | `is_group_member(group_id)`                                                          | `is_group_admin(group_id)`                                                                                                                                                                                                                                                |
 | `logs`        | `is_group_member(group_id of task)` — peers' logs power the live counter + oversight | self (`user_id = auth.uid()`) **OR** `is_group_admin(group_id of task)` — D29 proxy-logging (sets `logged_by`, writes an `audit_log` row)                                                                                                                                 |
-| `invites`     | `is_group_admin(group_id)`                                                           | `is_group_admin(group_id)` (owner or co-admin re-shares; D26)                                                                                                                                                                                                             |
+| `invites`     | `is_group_admin(group_id)` (the invitee previews via the `lookup_invite` RPC)        | `is_group_admin(group_id)` insert/delete, no update (owner or co-admin re-shares; D26); `code` never client-written (0007)                                                                                                                                                |
 | `reminders`   | self                                                                                 | self only (`user_id = auth.uid()`)                                                                                                                                                                                                                                        |
 | `streaks`     | self + `is_group_admin` of a shared group                                            | self (or the scheduled job, service role)                                                                                                                                                                                                                                 |
 | `reactions`   | `is_group_member(group_id)`                                                          | insert/delete where `from_user_id = auth.uid()`                                                                                                                                                                                                                           |

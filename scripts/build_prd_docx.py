@@ -218,9 +218,9 @@ A(hrule())
 A(heading("6. Data model (sketch)", 1))
 for t in [
     ("users", "id, name, avatar, timezone (each member's day closes at their own midnight — D34) (Supabase Auth). No app-level admin flag; one out-of-band is_super_admin (D27, granted only in Supabase — recovery + moderation)."),
-    ("groups", "id, name, invite_code, created_by = the owner (authoritative; updated on transfer / succession)"),
+    ("groups", "id, name, created_by = the owner (authoritative; updated on transfer / succession). No group-level invite code — joining goes through invites only (D35)"),
     ("memberships", "user_id, group_id, role (owner | admin | member); exactly one owner row per group"),
-    ("invites", "id, group_id, email (optional — locks the invite to a verified sign-in email, enforced without sending anything), role (admin | member), code — shareable link/code invites (/join/<code>; admin shares the link themselves; accept → a membership). Email delivery of invites = later nice-to-have (needs Resend + a domain)"),
+    ("invites", "id, group_id, email (optional — locks the invite to a verified sign-in email, enforced without sending anything), role (admin | member), code (DB-generated) — shareable link/code invites (/join/<code>; admin shares the link themselves; accept → a membership). Open invites (no email) are reusable until revoked — one link serves a whole halaqah; email-locked invites are single-use, deleted on accept (D35). Email delivery of invites = later nice-to-have (needs Resend + a domain)"),
     ("tasks", "id, group_id, label, subtitle, target_count, order"),
     ("logs", "id, user_id, task_id, count, date, logged_by (nullable — the admin who logged it on the member's behalf; null = self; D29)"),
     ("reminders", "user_id, task_id, time (HH:MM), enabled — personal per-task custom reminder times (D30)"),
