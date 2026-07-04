@@ -72,7 +72,7 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **Tap counter** — tasbih-style: tap to count, haptics + subtle sound, number animation
 - **Progress rings** — Apple-Watch-style ring per item, fills toward target, closes on completion
 - **Live collective counter** — real-time group total ("41,300 / 100,000 today") via Supabase Realtime
-- **Streaks** — personal daily streak; **"never miss twice"** forgiveness (1 streak-freeze)
+- **Streaks** — personal daily streak; **"never miss twice"** forgiveness (1 streak-freeze that **re-arms after every kept day** — a single missed day is always forgiven if you come back; two in a row reset)
 - **Group leaderboard** — rank members by consistency/completion this week
 - **Consistency tracker** — the longitudinal view of _how steadfast_ each member is (the in-app surface for our North Star). A **14-day task-by-task grid** (each task × day, green intensity = % of that day's target hit) + a headline **30-day consistency band** (a calm word + %, abstracted — _"Steady · 83%"_ — not a raw 7/30/90 grade; D28) + **longest streak**. Three views:
   - **Personal** — each member sees their own history (self-reflection, identity reinforcement); they can also **correct their own past counts** in the grid (D29)

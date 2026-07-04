@@ -103,7 +103,13 @@ Fix the three things that will otherwise break the next deploy or a fresh DB.
 - Convert `/groups`, `/group/manage` to Server Components (F2); interactivity pushed to client leaves.
 - **Exit:** create a group, define its task list + targets, invite/add a member — all persisted, all RLS-guarded, all tested.
 
-### M3 — The core loop: logs + counting (CET-6, CET-8) · _the product_
+### M3 — The core loop: logs + counting (CET-6, CET-8) · _the product_ · 🟡 BUILT 2026-07-04
+
+> **Built as designed (D36 for the details):** logs writes RPC-only; increment bounds
+> 1–500/call + `greatest(target×10, target+1000)` cap + 14-day tz-window (proposed, owner
+> approves in test); streak advances inline on completion; freeze re-arms every kept day
+> (never-miss-twice made literal); hourly pg_cron rollover. pgTAP 126/126 · e2e 7/7 locally.
+> Awaiting owner test → cloud push → merge.
 
 - Tables: **`logs`** (14-day raw; `logged_by` for D29), **`streaks`** (+ RLS + tests).
 - **Count-integrity / tap-rate guard (B4):** server-side increment RPC that validates the delta (bounds per call + per-window rate limit) so counts can't be inflated — they feed streaks/leaderboard/steadfastness.
