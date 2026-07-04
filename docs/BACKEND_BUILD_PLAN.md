@@ -90,7 +90,12 @@ Fix the three things that will otherwise break the next deploy or a fresh DB.
 - Route gating in `(app)/layout.tsx`; **session + active-group** get a real home (cookie / `profiles` preference) — resolves F5.
 - **Exit:** a real user signs in → profile row created → protected routes gate → `/groups` renders (empty) from the DB, not the mock.
 
-### M2 — Groups + tasks write path (CET-4, CET-5) · _first server-first screens_
+### M2 — Groups + tasks write path (CET-4, CET-5) · _first server-first screens_ · ✅ DONE 2026-07-04
+
+> **Shipped as designed, plus D35:** one invite-code namespace — `groups.invite_code` dropped; an
+> open invite (no email) is **reusable until revoked**, an email-locked one is single-use. Membership
+> INSERT went fully RPC-only (`create_group` + `accept_invite`). Verified: pgTAP 75/75 · e2e 5/5 ·
+> CI fresh-stack replay green. Details: STATUS D35 + the M2 entry.
 
 - Tables: **`tasks`**, **`invites`** (+ RLS + policy tests).
 - Server Actions: create/rename/delete group (RPCs exist), invite-by-email + accept, remove/promote member, task CRUD. Invite codes generated in the DB/Server Action, never the client.
