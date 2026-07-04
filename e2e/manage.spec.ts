@@ -72,10 +72,12 @@ test("owner: create group → manage → tasks → open invite", async ({ page }
   await page.click('button:has-text("Add task")');
   await expect(page.getByText("target 100 / day")).toBeVisible();
 
-  // task CRUD: edit the target
+  // task CRUD: edit the target — scope to the edit row (Settings has its own
+  // always-visible Save button, so a bare "Save" is ambiguous)
   await page.click('button:has-text("Edit")');
-  await page.getByPlaceholder("Daily target").first().fill("33");
-  await page.click('button:has-text("Save")');
+  const editRow = page.locator('li:has(input[placeholder="Daily target"])');
+  await editRow.getByPlaceholder("Daily target").fill("33");
+  await editRow.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("target 33 / day")).toBeVisible();
 
   // rename the group (the header echoes the new name after revalidation)
