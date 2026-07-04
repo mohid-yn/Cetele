@@ -1,0 +1,232 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { ProgressRing, buttonVariants } from "@/components/ui";
+import { PageHeader } from "@/components/demo/page-header";
+import { SectionHeading } from "@/components/demo/section-heading";
+import { StreakChip } from "@/components/demo/streak-chip";
+import { DayStrip, fmtLongDate } from "@/components/demo/day-strip";
+import { CheckIcon, ChevronRightIcon } from "@/components/demo/icons";
+
+/**
+ * Client leaf for the server-first Today (M3). Layout/copy mirror the mock
+ * screen; data arrives as props. The v2 mock extras (fresh-start banner, peer
+ * reactions) return with their own backends — the circle list here is the
+ * real, reaction-less core.
+ */
+
+export type TodayTask = {
+  id: string;
+  label: string;
+  subtitle: string | null;
+  target: number;
+};
+
+export function TodayClient({
+  firstName,
+  todayISO,
+  streak,
+  tasks,
+  counts,
+  circle,
+  collectivePct,
+}: {
+  firstName: string;
+  todayISO: string;
+  streak: number;
+  tasks: TodayTask[];
+  /** date → taskId → my count (last 14 days) */
+  counts: Record<string, Record<string, number>>;
+  circle: { name: string; closed: number; total: number; isMe: boolean }[];
+  collectivePct: number;
+}) {
+  const [date, setDate] = React.useState(todayISO);
+  const isToday = date === todayISO;
+
+  const countOn = (taskId: string, d: string) => counts[d]?.[taskId] ?? 0;
+  const dayFull = (d: string) =>
+    tasks.length > 0 && tasks.every((t) => countOn(t.id, d) >= t.target);
+
+  const rings = tasks.map((t) => {
+    const count = countOn(t.id, date);
+    return { task: t, count, done: count >= t.target };
+  });
+  const closed = rings.filter((r) => r.done).length;
+  const left = rings.length - closed;
+
+  // Abstraction (GLANCE): one human headline that leads with the unfinished.
+  const glance =
+    rings.length === 0
+      ? "No tasks yet"
+      : left === 0
+        ? `All rings closed${isToday ? " today" : ""} — mashaAllah 🎉`
+        : closed === 0
+          ? "A fresh page — start with one ring"
+          : `${left} ring${left === 1 ? "" : "s"} to close — you're almost there`;
+
+  // One primary action (goal-gradient): continue the ring closest to done.
+  const next = rings
+    .filter((r) => !r.done)
+    .sort((a, b) => b.count / b.task.target - a.count / a.task.target)[0];
+
+  return (
+    <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
+      <PageHeader
+        title={
+          <div>
+            <p className="text-sm text-muted-foreground">Assalamu alaykum,</p>
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              {firstName}
+            </h1>
+          </div>
+        }
+        subtitle={<span className="font-medium text-foreground">{glance}</span>}
+        action={<StreakChip current={streak} />}
+      />
+
+      {/* Day picker — log for today, or back-fill a day that's gone by (D8). */}
+      <div>
+        <DayStrip
+          value={date}
+          onChange={setDate}
+          today={todayISO}
+          isDone={dayFull}
+        />
+        {!isToday && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Catching up on{" "}
+            <span className="font-medium text-foreground">
+              {fmtLongDate(date)}
+            </span>{" "}
+            ·{" "}
+            <button
+              type="button"
+              onClick={() => setDate(todayISO)}
+              className="font-medium text-primary underline"
+            >
+              back to today
+            </button>
+          </p>
+        )}
+      </div>
+
+      {/* Primary action — one gold CTA, the nearest-to-done ring */}
+      {next && (
+        <Link
+          href={`/count/${next.task.id}${isToday ? "" : `?date=${date}`}`}
+          className={buttonVariants({ variant: "accent", className: "w-full" })}
+        >
+          Continue {next.task.label} ·{" "}
+          <span className="tabular-nums">
+            {next.count}/{next.task.target}
+          </span>
+        </Link>
+      )}
+
+      {/* Rings */}
+      <section>
+        <SectionHeading action="tap to count">
+          {isToday ? "Your rings today" : "Your rings"}
+        </SectionHeading>
+        <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+          {rings.map(({ task: t, count, done }) => (
+            <li key={t.id}>
+              <Link
+                href={`/count/${t.id}${isToday ? "" : `?date=${date}`}`}
+                className="flex items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none"
+              >
+                <ProgressRing
+                  value={count}
+                  max={t.target}
+                  size={60}
+                  thickness={7}
+                >
+                  {done ? (
+                    <CheckIcon className="size-5 text-success" />
+                  ) : (
+                    <span className="text-xs font-bold text-foreground tabular-nums">
+                      {Math.round((count / t.target) * 100)}%
+                    </span>
+                  )}
+                </ProgressRing>
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-base font-semibold text-foreground">
+                    {t.label}
+                  </p>
+                  {t.subtitle && (
+                    <p
+                      className="truncate text-sm text-muted-foreground"
+                      dir="rtl"
+                      lang="ar"
+                    >
+                      {t.subtitle}
+                    </p>
+                  )}
+                  <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+                    {count.toLocaleString()} / {t.target.toLocaleString()}
+                  </p>
+                </div>
+                <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
+              </Link>
+            </li>
+          ))}
+          {rings.length === 0 && (
+            <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+              No tasks yet — the group&rsquo;s admin sets the shared list under{" "}
+              <Link
+                href="/group/manage"
+                className="font-medium text-primary underline"
+              >
+                Manage
+              </Link>
+              .
+            </li>
+          )}
+        </ul>
+        {isToday && tasks.length > 0 && (
+          <p className="mt-2.5 text-xs text-muted-foreground">
+            Your circle is{" "}
+            <span className="font-medium text-foreground tabular-nums">
+              {collectivePct}%
+            </span>{" "}
+            toward today&apos;s goal.
+          </p>
+        )}
+      </section>
+
+      {/* Your circle today — the accountability glance (real data, M3) */}
+      {circle.length > 1 && (
+        <section>
+          <SectionHeading>Your circle today</SectionHeading>
+          <ul className="flex flex-col gap-1.5">
+            {circle.map((m) => (
+              <li
+                key={m.name + String(m.isMe)}
+                className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm"
+              >
+                <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+                  {m.name}
+                  {m.isMe && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">
+                      (you)
+                    </span>
+                  )}
+                </span>
+                {m.closed >= m.total && m.total > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+                    <CheckIcon className="size-4" /> all rings closed
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {m.closed}/{m.total} rings
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}

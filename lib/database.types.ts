@@ -98,6 +98,58 @@ export type Database = {
           },
         ];
       };
+      logs: {
+        Row: {
+          count: number;
+          date: string;
+          id: string;
+          logged_by: string | null;
+          task_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          count?: number;
+          date: string;
+          id?: string;
+          logged_by?: string | null;
+          task_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          count?: number;
+          date?: string;
+          id?: string;
+          logged_by?: string | null;
+          task_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "logs_logged_by_fkey";
+            columns: ["logged_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "logs_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "logs_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       memberships: {
         Row: {
           group_id: string;
@@ -141,6 +193,7 @@ export type Database = {
           id: string;
           is_super_admin: boolean;
           name: string;
+          timezone: string;
         };
         Insert: {
           avatar_url?: string | null;
@@ -148,6 +201,7 @@ export type Database = {
           id: string;
           is_super_admin?: boolean;
           name: string;
+          timezone?: string;
         };
         Update: {
           avatar_url?: string | null;
@@ -155,8 +209,41 @@ export type Database = {
           id?: string;
           is_super_admin?: boolean;
           name?: string;
+          timezone?: string;
         };
         Relationships: [];
+      };
+      streaks: {
+        Row: {
+          current: number;
+          freezes_left: number;
+          last_active: string | null;
+          longest: number;
+          user_id: string;
+        };
+        Insert: {
+          current?: number;
+          freezes_left?: number;
+          last_active?: string | null;
+          longest?: number;
+          user_id: string;
+        };
+        Update: {
+          current?: number;
+          freezes_left?: number;
+          last_active?: string | null;
+          longest?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "streaks_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       tasks: {
         Row: {
@@ -228,6 +315,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      increment_count: {
+        Args: { p_date: string; p_delta: number; p_task: string };
+        Returns: number;
+      };
       lookup_invite: {
         Args: { p_code: string };
         Returns: {
@@ -238,6 +329,15 @@ export type Database = {
           group_name: string;
           invite_role: string;
         }[];
+      };
+      set_count: {
+        Args: {
+          p_count: number;
+          p_date: string;
+          p_task: string;
+          p_user: string;
+        };
+        Returns: number;
       };
       transfer_ownership: {
         Args: { p_group: string; p_new_owner: string };

@@ -10,6 +10,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { isoDate } from "@/lib/mock/data";
+import { isoDaysAgo } from "@/lib/local-date";
 import { CheckIcon } from "./icons";
 
 function label(date: string, i: number): string {
@@ -30,15 +31,21 @@ export function DayStrip({
   onChange,
   isDone,
   days = 14,
+  today,
   className,
 }: {
   value: string;
   onChange: (date: string) => void;
   isDone?: (date: string) => boolean;
   days?: number;
+  /** ISO anchor for "Today" — the user's profile-timezone date (D34). Falls
+   *  back to the device clock (the mock screens' behaviour). */
+  today?: string;
   className?: string;
 }) {
-  const dates = Array.from({ length: days }, (_, i) => isoDate(i));
+  const dates = Array.from({ length: days }, (_, i) =>
+    today ? isoDaysAgo(today, i) : isoDate(i),
+  );
   return (
     <div className={cn("-mx-4 overflow-x-auto px-4", className)}>
       <div className="flex gap-1.5 pb-1">

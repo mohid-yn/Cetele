@@ -1,186 +1,144 @@
-"use client";
-
-import * as React from "react";
 import Link from "next/link";
-import { ProgressRing, buttonVariants } from "@/components/ui";
-import { useMock, sel } from "@/lib/mock/store";
-import { isoDate } from "@/lib/mock/data";
-import { PageHeader } from "@/components/demo/page-header";
-import { SectionHeading } from "@/components/demo/section-heading";
-import { StreakChip } from "@/components/demo/streak-chip";
-import { DayStrip, fmtLongDate } from "@/components/demo/day-strip";
-import { CircleToday } from "@/components/demo/peer-reactions";
-import { FreshStartBanner } from "@/components/demo/fresh-start";
-import { CheckIcon, ChevronRightIcon } from "@/components/demo/icons";
+import { buttonVariants } from "@/components/ui";
+import { createClient } from "@/lib/supabase/server";
+import { resolveActiveGroup } from "@/lib/active-group";
+import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import { TodayClient } from "./today-client";
+import { TimezoneSync } from "./timezone-sync";
 
-const TODAY = isoDate(0);
+/**
+ * Today, server-first (M3 — the core loop's home). Fetches the active group's
+ * tasks, my last-14-days counts, my streak, and the circle's today under RLS;
+ * all interactivity (day picking, links) lives in the client leaf.
+ */
+export default async function TodayPage() {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const me = claims?.claims.sub as string;
 
-export default function TodayPage() {
-  const { state } = useMock();
-  const me = sel.currentUser(state);
-  const group = sel.activeGroup(state);
-  const tasks = sel.groupTasks(state, group.id);
-  const streak = sel.streak(state, me.id);
+  const active = await resolveActiveGroup();
+  if (!active) {
+    return (
+      <div className="grid flex-1 place-items-center p-8 text-center">
+        <div>
+          <h1 className="font-display text-xl font-bold text-foreground">
+            Assalamu alaykum 👋
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            You&rsquo;re not in a group yet — create one, or join with an invite
+            link.
+          </p>
+          <Link
+            href="/groups"
+            className={buttonVariants({ variant: "accent", className: "mt-4" })}
+          >
+            Go to groups
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
-  // Which day we're viewing/logging — today by default, back-fillable (D8).
-  const [date, setDate] = React.useState(TODAY);
-  const isToday = date === TODAY;
+  const [
+    { data: profile },
+    { data: tasks },
+    { data: streak },
+    { data: members },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("name, timezone")
+      .eq("id", me)
+      .maybeSingle(),
+    supabase
+      .from("tasks")
+      .select("id, label, subtitle, target_count")
+      .eq("group_id", active.groupId)
+      .order("sort_order"),
+    supabase.from("streaks").select("current").eq("user_id", me).maybeSingle(),
+    supabase
+      .from("memberships")
+      .select("user_id, profiles(name)")
+      .eq("group_id", active.groupId),
+  ]);
 
-  const firstName = me.name.split(" ")[0];
+  const tz = profile?.timezone ?? "UTC";
+  const todayISO = localDateISO(tz);
+  const taskIds = (tasks ?? []).map((t) => t.id);
 
-  // Each ring's progress for the selected day (reused for the headline + CTA).
-  const rings = tasks.map((t) => {
-    const count = sel.countOn(state, me.id, t.id, date);
-    return { task: t, count, done: count >= t.targetCount };
-  });
-  const closed = rings.filter((r) => r.done).length;
-  const left = rings.length - closed;
+  const [{ data: myLogs }, { data: todayLogs }] = await Promise.all([
+    // my last fortnight (rings for the selected day + DayStrip done-marks)
+    supabase
+      .from("logs")
+      .select("task_id, date, count")
+      .eq("user_id", me)
+      .in(
+        "task_id",
+        taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+      )
+      .gte("date", isoDaysAgo(todayISO, 13)),
+    // the whole circle's today (collective line + circle list)
+    supabase
+      .from("logs")
+      .select("user_id, task_id, count")
+      .eq("date", todayISO)
+      .in(
+        "task_id",
+        taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+      ),
+  ]);
 
-  // Abstraction (GLANCE): one human headline that leads with the unfinished.
-  const glance =
-    rings.length === 0
-      ? "No tasks yet"
-      : left === 0
-        ? `All rings closed${isToday ? " today" : ""} — mashaAllah 🎉`
-        : closed === 0
-          ? "A fresh page — start with one ring"
-          : `${left} ring${left === 1 ? "" : "s"} to close — you're almost there`;
+  // date → taskId → count (mine)
+  const counts: Record<string, Record<string, number>> = {};
+  for (const l of myLogs ?? []) {
+    (counts[l.date] ??= {})[l.task_id] = l.count;
+  }
 
-  // One primary action (goal-gradient): continue the ring closest to done.
-  const next = rings
-    .filter((r) => !r.done)
-    .sort(
-      (a, b) => b.count / b.task.targetCount - a.count / a.task.targetCount,
-    )[0];
+  // circle: each member's closed-ring count today
+  const byMember = new Map<string, Map<string, number>>();
+  for (const l of todayLogs ?? []) {
+    if (!byMember.has(l.user_id)) byMember.set(l.user_id, new Map());
+    byMember.get(l.user_id)!.set(l.task_id, l.count);
+  }
+  const circle = (members ?? [])
+    .map((m) => {
+      const mine = byMember.get(m.user_id);
+      const closed = (tasks ?? []).filter(
+        (t) => (mine?.get(t.id) ?? 0) >= t.target_count,
+      ).length;
+      return {
+        name: m.profiles?.name ?? "Member",
+        closed,
+        total: (tasks ?? []).length,
+        isMe: m.user_id === me,
+      };
+    })
+    .sort((a, b) => Number(b.isMe) - Number(a.isMe) || b.closed - a.closed);
 
-  // Collective presence — a slim line, not a second counter (that lives on Group).
-  const collective = sel.groupToday(state, group.id);
-  const collectivePct = collective.goal
-    ? Math.round((collective.total / collective.goal) * 100)
-    : 0;
+  // collective: everyone's counts today vs the group-wide goal
+  const total = (todayLogs ?? []).reduce((s, l) => s + l.count, 0);
+  const goal =
+    (members?.length ?? 0) *
+    (tasks ?? []).reduce((s, t) => s + t.target_count, 0);
+  const collectivePct = goal ? Math.round((total / goal) * 100) : 0;
 
   return (
-    <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
-      {/* Fresh-start re-engagement (CET-19) — shows on temporal landmarks */}
-      <FreshStartBanner />
-
-      <PageHeader
-        title={
-          <div>
-            <p className="text-sm text-muted-foreground">Assalamu alaykum,</p>
-            <h1 className="font-display text-2xl font-bold text-foreground">
-              {firstName}
-            </h1>
-          </div>
-        }
-        subtitle={<span className="font-medium text-foreground">{glance}</span>}
-        action={<StreakChip current={streak?.current ?? 0} />}
+    <>
+      <TimezoneSync current={tz} />
+      <TodayClient
+        firstName={(profile?.name ?? "Friend").split(" ")[0]}
+        todayISO={todayISO}
+        streak={streak?.current ?? 0}
+        tasks={(tasks ?? []).map((t) => ({
+          id: t.id,
+          label: t.label,
+          subtitle: t.subtitle,
+          target: t.target_count,
+        }))}
+        counts={counts}
+        circle={circle}
+        collectivePct={collectivePct}
       />
-
-      {/* Day picker — log for today, or back-fill a day that's gone by (D8).
-          A primary action, so it's right here on open. */}
-      <div>
-        <DayStrip
-          value={date}
-          onChange={setDate}
-          isDone={(d) => sel.dayCompletion(state, me.id, group.id, d).full}
-        />
-        {!isToday && (
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Catching up on{" "}
-            <span className="font-medium text-foreground">
-              {fmtLongDate(date)}
-            </span>{" "}
-            ·{" "}
-            <button
-              type="button"
-              onClick={() => setDate(TODAY)}
-              className="font-medium text-primary underline"
-            >
-              back to today
-            </button>
-          </p>
-        )}
-      </div>
-
-      {/* Primary action — one gold CTA, the nearest-to-done ring */}
-      {next && (
-        <Link
-          href={`/count/${next.task.id}${isToday ? "" : `?date=${date}`}`}
-          className={buttonVariants({ variant: "accent", className: "w-full" })}
-        >
-          Continue {next.task.label} ·{" "}
-          <span className="tabular-nums">
-            {next.count}/{next.task.targetCount}
-          </span>
-        </Link>
-      )}
-
-      {/* Rings */}
-      <section>
-        <SectionHeading action="tap to count">
-          {isToday ? "Your rings today" : "Your rings"}
-        </SectionHeading>
-        <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-          {rings.map(({ task: t, count, done }) => (
-            <li key={t.id}>
-              <Link
-                href={`/count/${t.id}${isToday ? "" : `?date=${date}`}`}
-                className="flex items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none"
-              >
-                <ProgressRing
-                  value={count}
-                  max={t.targetCount}
-                  size={60}
-                  thickness={7}
-                >
-                  {done ? (
-                    <CheckIcon className="size-5 text-success" />
-                  ) : (
-                    <span className="text-xs font-bold text-foreground tabular-nums">
-                      {Math.round((count / t.targetCount) * 100)}%
-                    </span>
-                  )}
-                </ProgressRing>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-base font-semibold text-foreground">
-                    {t.label}
-                  </p>
-                  {t.subtitle && (
-                    <p
-                      className="truncate text-sm text-muted-foreground"
-                      dir="rtl"
-                      lang="ar"
-                    >
-                      {t.subtitle}
-                    </p>
-                  )}
-                  <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-                    {count.toLocaleString()} / {t.targetCount.toLocaleString()}
-                  </p>
-                </div>
-                <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-        {isToday && (
-          <p className="mt-2.5 text-xs text-muted-foreground">
-            Your circle is{" "}
-            <span className="font-medium text-foreground tabular-nums">
-              {collectivePct}%
-            </span>{" "}
-            toward today&apos;s goal — see the garden on{" "}
-            <Link href="/group" className="font-medium text-primary underline">
-              Group
-            </Link>
-            .
-          </p>
-        )}
-      </section>
-
-      {/* One-tap peer reactions (CET-18) — unified circle view */}
-      <CircleToday />
-    </div>
+    </>
   );
 }
