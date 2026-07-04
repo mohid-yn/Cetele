@@ -134,6 +134,30 @@ export type Database = {
           },
         ];
       };
+      profiles: {
+        Row: {
+          avatar_url: string | null;
+          created_at: string;
+          id: string;
+          is_super_admin: boolean;
+          name: string;
+        };
+        Insert: {
+          avatar_url?: string | null;
+          created_at?: string;
+          id: string;
+          is_super_admin?: boolean;
+          name: string;
+        };
+        Update: {
+          avatar_url?: string | null;
+          created_at?: string;
+          id?: string;
+          is_super_admin?: boolean;
+          name?: string;
+        };
+        Relationships: [];
+      };
       tasks: {
         Row: {
           group_id: string;
@@ -168,30 +192,6 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
-      };
-      profiles: {
-        Row: {
-          avatar_url: string | null;
-          created_at: string;
-          id: string;
-          is_super_admin: boolean;
-          name: string;
-        };
-        Insert: {
-          avatar_url?: string | null;
-          created_at?: string;
-          id: string;
-          is_super_admin?: boolean;
-          name: string;
-        };
-        Update: {
-          avatar_url?: string | null;
-          created_at?: string;
-          id?: string;
-          is_super_admin?: boolean;
-          name?: string;
-        };
-        Relationships: [];
       };
     };
     Views: {

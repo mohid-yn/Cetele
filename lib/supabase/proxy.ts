@@ -52,11 +52,12 @@ export async function updateSession(request: NextRequest) {
   if (!data?.claims && !isPublic(request.nextUrl.pathname)) {
     // Signed out on a protected route → back to the login page, carrying the
     // intended destination so sign-in can land there (e.g. /join/<code>).
+    // /today is already the default post-sign-in landing — skip the noise.
     const url = request.nextUrl.clone();
     const dest = request.nextUrl.pathname;
     url.pathname = "/";
     url.search = "";
-    if (dest !== "/") url.searchParams.set("next", dest);
+    if (dest !== "/" && dest !== "/today") url.searchParams.set("next", dest);
     return NextResponse.redirect(url);
   }
 
