@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@/components/ui";
 import { AppIconLogo } from "@/components/ui/logo";
@@ -103,92 +104,107 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-background px-6 py-10">
-      <div className="w-full max-w-[24rem]">
-        {/* Brand */}
-        <div className="flex flex-col items-center gap-4 text-center">
-          <AppIconLogo className="size-20 rounded-[1.25rem] shadow-lg" />
-          <div>
-            <h1 className="font-display text-3xl font-bold tracking-tight text-primary">
-              Cetele
-            </h1>
-            <p className="mt-2 text-sm text-balance text-muted-foreground">
-              Track your daily dhikr together — a shared tally that makes
-              remembrance a habit.
-            </p>
-          </div>
-        </div>
+    <main className="min-h-dvh lg:grid lg:grid-cols-2">
+      {/* Left — brand imagery (desktop only) */}
+      <div className="relative hidden bg-primary-700 lg:block">
+        <Image
+          src="/login-hero.png"
+          alt=""
+          fill
+          priority
+          sizes="50vw"
+          className="object-cover"
+        />
+      </div>
 
-        {/* Sign-in card */}
-        <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-md">
-          {GOOGLE_ENABLED && (
-            <Button
-              variant="outline"
-              className="w-full"
-              leadingIcon={<GoogleIcon />}
-              onClick={signInWithGoogle}
-            >
-              Continue with Google
-            </Button>
-          )}
-
-          {GOOGLE_ENABLED && EMAIL_ENABLED && (
-            <div className="flex items-center gap-3 py-1 text-xs text-muted-foreground">
-              <span className="h-px flex-1 bg-border" />
-              or
-              <span className="h-px flex-1 bg-border" />
+      {/* Right — sign-in */}
+      <div className="grid min-h-dvh place-items-center bg-background px-6 py-10">
+        <div className="w-full max-w-[24rem]">
+          {/* Brand */}
+          <div className="flex flex-col items-center gap-4 text-center">
+            <AppIconLogo className="size-20 rounded-[1.25rem] shadow-lg" />
+            <div>
+              <h1 className="font-display text-3xl font-bold tracking-tight text-primary">
+                Cetele
+              </h1>
+              <p className="mt-2 text-sm text-balance text-muted-foreground">
+                Track your daily dhikr together — a shared tally that makes
+                remembrance a habit.
+              </p>
             </div>
-          )}
+          </div>
 
-          {EMAIL_ENABLED &&
-            (sent ? (
-              <div className="rounded-xl border border-border bg-muted p-4 text-center">
-                <MailIcon className="mx-auto size-7 text-primary" />
-                <p className="mt-2 text-sm font-medium text-foreground">
-                  Check your email
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  We sent a magic link to {email || "you"}. Open it on this
-                  device to sign in.
-                </p>
+          {/* Sign-in card */}
+          <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-md">
+            {GOOGLE_ENABLED && (
+              <Button
+                variant="outline"
+                className="w-full"
+                leadingIcon={<GoogleIcon />}
+                onClick={signInWithGoogle}
+              >
+                Continue with Google
+              </Button>
+            )}
+
+            {GOOGLE_ENABLED && EMAIL_ENABLED && (
+              <div className="flex items-center gap-3 py-1 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
               </div>
-            ) : (
-              <form className="flex flex-col gap-2" onSubmit={sendMagicLink}>
-                <Input
-                  type="email"
-                  required
-                  placeholder="you@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="w-full"
-                  disabled={pending}
-                  leadingIcon={<MailIcon />}
-                >
-                  {pending ? "Sending…" : "Email me a magic link"}
-                </Button>
-              </form>
-            ))}
+            )}
 
-          {!GOOGLE_ENABLED && !EMAIL_ENABLED && (
-            <p className="text-center text-sm text-muted-foreground">
-              Sign-in is being set up. Please check back shortly.
-            </p>
-          )}
+            {EMAIL_ENABLED &&
+              (sent ? (
+                <div className="rounded-xl border border-border bg-muted p-4 text-center">
+                  <MailIcon className="mx-auto size-7 text-primary" />
+                  <p className="mt-2 text-sm font-medium text-foreground">
+                    Check your email
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    We sent a magic link to {email || "you"}. Open it on this
+                    device to sign in.
+                  </p>
+                </div>
+              ) : (
+                <form className="flex flex-col gap-2" onSubmit={sendMagicLink}>
+                  <Input
+                    type="email"
+                    required
+                    placeholder="you@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="w-full"
+                    disabled={pending}
+                    leadingIcon={<MailIcon />}
+                  >
+                    {pending ? "Sending…" : "Email me a magic link"}
+                  </Button>
+                </form>
+              ))}
 
-          {error ? (
-            <p role="alert" className="text-center text-xs text-danger">
-              {error}
-            </p>
-          ) : null}
+            {!GOOGLE_ENABLED && !EMAIL_ENABLED && (
+              <p className="text-center text-sm text-muted-foreground">
+                Sign-in is being set up. Please check back shortly.
+              </p>
+            )}
+
+            {error ? (
+              <p role="alert" className="text-center text-xs text-danger">
+                {error}
+              </p>
+            ) : null}
+          </div>
+
+          <p className="mt-5 text-center text-xs text-muted-foreground">
+            Private by default. Your circle, your data.
+          </p>
         </div>
-
-        <p className="mt-5 text-center text-xs text-muted-foreground">
-          Private by default. Your circle, your data.
-        </p>
       </div>
     </main>
   );

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
 import { GroupSwitcher } from "./group-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { WebAppLogo } from "@/components/ui/logo";
 
 /** Persistent left nav for desktop (≥lg). Mirrors the mobile bottom bar. */
 export function Sidebar() {
@@ -16,15 +17,12 @@ export function Sidebar() {
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-card p-4 lg:flex">
       {/* Wordmark */}
-      <Link href="/today" className="mb-6 flex items-center gap-2.5 px-2">
-        <span
-          aria-hidden
-          className="size-7 rounded-full border-[5px] border-primary"
-          style={{ borderTopColor: "transparent" }}
-        />
-        <span className="font-display text-xl font-bold tracking-tight text-primary">
-          Cetele
-        </span>
+      <Link
+        href="/today"
+        aria-label="Cetele — home"
+        className="mb-6 flex items-center px-2"
+      >
+        <WebAppLogo className="h-8 w-auto" />
       </Link>
 
       {/* Active group (switcher when the user belongs to more than one) */}
