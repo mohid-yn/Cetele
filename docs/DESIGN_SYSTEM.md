@@ -1,6 +1,6 @@
 # Cetele Design System
 
-Themed **emerald `#047857` + gold `#F59E0B` on white** (light-first). Emerald is
+Themed **emerald `#047857` + gold `#F59E0B` on warm cream `#FAF6EC`** (light-first; see §Colour + D25). Emerald is
 brand, calm/spiritual, _and_ the completion/growth signal; gold is reserved for
 earned action and celebration only.
 Live reference: **`/designsystem`** · Tokens: **`app/globals.css`** · Components: **`components/ui/`**.

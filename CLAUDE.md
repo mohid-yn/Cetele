@@ -29,7 +29,7 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 
 ## UI / design system
 
-Themed **emerald `#047857` + gold `#F59E0B` on pure white** (light-first; see D20).
+Themed **emerald `#047857` + gold `#F59E0B` on warm cream** (light-first; see D20 + D25 — D25 warmed the surface from pure white to cream `#FAF6EC` / brown in dark).
 Emerald = brand + calm/spiritual + completion/growth; gold = earned action +
 celebration only. Build UI from the existing system — don't hard-code
 colors/spacing or fork primitives.

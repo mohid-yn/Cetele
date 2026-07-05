@@ -16,11 +16,12 @@ import {
   Stat,
 } from "@/components/ui";
 import { RingDemo } from "./ring-demo";
+import { AppIconLogo, WebAppLogo } from "@/components/ui/logo";
 
 export const metadata: Metadata = {
   title: "Design System · Cetele",
   description:
-    "Living style guide — tokens and components, themed emerald + gold on white.",
+    "Living style guide — tokens and components, themed emerald + gold on warm cream.",
 };
 
 /* ---------- small presentational helpers (page-local) ---------- */
@@ -133,6 +134,7 @@ const SHADOWS = [
 ];
 
 const NAV = [
+  ["Brand", "brand"],
   ["Colors", "colors"],
   ["Typography", "typography"],
   ["Spacing", "spacing"],
@@ -152,12 +154,9 @@ export default function DesignSystemPage() {
       {/* Header */}
       <header className="mb-12 space-y-3">
         <div className="flex items-center gap-2.5">
-          <span className="font-display text-xl font-bold">
-            <span className="text-primary">Youth</span>{" "}
-            <span className="text-accent">Nexus</span>
-          </span>
+          <WebAppLogo className="h-8 w-auto" />
           <Badge variant="outline" size="sm">
-            Cetele
+            Design tokens
           </Badge>
         </div>
         <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">
@@ -165,7 +164,7 @@ export default function DesignSystemPage() {
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Tokens and reusable components for Cetele, themed emerald + gold on
-          white. Everything below is driven by the design tokens in{" "}
+          warm cream. Everything below is driven by the design tokens in{" "}
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
             app/globals.css
           </code>
@@ -189,6 +188,30 @@ export default function DesignSystemPage() {
       </header>
 
       <div className="space-y-16">
+        {/* BRAND */}
+        <Section
+          id="brand"
+          title="Brand marks"
+          description="The Cetele logo — a gold nalayn silhouette on emerald. Colours come from design tokens, so both marks adapt to light/dark. AppIconLogo is the square hero mark (login, splash); WebAppLogo is the horizontal wordmark for headers and the app sidebar. Import from @/components/ui/logo."
+        >
+          <Card>
+            <CardContent className="flex flex-wrap items-center gap-8 pt-6">
+              <div className="flex flex-col items-center gap-2">
+                <AppIconLogo className="size-20 rounded-[1.25rem] shadow-md" />
+                <code className="font-mono text-xs text-muted-foreground">
+                  AppIconLogo
+                </code>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <WebAppLogo className="h-10 w-auto" />
+                <code className="font-mono text-xs text-muted-foreground">
+                  WebAppLogo
+                </code>
+              </div>
+            </CardContent>
+          </Card>
+        </Section>
+
         {/* COLORS */}
         <Section
           id="colors"
@@ -330,7 +353,7 @@ export default function DesignSystemPage() {
         <Section
           id="elevation"
           title="Elevation"
-          description="Soft, neutral shadows for a clean lift on white. Cards use sm; popovers/menus use md–lg; modals use xl."
+          description="Soft, neutral shadows for a clean lift off the cream page. Cards use sm; popovers/menus use md–lg; modals use xl."
         >
           <div className="flex flex-wrap gap-6">
             {SHADOWS.map((s) => (
@@ -489,7 +512,7 @@ export default function DesignSystemPage() {
       </div>
 
       <footer className="mt-20 border-t border-border pt-6 text-xs text-muted-foreground">
-        Cetele design system · emerald + gold on white · tokens in{" "}
+        Cetele design system · emerald + gold on warm cream · tokens in{" "}
         <code className="font-mono">app/globals.css</code>, components in{" "}
         <code className="font-mono">components/ui/</code>.
       </footer>
