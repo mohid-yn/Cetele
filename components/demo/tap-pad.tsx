@@ -2,33 +2,8 @@
 
 import * as React from "react";
 import { ProgressRing } from "@/components/ui";
+import { playTap } from "@/lib/sound";
 import { cn } from "@/lib/utils";
-
-let audioCtx: AudioContext | null = null;
-function click() {
-  if (typeof window === "undefined") return;
-  try {
-    const Ctor =
-      window.AudioContext ??
-      (window as unknown as { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext;
-    if (!Ctor) return;
-    audioCtx ??= new Ctor();
-    const ctx = audioCtx;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(660, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.05);
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.12);
-  } catch {
-    // audio not available — silent is fine
-  }
-}
 
 interface TapPadProps {
   value: number;
@@ -47,7 +22,7 @@ export function TapPad({ value, max, sound, onTap }: TapPadProps) {
   const done = value >= max;
 
   const handleTap = () => {
-    if (sound) click();
+    if (sound) playTap();
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate?.(done ? [0, 30, 20, 40] : 18);
     }

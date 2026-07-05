@@ -8,6 +8,7 @@ import { useCelebration } from "@/components/demo/celebration";
 import { TapPad } from "@/components/demo/tap-pad";
 import { DayStrip, fmtLongDate } from "@/components/demo/day-strip";
 import { ArrowLeftIcon } from "@/components/demo/icons";
+import { playTen } from "@/lib/sound";
 import { incrementCount } from "../../today/actions";
 
 /**
@@ -199,7 +200,13 @@ export function CountClient({
           )}
         >
           {remaining > 10 && (
-            <Button variant="outline" onClick={() => addCapped(10)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (sound) playTen();
+                addCapped(10);
+              }}
+            >
               +10
             </Button>
           )}
