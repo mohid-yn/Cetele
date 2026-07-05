@@ -31,17 +31,28 @@ export function Dialog({
   className,
 }: DialogProps) {
   const cardRef = React.useRef<HTMLDivElement>(null);
+  // Read onClose through a ref so the effect below depends only on `open` —
+  // an inline `onClose={() => …}` prop changes identity every parent render,
+  // and re-running the effect would steal focus from whatever the user is
+  // typing into (the focus() call must fire once per open, not per keystroke).
+  const onCloseRef = React.useRef(onClose);
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
-    // Move focus into the dialog for keyboard users.
-    cardRef.current?.focus();
+    // Move focus into the dialog for keyboard users — unless something inside
+    // it (e.g. an autoFocus input) already took it.
+    if (!cardRef.current?.contains(document.activeElement)) {
+      cardRef.current?.focus();
+    }
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open || typeof document === "undefined") return null;
 
