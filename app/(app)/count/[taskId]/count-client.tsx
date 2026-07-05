@@ -8,7 +8,7 @@ import { useCelebration } from "@/components/demo/celebration";
 import { TapPad } from "@/components/demo/tap-pad";
 import { DayStrip, fmtLongDate } from "@/components/demo/day-strip";
 import { ArrowLeftIcon } from "@/components/demo/icons";
-import { playTen } from "@/lib/sound";
+import { playComplete, playTen } from "@/lib/sound";
 import { incrementCount } from "../../today/actions";
 
 /**
@@ -100,6 +100,7 @@ export function CountClient({
   const celebrateIfClosed = (next: number) => {
     if (next >= task.target && !justCompleted.current) {
       justCompleted.current = true;
+      if (sound) playComplete();
       celebrate({ title: "Ring closed! 🎉" });
     }
   };

@@ -89,14 +89,57 @@ export function playTap() {
   }
 }
 
-/** A +10 jump — a weightier double thock, reads as "several at once". */
+/** A +10 jump — a single, heavier thock: deeper and louder than a tap. */
 export function playTen() {
   try {
     const ctx = getCtx();
     if (!ctx) return;
     const t = ctx.currentTime;
-    thock(ctx, t, 0.9);
-    thock(ctx, t + 0.07, 1.15);
+    burst(ctx, t, { freq: jitter(160), gain: 0.85, dur: 0.07, q: 0.9 });
+    burst(ctx, t, { freq: jitter(1900), gain: 0.16, dur: 0.03, q: 1.4 });
+  } catch {
+    // audio not available — silent is fine
+  }
+}
+
+/**
+ * Task completed — a celebratory flourish that stays non-musical (D37):
+ * a rising air-whoosh (band-swept noise) + a scatter of bright ticks at
+ * random timings, like a swish and falling beads. No pitches, no rhythm.
+ */
+export function playComplete() {
+  try {
+    const ctx = getCtx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // Rising whoosh: looped noise through a bandpass sweeping upward.
+    const src = ctx.createBufferSource();
+    src.buffer = getNoise(ctx);
+    src.loop = true;
+    const band = ctx.createBiquadFilter();
+    band.type = "bandpass";
+    band.Q.value = 1.5;
+    band.frequency.setValueAtTime(300, t);
+    band.frequency.exponentialRampToValueAtTime(3500, t + 0.4);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.22, t + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    src.connect(band).connect(gain).connect(ctx.destination);
+    src.start(t);
+    src.stop(t + 0.5);
+
+    // Sparkle: a few bright ticks scattered irregularly over the whoosh.
+    for (let i = 0; i < 6; i++) {
+      const at = t + 0.08 + Math.random() * 0.35;
+      burst(ctx, at, {
+        freq: 2500 + Math.random() * 2700,
+        gain: 0.05 + Math.random() * 0.06,
+        dur: 0.03,
+        q: 2,
+      });
+    }
   } catch {
     // audio not available — silent is fine
   }
