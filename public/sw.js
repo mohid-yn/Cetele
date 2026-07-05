@@ -1,10 +1,15 @@
-// Cetele service worker — minimal app-shell offline support.
-// Bump CACHE when the shell changes to invalidate old caches.
-const CACHE = "cetele-shell-v1";
-const SHELL = ["/", "/manifest.webmanifest"];
+// Cetele service worker — minimal, deliberately non-invasive.
+// Bump CACHE when this file changes to activate the new version + wipe old
+// caches (the activate handler deletes every cache != CACHE).
+//
+// v2 (2026-07-05): v1 cached "/" (the login page) and intercepted navigations
+// + cross-origin requests, which broke the OAuth round-trip (served a stale
+// login shell, and threw "Failed to fetch" on Supabase/Google calls). v2 never
+// touches navigations, /auth/*, or cross-origin — it only lightly caches
+// same-origin static GETs, and never precaches an HTML page.
+const CACHE = "cetele-static-v2";
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
@@ -16,23 +21,38 @@ self.addEventListener("activate", (event) => {
         Promise.all(
           keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)),
         ),
-      ),
+      )
+      .then(() => self.clients.claim()),
   );
-  self.clients.claim();
 });
 
-// Network-first for navigations (fresh content when online, shell when offline);
-// cache-first for other GETs.
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
-  if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match("/")));
-    return;
-  }
+  const url = new URL(request.url);
 
+  // Never intercept: cross-origin (Supabase/Google/CDN), auth routes, or
+  // navigations — the browser must handle these natively so redirects,
+  // cookies and the OAuth exchange are never disturbed.
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/auth")) return;
+  if (request.mode === "navigate") return;
+
+  // Same-origin static GET: cache-first, fall back to network, never throw.
   event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request)),
+    caches.match(request).then(
+      (cached) =>
+        cached ||
+        fetch(request)
+          .then((res) => {
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put(request, copy));
+            }
+            return res;
+          })
+          .catch(() => Response.error()),
+    ),
   );
 });
