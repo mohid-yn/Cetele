@@ -5,6 +5,7 @@ import { resolveActiveGroup } from "@/lib/active-group";
 import { localDateISO, isoDaysAgo } from "@/lib/local-date";
 import { TodayClient } from "./today-client";
 import { TimezoneSync } from "./timezone-sync";
+import { TodayLive } from "./today-live";
 
 /**
  * Today, server-first (M3 — the core loop's home). Fetches the active group's
@@ -125,6 +126,10 @@ export default async function TodayPage() {
   return (
     <>
       <TimezoneSync current={tz} />
+      <TodayLive
+        groupId={active.groupId}
+        taskIds={(tasks ?? []).map((t) => t.id)}
+      />
       <TodayClient
         firstName={(profile?.name ?? "Friend").split(" ")[0]}
         todayISO={todayISO}

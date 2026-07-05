@@ -1,0 +1,25 @@
+-- ============================================================================
+-- CET-7 · Migration 0009 — M4: realtime for the live collective counter
+-- ----------------------------------------------------------------------------
+-- The /today collective total ("41,300 / 100,000 today") is computed server-
+-- side from logs (0008), but only refreshes on navigation. M4 makes it LIVE:
+-- as ANY group member taps, every member's counter ticks up within ~a second.
+--
+-- Mechanism: add public.logs to the `supabase_realtime` publication so the
+-- authenticated client can subscribe to postgres_changes on it. Visibility is
+-- governed entirely by the EXISTING RLS — logs_select_group_member (0008) means
+-- a subscriber only ever receives changes for logs in groups they belong to.
+-- The client narrows further to the ACTIVE group's task ids and re-reads the
+-- collective sum on each relevant change (writes are debounced RPC flushes, so
+-- the change rate is modest — fine at halaqah-group scale). If a single group
+-- ever grows large enough that per-record fan-out matters, the escape hatch is
+-- a per-group Broadcast topic driven by a trigger; not needed for v1.
+--
+-- No schema change and no new grant: SELECT on logs was already granted to
+-- `authenticated` in 0008, and realtime reuses that exact policy to decide who
+-- receives each change. Default replica identity (primary key) is sufficient —
+-- INSERT/UPDATE payloads carry the new row (new count/task/date), which is all
+-- the client needs; it never relies on old values (it re-reads the sum).
+-- ============================================================================
+
+alter publication supabase_realtime add table public.logs;

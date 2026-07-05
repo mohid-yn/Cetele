@@ -186,6 +186,10 @@ export function TodayClient({
         </ul>
         {isToday && tasks.length > 0 && (
           <p className="mt-2.5 text-xs text-muted-foreground">
+            <span
+              aria-hidden
+              className="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-success align-middle"
+            />
             Your circle is{" "}
             <span className="font-medium text-foreground tabular-nums">
               {collectivePct}%
