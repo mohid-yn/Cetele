@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@/components/ui";
 import { AppIconLogo } from "@/components/ui/logo";
@@ -203,6 +204,15 @@ export default function LoginPage() {
 
           <p className="mt-5 text-center text-xs text-muted-foreground">
             Private by default. Your circle, your data.
+          </p>
+          <p className="mt-1.5 text-center text-xs text-muted-foreground">
+            <Link href="/privacy" className="hover:text-foreground">
+              Privacy
+            </Link>
+            <span aria-hidden> · </span>
+            <Link href="/terms" className="hover:text-foreground">
+              Terms
+            </Link>
           </p>
         </div>
       </div>
