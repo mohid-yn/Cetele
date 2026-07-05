@@ -19,6 +19,17 @@ import {
 const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_AUTH_GOOGLE === "1";
 
 /**
+ * Email magic-link sign-in. Hidden by default because it depends on a working
+ * mail sender: Supabase's built-in sender is rate-limited (~2/hr) and can't be
+ * used for real testers, and custom SMTP (Resend) needs a verified domain we
+ * don't own yet. Enable by setting NEXT_PUBLIC_AUTH_EMAIL=1 — e.g. in
+ * .env.local for local dev (magic links land in Mailpit), or in Vercel once a
+ * domain + Resend are configured. Off in prod for now → Google is the only
+ * public sign-in.
+ */
+const EMAIL_ENABLED = process.env.NEXT_PUBLIC_AUTH_EMAIL === "1";
+
+/**
  * Post-sign-in destination (set by the proxy gate as `/?next=` — e.g. an
  * invite link /join/<code>), stashed in the AUTH_NEXT_COOKIE for the auth
  * routes to consume. A cookie, not a ?next= on the redirect URL: Supabase's
@@ -89,54 +100,61 @@ export default function LoginPage() {
       {/* Auth */}
       <div className="flex flex-col gap-3">
         {GOOGLE_ENABLED && (
-          <>
-            <Button
-              variant="outline"
-              className="w-full"
-              leadingIcon={<GoogleIcon />}
-              onClick={signInWithGoogle}
-            >
-              Continue with Google
-            </Button>
-
-            <div className="flex items-center gap-3 py-1 text-xs text-muted-foreground">
-              <span className="h-px flex-1 bg-border" />
-              or
-              <span className="h-px flex-1 bg-border" />
-            </div>
-          </>
+          <Button
+            variant="outline"
+            className="w-full"
+            leadingIcon={<GoogleIcon />}
+            onClick={signInWithGoogle}
+          >
+            Continue with Google
+          </Button>
         )}
 
-        {sent ? (
-          <div className="rounded-2xl border border-border bg-card p-4 text-center">
-            <MailIcon className="mx-auto size-7 text-primary" />
-            <p className="mt-2 text-sm font-medium text-foreground">
-              Check your email
-            </p>
-            <p className="text-xs text-muted-foreground">
-              We sent a magic link to {email || "you"}. Open it on this device
-              to sign in.
-            </p>
+        {GOOGLE_ENABLED && EMAIL_ENABLED && (
+          <div className="flex items-center gap-3 py-1 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            or
+            <span className="h-px flex-1 bg-border" />
           </div>
-        ) : (
-          <form className="flex flex-col gap-2" onSubmit={sendMagicLink}>
-            <Input
-              type="email"
-              required
-              placeholder="you@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full"
-              disabled={pending}
-              leadingIcon={<MailIcon />}
-            >
-              {pending ? "Sending…" : "Email me a magic link"}
-            </Button>
-          </form>
+        )}
+
+        {EMAIL_ENABLED &&
+          (sent ? (
+            <div className="rounded-2xl border border-border bg-card p-4 text-center">
+              <MailIcon className="mx-auto size-7 text-primary" />
+              <p className="mt-2 text-sm font-medium text-foreground">
+                Check your email
+              </p>
+              <p className="text-xs text-muted-foreground">
+                We sent a magic link to {email || "you"}. Open it on this device
+                to sign in.
+              </p>
+            </div>
+          ) : (
+            <form className="flex flex-col gap-2" onSubmit={sendMagicLink}>
+              <Input
+                type="email"
+                required
+                placeholder="you@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full"
+                disabled={pending}
+                leadingIcon={<MailIcon />}
+              >
+                {pending ? "Sending…" : "Email me a magic link"}
+              </Button>
+            </form>
+          ))}
+
+        {!GOOGLE_ENABLED && !EMAIL_ENABLED && (
+          <p className="text-center text-sm text-muted-foreground">
+            Sign-in is being set up. Please check back shortly.
+          </p>
         )}
 
         {error ? (
