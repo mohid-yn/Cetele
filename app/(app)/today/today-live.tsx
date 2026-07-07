@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { dlog } from "@/lib/db-log";
 
 /**
  * M4 — makes the /today collective counter + circle standings LIVE (CET-7).
@@ -34,7 +35,10 @@ export function TodayLive({
     let timer: ReturnType<typeof setTimeout> | undefined;
     const refreshSoon = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => router.refresh(), 500);
+      timer = setTimeout(() => {
+        dlog("realtime.today → router.refresh()");
+        router.refresh();
+      }, 500);
     };
 
     const channel = supabase
@@ -44,14 +48,17 @@ export function TodayLive({
         { event: "*", schema: "public", table: "logs" },
         (payload) => {
           const row = (payload.new ?? payload.old) as { task_id?: string };
-          if (row?.task_id && taskSet.has(row.task_id)) refreshSoon();
+          if (row?.task_id && taskSet.has(row.task_id)) {
+            dlog("realtime.today ← logs change", row.task_id);
+            refreshSoon();
+          }
         },
       );
 
     // Carry the auth token so realtime applies our RLS (only our groups' logs).
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) supabase.realtime.setAuth(data.session.access_token);
-      channel.subscribe();
+      channel.subscribe((status) => dlog("realtime.today status", status));
     });
 
     return () => {

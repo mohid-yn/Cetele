@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ACTIVE_GROUP_COOKIE } from "@/lib/active-group";
+import { q } from "@/lib/db-log";
 
 /** Create a group via the create_group RPC (atomic group + owner membership). */
 export async function createGroup(name: string) {
@@ -12,7 +13,10 @@ export async function createGroup(name: string) {
   if (!trimmed) return { error: "Group name is required" };
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("create_group", { p_name: trimmed });
+  const { error } = await q(
+    "rpc.create_group",
+    supabase.rpc("create_group", { p_name: trimmed }),
+  );
   if (error) return { error: error.message };
 
   revalidatePath("/groups");
@@ -26,11 +30,10 @@ export async function createGroup(name: string) {
  */
 export async function openManage(groupId: string) {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("groups")
-    .select("id")
-    .eq("id", groupId)
-    .maybeSingle();
+  const { data } = await q(
+    "openManage.visibility",
+    supabase.from("groups").select("id").eq("id", groupId).maybeSingle(),
+  );
   if (!data) return;
 
   (await cookies()).set(ACTIVE_GROUP_COOKIE, groupId, {
@@ -49,11 +52,10 @@ export async function openManage(groupId: string) {
  */
 export async function setActiveGroup(groupId: string, next?: string) {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("groups")
-    .select("id")
-    .eq("id", groupId)
-    .maybeSingle();
+  const { data } = await q(
+    "setActiveGroup.visibility",
+    supabase.from("groups").select("id").eq("id", groupId).maybeSingle(),
+  );
   if (!data) return;
 
   (await cookies()).set(ACTIVE_GROUP_COOKIE, groupId, {

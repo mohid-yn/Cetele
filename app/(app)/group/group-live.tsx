@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { dlog } from "@/lib/db-log";
 
 /**
  * M5 — keeps the group hub's collective progress LIVE (CET-7 substrate, M4).
@@ -28,7 +29,10 @@ export function GroupLive({
     let timer: ReturnType<typeof setTimeout> | undefined;
     const refreshSoon = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => router.refresh(), 500);
+      timer = setTimeout(() => {
+        dlog("realtime.group → router.refresh()");
+        router.refresh();
+      }, 500);
     };
 
     const channel = supabase
@@ -38,13 +42,16 @@ export function GroupLive({
         { event: "*", schema: "public", table: "logs" },
         (payload) => {
           const row = (payload.new ?? payload.old) as { task_id?: string };
-          if (row?.task_id && taskSet.has(row.task_id)) refreshSoon();
+          if (row?.task_id && taskSet.has(row.task_id)) {
+            dlog("realtime.group ← logs change", row.task_id);
+            refreshSoon();
+          }
         },
       );
 
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) supabase.realtime.setAuth(data.session.access_token);
-      channel.subscribe();
+      channel.subscribe((status) => dlog("realtime.group status", status));
     });
 
     return () => {

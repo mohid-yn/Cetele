@@ -3,6 +3,7 @@ import { buttonVariants } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { resolveActiveGroup } from "@/lib/active-group";
 import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import { q } from "@/lib/db-log";
 import { TodayClient } from "./today-client";
 import { TimezoneSync } from "./timezone-sync";
 import { TodayLive } from "./today-live";
@@ -45,49 +46,59 @@ export default async function TodayPage() {
     { data: tasks },
     { data: streak },
     { data: members },
-  ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("name, timezone")
-      .eq("id", me)
-      .maybeSingle(),
-    supabase
-      .from("tasks")
-      .select("id, label, subtitle, target_count")
-      .eq("group_id", active.groupId)
-      .order("sort_order"),
-    supabase.from("streaks").select("current").eq("user_id", me).maybeSingle(),
-    supabase
-      .from("memberships")
-      .select("user_id, profiles(name)")
-      .eq("group_id", active.groupId),
-  ]);
+  ] = await q(
+    "today.reads (profile+tasks+streak+members)",
+    Promise.all([
+      supabase
+        .from("profiles")
+        .select("name, timezone")
+        .eq("id", me)
+        .maybeSingle(),
+      supabase
+        .from("tasks")
+        .select("id, label, subtitle, target_count")
+        .eq("group_id", active.groupId)
+        .order("sort_order"),
+      supabase
+        .from("streaks")
+        .select("current")
+        .eq("user_id", me)
+        .maybeSingle(),
+      supabase
+        .from("memberships")
+        .select("user_id, profiles(name)")
+        .eq("group_id", active.groupId),
+    ]),
+  );
 
   const tz = profile?.timezone ?? "UTC";
   const todayISO = localDateISO(tz);
   const taskIds = (tasks ?? []).map((t) => t.id);
 
-  const [{ data: myLogs }, { data: todayLogs }] = await Promise.all([
-    // my last fortnight (rings for the selected day + DayStrip done-marks)
-    supabase
-      .from("logs")
-      .select("task_id, date, count")
-      .eq("user_id", me)
-      .in(
-        "task_id",
-        taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
-      )
-      .gte("date", isoDaysAgo(todayISO, 13)),
-    // the whole circle's today (collective line + circle list)
-    supabase
-      .from("logs")
-      .select("user_id, task_id, count")
-      .eq("date", todayISO)
-      .in(
-        "task_id",
-        taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
-      ),
-  ]);
+  const [{ data: myLogs }, { data: todayLogs }] = await q(
+    "today.logs (my 14d + circle today)",
+    Promise.all([
+      // my last fortnight (rings for the selected day + DayStrip done-marks)
+      supabase
+        .from("logs")
+        .select("task_id, date, count")
+        .eq("user_id", me)
+        .in(
+          "task_id",
+          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+        )
+        .gte("date", isoDaysAgo(todayISO, 13)),
+      // the whole circle's today (collective line + circle list)
+      supabase
+        .from("logs")
+        .select("user_id, task_id, count")
+        .eq("date", todayISO)
+        .in(
+          "task_id",
+          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+        ),
+    ]),
+  );
 
   // date → taskId → count (mine)
   const counts: Record<string, Record<string, number>> = {};

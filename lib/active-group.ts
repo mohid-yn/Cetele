@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { q } from "@/lib/db-log";
 
 /**
  * The active group's "real home" (F5): a long-lived cookie, written by Server
@@ -21,10 +22,10 @@ export async function resolveActiveGroup(): Promise<{
   const me = claims?.claims.sub;
   if (!me) return null;
 
-  const { data: rows } = await supabase
-    .from("memberships")
-    .select("group_id, role")
-    .eq("user_id", me);
+  const { data: rows } = await q(
+    "activeGroup.memberships",
+    supabase.from("memberships").select("group_id, role").eq("user_id", me),
+  );
   if (!rows?.length) return null;
 
   const preferred = (await cookies()).get(ACTIVE_GROUP_COOKIE)?.value;

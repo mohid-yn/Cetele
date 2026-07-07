@@ -3,6 +3,7 @@ import { buttonVariants } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { resolveActiveGroup } from "@/lib/active-group";
 import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import { q } from "@/lib/db-log";
 import type { GridRow } from "@/components/app/task-grid";
 import { ProgressClient } from "./progress-client";
 
@@ -52,35 +53,41 @@ export default async function ProgressPage() {
     { data: tasks },
     { data: streak },
     { data: members },
-  ] = await Promise.all([
-    supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
-    supabase
-      .from("tasks")
-      .select("id, label, target_count")
-      .eq("group_id", groupId)
-      .order("sort_order"),
-    supabase
-      .from("streaks")
-      .select("current, longest, freezes_left")
-      .eq("user_id", me)
-      .maybeSingle(),
-    supabase
-      .from("memberships")
-      .select("user_id, profiles(name)")
-      .eq("group_id", groupId),
-  ]);
+  ] = await q(
+    "progress.reads (profile+tasks+streak+members)",
+    Promise.all([
+      supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
+      supabase
+        .from("tasks")
+        .select("id, label, target_count")
+        .eq("group_id", groupId)
+        .order("sort_order"),
+      supabase
+        .from("streaks")
+        .select("current, longest, freezes_left")
+        .eq("user_id", me)
+        .maybeSingle(),
+      supabase
+        .from("memberships")
+        .select("user_id, profiles(name)")
+        .eq("group_id", groupId),
+    ]),
+  );
 
   const tz = profile?.timezone ?? "UTC";
   const todayISO = localDateISO(tz);
   const taskList = tasks ?? [];
   const taskIds = taskList.map((t) => t.id);
 
-  const { data: logs } = await supabase
-    .from("logs")
-    .select("task_id, date, count, logged_by")
-    .eq("user_id", me)
-    .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
-    .gte("date", isoDaysAgo(todayISO, DAYS - 1));
+  const { data: logs } = await q(
+    "progress.logs (my 14d)",
+    supabase
+      .from("logs")
+      .select("task_id, date, count, logged_by")
+      .eq("user_id", me)
+      .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
+      .gte("date", isoDaysAgo(todayISO, DAYS - 1)),
+  );
 
   // `task|date` → { count, loggedBy } (my own record; unique per key).
   const index = new Map<string, { count: number; loggedBy: string | null }>();

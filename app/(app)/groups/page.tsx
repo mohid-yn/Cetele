@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/demo/page-header";
 import { SectionHeading } from "@/components/demo/section-heading";
 import { UsersIcon } from "@/components/demo/icons";
 import { createClient } from "@/lib/supabase/server";
+import { q } from "@/lib/db-log";
 import { NewGroupButton } from "./new-group";
 import { openManage, setActiveGroup } from "./actions";
 
@@ -17,11 +18,14 @@ export default async function GroupsHomePage() {
   const { data } = await supabase.auth.getClaims();
   const me = data?.claims.sub;
 
-  const { data: rows } = await supabase
-    .from("memberships")
-    .select("role, groups(id, name, memberships(count))")
-    .eq("user_id", me ?? "")
-    .order("role");
+  const { data: rows } = await q(
+    "groups.memberships (mine + counts)",
+    supabase
+      .from("memberships")
+      .select("role, groups(id, name, memberships(count))")
+      .eq("user_id", me ?? "")
+      .order("role"),
+  );
 
   const mine = (rows ?? []).filter((r) => r.groups != null);
   const owned = mine.filter((r) => r.role === "owner");

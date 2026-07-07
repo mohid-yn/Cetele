@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { q } from "@/lib/db-log";
 
 /**
  * M5 Server Actions for the group hub's admin-oversight writes (D29). Both
@@ -20,12 +21,15 @@ export async function setCount(
   count: number,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("set_count", {
-    p_user: userId,
-    p_task: taskId,
-    p_date: date,
-    p_count: count,
-  });
+  const { error } = await q(
+    `rpc.set_count (=${count})`,
+    supabase.rpc("set_count", {
+      p_user: userId,
+      p_task: taskId,
+      p_date: date,
+      p_count: count,
+    }),
+  );
   if (error) return { error: error.message };
 
   revalidatePath("/group");
@@ -46,21 +50,24 @@ export async function logForGroup(
   const supabase = await createClient();
 
   // Readable under RLS (I'm a member of this group). RPC re-verifies I'm admin.
-  const { data: members, error: membersError } = await supabase
-    .from("memberships")
-    .select("user_id")
-    .eq("group_id", groupId);
+  const { data: members, error: membersError } = await q(
+    "logForGroup.members",
+    supabase.from("memberships").select("user_id").eq("group_id", groupId),
+  );
   if (membersError) return { error: membersError.message };
   if (!members?.length) return { error: null };
 
-  const results = await Promise.all(
-    members.map((m) =>
-      supabase.rpc("set_count", {
-        p_user: m.user_id,
-        p_task: taskId,
-        p_date: date,
-        p_count: count,
-      }),
+  const results = await q(
+    `logForGroup.set_count ×${members.length}`,
+    Promise.all(
+      members.map((m) =>
+        supabase.rpc("set_count", {
+          p_user: m.user_id,
+          p_task: taskId,
+          p_date: date,
+          p_count: count,
+        }),
+      ),
     ),
   );
   const firstError = results.find((r) => r.error)?.error;

@@ -3,6 +3,7 @@ import { buttonVariants } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { resolveActiveGroup } from "@/lib/active-group";
 import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import { q } from "@/lib/db-log";
 import type { BreakdownMember } from "@/components/app/member-breakdown";
 import type { GridRow } from "@/components/app/task-grid";
 import { GroupLive } from "./group-live";
@@ -59,19 +60,22 @@ export default async function GroupPage() {
     { data: profile },
     { data: tasks },
     { data: members },
-  ] = await Promise.all([
-    supabase.from("groups").select("name").eq("id", groupId).maybeSingle(),
-    supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
-    supabase
-      .from("tasks")
-      .select("id, label, target_count")
-      .eq("group_id", groupId)
-      .order("sort_order"),
-    supabase
-      .from("memberships")
-      .select("user_id, role, profiles(name)")
-      .eq("group_id", groupId),
-  ]);
+  ] = await q(
+    "group.reads (group+profile+tasks+members)",
+    Promise.all([
+      supabase.from("groups").select("name").eq("id", groupId).maybeSingle(),
+      supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
+      supabase
+        .from("tasks")
+        .select("id, label, target_count")
+        .eq("group_id", groupId)
+        .order("sort_order"),
+      supabase
+        .from("memberships")
+        .select("user_id, role, profiles(name)")
+        .eq("group_id", groupId),
+    ]),
+  );
 
   const tz = profile?.timezone ?? "UTC";
   const todayISO = localDateISO(tz);
@@ -82,19 +86,25 @@ export default async function GroupPage() {
 
   // One scan: every member's last-fortnight logs (group-readable). Subsets of
   // this feed today's collective, the 7-day ranking, and the 14-day grids.
-  const { data: logs } = await supabase
-    .from("logs")
-    .select("user_id, task_id, date, count, logged_by")
-    .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
-    .gte("date", isoDaysAgo(todayISO, DAYS - 1));
+  const { data: logs } = await q(
+    "group.logs (14d, all members)",
+    supabase
+      .from("logs")
+      .select("user_id, task_id, date, count, logged_by")
+      .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
+      .gte("date", isoDaysAgo(todayISO, DAYS - 1)),
+  );
 
   // Admin oversight needs peer streaks (RLS: self + members of groups I admin).
   const streakMap = new Map<string, number>();
   if (canManage && memberIds.length) {
-    const { data: streaks } = await supabase
-      .from("streaks")
-      .select("user_id, current")
-      .in("user_id", memberIds);
+    const { data: streaks } = await q(
+      "group.streaks (peers, admin)",
+      supabase
+        .from("streaks")
+        .select("user_id, current")
+        .in("user_id", memberIds),
+    );
     for (const s of streaks ?? []) streakMap.set(s.user_id, s.current);
   }
 

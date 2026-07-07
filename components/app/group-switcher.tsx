@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { setActiveGroup } from "@/app/(app)/groups/actions";
+import { q } from "@/lib/db-log";
 import { ChevronDownIcon, CheckIcon, GridIcon } from "@/components/demo/icons";
 
 type Role = "owner" | "admin" | "member";
@@ -56,10 +57,13 @@ export function GroupSwitcher({
       const { data: claims } = await supabase.auth.getClaims();
       const me = claims?.claims.sub;
       if (!me) return;
-      const { data } = await supabase
-        .from("memberships")
-        .select("role, groups(id, name)")
-        .eq("user_id", me);
+      const { data } = await q(
+        "switcher.memberships",
+        supabase
+          .from("memberships")
+          .select("role, groups(id, name)")
+          .eq("user_id", me),
+      );
       const list: Group[] = (data ?? [])
         .filter((r) => r.groups)
         .map((r) => ({

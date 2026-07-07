@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { q } from "@/lib/db-log";
 
 /**
  * The tap path (M3). All integrity rules live in the increment_count RPC
@@ -15,11 +16,14 @@ export async function incrementCount(
   delta: number,
 ): Promise<{ count: number | null; error: string | null }> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("increment_count", {
-    p_task: taskId,
-    p_date: date,
-    p_delta: delta,
-  });
+  const { data, error } = await q(
+    `rpc.increment_count (+${delta})`,
+    supabase.rpc("increment_count", {
+      p_task: taskId,
+      p_date: date,
+      p_delta: delta,
+    }),
+  );
   if (error) return { count: null, error: error.message };
 
   revalidatePath("/today");
