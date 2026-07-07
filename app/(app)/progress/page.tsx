@@ -1,206 +1,140 @@
-"use client";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui";
+import { createClient } from "@/lib/supabase/server";
+import { resolveActiveGroup } from "@/lib/active-group";
+import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import type { GridRow } from "@/components/app/task-grid";
+import { ProgressClient } from "./progress-client";
 
-import * as React from "react";
-import { Card, CardContent, Badge } from "@/components/ui";
-import { useMock, sel } from "@/lib/mock/store";
-import { TaskBreakdownGrid } from "@/components/demo/task-breakdown-grid";
-import { PageHeader } from "@/components/demo/page-header";
-import { SectionHeading } from "@/components/demo/section-heading";
-import { BadgesGrid } from "@/components/demo/badges";
-import { FlameIcon, ShieldIcon } from "@/components/demo/icons";
-import { useAnimatedNumber } from "@/components/demo/use-animated-number";
+const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
+const DAYS = 14;
 
-/** Small labelled metric used across the consistency views. */
-function Score({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: React.ReactNode;
-  sub?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </span>
-      <span className="font-display text-2xl leading-none font-bold text-foreground tabular-nums">
-        {value}
-      </span>
-      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
-    </div>
-  );
-}
+/**
+ * Progress, server-first (M5 — personal reflection). Streak hero +
+ * never-miss-twice (from `streaks`) and the editable last-14-days task grid
+ * (self-correct via `set_count`, D29) — all off raw `logs` under RLS.
+ *
+ * The 30-day steadfastness band, the group-90 collective rollup, and the badge
+ * grid are deferred to M6 (they read the `daily_completion` rollup, which only
+ * retains what raw logs can't — beyond the 14-day window).
+ */
+export default async function ProgressPage() {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const me = claims?.claims.sub as string;
 
-export default function ProgressPage() {
-  const { state } = useMock();
-  const me = sel.currentUser(state);
-  const group = sel.activeGroup(state);
-  const streak = sel.streak(state, me.id);
-
-  // Heavy-ish derived data — memoise so the realtime ticker doesn't recompute it.
-  // D28: 30-day is the personal steadfastness window (7-day was noisy, 90-day
-  // duplicated it — streak covers momentum); 90-day survives only as the group
-  // collective North Star (PRD §9). 14-day lives in the grid below.
-  // (Admin member-oversight lives under Group → Members, not on this personal tab.)
-  const { c30, groupC90 } = React.useMemo(() => {
-    return {
-      c30: sel.consistency(state, me.id, group.id, 30),
-      groupC90: sel.groupConsistency(state, group.id, 90),
-    };
-  }, [state, me.id, group.id]);
-
-  // Count-up on first paint so the page feels alive, not a static dashboard.
-  const c30Shown = useAnimatedNumber(c30, 700, true);
-  const groupShown = useAnimatedNumber(groupC90, 800, true);
-
-  // GLANCE headline (abstraction rule): one warm, human takeaway up top.
-  const daysComplete30 = Math.round((c30 / 100) * 30);
-  const tone =
-    c30 >= 80
-      ? "steadfast, mashaAllah"
-      : c30 >= 50
-        ? "a strong rhythm — keep building"
-        : c30 >= 25
-          ? "you're finding your rhythm"
-          : "every day is a fresh start";
-  // The 30-day band abstracts the % into a calm word, not a raw grade (research §C).
-  const bandWord =
-    c30 >= 80
-      ? "Steadfast"
-      : c30 >= 50
-        ? "Steady"
-        : c30 >= 25
-          ? "Building"
-          : "Fresh start";
-
-  return (
-    <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
-      <PageHeader
-        title="Progress"
-        subtitle={
-          <span className="text-balance">
-            You&apos;ve fully completed{" "}
-            <span className="font-semibold text-foreground">
-              {daysComplete30} of the last 30 days
-            </span>{" "}
-            — {tone}.
-          </span>
-        }
-      />
-
-      {/* Streak hero — the motivational anchor (moved here from Profile) */}
-      <Card className="bg-primary p-5 text-primary-foreground">
-        <div className="flex items-center gap-4">
-          <div className="grid size-16 shrink-0 place-items-center rounded-full bg-primary-foreground/10">
-            <FlameIcon className="size-8 text-accent" />
-          </div>
-          <div>
-            <p className="font-display text-4xl font-bold tabular-nums">
-              {streak?.current ?? 0}
-            </p>
-            <p className="text-sm text-primary-foreground/70">day streak</p>
-          </div>
-          <div className="ml-auto text-right">
-            <p className="font-display text-2xl font-bold tabular-nums">
-              {streak?.longest ?? 0}
-            </p>
-            <p className="text-xs text-primary-foreground/70">longest</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Never miss twice — forgiveness (moved here from Profile) */}
-      <Card className="p-4">
-        <div className="flex items-start gap-3">
-          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-success-500/15 text-success">
-            <ShieldIcon className="size-5" />
-          </div>
-          <div className="flex-1">
-            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              Never miss twice
-              <Badge variant="success" size="sm">
-                {streak?.freezesLeft ?? 0} freeze
-                {(streak?.freezesLeft ?? 0) === 1 ? "" : "s"} left
-              </Badge>
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Miss a day and a streak-freeze keeps your streak alive — once. The
-              point is to come back, not to be perfect.
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Personal — one 30-day steadfastness band + the last-14-days task grid */}
-      <Card>
-        <CardContent className="flex flex-col gap-5 pt-6">
-          {/* D28: a single abstracted 30-day band replaces the 7/30/90 trio. */}
-          <div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm font-semibold text-foreground">
-                {bandWord}
-              </span>
-              <span className="font-display text-2xl leading-none font-bold text-foreground tabular-nums">
-                {c30Shown}%
-              </span>
-            </div>
-            <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
-                style={{ width: `${c30Shown}%` }}
-              />
-            </div>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              {daysComplete30} of the last 30 days fully completed
-            </p>
-          </div>
-
-          <div>
-            <SectionHeading>Last 14 days · task by task</SectionHeading>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Each row is a task; tap any square to see or correct that
-              day&rsquo;s count.
-            </p>
-            {/* Your own record — editable so you can correct it (D29). */}
-            <TaskBreakdownGrid
-              userId={me.id}
-              groupId={group.id}
-              days={14}
-              editable
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Achievement badges (CET-20) — moved here from Profile */}
-      <BadgesGrid />
-
-      {/* Group collective rollup — shown to everyone (the North Star, visible) */}
-      <Card>
-        <CardContent className="flex items-center justify-between gap-4 pt-6">
-          <div>
-            <Score label="Group · 90 days" value={`${groupShown}%`} />
-            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-              The circle&rsquo;s collective consistency. Goal:{" "}
-              <span className="font-semibold text-foreground">70%+</span>{" "}
-              together over 90 days — showing up, not perfection.
-            </p>
-          </div>
-          <div
-            className="grid size-16 shrink-0 place-items-center rounded-full text-lg font-bold text-primary tabular-nums"
-            style={{
-              background: `conic-gradient(var(--primary) ${groupShown * 3.6}deg, var(--muted) 0)`,
-            }}
-            aria-hidden
+  const active = await resolveActiveGroup();
+  if (!active) {
+    return (
+      <div className="grid flex-1 place-items-center p-8 text-center">
+        <div>
+          <h1 className="font-display text-xl font-bold text-foreground">
+            No progress yet
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Join or create a group to start tracking your rhythm.
+          </p>
+          <Link
+            href="/groups"
+            className={buttonVariants({ variant: "accent", className: "mt-4" })}
           >
-            <span className="grid size-12 place-items-center rounded-full bg-card">
-              {groupShown}%
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            Go to groups
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const groupId = active.groupId;
+
+  const [
+    { data: profile },
+    { data: tasks },
+    { data: streak },
+    { data: members },
+  ] = await Promise.all([
+    supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
+    supabase
+      .from("tasks")
+      .select("id, label, target_count")
+      .eq("group_id", groupId)
+      .order("sort_order"),
+    supabase
+      .from("streaks")
+      .select("current, longest, freezes_left")
+      .eq("user_id", me)
+      .maybeSingle(),
+    supabase
+      .from("memberships")
+      .select("user_id, profiles(name)")
+      .eq("group_id", groupId),
+  ]);
+
+  const tz = profile?.timezone ?? "UTC";
+  const todayISO = localDateISO(tz);
+  const taskList = tasks ?? [];
+  const taskIds = taskList.map((t) => t.id);
+
+  const { data: logs } = await supabase
+    .from("logs")
+    .select("task_id, date, count, logged_by")
+    .eq("user_id", me)
+    .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
+    .gte("date", isoDaysAgo(todayISO, DAYS - 1));
+
+  // `task|date` → { count, loggedBy } (my own record; unique per key).
+  const index = new Map<string, { count: number; loggedBy: string | null }>();
+  for (const l of logs ?? []) {
+    index.set(`${l.task_id}|${l.date}`, {
+      count: l.count,
+      loggedBy: l.logged_by,
+    });
+  }
+  const countOf = (t: string, d: string) => index.get(`${t}|${d}`)?.count ?? 0;
+
+  const names: Record<string, string> = {};
+  for (const m of members ?? [])
+    names[m.user_id] = m.profiles?.name ?? "Member";
+
+  const dates14 = Array.from({ length: DAYS }, (_, i) =>
+    isoDaysAgo(todayISO, DAYS - 1 - i),
+  );
+
+  const rows: GridRow[] = taskList.map((t) => ({
+    taskId: t.id,
+    label: t.label,
+    cells: dates14.map((date) => {
+      const cell = index.get(`${t.id}|${date}`);
+      const count = cell?.count ?? 0;
+      const target = t.target_count;
+      return {
+        date,
+        count,
+        target,
+        pct: target ? Math.min(1, count / target) : 0,
+        full: count >= target,
+        loggedBy: cell?.loggedBy ?? null,
+      };
+    }),
+  }));
+
+  const daysFull = taskList.length
+    ? dates14.filter((d) =>
+        taskList.every((t) => countOf(t.id, d) >= t.target_count),
+      ).length
+    : 0;
+
+  return (
+    <ProgressClient
+      current={streak?.current ?? 0}
+      longest={streak?.longest ?? 0}
+      freezesLeft={streak?.freezes_left ?? 0}
+      daysFull={daysFull}
+      days={DAYS}
+      rows={rows}
+      viewerId={me}
+      names={names}
+      hasTasks={taskList.length > 0}
+    />
   );
 }

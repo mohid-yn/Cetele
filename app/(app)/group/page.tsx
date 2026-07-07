@@ -1,375 +1,234 @@
-"use client";
-
-import * as React from "react";
 import Link from "next/link";
-import { buttonVariants, Button, Dialog } from "@/components/ui";
-import { cn } from "@/lib/utils";
-import { useMock, sel } from "@/lib/mock/store";
-import { PageHeader } from "@/components/demo/page-header";
-import { SectionHeading } from "@/components/demo/section-heading";
-import { GroupSwitcher } from "@/components/demo/group-switcher";
-import { GroupGarden } from "@/components/demo/group-garden";
-import { LiveCounter } from "@/components/demo/live-counter";
-import { PairGoal } from "@/components/demo/pair-goal";
-import { MemberRow } from "@/components/demo/member-row";
-import { MemberBreakdownDialog } from "@/components/demo/member-breakdown";
-import { SteadfastnessBoard } from "@/components/demo/steadfastness-board";
-import { Segmented } from "@/components/demo/segmented";
+import { buttonVariants } from "@/components/ui";
+import { createClient } from "@/lib/supabase/server";
+import { resolveActiveGroup } from "@/lib/active-group";
+import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import type { BreakdownMember } from "@/components/app/member-breakdown";
+import type { GridRow } from "@/components/app/task-grid";
+import { GroupLive } from "./group-live";
 import {
-  CheckIcon,
-  ChevronRightIcon,
-  FlameIcon,
-  GridIcon,
-  SettingsIcon,
-} from "@/components/demo/icons";
-import { isoDate } from "@/lib/mock/data";
+  GroupClient,
+  type Contribution,
+  type Standing,
+  type TaskTotal,
+} from "./group-client";
 
-type Tab = "overview" | "standings" | "members";
-const MEDALS = ["🥇", "🥈", "🥉"];
+const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
+const DAYS = 14;
 
-export default function GroupPage() {
-  const { state, actions } = useMock();
-  const group = sel.activeGroup(state);
-  const tasks = sel.groupTasks(state, group.id);
-  const members = sel.groupMembers(state, group.id);
-  const meId = state.session.currentUserId;
-  const today = isoDate(0);
-  const canManage = sel.canManageGroup(state, meId, group.id);
+/**
+ * Group hub, server-first (M5 — reflection surfaces, CET-9/CET-16). One 14-day
+ * `logs` range scan (group-wide under RLS) powers every read: the live
+ * collective total (Overview), the weekly ranking (Standings), today's
+ * contributions + the admin fortnight breakdown (Members). All bounded scans —
+ * no rollup needed (the 30-day band / steadfastness / group-90 come with M6's
+ * `daily_completion` rollup; the garden / pair goal come with their v2 backends).
+ */
+export default async function GroupPage() {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const me = claims?.claims.sub as string;
 
-  const [tab, setTab] = React.useState<Tab>("overview");
-  // Admin oversight: which member's fortnight breakdown is open (null = none).
-  const [breakdownUserId, setBreakdownUserId] = React.useState<string | null>(
-    null,
+  const active = await resolveActiveGroup();
+  if (!active) {
+    return (
+      <div className="grid flex-1 place-items-center p-8 text-center">
+        <div>
+          <h1 className="font-display text-xl font-bold text-foreground">
+            No group yet
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create a circle, or join one with an invite link.
+          </p>
+          <Link
+            href="/groups"
+            className={buttonVariants({ variant: "accent", className: "mt-4" })}
+          >
+            Go to groups
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const groupId = active.groupId;
+  const canManage = active.role === "owner" || active.role === "admin";
+
+  const [
+    { data: group },
+    { data: profile },
+    { data: tasks },
+    { data: members },
+  ] = await Promise.all([
+    supabase.from("groups").select("name").eq("id", groupId).maybeSingle(),
+    supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
+    supabase
+      .from("tasks")
+      .select("id, label, target_count")
+      .eq("group_id", groupId)
+      .order("sort_order"),
+    supabase
+      .from("memberships")
+      .select("user_id, role, profiles(name)")
+      .eq("group_id", groupId),
+  ]);
+
+  const tz = profile?.timezone ?? "UTC";
+  const todayISO = localDateISO(tz);
+  const taskList = tasks ?? [];
+  const taskIds = taskList.map((t) => t.id);
+  const memberList = members ?? [];
+  const memberIds = memberList.map((m) => m.user_id);
+
+  // One scan: every member's last-fortnight logs (group-readable). Subsets of
+  // this feed today's collective, the 7-day ranking, and the 14-day grids.
+  const { data: logs } = await supabase
+    .from("logs")
+    .select("user_id, task_id, date, count, logged_by")
+    .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
+    .gte("date", isoDaysAgo(todayISO, DAYS - 1));
+
+  // Admin oversight needs peer streaks (RLS: self + members of groups I admin).
+  const streakMap = new Map<string, number>();
+  if (canManage && memberIds.length) {
+    const { data: streaks } = await supabase
+      .from("streaks")
+      .select("user_id, current")
+      .in("user_id", memberIds);
+    for (const s of streaks ?? []) streakMap.set(s.user_id, s.current);
+  }
+
+  // Index: `user|task|date` → { count, loggedBy } (unique per the logs key).
+  const index = new Map<string, { count: number; loggedBy: string | null }>();
+  for (const l of logs ?? []) {
+    index.set(`${l.user_id}|${l.task_id}|${l.date}`, {
+      count: l.count,
+      loggedBy: l.logged_by,
+    });
+  }
+  const countOf = (u: string, t: string, d: string) =>
+    index.get(`${u}|${t}|${d}`)?.count ?? 0;
+
+  const names: Record<string, string> = {};
+  for (const m of memberList) names[m.user_id] = m.profiles?.name ?? "Member";
+
+  const dates14 = Array.from({ length: DAYS }, (_, i) =>
+    isoDaysAgo(todayISO, DAYS - 1 - i),
   );
-  // D29: the in-person halaqah "log for the group" quick-action dialog.
-  const [groupLogOpen, setGroupLogOpen] = React.useState(false);
+  const last7 = new Set(
+    Array.from({ length: 7 }, (_, i) => isoDaysAgo(todayISO, i)),
+  );
 
-  // Per-task collective progress: everyone's counts today vs target × members.
-  const taskTotals = tasks.map((t) => {
-    const total = state.logs
-      .filter((l) => l.taskId === t.id && l.date === today)
-      .reduce((s, l) => s + l.count, 0);
-    return { task: t, total, goal: t.targetCount * members.length };
-  });
+  // Overview — collective per-task total today vs (target × members).
+  const taskTotals: TaskTotal[] = taskList.map((t) => ({
+    taskId: t.id,
+    label: t.label,
+    total: memberIds.reduce((s, u) => s + countOf(u, t.id, todayISO), 0),
+    goal: t.target_count * memberList.length,
+  }));
 
-  // Today's contributions per member (the Members view).
-  const taskIds = new Set(tasks.map((t) => t.id));
-  const contributions = members
+  // Members — today's total contribution per member (sorted desc).
+  const contributions: Contribution[] = memberList
     .map((m) => ({
-      ...m,
-      today: state.logs
-        .filter(
-          (l) =>
-            l.userId === m.userId && taskIds.has(l.taskId) && l.date === today,
-        )
-        .reduce((s, l) => s + l.count, 0),
+      userId: m.user_id,
+      name: names[m.user_id],
+      role: m.role as Contribution["role"],
+      isMe: m.user_id === me,
+      today: taskList.reduce(
+        (s, t) => s + countOf(m.user_id, t.id, todayISO),
+        0,
+      ),
     }))
     .sort((a, b) => b.today - a.today);
 
-  const standings = sel.leaderboard(state, group.id);
+  // Standings — weekly ranking: days-active (any count) then total, over 7 days.
+  // (No per-row streak: peer streaks aren't member-readable under RLS — that
+  // column is admin-only, surfaced in the breakdown below.)
+  const standings: Standing[] = memberList
+    .map((m) => {
+      let total = 0;
+      const activeDates = new Set<string>();
+      for (const t of taskList) {
+        for (const d of last7) {
+          const c = countOf(m.user_id, t.id, d);
+          if (c > 0) {
+            total += c;
+            activeDates.add(d);
+          }
+        }
+      }
+      return {
+        userId: m.user_id,
+        name: names[m.user_id],
+        isMe: m.user_id === me,
+        daysActive: activeDates.size,
+        total,
+      };
+    })
+    .sort((a, b) => b.daysActive - a.daysActive || b.total - a.total);
+
+  // Members breakdown — the admin-only fortnight grid + summary, per member.
+  const breakdowns: Record<string, BreakdownMember> = {};
+  if (canManage) {
+    for (const m of memberList) {
+      const rows: GridRow[] = taskList.map((t) => ({
+        taskId: t.id,
+        label: t.label,
+        cells: dates14.map((date) => {
+          const cell = index.get(`${m.user_id}|${t.id}|${date}`);
+          const count = cell?.count ?? 0;
+          const target = t.target_count;
+          return {
+            date,
+            count,
+            target,
+            pct: target ? Math.min(1, count / target) : 0,
+            full: count >= target,
+            loggedBy: cell?.loggedBy ?? null,
+          };
+        }),
+      }));
+      const daysFull = taskList.length
+        ? dates14.filter((d) =>
+            taskList.every(
+              (t) => countOf(m.user_id, t.id, d) >= t.target_count,
+            ),
+          ).length
+        : 0;
+      breakdowns[m.user_id] = {
+        id: m.user_id,
+        name: names[m.user_id],
+        role: m.role as BreakdownMember["role"],
+        score: Math.round((daysFull / DAYS) * 100),
+        daysFull,
+        streak: streakMap.get(m.user_id) ?? 0,
+        rows,
+      };
+    }
+  }
 
   return (
-    <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
-      <PageHeader
-        title={
-          <GroupSwitcher className="-ml-2 px-2 py-0.5 font-display text-2xl font-bold" />
-        }
-        subtitle={
-          <span className="px-0.5">
-            {members.length} members ·{" "}
-            <span className="font-mono">{group.inviteCode}</span>
-          </span>
-        }
-        action={
-          <div className="flex items-center gap-1.5">
-            <Link
-              href="/groups"
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              <GridIcon className="size-4" />
-              Groups
-            </Link>
-            {canManage && (
-              <Link
-                href="/group/manage"
-                aria-label="Manage group"
-                className={buttonVariants({ variant: "outline", size: "icon" })}
-              >
-                <SettingsIcon className="size-5" />
-              </Link>
-            )}
-          </div>
-        }
+    <>
+      <GroupLive groupId={groupId} taskIds={taskIds} />
+      <GroupClient
+        groupId={groupId}
+        groupName={group?.name ?? "Circle"}
+        memberCount={memberList.length}
+        canManage={canManage}
+        todayISO={todayISO}
+        days={DAYS}
+        tasks={taskList.map((t) => ({
+          id: t.id,
+          label: t.label,
+          target: t.target_count,
+        }))}
+        taskTotals={taskTotals}
+        contributions={contributions}
+        standings={standings}
+        breakdowns={breakdowns}
+        names={names}
+        viewerId={me}
       />
-
-      <Segmented<Tab>
-        value={tab}
-        onChange={setTab}
-        options={[
-          { value: "overview", label: "Overview" },
-          { value: "standings", label: "Standings" },
-          { value: "members", label: "Members" },
-        ]}
-      />
-
-      {/* ---- Overview: the collective hero ---- */}
-      {tab === "overview" && (
-        <>
-          <GroupGarden />
-          <LiveCounter />
-
-          <section>
-            <SectionHeading>Collective progress</SectionHeading>
-            <ul className="flex flex-col gap-3">
-              {taskTotals.map(({ task, total, goal }) => {
-                const pct = goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
-                const met = goal > 0 && total >= goal;
-                return (
-                  <li key={task.id}>
-                    <div className="mb-1 flex items-baseline justify-between text-sm">
-                      <span className="flex items-center gap-1.5 font-medium text-foreground">
-                        {task.label}
-                        {met && (
-                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
-                            <CheckIcon className="size-3.5" />
-                            met
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-muted-foreground tabular-nums">
-                        {total.toLocaleString()} / {goal.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]",
-                          met ? "bg-success" : "bg-primary",
-                        )}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        </>
-      )}
-
-      {/* ---- Standings: winnable pair goal + the (for-fun) ranking ---- */}
-      {tab === "standings" && (
-        <>
-          <PairGoal />
-          <p className="text-xs text-muted-foreground">
-            The ranking is for fun — the pair goal above is the one you win
-            together.
-          </p>
-          <ol className="flex flex-col gap-2">
-            {standings.map((row, i) => {
-              const isMe = row.userId === meId;
-              return (
-                <li
-                  key={row.userId}
-                  className={cn(
-                    "rounded-2xl border p-3 shadow-sm",
-                    // Opacity-tint (not a fixed light step) so the "you" highlight
-                    // stays readable in dark too — bg-accent-50 was white-on-white.
-                    isMe
-                      ? "border-accent-500/40 bg-accent-500/10"
-                      : "border-border bg-card",
-                  )}
-                >
-                  <MemberRow
-                    name={row.user.name}
-                    you={isMe}
-                    leading={
-                      <span className="w-7 shrink-0 text-center font-display text-lg font-bold text-muted-foreground tabular-nums">
-                        {i < 3 ? MEDALS[i] : i + 1}
-                      </span>
-                    }
-                    status={
-                      <span className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-0.5">
-                          <FlameIcon className="size-3.5 text-accent" />
-                          {row.streak}d
-                        </span>
-                        <span>· {row.daysActive}/7 days active</span>
-                      </span>
-                    }
-                    trailing={
-                      <div className="text-right">
-                        <p className="font-display text-base font-bold text-foreground tabular-nums">
-                          {row.total.toLocaleString()}
-                        </p>
-                        <p className="text-xs text-muted-foreground">counts</p>
-                      </div>
-                    }
-                  />
-                </li>
-              );
-            })}
-          </ol>
-        </>
-      )}
-
-      {/* ---- Members: who's in the circle + today's contribution ---- */}
-      {tab === "members" && (
-        <>
-          <section>
-            <SectionHeading
-              action={
-                canManage ? (
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setGroupLogOpen(true)}
-                      className="font-medium text-primary"
-                    >
-                      Log for group
-                    </button>
-                    <Link
-                      href="/group/manage"
-                      className="font-medium text-primary"
-                    >
-                      Manage
-                    </Link>
-                  </div>
-                ) : undefined
-              }
-            >
-              {members.length} members
-            </SectionHeading>
-            {canManage && (
-              <p className="mb-2 text-xs text-muted-foreground">
-                Tap a member to view or log their last 14 days, task by task.
-              </p>
-            )}
-            <ul className="flex flex-col gap-1.5">
-              {contributions.map((m) => {
-                const row = (
-                  <MemberRow
-                    name={m.user.name}
-                    role={m.role}
-                    you={m.userId === meId}
-                    trailing={
-                      <div className="flex items-center gap-2">
-                        <div className="text-right">
-                          <p className="font-display text-sm font-bold text-foreground tabular-nums">
-                            {m.today.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">today</p>
-                        </div>
-                        {canManage && (
-                          <ChevronRightIcon className="size-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    }
-                  />
-                );
-                return (
-                  <li key={m.userId}>
-                    {canManage ? (
-                      <button
-                        type="button"
-                        onClick={() => setBreakdownUserId(m.userId)}
-                        aria-label={`See ${m.user.name}'s last 14 days`}
-                        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-muted/50"
-                      >
-                        {row}
-                      </button>
-                    ) : (
-                      <div className="rounded-xl border border-border bg-card px-3 py-2">
-                        {row}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            {canManage && (
-              <div className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-                Invite with code{" "}
-                <span className="font-mono font-semibold text-foreground">
-                  {group.inviteCode}
-                </span>{" "}
-                — or add members from{" "}
-                <Link href="/group/manage" className="font-medium text-primary">
-                  Manage
-                </Link>
-                .
-              </div>
-            )}
-          </section>
-          {/* Steadfastness recognition — admin/owner-only, group-scoped (D31) */}
-          {canManage && <SteadfastnessBoard groupId={group.id} />}
-        </>
-      )}
-
-      {canManage && (
-        <MemberBreakdownDialog
-          key={breakdownUserId ?? "none"}
-          userId={breakdownUserId}
-          groupId={group.id}
-          open={breakdownUserId !== null}
-          onClose={() => setBreakdownUserId(null)}
-        />
-      )}
-
-      {/* D29: log a task for the whole circle today (in-person halaqah tally) */}
-      {canManage && (
-        <Dialog
-          open={groupLogOpen}
-          onClose={() => setGroupLogOpen(false)}
-          title="Log for the group"
-          description="Mark a task done for everyone today — for an in-person session. Each entry is recorded as logged by you."
-          className="max-w-md"
-        >
-          <ul className="flex flex-col gap-2">
-            {tasks.map((t) => {
-              const done = taskTotals.find((x) => x.task.id === t.id);
-              const allDone = done ? done.total >= done.goal : false;
-              return (
-                <li
-                  key={t.id}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {t.label}
-                    </p>
-                    <p className="text-xs text-muted-foreground tabular-nums">
-                      target {t.targetCount.toLocaleString()} · ×
-                      {members.length} members
-                    </p>
-                  </div>
-                  {allDone ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
-                      <CheckIcon className="size-4" />
-                      all done
-                    </span>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        actions.logForGroup(
-                          group.id,
-                          t.id,
-                          today,
-                          t.targetCount,
-                        )
-                      }
-                    >
-                      Mark all done
-                    </Button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </Dialog>
-      )}
-    </div>
+    </>
   );
 }
