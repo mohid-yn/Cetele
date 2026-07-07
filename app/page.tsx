@@ -13,6 +13,7 @@ import {
   AUTH_NEXT_MAX_AGE,
   sanitizeNextPath,
 } from "@/lib/auth-next";
+import { devMagicLink } from "./dev-auth";
 
 /**
  * Google sign-in is hidden until the provider is actually configured
@@ -32,6 +33,16 @@ const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_AUTH_GOOGLE === "1";
  * public sign-in.
  */
 const EMAIL_ENABLED = process.env.NEXT_PUBLIC_AUTH_EMAIL === "1";
+
+/**
+ * DEV-ONLY one-tap sign-in. Set NEXT_PUBLIC_AUTH_DEV=1 in .env.local to show a
+ * button that sends a magic link and auto-follows it from the local Mailpit
+ * inbox — so you skip the mailbox during local development. The server action
+ * it calls is hard-gated to the local 127.0.0.1 stack (app/dev-auth.ts); never
+ * set this flag in Vercel.
+ */
+const DEV_LOGIN = process.env.NEXT_PUBLIC_AUTH_DEV === "1";
+const DEV_EMAIL = "dev@cetele.local";
 
 /** Read `?next=` (set by the proxy gate for e.g. an invite link). */
 function readNextPath() {
@@ -104,6 +115,39 @@ export default function LoginPage() {
     else setSent(true);
   }
 
+  /**
+   * Dev one-tap: send the magic link, then follow it straight from Mailpit —
+   * no inbox. Uses the typed email if present, else a fixed dev account so it's
+   * a single click. Local-only (the server action refuses any non-127.0.0.1
+   * stack); guarded behind DEV_LOGIN so it never renders in prod.
+   */
+  async function devSignIn() {
+    setError(null);
+    setPending(true);
+    stashNextPath();
+    const devEmail = email || DEV_EMAIL;
+    const since = Date.now();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: devEmail,
+      options: {
+        emailRedirectTo: `${location.origin}/auth/confirm`,
+        shouldCreateUser: true,
+      },
+    });
+    if (error) {
+      setPending(false);
+      setError(error.message);
+      return;
+    }
+    const link = await devMagicLink(devEmail, since);
+    if (!link) {
+      setPending(false);
+      setError("Dev sign-in failed — is `supabase start` running?");
+      return;
+    }
+    window.location.href = link;
+  }
+
   return (
     <main className="min-h-dvh lg:grid lg:grid-cols-2">
       {/* Left — brand imagery (desktop only) */}
@@ -137,6 +181,29 @@ export default function LoginPage() {
 
           {/* Sign-in card */}
           <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-md">
+            {DEV_LOGIN && (
+              <>
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  disabled={pending}
+                  onClick={devSignIn}
+                >
+                  {pending ? "Signing in…" : "Dev sign-in (skip inbox)"}
+                </Button>
+                <p className="text-center text-[11px] text-muted-foreground">
+                  Local dev only · {email || DEV_EMAIL}
+                </p>
+                {(GOOGLE_ENABLED || EMAIL_ENABLED) && (
+                  <div className="flex items-center gap-3 py-1 text-xs text-muted-foreground">
+                    <span className="h-px flex-1 bg-border" />
+                    or
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+                )}
+              </>
+            )}
+
             {GOOGLE_ENABLED && (
               <Button
                 variant="outline"
