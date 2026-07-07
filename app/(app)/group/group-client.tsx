@@ -13,6 +13,7 @@ import {
   MemberBreakdownDialog,
   type BreakdownMember,
 } from "@/components/app/member-breakdown";
+import { GroupSwitcher } from "@/components/app/group-switcher";
 import {
   CheckIcon,
   ChevronRightIcon,
@@ -103,9 +104,10 @@ export function GroupClient({
     <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
       <PageHeader
         title={
-          <span className="font-display text-2xl font-bold text-foreground">
-            {groupName}
-          </span>
+          <GroupSwitcher
+            className="-ml-2 px-2 py-0.5 font-display text-2xl font-bold"
+            initialName={groupName}
+          />
         }
         subtitle={
           <span>

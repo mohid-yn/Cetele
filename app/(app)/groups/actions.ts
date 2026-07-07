@@ -39,3 +39,29 @@ export async function openManage(groupId: string) {
   });
   redirect("/group/manage");
 }
+
+/**
+ * Switch the active group (F5 cookie home) and land somewhere real. Powers the
+ * sidebar/header group switcher and the tappable /groups cards — so a member of
+ * several circles can actually move between them. Visibility is RLS-validated
+ * (a group you can't see never becomes active); `next` is confined to internal
+ * paths (no open redirect), defaulting to /today.
+ */
+export async function setActiveGroup(groupId: string, next?: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("groups")
+    .select("id")
+    .eq("id", groupId)
+    .maybeSingle();
+  if (!data) return;
+
+  (await cookies()).set(ACTIVE_GROUP_COOKIE, groupId, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
+  const dest =
+    next && next.startsWith("/") && !next.startsWith("//") ? next : "/today";
+  redirect(dest);
+}

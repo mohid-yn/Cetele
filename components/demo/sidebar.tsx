@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
-import { GroupSwitcher } from "./group-switcher";
+import { GroupSwitcher } from "@/components/app/group-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { WebAppLogo } from "@/components/ui/logo";
 

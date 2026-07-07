@@ -46,6 +46,26 @@ async function signIn(page: Page, email: string) {
   await page.waitForURL("**/today");
 }
 
+/** Create a group + one task via the real UI (owner flow). */
+async function createGroupWithTask(
+  page: Page,
+  name: string,
+  task: string,
+  target: number,
+) {
+  await page.goto("/groups");
+  await page.click('button:has-text("New group")');
+  await page.fill("#new-group-name", name);
+  await page.click('button:has-text("Create group")');
+  const card = page.getByRole("listitem").filter({ hasText: name });
+  await card.getByRole("button", { name: "Manage" }).click();
+  await page.waitForURL("**/group/manage");
+  await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill(task);
+  await page.getByPlaceholder("Daily target").last().fill(String(target));
+  await page.click('button:has-text("Add task")');
+  await expect(page.getByText(`target ${target} / day`)).toBeVisible();
+}
+
 test("reflection surfaces read real logs; admin proxy-edit persists", async ({
   browser,
 }) => {
@@ -135,4 +155,34 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
 
   await ctxA.close();
   await ctxB.close();
+});
+
+test("switching the active group changes the data shown", async ({ page }) => {
+  const C = `e2e-m5-c-${STAMP}@example.com`;
+  await signIn(page, C);
+  await createGroupWithTask(page, "Alpha Circle", "Tasbih", 10);
+  await createGroupWithTask(page, "Beta Circle", "Salawat", 5);
+
+  // Tapping a /groups card makes that circle active and opens Today (no client
+  // JS needed — the card is a Server-Action form). Alpha shows only its task.
+  await page.goto("/groups");
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Alpha Circle" })
+    .getByRole("button", { name: /Alpha Circle/ })
+    .click();
+  await page.waitForURL("**/today");
+  await expect(page.getByText("Continue Tasbih")).toBeVisible();
+  await expect(page.getByText("Salawat")).toHaveCount(0);
+
+  // Switch to Beta → Today now reflects Beta's task instead.
+  await page.goto("/groups");
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Beta Circle" })
+    .getByRole("button", { name: /Beta Circle/ })
+    .click();
+  await page.waitForURL("**/today");
+  await expect(page.getByText("Continue Salawat")).toBeVisible();
+  await expect(page.getByText("Tasbih")).toHaveCount(0);
 });
