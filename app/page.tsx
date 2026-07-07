@@ -63,18 +63,7 @@ function stashNextPath() {
 
 export default function LoginPage() {
   const router = useRouter();
-  // Create the browser client lazily (first effect/handler call), never during
-  // render. `/` is statically prerendered, and `createClient()` throws when the
-  // Supabase env is absent (e.g. the CI `verify` build, which has no env) — so
-  // creating it in render would crash the build. Effects/handlers only run in
-  // the browser, where the build-inlined env is always present.
-  const supabaseRef = React.useRef<ReturnType<typeof createClient> | null>(
-    null,
-  );
-  const getSupabase = React.useCallback(
-    () => (supabaseRef.current ??= createClient()),
-    [],
-  );
+  const supabase = React.useMemo(() => createClient(), []);
   const [email, setEmail] = React.useState("");
   const [sent, setSent] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -85,29 +74,27 @@ export default function LoginPage() {
   // miss), go straight into the app instead of showing the login screen.
   React.useEffect(() => {
     let cancelled = false;
-    getSupabase()
-      .auth.getClaims()
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.claims) {
-          router.replace(readNextPath() ?? "/today");
-          return;
-        }
-        // Not signed in: surface a failed OAuth exchange (callback →
-        // /?auth-error=1) instead of a silent bounce back to login.
-        if (new URLSearchParams(location.search).get("auth-error")) {
-          setError("Sign-in didn't complete. Please try again.");
-        }
-      });
+    supabase.auth.getClaims().then(({ data }) => {
+      if (cancelled) return;
+      if (data?.claims) {
+        router.replace(readNextPath() ?? "/today");
+        return;
+      }
+      // Not signed in: surface a failed OAuth exchange (callback →
+      // /?auth-error=1) instead of a silent bounce back to login.
+      if (new URLSearchParams(location.search).get("auth-error")) {
+        setError("Sign-in didn't complete. Please try again.");
+      }
+    });
     return () => {
       cancelled = true;
     };
-  }, [getSupabase, router]);
+  }, [supabase, router]);
 
   async function signInWithGoogle() {
     setError(null);
     stashNextPath();
-    const { error } = await getSupabase().auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${location.origin}/auth/callback` },
     });
@@ -119,7 +106,7 @@ export default function LoginPage() {
     setError(null);
     setPending(true);
     stashNextPath();
-    const { error } = await getSupabase().auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${location.origin}/auth/confirm` },
     });
@@ -140,7 +127,7 @@ export default function LoginPage() {
     stashNextPath();
     const devEmail = email || DEV_EMAIL;
     const since = Date.now();
-    const { error } = await getSupabase().auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email: devEmail,
       options: {
         emailRedirectTo: `${location.origin}/auth/confirm`,
