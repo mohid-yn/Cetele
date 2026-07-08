@@ -40,6 +40,16 @@ jobs:
 
       - name: Build
         run: pnpm build
+        env:
+          # Public, build-inlined Supabase vars — NOT secrets (they ship to the
+          # browser; RLS protects the data, same values stack-tests hardcodes).
+          # `NEXT_PUBLIC_*` is baked in at build, and `/` statically prerenders a
+          # browser client, so the build needs *some* value present or it throws
+          # ("URL and API key are required"). This job only typechecks/compiles
+          # the bundle, so a placeholder is fine — every real build (Vercel prod/
+          # preview) injects the true values.
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
 
   # Boots the real local Supabase stack:
   #  1. migration replay + seed on a fresh Postgres (the IaC reproducibility gate)
