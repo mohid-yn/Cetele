@@ -11,12 +11,24 @@ import { TaskGrid, type GridRow } from "@/components/app/task-grid";
  * never-miss-twice + the editable last-14-days grid (self-correct, D29). Data
  * arrives as props; the grid writes through the `setCount` action.
  */
+/** A calm word for the 30-day band (D28 — abstract the number, don't grade). */
+function bandWord(pct: number): string {
+  if (pct >= 80) return "Steadfast";
+  if (pct >= 60) return "Steady";
+  if (pct >= 40) return "Building";
+  if (pct >= 20) return "Finding your rhythm";
+  return "Fresh start";
+}
+
 export function ProgressClient({
   current,
   longest,
   freezesLeft,
   daysFull,
   days,
+  band,
+  bandFull,
+  bandWindow,
   rows,
   viewerId,
   names,
@@ -27,6 +39,9 @@ export function ProgressClient({
   freezesLeft: number;
   daysFull: number;
   days: number;
+  band: number;
+  bandFull: number;
+  bandWindow: number;
   rows: GridRow[];
   viewerId: string;
   names: Record<string, string>;
@@ -75,6 +90,32 @@ export function ProgressClient({
             <p className="text-xs text-primary-foreground/70">longest</p>
           </div>
         </div>
+      </Card>
+
+      {/* 30-day consistency band (D28 — a calm word + %, from the rollup) */}
+      <Card className="p-5">
+        <div className="flex items-baseline justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">
+              Consistency · last {bandWindow} days
+            </h2>
+            <p className="mt-1 text-sm font-semibold text-primary">
+              {bandWord(band)}
+            </p>
+          </div>
+          <span className="font-display text-2xl font-bold text-foreground tabular-nums">
+            {band}%
+          </span>
+        </div>
+        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
+            style={{ width: `${band}%` }}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {bandFull} of the last {bandWindow} days fully completed.
+        </p>
       </Card>
 
       {/* Never miss twice — forgiveness */}

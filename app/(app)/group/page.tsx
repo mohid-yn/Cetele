@@ -11,11 +11,14 @@ import {
   GroupClient,
   type Contribution,
   type Standing,
+  type Steadfast,
   type TaskTotal,
 } from "./group-client";
 
 const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
 const DAYS = 14;
+const STEADFAST_WINDOW = 90;
+const STEADFAST_BAR = 85;
 
 /**
  * Group hub, server-first (M5 — reflection surfaces, CET-9/CET-16). One 14-day
@@ -217,6 +220,56 @@ export default async function GroupPage() {
     }
   }
 
+  // M6 — the group's 90-day collective consistency (the North Star, PRD §9).
+  // An aggregate RPC so a plain member sees the figure without reading peers'
+  // individual rollup rows (RLS forbids that; the RPC returns only the number).
+  const { data: groupConsistency90 } = await q(
+    "group.group_consistency (90d)",
+    supabase.rpc("group_consistency", { p_group: groupId, p_days: 90 }),
+  );
+
+  // M6 — the admin-only steadfastness board (D31): each member's recent
+  // consistency RATE = avg(completion_pct) over their last-90 rollup rows
+  // (a rate, not a sum; partial credit); ≥14 active days to qualify; an ≥85%
+  // recognition bar (not a single winner). Admin reads members' rows under RLS.
+  let steadfastness: Steadfast[] = [];
+  if (canManage && memberIds.length) {
+    const { data: dc } = await q(
+      "group.daily_completion (90d, steadfastness)",
+      supabase
+        .from("daily_completion")
+        .select("user_id, completion_pct")
+        .eq("group_id", groupId)
+        .gte("date", isoDaysAgo(todayISO, STEADFAST_WINDOW)),
+    );
+    const agg = new Map<string, { sum: number; n: number; active: number }>();
+    for (const r of dc ?? []) {
+      const pct = Number(r.completion_pct);
+      const a = agg.get(r.user_id) ?? { sum: 0, n: 0, active: 0 };
+      a.sum += pct;
+      a.n += 1;
+      if (pct > 0) a.active += 1;
+      agg.set(r.user_id, a);
+    }
+    steadfastness = memberList
+      .map((m) => {
+        const a = agg.get(m.user_id);
+        const measuredDays = a?.active ?? 0;
+        const eligible = measuredDays >= 14;
+        const pct = a && a.n ? Math.round(a.sum / a.n) : 0;
+        return {
+          userId: m.user_id,
+          name: names[m.user_id],
+          isMe: m.user_id === me,
+          pct,
+          measuredDays,
+          eligible,
+          meetsBar: eligible && pct >= STEADFAST_BAR,
+        };
+      })
+      .sort((a, b) => Number(b.eligible) - Number(a.eligible) || b.pct - a.pct);
+  }
+
   return (
     <>
       <GroupLive groupId={groupId} taskIds={taskIds} />
@@ -236,6 +289,9 @@ export default async function GroupPage() {
         contributions={contributions}
         standings={standings}
         breakdowns={breakdowns}
+        groupConsistency90={groupConsistency90 ?? 0}
+        steadfastness={steadfastness}
+        steadfastBar={STEADFAST_BAR}
         names={names}
         viewerId={me}
       />

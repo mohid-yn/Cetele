@@ -14,6 +14,7 @@ import {
   type BreakdownMember,
 } from "@/components/app/member-breakdown";
 import { GroupSwitcher } from "@/components/app/group-switcher";
+import { SteadfastnessBoard } from "@/components/app/steadfastness-board";
 import {
   CheckIcon,
   ChevronRightIcon,
@@ -47,6 +48,15 @@ export type Standing = {
   daysActive: number;
   total: number;
 };
+export type Steadfast = {
+  userId: string;
+  name: string;
+  isMe: boolean;
+  pct: number;
+  measuredDays: number;
+  eligible: boolean;
+  meetsBar: boolean;
+};
 
 export function GroupClient({
   groupId,
@@ -60,6 +70,9 @@ export function GroupClient({
   contributions,
   standings,
   breakdowns,
+  groupConsistency90,
+  steadfastness,
+  steadfastBar,
   names,
   viewerId,
 }: {
@@ -75,6 +88,11 @@ export function GroupClient({
   standings: Standing[];
   /** Per-member fortnight breakdown, admin-only ({} otherwise). */
   breakdowns: Record<string, BreakdownMember>;
+  /** The group's 90-day collective consistency (North Star, PRD §9). */
+  groupConsistency90: number;
+  /** Admin-only steadfastness board ([] for plain members). */
+  steadfastness: Steadfast[];
+  steadfastBar: number;
   names: Record<string, string>;
   viewerId: string;
 }) {
@@ -164,6 +182,30 @@ export function GroupClient({
               {collectiveTotal.toLocaleString()} of{" "}
               {collectiveGoal.toLocaleString()} toward today&rsquo;s goal
             </p>
+          </section>
+
+          {/* M6 — the durable North Star (90-day collective consistency) */}
+          <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-baseline justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Steadfast together · 90 days
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  The circle&rsquo;s share of fully-completed days — the number
+                  we grow.
+                </p>
+              </div>
+              <span className="font-display text-3xl font-bold text-primary tabular-nums">
+                {groupConsistency90}%
+              </span>
+            </div>
+            <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
+                style={{ width: `${groupConsistency90}%` }}
+              />
+            </div>
           </section>
 
           <section>
@@ -334,6 +376,13 @@ export function GroupClient({
                 Manage
               </Link>{" "}
               — share an invite link or code.
+            </div>
+          )}
+
+          {/* M6 · D31 — admin-only steadfastness recognition board */}
+          {canManage && steadfastness.length > 0 && (
+            <div className="mt-6">
+              <SteadfastnessBoard board={steadfastness} bar={steadfastBar} />
             </div>
           )}
         </section>

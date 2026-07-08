@@ -9,6 +9,7 @@ import { ProgressClient } from "./progress-client";
 
 const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
 const DAYS = 14;
+const BAND_WINDOW = 30;
 
 /**
  * Progress, server-first (M5 — personal reflection). Streak hero +
@@ -79,15 +80,36 @@ export default async function ProgressPage() {
   const taskList = tasks ?? [];
   const taskIds = taskList.map((t) => t.id);
 
-  const { data: logs } = await q(
-    "progress.logs (my 14d)",
-    supabase
-      .from("logs")
-      .select("task_id, date, count, logged_by")
-      .eq("user_id", me)
-      .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
-      .gte("date", isoDaysAgo(todayISO, DAYS - 1)),
-  );
+  const [{ data: logs }, { data: dc30 }] = await Promise.all([
+    q(
+      "progress.logs (my 14d)",
+      supabase
+        .from("logs")
+        .select("task_id, date, count, logged_by")
+        .eq("user_id", me)
+        .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
+        .gte("date", isoDaysAgo(todayISO, DAYS - 1)),
+    ),
+    // M6: the 30-day consistency band reads the rollup (raw logs only keep 14
+    // days). Completed days only — today has no rollup row yet (D8: don't dip
+    // the number for a day still in progress).
+    q(
+      "progress.daily_completion (30d band)",
+      supabase
+        .from("daily_completion")
+        .select("completion_pct")
+        .eq("user_id", me)
+        .eq("group_id", groupId)
+        .gte("date", isoDaysAgo(todayISO, BAND_WINDOW)),
+    ),
+  ]);
+
+  // Band = % of the last 30 completed days that were fully done (all rings).
+  // A full day rolls up to exactly 100; missing/partial days aren't counted.
+  const bandFull = (dc30 ?? []).filter(
+    (r) => Number(r.completion_pct) >= 100,
+  ).length;
+  const band = Math.round((bandFull / BAND_WINDOW) * 100);
 
   // `task|date` → { count, loggedBy } (my own record; unique per key).
   const index = new Map<string, { count: number; loggedBy: string | null }>();
@@ -138,6 +160,9 @@ export default async function ProgressPage() {
       freezesLeft={streak?.freezes_left ?? 0}
       daysFull={daysFull}
       days={DAYS}
+      band={band}
+      bandFull={bandFull}
+      bandWindow={BAND_WINDOW}
       rows={rows}
       viewerId={me}
       names={names}

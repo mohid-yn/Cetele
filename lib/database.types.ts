@@ -34,6 +34,42 @@ export type Database = {
   };
   public: {
     Tables: {
+      daily_completion: {
+        Row: {
+          completion_pct: number;
+          date: string;
+          group_id: string;
+          user_id: string;
+        };
+        Insert: {
+          completion_pct: number;
+          date: string;
+          group_id: string;
+          user_id: string;
+        };
+        Update: {
+          completion_pct?: number;
+          date?: string;
+          group_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "daily_completion_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "daily_completion_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       groups: {
         Row: {
           created_at: string;
@@ -152,18 +188,21 @@ export type Database = {
       };
       memberships: {
         Row: {
+          created_at: string;
           group_id: string;
           id: string;
           role: string;
           user_id: string;
         };
         Insert: {
+          created_at?: string;
           group_id: string;
           id?: string;
           role?: string;
           user_id: string;
         };
         Update: {
+          created_at?: string;
           group_id?: string;
           id?: string;
           role?: string;
@@ -314,6 +353,10 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      group_consistency: {
+        Args: { p_days: number; p_group: string };
+        Returns: number;
       };
       increment_count: {
         Args: { p_date: string; p_delta: number; p_task: string };

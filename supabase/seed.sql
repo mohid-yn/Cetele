@@ -25,11 +25,13 @@ insert into public.groups (id, name, created_by)
 values ('00000000-0000-0000-0000-0000000000b1', 'Fajr Circle', '00000000-0000-0000-0000-0000000000a1')
 on conflict (id) do nothing;
 
-insert into public.memberships (user_id, group_id, role)
+-- Backdated joins (created_at, M6) so the members have an enrolled span for the
+-- steadfastness rollup — a brand-new "joined today" member has no completed days.
+insert into public.memberships (user_id, group_id, role, created_at)
 values
-  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000b1', 'owner'),
-  ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-0000000000b1', 'admin'),
-  ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000b1', 'member')
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000b1', 'owner',  current_date - 40),
+  ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-0000000000b1', 'admin',  current_date - 40),
+  ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000b1', 'member', current_date - 40)
 on conflict (user_id, group_id) do nothing;
 
 -- The group's task list (M2). Targets small so local testing closes rings fast.
@@ -62,3 +64,8 @@ on conflict (user_id, task_id, date) do nothing;
 update public.streaks
 set current = 3, longest = 5, last_active = current_date - 1
 where user_id = '00000000-0000-0000-0000-0000000000a1';
+
+-- Populate the daily_completion rollup (M6) from the seeded logs so the 30-day
+-- band, group-90 North Star, and steadfastness board render on a fresh DB. In
+-- production the nightly pg_cron job does this; here we run it once inline.
+select private.run_daily_rollup();
