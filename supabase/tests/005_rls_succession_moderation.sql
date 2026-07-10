@@ -34,24 +34,28 @@ insert into auth.users (id, email, raw_user_meta_data, aud, role) values
 
 update public.profiles set is_super_admin = true where id = 'f7000000-0000-0000-0000-000000000009';
 
+-- g1 owner = o (no logs → dormant). g2 owner = x, a DIFFERENT person who IS
+-- active (a recent log). Distinct owners matter: group_owner_absent judges the
+-- owner's activity GLOBALLY (an owner active anywhere isn't "gone"), so o's
+-- dormancy for g1 must not be masked by another circle's activity.
 insert into public.groups (id, name, created_by) values
   ('f7000000-0000-0000-0000-0000000000b1', 'Dormant Circle', 'f7000000-0000-0000-0000-000000000001'),
-  ('f7000000-0000-0000-0000-0000000000b2', 'Active Circle',  'f7000000-0000-0000-0000-000000000001');
+  ('f7000000-0000-0000-0000-0000000000b2', 'Active Circle',  'f7000000-0000-0000-0000-000000000008');
 
 insert into public.memberships (user_id, group_id, role, created_at) values
   ('f7000000-0000-0000-0000-000000000001', 'f7000000-0000-0000-0000-0000000000b1', 'owner',  current_date - 40),
   ('f7000000-0000-0000-0000-000000000002', 'f7000000-0000-0000-0000-0000000000b1', 'admin',  current_date - 40),
   ('f7000000-0000-0000-0000-000000000003', 'f7000000-0000-0000-0000-0000000000b1', 'member', current_date - 40),
-  ('f7000000-0000-0000-0000-000000000001', 'f7000000-0000-0000-0000-0000000000b2', 'owner',  current_date - 40),
+  ('f7000000-0000-0000-0000-000000000008', 'f7000000-0000-0000-0000-0000000000b2', 'owner',  current_date - 40),
   ('f7000000-0000-0000-0000-000000000002', 'f7000000-0000-0000-0000-0000000000b2', 'admin',  current_date - 40);
 
 insert into public.tasks (id, group_id, label, target_count) values
   ('f7000000-0000-0000-0000-0000000000c1', 'f7000000-0000-0000-0000-0000000000b1', 'Salawat', 10),
   ('f7000000-0000-0000-0000-0000000000c2', 'f7000000-0000-0000-0000-0000000000b2', 'Salawat', 10);
 
--- g2's owner is ACTIVE (a recent log); g1's owner has none → dormant.
+-- g2's owner (x) is ACTIVE (a recent log); g1's owner (o) has none → dormant.
 insert into public.logs (user_id, task_id, date, count) values
-  ('f7000000-0000-0000-0000-000000000001', 'f7000000-0000-0000-0000-0000000000c2', current_date - 1, 5);
+  ('f7000000-0000-0000-0000-000000000008', 'f7000000-0000-0000-0000-0000000000c2', current_date - 1, 5);
 
 create function pg_temp.impersonate(u uuid) returns void language plpgsql as $$
 begin
