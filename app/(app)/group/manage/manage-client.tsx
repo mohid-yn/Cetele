@@ -206,6 +206,7 @@ export function ManageClient({
   members,
   tasks,
   invites,
+  canClaim,
 }: {
   group: ManageGroup;
   me: string;
@@ -213,6 +214,7 @@ export function ManageClient({
   members: ManageMember[];
   tasks: ManageTask[];
   invites: ManageInvite[];
+  canClaim: boolean;
 }) {
   const isOwner = myRole === "owner";
   const owner = members.find((m) => m.role === "owner");
@@ -222,6 +224,8 @@ export function ManageClient({
   const taskAct = useAction();
   const settingsAct = useAction();
   const ownershipAct = useAction();
+  const claimAct = useAction();
+  const [claimOpen, setClaimOpen] = React.useState(false);
 
   const [newLabel, setNewLabel] = React.useState("");
   const [newSubtitle, setNewSubtitle] = React.useState("");
@@ -283,6 +287,30 @@ export function ManageClient({
           </span>
         </div>
       </div>
+
+      {/* Succession (M7 · D27) — claim an absent owner's group ------------ */}
+      {canClaim && (
+        <Card className="border-warning-500/40 bg-warning-500/10 p-4">
+          <p className="text-sm font-semibold text-foreground">
+            Keep this circle running
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {owner?.name ?? "The owner"} hasn&rsquo;t been active in a while. As
+            a co-admin you can take over ownership so the circle isn&rsquo;t
+            left without one — they stay on as a co-admin.
+          </p>
+          <Button
+            size="sm"
+            variant="primary"
+            className="mt-3"
+            disabled={claimAct.pending}
+            onClick={() => setClaimOpen(true)}
+          >
+            Claim ownership
+          </Button>
+          <ErrorNote error={claimAct.error} />
+        </Card>
+      )}
 
       {/* Members --------------------------------------------------------- */}
       <section>
@@ -590,6 +618,14 @@ export function ManageClient({
       </section>
 
       {/* Confirms -------------------------------------------------------- */}
+      <ConfirmDialog
+        open={claimOpen}
+        onClose={() => setClaimOpen(false)}
+        onConfirm={() => claimAct.run(() => act.claimOwnership(group.id))}
+        title="Claim ownership of this circle?"
+        description="The current owner has been inactive, so you can take over to keep the circle running. They stay on as a co-admin. This is recorded in the group's history."
+        confirmLabel="Claim ownership"
+      />
       <ConfirmDialog
         open={transferOpen}
         onClose={() => setTransferOpen(false)}

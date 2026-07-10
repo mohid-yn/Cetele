@@ -69,6 +69,21 @@ export async function transferOwnership(
   return ok;
 }
 
+/**
+ * M7 (D27) — a co-admin claims a group whose owner is absent (dormant ≥14 days
+ * or gone), so one owner leaving never orphans the circle. The RPC enforces
+ * both the co-admin role and owner-absence, and writes the audit trail.
+ */
+export async function claimOwnership(groupId: string): Promise<Result> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("claim_ownership", { p_group: groupId });
+  if (error) return fail(error.message);
+
+  revalidatePath("/group/manage");
+  revalidatePath("/groups");
+  return ok;
+}
+
 // ---------------------------------------------------------------------------
 // Tasks (CET-5 — the admin task-list editor)
 // ---------------------------------------------------------------------------

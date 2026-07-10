@@ -34,6 +34,75 @@ export type Database = {
   };
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string;
+          actor_id: string | null;
+          created_at: string;
+          detail: Json | null;
+          group_id: string | null;
+          id: string;
+          target_user_id: string | null;
+        };
+        Insert: {
+          action: string;
+          actor_id?: string | null;
+          created_at?: string;
+          detail?: Json | null;
+          group_id?: string | null;
+          id?: string;
+          target_user_id?: string | null;
+        };
+        Update: {
+          action?: string;
+          actor_id?: string | null;
+          created_at?: string;
+          detail?: Json | null;
+          group_id?: string | null;
+          id?: string;
+          target_user_id?: string | null;
+        };
+        Relationships: [];
+      };
+      reports: {
+        Row: {
+          created_at: string;
+          group_id: string | null;
+          id: string;
+          reason: string;
+          reported_user_id: string | null;
+          reporter_id: string;
+          resolution_note: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          status: string;
+        };
+        Insert: {
+          created_at?: string;
+          group_id?: string | null;
+          id?: string;
+          reason: string;
+          reported_user_id?: string | null;
+          reporter_id: string;
+          resolution_note?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+        };
+        Update: {
+          created_at?: string;
+          group_id?: string | null;
+          id?: string;
+          reason?: string;
+          reported_user_id?: string | null;
+          reporter_id?: string;
+          resolution_note?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+        };
+        Relationships: [];
+      };
       daily_completion: {
         Row: {
           completion_pct: number;
@@ -339,6 +408,14 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      can_claim_ownership: {
+        Args: { p_group: string };
+        Returns: boolean;
+      };
+      claim_ownership: {
+        Args: { p_group: string };
+        Returns: undefined;
+      };
       create_group: {
         Args: { p_name: string };
         Returns: {
@@ -372,6 +449,14 @@ export type Database = {
           group_name: string;
           invite_role: string;
         }[];
+      };
+      reassign_owner: {
+        Args: { p_group: string; p_new_owner: string };
+        Returns: undefined;
+      };
+      resolve_report: {
+        Args: { p_note?: string; p_report: string; p_status: string };
+        Returns: undefined;
       };
       set_count: {
         Args: {

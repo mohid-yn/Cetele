@@ -45,6 +45,7 @@ export default async function ManageGroupPage() {
     { data: members },
     { data: tasks },
     { data: invites },
+    { data: canClaim },
   ] = await Promise.all([
     supabase
       .from("groups")
@@ -65,6 +66,8 @@ export default async function ManageGroupPage() {
       .select("id, email, role, code, created_at")
       .eq("group_id", active.groupId)
       .order("created_at"),
+    // M7 (D27): a co-admin can claim the group if the owner is absent.
+    supabase.rpc("can_claim_ownership", { p_group: active.groupId }),
   ]);
 
   if (!group) redirect("/groups");
@@ -96,6 +99,7 @@ export default async function ManageGroupPage() {
         role: role as "admin" | "member",
         code,
       }))}
+      canClaim={canClaim ?? false}
     />
   );
 }
