@@ -46,15 +46,16 @@ insert into public.tasks (id, group_id, label, target_count) values
 
 -- Raw logs (inserted directly as the test superuser; the app path is RPC-only).
 -- m: cd-1 FULL (both rings) · cd-2 PARTIAL (t1 only → 50%) · cd-3 nothing (missed
---    within span → 0) · cd-15 FULL (the write-before-prune boundary day).
+--    within span → 0) · cd-14 FULL (the oldest in-window day — rolled up AND its
+--    logs kept, so a re-run stays idempotent).
 insert into public.logs (user_id, task_id, date, count) values
   ('e6000000-0000-0000-0000-000000000003', 'e6000000-0000-0000-0000-0000000000c1', current_date - 1, 10),
   ('e6000000-0000-0000-0000-000000000003', 'e6000000-0000-0000-0000-0000000000c2', current_date - 1, 5),
   ('e6000000-0000-0000-0000-000000000003', 'e6000000-0000-0000-0000-0000000000c1', current_date - 2, 10),
-  ('e6000000-0000-0000-0000-000000000003', 'e6000000-0000-0000-0000-0000000000c1', current_date - 15, 10),
-  ('e6000000-0000-0000-0000-000000000003', 'e6000000-0000-0000-0000-0000000000c2', current_date - 15, 5),
+  ('e6000000-0000-0000-0000-000000000003', 'e6000000-0000-0000-0000-0000000000c1', current_date - 14, 10),
+  ('e6000000-0000-0000-0000-000000000003', 'e6000000-0000-0000-0000-0000000000c2', current_date - 14, 5),
   -- an ancient log outside the rollup window → must be pruned, never rolled up
-  ('e6000000-0000-0000-0000-000000000003', 'e6000000-0000-0000-0000-0000000000c1', current_date - 20, 10),
+  ('e6000000-0000-0000-0000-000000000003', 'e6000000-0000-0000-0000-0000000000c1', current_date - 16, 10),
   -- n: only cd-1 FULL (joined cd-3, so cd-3/cd-2 are enrolled-but-missed = 0)
   ('e6000000-0000-0000-0000-000000000004', 'e6000000-0000-0000-0000-0000000000c1', current_date - 1, 10),
   ('e6000000-0000-0000-0000-000000000004', 'e6000000-0000-0000-0000-0000000000c2', current_date - 1, 5);
@@ -112,21 +113,21 @@ select is((select count(*) from public.daily_completion
   where user_id='e6000000-0000-0000-0000-000000000004' and date=current_date-4),
   0::bigint, 'new joiner: NO row before they joined (pre-enrolment days do not count)');
 
--- write-before-prune: the boundary day (cd-15) is rolled up, THEN its raw log
--- is pruned — proves ordering (a day is never lost to the prune un-rolled).
+-- the oldest in-window day (cd-14) is rolled up AND its raw logs are KEPT (it
+-- sits at the prune boundary) — the property that keeps a re-run idempotent.
 select is((select completion_pct from public.daily_completion
-  where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-15),
-  100.00, 'the boundary day is rolled up before its raw log is pruned');
+  where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-14),
+  100.00, 'the oldest in-window day is rolled up');
 select is((select count(*) from public.logs
-  where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-15),
-  0::bigint, 'the boundary day''s raw log is pruned (14-day retention)');
+  where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-14),
+  2::bigint, 'the in-window day keeps its raw logs (prune boundary aligns with the window)');
 
--- prune: the ancient log (cd-20) is gone and was never rolled up (outside window)
+-- prune: the out-of-window log (cd-16) is gone and was never rolled up
 select is((select count(*) from public.logs
-  where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-20),
-  0::bigint, 'logs older than 14 days are pruned');
+  where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-16),
+  0::bigint, 'logs older than the window are pruned');
 select is((select count(*) from public.daily_completion
-  where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-20),
+  where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-16),
   0::bigint, 'a day outside the rollup window is not fabricated');
 -- recent logs (still in the 14-day window) survive the prune
 select is((select count from public.logs
@@ -138,21 +139,27 @@ select is((select count(*) from public.daily_completion
   where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-100),
   0::bigint, 'rollup rows older than 90 days are pruned');
 
--- idempotent: a second run leaves the same picture
-select lives_ok($$select private.run_daily_rollup()$$, 'the rollup job is idempotent');
+-- idempotent: a second run must NOT corrupt the boundary day, even though the
+-- first run already pruned everything older than the window. (This is the exact
+-- regression the window/prune alignment fixes — a wider window recomputed cd-14
+-- as 0 on the second pass once its logs were pruned.)
+select lives_ok($$select private.run_daily_rollup()$$, 'the rollup job re-runs');
+select is((select completion_pct from public.daily_completion
+  where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-14),
+  100.00, 're-running keeps the boundary day intact (idempotent)');
 select is((select completion_pct from public.daily_completion
   where user_id='e6000000-0000-0000-0000-000000000003' and date=current_date-2),
   50.00, 're-running does not change a settled day');
 
 -- ----------------------------------------------------------------------------
 -- steadfastness shape — avg(completion_pct) over the member's rows + active days
--- m has: cd-1=100, cd-2=50, cd-3..cd-14=0 (12 days), cd-15=100 → 15 rows,
--- sum 250 → avg 16.67 → 17; active days (pct>0) = 3 → NOT yet eligible (<14).
+-- m has: cd-1=100, cd-2=50, cd-3..cd-13=0 (11 days), cd-14=100 → 14 rows,
+-- sum 250 → avg 17.86 → 18; active days (pct>0) = 3 → NOT yet eligible (<14).
 -- ----------------------------------------------------------------------------
 select is((select round(avg(completion_pct))::integer from public.daily_completion
   where user_id='e6000000-0000-0000-0000-000000000003'
     and group_id='e6000000-0000-0000-0000-0000000000b1'),
-  17, 'steadfastness = average daily completion rate (a rate, not a sum)');
+  18, 'steadfastness = average daily completion rate (a rate, not a sum)');
 select is((select count(*) from public.daily_completion
   where user_id='e6000000-0000-0000-0000-000000000003'
     and group_id='e6000000-0000-0000-0000-0000000000b1' and completion_pct > 0),

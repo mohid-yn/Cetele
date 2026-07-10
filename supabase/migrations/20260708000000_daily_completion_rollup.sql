@@ -18,10 +18,12 @@
 --   * private.run_daily_rollup() — nightly pg_cron (D34, in-DB). Ordering the
 --     whole retention split depends on: (1) WRITE the rollup for the recent
 --     window FIRST, (2) THEN prune raw logs to 14 days, (3) THEN prune the
---     rollup to 90 days. Idempotent (upsert) + must run nightly: the rollup
---     window equals the pre-prune raw range, so a long outage could let a day
---     age out of raw before its final rollup — acceptable for a longitudinal
---     metric, and pg_cron is reliable.
+--     rollup to 90 days. IDEMPOTENT: the rollup window's oldest day equals the
+--     prune boundary, so every recomputed day still has its raw logs — a
+--     re-run / cron double-fire is a no-op (a wider window would recompute a
+--     just-pruned day as 0). Must still run ~nightly: a day is rolled up on
+--     each of its ~14 days in the window, then pruned; a long outage could let
+--     a day age out before its final rollup — fine for a longitudinal metric.
 --   * public.group_consistency(group, days) — the members-facing collective
 --     figure (the North Star made visible). SECURITY DEFINER so a plain member
 --     can see the group aggregate without reading peers' individual rows
@@ -100,8 +102,13 @@ begin
   from public.memberships m
   join public.tasks t
     on t.group_id = m.group_id and t.target_count > 0
+  -- The window START equals the prune boundary (current_date - 14) below, so
+  -- every day it recomputes still has its raw logs — the rollup is IDEMPOTENT
+  -- (a re-run, manual trigger, or cron double-fire yields the same value). A
+  -- wider window that reached a day the prune removes would recompute that day
+  -- as 0 the second time (its logs gone) — so window and prune MUST align.
   cross join lateral generate_series(
-    greatest(m.created_at::date, current_date - 15)::timestamp,
+    greatest(m.created_at::date, current_date - 14)::timestamp,
     (current_date - 1)::timestamp,
     interval '1 day'
   ) as d
@@ -111,9 +118,10 @@ begin
   on conflict (user_id, group_id, date)
   do update set completion_pct = excluded.completion_pct;
 
-  -- (2) Prune raw logs to the 14-day window (D28/D31) — now that they are
-  -- rolled up. current_date - 14 keeps 15 date-values, a day of slack so no
-  -- member's own-timezone 14-day correction window is cut short.
+  -- (2) Prune raw logs older than the rollup window — now that everything in
+  -- the window is rolled up. Keeps [current_date-14, today] (15 date-values,
+  -- a day of tz slack over the 14-day correction window). A day leaves the
+  -- window and is pruned only AFTER its final rollup on a prior run.
   delete from public.logs where date < current_date - 14;
 
   -- (3) Prune the rollup to 90 days (steadfastness / group-90 horizon).

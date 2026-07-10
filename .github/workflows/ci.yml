@@ -76,15 +76,7 @@ jobs:
         run: supabase start -x studio,imgproxy,vector,logflare
 
       - name: RLS + grants tests (pgTAP)
-        run: |
-          set -o pipefail
-          if ! supabase test db 2>&1 | tee /tmp/pgtap.log; then
-            echo "::group::pgTAP failure detail"
-            grep -nE "not ok|Failed test|ERROR:|DETAIL:|CONTEXT:|Bail out|# +have|# +want|Looks like" /tmp/pgtap.log \
-              | while IFS= read -r line; do echo "::error::pgTAP: ${line}"; done
-            echo "::endgroup::"
-            exit 1
-          fi
+        run: supabase test db
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
