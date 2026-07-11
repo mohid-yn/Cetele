@@ -7,7 +7,13 @@
 // login shell, and threw "Failed to fetch" on Supabase/Google calls). v2 never
 // touches navigations, /auth/*, or cross-origin — it only lightly caches
 // same-origin static GETs, and never precaches an HTML page.
-const CACHE = "cetele-static-v2";
+//
+// v3 (2026-07-11): cache bump only — forces browsers still running a stale v1
+// (which intercepted the `/?code=…` OAuth navigation and returned a network
+// error) to reinstall + wipe the old cache on activate. Fetch logic unchanged
+// from v2. Pairs with the proxy safety net that routes a `/?code=` landing to
+// /auth/callback for the server-side exchange.
+const CACHE = "cetele-static-v3";
 
 self.addEventListener("install", () => {
   self.skipWaiting();

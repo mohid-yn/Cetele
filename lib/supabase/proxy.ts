@@ -22,6 +22,22 @@ function isPublic(pathname: string) {
  * cookies) and gate protected routes. Runs from proxy.ts (Next 16 convention).
  */
 export async function updateSession(request: NextRequest) {
+  // OAuth safety net: if the provider round-trip lands the PKCE `code` on `/`
+  // (Supabase falls back to the Site URL when the exact redirect URL isn't in
+  // its allowlist), the client-only login page can't run the server exchange —
+  // it picks the code up async via detectSessionInUrl, so the first render
+  // misses the session and the user has to click again. Route it to the real
+  // /auth/callback handler so the exchange happens server-first, every time.
+  // (The code verifier lives in an @supabase/ssr cookie, readable there.)
+  if (
+    request.nextUrl.pathname === "/" &&
+    request.nextUrl.searchParams.has("code")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    return NextResponse.redirect(url);
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
