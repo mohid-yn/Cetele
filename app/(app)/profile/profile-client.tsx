@@ -17,6 +17,7 @@ import {
   savePushSubscription,
   removePushSubscription,
   setReminder,
+  sendTestPush,
 } from "./actions";
 
 export type ReminderTask = {
@@ -190,6 +191,10 @@ export function ProfileClient({
           </p>
         )}
 
+        {/* Prove it end-to-end on a real phone: the push lands 10s later, so you
+            can lock the screen and see it arrive the way a reminder would. */}
+        {subscribed && <TestPushCard />}
+
         {tasks.length === 0 ? (
           <p className="mt-2 rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
             No tasks yet — reminders appear once your circle has some.
@@ -225,6 +230,53 @@ export function ProfileClient({
         </Button>
       </form>
     </div>
+  );
+}
+
+/**
+ * "Send a test notification" — fires a real push to this device 10 seconds from
+ * now. The delay is the feature: it lets you lock the phone and confirm the
+ * notification arrives with the app closed, which is the only thing that proves
+ * reminders will actually work.
+ */
+function TestPushCard() {
+  const act = useAction();
+  const [sent, setSent] = React.useState(false);
+
+  return (
+    <Card className="mt-2 flex items-center justify-between gap-3 p-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">
+          Send a test notification
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {act.pending
+            ? "Arriving in ~10 seconds — lock your phone and wait."
+            : sent
+              ? "Sent. If it didn't appear, check notifications are allowed for Cetele."
+              : "Arrives in 10 seconds, so you can lock your phone and watch it land."}
+        </p>
+        {act.error && (
+          <p role="alert" className="mt-1 text-xs text-danger">
+            {act.error}
+          </p>
+        )}
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={act.pending}
+        onClick={() => {
+          setSent(false);
+          act.run(
+            () => sendTestPush(),
+            () => setSent(true),
+          );
+        }}
+      >
+        {act.pending ? "Sending…" : "Test"}
+      </Button>
+    </Card>
   );
 }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import webpush from "web-push";
 import { createServiceClient } from "@/lib/supabase/service";
+import { configureWebPush, sendToDevices } from "@/lib/push/send";
 import { groupHref } from "@/lib/group-href";
 
 /**
@@ -44,13 +44,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT;
-  if (!publicKey || !privateKey || !subject) {
+  if (!configureWebPush()) {
     return NextResponse.json({ error: "VAPID keys missing" }, { status: 503 });
   }
-  webpush.setVapidDetails(subject, publicKey, privateKey);
 
   const supabase = createServiceClient();
   const { data, error } = await supabase.rpc("claim_due_reminders");
@@ -59,13 +55,13 @@ export async function POST(request: Request) {
   }
 
   const due = (data ?? []) as DueReminder[];
-  const dead: string[] = [];
-  let sent = 0;
 
-  await Promise.all(
+  // One reminder can target several devices; each row is already (reminder ×
+  // device), so send them independently and collect the dead endpoints.
+  const results = await Promise.all(
     due.map(async (r) => {
       const remaining = Math.max(0, r.target_count - r.current_count);
-      const payload = JSON.stringify({
+      return sendToDevices([r], {
         title: r.task_label,
         body:
           r.current_count > 0
@@ -74,25 +70,11 @@ export async function POST(request: Request) {
         url: groupHref(r.group_id, `/count/${r.task_id}`),
         tag: `reminder-${r.reminder_id}`,
       });
-
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: r.endpoint,
-            keys: { p256dh: r.p256dh, auth: r.auth },
-          },
-          payload,
-        );
-        sent++;
-      } catch (e) {
-        const status = (e as { statusCode?: number }).statusCode;
-        // 404/410 = the endpoint is gone for good (uninstalled, revoked).
-        // Anything else (network blip, 5xx) is transient — leave it alone and
-        // let the next reminder try again.
-        if (status === 404 || status === 410) dead.push(r.endpoint);
-      }
     }),
   );
+
+  const sent = results.reduce((n, r) => n + r.sent, 0);
+  const dead = results.flatMap((r) => r.dead);
 
   let pruned = 0;
   if (dead.length) {
