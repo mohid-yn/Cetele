@@ -31,18 +31,20 @@ export async function savePushSubscription(sub: {
   const { supabase, uid } = await me();
   if (!uid) return { error: "You are signed out." };
 
+  // An RPC, not an upsert: PostgREST's upsert compiles to ON CONFLICT DO UPDATE,
+  // which needs UPDATE privilege — and push_subscriptions is INSERT/DELETE-only
+  // by design (a browser re-subscribes with a new endpoint; it never mutates
+  // one). The RPC also reassigns the row if the SAME endpoint comes back for a
+  // DIFFERENT user (a shared phone), so reminders never push to the previous
+  // owner's device.
   const { error } = await q(
-    "push.subscribe",
-    supabase.from("push_subscriptions").upsert(
-      {
-        user_id: uid,
-        endpoint: sub.endpoint,
-        p256dh: sub.p256dh,
-        auth: sub.auth,
-        user_agent: sub.userAgent,
-      },
-      { onConflict: "endpoint" },
-    ),
+    "rpc.save_push_subscription",
+    supabase.rpc("save_push_subscription", {
+      p_endpoint: sub.endpoint,
+      p_p256dh: sub.p256dh,
+      p_auth: sub.auth,
+      p_user_agent: sub.userAgent,
+    }),
   );
   await signOutIfStaleSession(error);
   if (error) return { error: error.message };

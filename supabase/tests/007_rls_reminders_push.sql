@@ -56,12 +56,18 @@ select ok(has_function_privilege('authenticated','public.set_reminder(uuid,time,
   'set_reminder is the write path');
 select ok(not has_table_privilege('anon','public.reminders','select'), 'anon has no reminders read');
 
--- (column-scoped grant, so this is has_COLUMN_privilege — a table-level check
--- reads false even though the insert is allowed)
-select ok(has_column_privilege('authenticated','public.push_subscriptions','endpoint','insert'),
-  'a member can register a device');
+-- Device registration is RPC-only (0014). A direct upsert from the client dies
+-- `permission denied` — PostgREST compiles upsert to ON CONFLICT DO UPDATE, and
+-- there is no UPDATE grant here by design. This shipped as a live bug once; both
+-- halves are pinned below.
+select ok(not has_table_privilege('authenticated','public.push_subscriptions','insert'),
+  'registering a device is RPC-only');
 select ok(not has_table_privilege('authenticated','public.push_subscriptions','update'),
   'push_subscriptions has no UPDATE (a device re-subscribes; it never mutates)');
+select ok(has_function_privilege('authenticated','public.save_push_subscription(text,text,text,text)','execute'),
+  'save_push_subscription is the write path');
+select ok(has_table_privilege('authenticated','public.push_subscriptions','delete'),
+  'a member can unsubscribe this device');
 select ok(not has_table_privilege('anon','public.push_subscriptions','select'), 'anon has no subscription read');
 
 -- The dispatcher's exact privilege — and nothing more. (service_role gets NO
@@ -128,8 +134,39 @@ select is((select count(*) from public.claim_due_reminders()), 0::bigint,
 select is((select last_sent_on from public.reminders), null,
   '...and their reminder is left un-stamped for when they do subscribe');
 
-insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values
-  ('c8000000-0000-0000-0000-00000000000a', 'https://push.test/a1', 'p256', 'authkey');
+-- Register the device the way the app does — through the RPC (this is the exact
+-- call that failed on a real iPhone with `permission denied` before 0014).
+select pg_temp.impersonate('c8000000-0000-0000-0000-00000000000a');
+select lives_ok(
+  $$select public.save_push_subscription('https://push.test/a1','p256','authkey','iPhone')$$,
+  'a member registers a device');
+-- Re-subscribing with the same endpoint updates in place, never duplicates.
+select lives_ok(
+  $$select public.save_push_subscription('https://push.test/a1','p256-new','authkey','iPhone')$$,
+  '...and re-registering the same device is idempotent');
+reset role;
+select is((select count(*) from public.push_subscriptions where endpoint='https://push.test/a1'),
+  1::bigint, 'one row per device, not a duplicate');
+select is((select p256dh from public.push_subscriptions where endpoint='https://push.test/a1'),
+  'p256-new', 'the refreshed key won');
+
+-- Shared phone: the SAME endpoint comes back for a DIFFERENT user. The row must
+-- move to them — otherwise their reminders would push to the previous owner.
+select pg_temp.impersonate('c8000000-0000-0000-0000-00000000000b');
+select lives_ok(
+  $$select public.save_push_subscription('https://push.test/a1','p256','authkey','iPhone')$$,
+  'a second user subscribes on the same device');
+reset role;
+select is((select user_id from public.push_subscriptions where endpoint='https://push.test/a1'),
+  'c8000000-0000-0000-0000-00000000000b'::uuid,
+  'the device now belongs to whoever just subscribed (no cross-user push)');
+
+-- Hand it back to `a` for the claim tests below.
+select pg_temp.impersonate('c8000000-0000-0000-0000-00000000000a');
+select lives_ok(
+  $$select public.save_push_subscription('https://push.test/a1','p256','authkey','iPhone')$$,
+  'the first user re-subscribes');
+reset role;
 
 select is((select count(*) from public.claim_due_reminders()), 1::bigint,
   'a due reminder with a device is claimed');

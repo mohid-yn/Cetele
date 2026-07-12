@@ -601,6 +601,15 @@ export type Database = {
         Args: { p_note?: string; p_report: string; p_status: string };
         Returns: undefined;
       };
+      save_push_subscription: {
+        Args: {
+          p_auth: string;
+          p_endpoint: string;
+          p_p256dh: string;
+          p_user_agent: string;
+        };
+        Returns: undefined;
+      };
       set_count: {
         Args: {
           p_count: number;
