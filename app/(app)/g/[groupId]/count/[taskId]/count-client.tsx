@@ -9,6 +9,7 @@ import { TapPad } from "@/components/demo/tap-pad";
 import { DayStrip, fmtLongDate } from "@/components/demo/day-strip";
 import { ArrowLeftIcon } from "@/components/demo/icons";
 import { playComplete, playTen } from "@/lib/sound";
+import { groupHref } from "@/lib/group-href";
 import { incrementCount } from "../../today/actions";
 
 /**
@@ -21,11 +22,13 @@ import { incrementCount } from "../../today/actions";
 const FLUSH_MS = 600;
 
 export function CountClient({
+  groupId,
   task,
   todayISO,
   initialDate,
   initialCounts,
 }: {
+  groupId: string;
   task: { id: string; label: string; subtitle: string | null; target: number };
   todayISO: string;
   initialDate: string;
@@ -126,7 +129,7 @@ export function CountClient({
           variant="ghost"
           size="sm"
           leadingIcon={<ArrowLeftIcon />}
-          onClick={() => router.push("/today")}
+          onClick={() => router.push(groupHref(groupId, "/today"))}
         >
           Today
         </Button>
@@ -187,7 +190,7 @@ export function CountClient({
           variant="outline"
           className="w-full"
           onClick={() => {
-            void flush().then(() => router.push("/today"));
+            void flush().then(() => router.push(groupHref(groupId, "/today")));
           }}
         >
           Back to today
@@ -216,7 +219,9 @@ export function CountClient({
             variant="accent"
             onClick={() => {
               addCapped(remaining);
-              void flush().then(() => router.push("/today"));
+              void flush().then(() =>
+                router.push(groupHref(groupId, "/today")),
+              );
             }}
           >
             Mark done

@@ -43,7 +43,7 @@ async function signIn(page: Page, email: string) {
     .toBe(true);
 
   await page.goto(link!);
-  await page.waitForURL("**/today");
+  await page.waitForURL(/\/groups|\/g\//);
 }
 
 /** Create a group + one task via the real UI (owner flow). */
@@ -58,7 +58,7 @@ async function createGroupWithTask(
   await page.fill("#new-group-name", name);
   await page.click('button:has-text("Create group")');
   const card = page.getByRole("listitem").filter({ hasText: name });
-  await card.getByRole("button", { name: "Manage" }).click();
+  await card.getByRole("link", { name: "Manage" }).click();
   await page.waitForURL("**/group/manage");
   await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill(task);
   await page.getByPlaceholder("Daily target").last().fill(String(target));
@@ -80,7 +80,7 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
   await pageA.click('button:has-text("New group")');
   await pageA.fill("#new-group-name", "Reflect Circle");
   await pageA.click('button:has-text("Create group")');
-  await pageA.click('button:has-text("Manage")');
+  await pageA.click('a:has-text("Manage")');
   await pageA.waitForURL("**/group/manage");
   await pageA.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Tasbih");
   await pageA.getByPlaceholder("Daily target").last().fill("10");
@@ -100,7 +100,7 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
     pageB.getByText("You’ve been invited to Reflect Circle"),
   ).toBeVisible();
   await pageB.click('button:has-text("Join the group")');
-  await pageB.waitForURL("**/groups");
+  await pageB.waitForURL(/\/g\/.*\/today/);
 
   await pageB.goto("/today");
   await pageB.click('a:has-text("Continue Tasbih")');
@@ -169,7 +169,7 @@ test("switching the active group changes the data shown", async ({ page }) => {
   await page
     .getByRole("listitem")
     .filter({ hasText: "Alpha Circle" })
-    .getByRole("button", { name: /Alpha Circle/ })
+    .getByRole("link", { name: /Alpha Circle/ })
     .click();
   await page.waitForURL("**/today");
   await expect(page.getByText("Continue Tasbih")).toBeVisible();
@@ -180,7 +180,7 @@ test("switching the active group changes the data shown", async ({ page }) => {
   await page
     .getByRole("listitem")
     .filter({ hasText: "Beta Circle" })
-    .getByRole("button", { name: /Beta Circle/ })
+    .getByRole("link", { name: /Beta Circle/ })
     .click();
   await page.waitForURL("**/today");
   await expect(page.getByText("Continue Salawat")).toBeVisible();

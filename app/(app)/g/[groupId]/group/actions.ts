@@ -32,9 +32,9 @@ export async function setCount(
   );
   if (error) return { error: error.message };
 
-  revalidatePath("/group");
-  revalidatePath("/progress");
-  revalidatePath("/today");
+  revalidatePath("/g/[groupId]/group", "page");
+  revalidatePath("/g/[groupId]/progress", "page");
+  revalidatePath("/g/[groupId]/today", "page");
   return { error: null };
 }
 
@@ -73,8 +73,8 @@ export async function logForGroup(
   const firstError = results.find((r) => r.error)?.error;
   if (firstError) return { error: firstError.message };
 
-  revalidatePath("/group");
-  revalidatePath("/progress");
-  revalidatePath("/today");
+  revalidatePath("/g/[groupId]/group", "page");
+  revalidatePath("/g/[groupId]/progress", "page");
+  revalidatePath("/g/[groupId]/today", "page");
   return { error: null };
 }

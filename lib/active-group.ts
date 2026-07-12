@@ -9,9 +9,42 @@ import { q } from "@/lib/db-log";
  * to the best real membership (owner > co-admin > member), or null when the
  * user has no groups.
  */
-export const ACTIVE_GROUP_COOKIE = "cetele-active-group";
+// Imported from the pure module (client-safe) but re-exported so existing
+// server callers can keep importing it from here.
+import { ACTIVE_GROUP_COOKIE } from "@/lib/group-href";
+export { ACTIVE_GROUP_COOKIE };
 
 const ROLE_RANK: Record<string, number> = { owner: 0, admin: 1, member: 2 };
+
+/**
+ * Resolve a group from a `/g/[groupId]` route param (CET-25). Validates that
+ * the caller is really a member under RLS — a group you can't see returns null
+ * (callers redirect to /groups). Unlike resolveActiveGroup this reads no
+ * cookie: the URL is the source of truth. The proxy records the last-visited
+ * group cookie from the path so bare `/today` can redirect back here.
+ */
+export async function resolveGroup(groupId: string): Promise<{
+  groupId: string;
+  role: "owner" | "admin" | "member";
+} | null> {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const me = claims?.claims.sub;
+  if (!me) return null;
+
+  const { data: row } = await q(
+    "resolveGroup.membership",
+    supabase
+      .from("memberships")
+      .select("role")
+      .eq("user_id", me)
+      .eq("group_id", groupId)
+      .maybeSingle(),
+  );
+  if (!row) return null;
+
+  return { groupId, role: row.role as "owner" | "admin" | "member" };
+}
 
 export async function resolveActiveGroup(): Promise<{
   groupId: string;

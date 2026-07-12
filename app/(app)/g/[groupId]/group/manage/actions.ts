@@ -37,7 +37,7 @@ export async function renameGroup(
     .eq("id", groupId);
   if (error) return fail(error.message);
 
-  revalidatePath("/group/manage");
+  revalidatePath("/g/[groupId]/group/manage", "page");
   revalidatePath("/groups");
   return ok;
 }
@@ -64,7 +64,7 @@ export async function transferOwnership(
   });
   if (error) return fail(error.message);
 
-  revalidatePath("/group/manage");
+  revalidatePath("/g/[groupId]/group/manage", "page");
   revalidatePath("/groups");
   return ok;
 }
@@ -79,7 +79,7 @@ export async function claimOwnership(groupId: string): Promise<Result> {
   const { error } = await supabase.rpc("claim_ownership", { p_group: groupId });
   if (error) return fail(error.message);
 
-  revalidatePath("/group/manage");
+  revalidatePath("/g/[groupId]/group/manage", "page");
   revalidatePath("/groups");
   return ok;
 }
@@ -124,7 +124,7 @@ export async function addTask(
   });
   if (error) return fail(error.message);
 
-  revalidatePath("/group/manage");
+  revalidatePath("/g/[groupId]/group/manage", "page");
   return ok;
 }
 
@@ -146,7 +146,7 @@ export async function updateTask(
     .eq("id", taskId);
   if (error) return fail(error.message);
 
-  revalidatePath("/group/manage");
+  revalidatePath("/g/[groupId]/group/manage", "page");
   return ok;
 }
 
@@ -155,7 +155,7 @@ export async function deleteTask(taskId: string): Promise<Result> {
   const { error } = await supabase.from("tasks").delete().eq("id", taskId);
   if (error) return fail(error.message);
 
-  revalidatePath("/group/manage");
+  revalidatePath("/g/[groupId]/group/manage", "page");
   return ok;
 }
 
@@ -178,7 +178,7 @@ export async function setMemberRole(
     .eq("user_id", userId);
   if (error) return fail(error.message);
 
-  revalidatePath("/group/manage");
+  revalidatePath("/g/[groupId]/group/manage", "page");
   return ok;
 }
 
@@ -194,7 +194,7 @@ export async function removeMember(
     .eq("user_id", userId);
   if (error) return fail(error.message);
 
-  revalidatePath("/group/manage");
+  revalidatePath("/g/[groupId]/group/manage", "page");
   return ok;
 }
 
@@ -221,7 +221,7 @@ export async function createInvite(
   });
   if (error) return fail(error.message);
 
-  revalidatePath("/group/manage");
+  revalidatePath("/g/[groupId]/group/manage", "page");
   return ok;
 }
 
@@ -230,6 +230,6 @@ export async function revokeInvite(inviteId: string): Promise<Result> {
   const { error } = await supabase.from("invites").delete().eq("id", inviteId);
   if (error) return fail(error.message);
 
-  revalidatePath("/group/manage");
+  revalidatePath("/g/[groupId]/group/manage", "page");
   return ok;
 }

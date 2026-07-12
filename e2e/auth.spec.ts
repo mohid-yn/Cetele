@@ -47,7 +47,7 @@ test("magic link → session → real /groups → create group → sign out", as
 
   // 3. open it in the same browser (PKCE) → signed in on /today
   await page.goto(link!);
-  await page.waitForURL("**/today");
+  await page.waitForURL(/\/groups|\/g\//);
 
   // 4. /groups renders (empty) from the real DB
   await page.goto("/groups");

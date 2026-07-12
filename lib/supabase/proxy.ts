@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { ACTIVE_GROUP_COOKIE, groupIdFromPath } from "@/lib/group-href";
 
 /** Routes that need no session (everything else requires sign-in). */
 const PUBLIC_PATHS = [
@@ -82,6 +83,17 @@ export async function updateSession(request: NextRequest) {
     url.search = "";
     if (dest !== "/" && dest !== "/today") url.searchParams.set("next", dest);
     return NextResponse.redirect(url);
+  }
+
+  // Record the last-visited group (CET-25): a signed-in visit to /g/<id>/…
+  // refreshes the cookie so bare /today etc. and the nav can fall back to it.
+  // Middleware may write cookies (a page render can't), so it lives here.
+  const gid = groupIdFromPath(request.nextUrl.pathname);
+  if (gid && data?.claims) {
+    supabaseResponse.cookies.set(ACTIVE_GROUP_COOKIE, gid, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    });
   }
 
   return supabaseResponse;

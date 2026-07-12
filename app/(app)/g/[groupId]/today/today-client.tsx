@@ -8,6 +8,7 @@ import { SectionHeading } from "@/components/demo/section-heading";
 import { StreakChip } from "@/components/demo/streak-chip";
 import { DayStrip, fmtLongDate } from "@/components/demo/day-strip";
 import { CheckIcon, ChevronRightIcon } from "@/components/demo/icons";
+import { groupHref } from "@/lib/group-href";
 
 /**
  * Client leaf for the server-first Today (M3). Layout/copy mirror the mock
@@ -24,6 +25,7 @@ export type TodayTask = {
 };
 
 export function TodayClient({
+  groupId,
   firstName,
   todayISO,
   streak,
@@ -32,6 +34,7 @@ export function TodayClient({
   circle,
   collectivePct,
 }: {
+  groupId: string;
   firstName: string;
   todayISO: string;
   streak: number;
@@ -114,7 +117,7 @@ export function TodayClient({
       {/* Primary action — one gold CTA, the nearest-to-done ring */}
       {next && (
         <Link
-          href={`/count/${next.task.id}${isToday ? "" : `?date=${date}`}`}
+          href={`${groupHref(groupId, `/count/${next.task.id}`)}${isToday ? "" : `?date=${date}`}`}
           className={buttonVariants({ variant: "accent", className: "w-full" })}
         >
           Continue {next.task.label} ·{" "}
@@ -133,7 +136,7 @@ export function TodayClient({
           {rings.map(({ task: t, count, done }) => (
             <li key={t.id}>
               <Link
-                href={`/count/${t.id}${isToday ? "" : `?date=${date}`}`}
+                href={`${groupHref(groupId, `/count/${t.id}`)}${isToday ? "" : `?date=${date}`}`}
                 className="flex items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none"
               >
                 <ProgressRing
@@ -175,7 +178,7 @@ export function TodayClient({
             <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
               No tasks yet — the group&rsquo;s admin sets the shared list under{" "}
               <Link
-                href="/group/manage"
+                href={groupHref(groupId, "/group/manage")}
                 className="font-medium text-primary underline"
               >
                 Manage

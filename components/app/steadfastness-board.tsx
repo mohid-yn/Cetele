@@ -1,7 +1,7 @@
 import { Card, CardContent, Badge } from "@/components/ui";
 import { SectionHeading } from "@/components/demo/section-heading";
 import { MemberRow } from "@/components/demo/member-row";
-import type { Steadfast } from "@/app/(app)/group/group-client";
+import type { Steadfast } from "@/app/(app)/g/[groupId]/group/group-client";
 
 /**
  * D31 — admin/owner-only **steadfastness** recognition board (M6, real). Ranks

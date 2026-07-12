@@ -15,6 +15,7 @@ import {
 } from "@/components/app/member-breakdown";
 import { GroupSwitcher } from "@/components/app/group-switcher";
 import { SteadfastnessBoard } from "@/components/app/steadfastness-board";
+import { groupHref } from "@/lib/group-href";
 import {
   CheckIcon,
   ChevronRightIcon,
@@ -143,7 +144,7 @@ export function GroupClient({
             </Link>
             {canManage && (
               <Link
-                href="/group/manage"
+                href={groupHref(groupId, "/group/manage")}
                 aria-label="Manage group"
                 className={buttonVariants({ variant: "outline", size: "icon" })}
               >
@@ -311,7 +312,7 @@ export function GroupClient({
                     Log for group
                   </button>
                   <Link
-                    href="/group/manage"
+                    href={groupHref(groupId, "/group/manage")}
                     className="font-medium text-primary"
                   >
                     Manage
@@ -372,7 +373,10 @@ export function GroupClient({
           {canManage && (
             <div className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
               Add members from{" "}
-              <Link href="/group/manage" className="font-medium text-primary">
+              <Link
+                href={groupHref(groupId, "/group/manage")}
+                className="font-medium text-primary"
+              >
                 Manage
               </Link>{" "}
               — share an invite link or code.

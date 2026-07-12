@@ -2,16 +2,22 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { resolveActiveGroup } from "@/lib/active-group";
+import { resolveGroup } from "@/lib/active-group";
 import { ManageClient } from "./manage-client";
 
 /**
  * Manage screen, server-first (M2 — the second real screen after /groups).
- * Fetches the active group's members / tasks / invites under RLS and pushes
- * all interactivity to the client leaf (ManageClient → Server Actions).
+ * Fetches this group's members / tasks / invites under RLS and pushes all
+ * interactivity to the client leaf (ManageClient → Server Actions). The group
+ * comes from the `/g/[groupId]` route param (CET-25).
  */
-export default async function ManageGroupPage() {
-  const active = await resolveActiveGroup();
+export default async function ManageGroupPage({
+  params,
+}: {
+  params: Promise<{ groupId: string }>;
+}) {
+  const { groupId } = await params;
+  const active = await resolveGroup(groupId);
   if (!active) redirect("/groups");
 
   const supabase = await createClient();

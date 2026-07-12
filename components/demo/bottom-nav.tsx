@@ -4,11 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS } from "./nav-items";
+import { NAV_ITEMS, resolveNavItem } from "./nav-items";
+import { useActiveGroupId } from "@/lib/use-active-group";
 
 /** Mobile tab bar pinned to the bottom of the app column (hidden on desktop). */
 export function BottomNav() {
   const pathname = usePathname();
+  const groupId = useActiveGroupId();
 
   return (
     <nav
@@ -17,10 +19,11 @@ export function BottomNav() {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="mx-auto grid max-w-[28rem] grid-cols-4">
-        {NAV_ITEMS.map(({ href, shortLabel, Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
+        {NAV_ITEMS.map((item) => {
+          const { href, active } = resolveNavItem(item, pathname, groupId);
+          const { shortLabel, Icon } = item;
           return (
-            <li key={href}>
+            <li key={shortLabel}>
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}

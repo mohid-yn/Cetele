@@ -1,11 +1,12 @@
+import Link from "next/link";
 import { Badge, Card, buttonVariants } from "@/components/ui";
 import { PageHeader } from "@/components/demo/page-header";
 import { SectionHeading } from "@/components/demo/section-heading";
 import { UsersIcon } from "@/components/demo/icons";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
+import { groupHref } from "@/lib/group-href";
 import { NewGroupButton } from "./new-group";
-import { openManage, setActiveGroup } from "./actions";
 
 /**
  * Groups home — the Drive-style "My Drive" for circles (D26). First screen
@@ -38,47 +39,44 @@ export default async function GroupsHomePage() {
     const canManage = row.role === "owner" || row.role === "admin";
     return (
       <Card className="flex items-center gap-1 p-1.5">
-        {/* Tap the card to make this circle active and open it (any role). */}
-        <form
-          action={setActiveGroup.bind(null, g.id, "/today")}
-          className="min-w-0 flex-1"
+        {/* Tap the card to open this circle (any role) — prefetched. */}
+        <Link
+          href={groupHref(g.id, "/today")}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/50"
         >
-          <button
-            type="submit"
-            className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/50"
-          >
-            <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-              <UsersIcon className="size-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1.5 font-semibold text-foreground">
-                <span className="truncate">{g.name}</span>
-                {row.role === "owner" && (
-                  <Badge variant="accent" size="sm">
-                    owner
-                  </Badge>
-                )}
-                {row.role === "admin" && (
-                  <Badge variant="primary" size="sm">
-                    co-admin
-                  </Badge>
-                )}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {members} {members === 1 ? "member" : "members"}
-              </p>
-            </div>
-          </button>
-        </form>
+          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+            <UsersIcon className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 font-semibold text-foreground">
+              <span className="truncate">{g.name}</span>
+              {row.role === "owner" && (
+                <Badge variant="accent" size="sm">
+                  owner
+                </Badge>
+              )}
+              {row.role === "admin" && (
+                <Badge variant="primary" size="sm">
+                  co-admin
+                </Badge>
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {members} {members === 1 ? "member" : "members"}
+            </p>
+          </div>
+        </Link>
         {canManage && (
-          <form action={openManage.bind(null, g.id)} className="pr-1.5">
-            <button
-              type="submit"
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              Manage
-            </button>
-          </form>
+          <Link
+            href={groupHref(g.id, "/group/manage")}
+            className={buttonVariants({
+              variant: "outline",
+              size: "sm",
+              className: "mr-1.5",
+            })}
+          >
+            Manage
+          </Link>
         )}
       </Card>
     );

@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Group switcher (real, M5 follow-up) — the Slack/Notion workspace-switcher
- * pattern, wired to the real active-group cookie. Fetches the circles the
- * signed-in user belongs to (RLS-scoped), shows the active one, and switches
- * via the `setActiveGroup` Server Action (validates visibility, moves the
- * cookie, redirects back to the current screen) — so a member of several
- * circles can move between them and every server screen re-reads that group.
+ * Group switcher (CET-25) — the Slack/Notion workspace-switcher pattern, now
+ * path-based. Fetches the circles the signed-in user belongs to (RLS-scoped)
+ * and renders each as a prefetched <Link> to `/g/[groupId]/<currentTab>`, so
+ * hovering preloads that group's screen and clicking switches instantly — no
+ * Server Action round-trip, no cookie write on the client (the proxy records
+ * last-visited from the path). Keeps the same tab across the switch.
  *
  * Self-fetching so it can live in the (still-mock) app shell without threading
  * server data through it; `initialName` avoids a flash where the caller (the
@@ -14,26 +14,19 @@
  */
 
 import * as React from "react";
-import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
-import { setActiveGroup } from "@/app/(app)/groups/actions";
 import { q } from "@/lib/db-log";
 import { ChevronDownIcon, CheckIcon, GridIcon } from "@/components/demo/icons";
+import { groupHref, groupIdFromPath, groupSubPath } from "@/lib/group-href";
 
 type Role = "owner" | "admin" | "member";
 type Group = { id: string; name: string; role: Role };
 
 const ROLE_RANK: Record<Role, number> = { owner: 0, admin: 1, member: 2 };
-
-/** Read a non-httpOnly cookie in the browser. */
-function readCookie(name: string): string | undefined {
-  return document.cookie
-    .split("; ")
-    .find((c) => c.startsWith(name + "="))
-    ?.split("=")[1];
-}
 
 export function GroupSwitcher({
   className,
@@ -42,13 +35,14 @@ export function GroupSwitcher({
   className?: string;
   initialName?: string;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const [groups, setGroups] = React.useState<Group[]>([]);
-  const [activeId, setActiveId] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState(false);
-  const [pending, startTransition] = React.useTransition();
   const ref = React.useRef<HTMLDivElement>(null);
+
+  // The active group + the tab to preserve both come from the URL.
+  const activeId = groupIdFromPath(pathname);
+  const sub = groupSubPath(pathname);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -70,19 +64,10 @@ export function GroupSwitcher({
           id: r.groups!.id,
           name: r.groups!.name,
           role: r.role as Role,
-        }));
+        }))
+        .sort((a, b) => ROLE_RANK[a.role] - ROLE_RANK[b.role]);
       if (cancelled) return;
-      // Mirror resolveActiveGroup: cookie if it's one of mine, else best role.
-      const cookie = readCookie("cetele-active-group");
-      const best = [...list].sort(
-        (a, b) => ROLE_RANK[a.role] - ROLE_RANK[b.role],
-      )[0];
-      const active =
-        cookie && list.some((g) => g.id === cookie)
-          ? cookie
-          : (best?.id ?? null);
       setGroups(list);
-      setActiveId(active);
     })();
     return () => {
       cancelled = true;
@@ -111,17 +96,6 @@ export function GroupSwitcher({
     initialName ??
     "Select group";
 
-  function switchTo(id: string) {
-    setOpen(false);
-    if (id === activeId) return;
-    // The sidebar switcher stays mounted across the soft navigation, so update
-    // the label/checkmark now rather than waiting for a remount.
-    setActiveId(id);
-    startTransition(async () => {
-      await setActiveGroup(id, pathname);
-    });
-  }
-
   const roleLabel = (r: Role) =>
     r === "owner" ? "Owner" : r === "admin" ? "Co-admin" : "Member";
 
@@ -131,10 +105,9 @@ export function GroupSwitcher({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        disabled={pending}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-lg text-foreground transition-colors hover:bg-muted disabled:opacity-60",
+          "inline-flex items-center gap-1.5 rounded-lg text-foreground transition-colors hover:bg-muted",
           className,
         )}
       >
@@ -153,12 +126,12 @@ export function GroupSwitcher({
           {groups.map((g) => {
             const activeOne = g.id === activeId;
             return (
-              <button
+              <Link
                 key={g.id}
-                type="button"
+                href={groupHref(g.id, sub)}
                 role="option"
                 aria-selected={activeOne}
-                onClick={() => switchTo(g.id)}
+                onClick={() => setOpen(false)}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-muted"
               >
                 <span className="grid size-4 shrink-0 place-items-center">
@@ -179,7 +152,7 @@ export function GroupSwitcher({
                 >
                   {roleLabel(g.role)}
                 </Badge>
-              </button>
+              </Link>
             );
           })}
           {groups.length === 0 && (
@@ -190,17 +163,14 @@ export function GroupSwitcher({
 
           {/* Drive-style "My Drive" entry — manage / create groups */}
           <div className="mt-1 border-t border-border pt-1">
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                router.push("/groups");
-              }}
+            <Link
+              href="/groups"
+              onClick={() => setOpen(false)}
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-muted"
             >
               <GridIcon className="size-4" />
               All my groups
-            </button>
+            </Link>
           </div>
         </div>
       )}

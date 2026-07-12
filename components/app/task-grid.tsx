@@ -17,7 +17,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button, Input } from "@/components/ui";
-import { setCount } from "@/app/(app)/group/actions";
+import { setCount } from "@/app/(app)/g/[groupId]/group/actions";
 import { CheckIcon } from "@/components/demo/icons";
 
 export type GridCell = {

@@ -26,7 +26,7 @@ export async function incrementCount(
   );
   if (error) return { count: null, error: error.message };
 
-  revalidatePath("/today");
+  revalidatePath("/g/[groupId]/today", "page");
   return { count: data, error: null };
 }
 
@@ -50,6 +50,6 @@ export async function setTimezone(
     .eq("id", me);
   if (error) return { error: error.message };
 
-  revalidatePath("/today");
+  revalidatePath("/g/[groupId]/today", "page");
   return { error: null };
 }

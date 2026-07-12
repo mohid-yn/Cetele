@@ -2,20 +2,22 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import { groupHref } from "@/lib/group-href";
 import { CountClient } from "./count-client";
 
 /**
  * Count screen, server-first shell (M3). The task + my fortnight of counts
- * load under RLS; the tap pad itself is the optimistic client leaf.
+ * load under RLS; the tap pad itself is the optimistic client leaf. The group
+ * comes from the `/g/[groupId]` route param (CET-25).
  */
 export default async function CountPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ taskId: string }>;
+  params: Promise<{ groupId: string; taskId: string }>;
   searchParams: Promise<{ date?: string }>;
 }) {
-  const [{ taskId }, { date: paramDate }] = await Promise.all([
+  const [{ groupId, taskId }, { date: paramDate }] = await Promise.all([
     params,
     searchParams,
   ]);
@@ -29,7 +31,12 @@ export default async function CountPage({
       .from("tasks")
       .select("id, label, subtitle, target_count")
       .eq("id", taskId)
-      .maybeSingle(), // RLS: visible only to the task's group members
+      // Pin the task to the group in the URL, so /g/<other>/count/<task> can't
+      // render a task under a group it doesn't belong to. RLS already limits
+      // tasks to their group's members, so this doubles as the membership
+      // check — no extra round-trip (the sibling pages' resolveGroup call).
+      .eq("group_id", groupId)
+      .maybeSingle(),
     supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
   ]);
 
@@ -39,7 +46,7 @@ export default async function CountPage({
         <div>
           <p>That task no longer exists.</p>
           <Link
-            href="/today"
+            href={groupHref(groupId, "/today")}
             className={buttonVariants({
               variant: "outline",
               className: "mt-4",
@@ -71,6 +78,7 @@ export default async function CountPage({
 
   return (
     <CountClient
+      groupId={groupId}
       task={{
         id: task.id,
         label: task.label,

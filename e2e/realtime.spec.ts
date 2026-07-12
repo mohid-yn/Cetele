@@ -39,7 +39,7 @@ async function signIn(page: Page, email: string) {
     .toBe(true);
 
   await page.goto(link!);
-  await page.waitForURL("**/today");
+  await page.waitForURL(/\/groups|\/g\//);
 }
 
 test("collective counter climbs live when a peer taps", async ({ browser }) => {
@@ -54,7 +54,7 @@ test("collective counter climbs live when a peer taps", async ({ browser }) => {
   await pageA.click('button:has-text("New group")');
   await pageA.fill("#new-group-name", "Live Circle");
   await pageA.click('button:has-text("Create group")');
-  await pageA.click('button:has-text("Manage")');
+  await pageA.click('a:has-text("Manage")');
   await pageA.waitForURL("**/group/manage");
   await pageA.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Tasbih");
   await pageA.getByPlaceholder("Daily target").last().fill("10");
@@ -74,7 +74,7 @@ test("collective counter climbs live when a peer taps", async ({ browser }) => {
     pageB.getByText("You’ve been invited to Live Circle"),
   ).toBeVisible();
   await pageB.click('button:has-text("Join the group")');
-  await pageB.waitForURL("**/groups");
+  await pageB.waitForURL(/\/g\/.*\/today/);
 
   // A sits on /today. Goal is now 10 × 2 members = 20; nobody has logged → 0%.
   await pageA.goto("/today");

@@ -41,7 +41,7 @@ async function signIn(page: Page, email: string) {
     .toBe(true);
 
   await page.goto(link!);
-  await page.waitForURL("**/today");
+  await page.waitForURL(/\/groups|\/g\//);
 }
 
 async function signOut(page: Page) {
@@ -61,7 +61,7 @@ test("owner: create group → manage → tasks → open invite", async ({ page }
   await expect(page.getByText("M2 Circle")).toBeVisible();
 
   // open the real manage screen (sets the active-group cookie)
-  await page.click('button:has-text("Manage")');
+  await page.click('a:has-text("Manage")');
   await page.waitForURL("**/group/manage");
   await expect(page.getByRole("heading", { name: "Manage" })).toBeVisible();
 
@@ -161,7 +161,7 @@ test("owner: promote the joiner to co-admin, then remove them", async ({
 }) => {
   await signIn(page, OWNER);
   await page.goto("/groups");
-  await page.click('button:has-text("Manage")');
+  await page.click('a:has-text("Manage")');
   await page.waitForURL("**/group/manage");
 
   // the joiner shows up in Members — scope to their row (the invite form has

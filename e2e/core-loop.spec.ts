@@ -39,7 +39,7 @@ async function signIn(page: Page, email: string) {
     .toBe(true);
 
   await page.goto(link!);
-  await page.waitForURL("**/today");
+  await page.waitForURL(/\/groups|\/g\//);
 }
 
 test("tap → count persists → ring closes → streak advances", async ({
@@ -55,7 +55,7 @@ test("tap → count persists → ring closes → streak advances", async ({
   await page.click('button:has-text("New group")');
   await page.fill("#new-group-name", "Core Circle");
   await page.click('button:has-text("Create group")');
-  await page.click('button:has-text("Manage")');
+  await page.click('a:has-text("Manage")');
   await page.waitForURL("**/group/manage");
   await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Salawat");
   await page.getByPlaceholder("Daily target").last().fill("3");
