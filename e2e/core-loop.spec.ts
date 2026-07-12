@@ -47,11 +47,13 @@ test("tap → count persists → ring closes → streak advances", async ({
 }) => {
   await signIn(page, USER);
 
-  // fresh user: /today offers the no-group empty state
-  await expect(page.getByText("not in a group yet")).toBeVisible();
+  // fresh user: bare /today has no group to resolve, so it redirects to
+  // /groups — the no-group home (CET-25; the old /today empty state is gone).
+  await page.goto("/today");
+  await page.waitForURL("**/groups");
+  await expect(page.getByText("create one to get started")).toBeVisible();
 
   // create a group + one small task (target 3 keeps the loop quick)
-  await page.goto("/groups");
   await page.click('button:has-text("New group")');
   await page.fill("#new-group-name", "Core Circle");
   await page.click('button:has-text("Create group")');

@@ -143,7 +143,11 @@ test("joiner: signed-out invite link → ?next= → sign in → accept → membe
     page.getByText("You’ve been invited to M2 Circle Renamed"),
   ).toBeVisible();
   await page.click('button:has-text("Join the group")');
-  await page.waitForURL("**/groups");
+  // Joining now lands straight in the circle (CET-25), not on /groups.
+  await page.waitForURL(/\/g\/.*\/today/);
+
+  // …and the circle shows up in the groups list with the new member counted.
+  await page.goto("/groups");
   await expect(page.getByText("M2 Circle Renamed")).toBeVisible();
   await expect(page.getByText("2 members")).toBeVisible();
 
