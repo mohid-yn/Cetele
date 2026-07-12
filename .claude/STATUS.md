@@ -178,7 +178,15 @@ _(Refreshed 2026-07-12 — this list had gone stale: every item below bar Resend
 
 ### Next steps (ordered) — tracked in Linear
 
-> **Requirements LOCKED (D32, 2026-06-29) — mock-first validation (D18) complete; backend build is now the focus.** The product owner reviewed the live mock and locked v1 requirements (PRD + mock baseline through D31). **CET-2 (Supabase schema + RLS) is the active next step**, built server-first per `docs/MIGRATION_MOCK_TO_SUPABASE.md` (selectors → queries, actions → Server Actions). Soft lock: requirements may be **revisited after real user testing** of the shipped backend — build against this baseline, don't add net-new mock features unless they block the backend.
+> **▶️ YOU ARE HERE (2026-07-12): the backend is DONE — M0–M8 all shipped (14 migrations live). What's left before the stakeholder review (D38) is the v2 conversions, then M9.**
+>
+> **Next, in order:**
+>
+> 1. **v2 retention features → real** (CET-17 garden · CET-18 peer reactions · CET-19 fresh-start · CET-20 badges · CET-21 endowed-progress onboarding · CET-22 pair goals). **Not net-new design** — each already exists in the CET-14 mock, so this is mock→real conversion (tables + RLS + Server Actions), the same strangler pattern M2–M8 used. Their tables (`reactions` etc.) are the ones 0007–0014 deliberately did **not** build.
+> 2. **M9 — cutover:** delete `lib/mock/*` + Demo Controls; no `lib/mock` import may remain. `/profile` was the last _real screen_ on `MockStateProvider` (freed by M8), so what's left in `lib/mock` now feeds **only** the v2 features above and the app shell.
+> 3. **CET-26** (backlog): the two CET-25 acceptance e2e tests that were never written.
+>
+> _Requirements remain LOCKED (D32) — a soft lock: revisit after real user testing. D38 governs scope: the owner will not show stakeholders until the app is 100% real (no mock shell / no Demo Controls) **and** feature-complete beyond v1._
 
 | #   | Issue                                             | Feature                                                                 | State                                                                                                                     |
 | --- | ------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -188,8 +196,8 @@ _(Refreshed 2026-07-12 — this list had gone stale: every item below bar Resend
 | —   | CET-14                                            | Clickable frontend mock (no backend) — D18                              | ✅ Done (live in prod)                                                                                                    |
 | —   | CET-15                                            | Responsive + theming; re-theme emerald/gold — D19/D20                   | ✅ Done (live in prod)                                                                                                    |
 | —   | _product-owner review → requirements lock_        | live-mock review complete → **requirements LOCKED (D32)**               | ✅ Done (2026-06-29)                                                                                                      |
-| 2   | [CET-2](https://linear.app/mohidkz/issue/CET-2)   | Supabase: schema + Row-Level Security                                   | 🟡 **in progress (~⅓)** — foundation + owner-orphan fix + M0 hygiene done; next = M1 (see `docs/BACKEND_BUILD_PLAN.md`)   |
-| 3   | [CET-3](https://linear.app/mohidkz/issue/CET-3)   | Auth: Google OAuth + email magic link                                   | ⏭️ after CET-2                                                                                                            |
+| 2   | [CET-2](https://linear.app/mohidkz/issue/CET-2)   | Supabase: schema + Row-Level Security                                   | ✅ **Done — live in prod** (migrations `0001`–`0014`; M0–M8 all shipped; pgTAP 263 across 7 suites)                       |
+| 3   | [CET-3](https://linear.app/mohidkz/issue/CET-3)   | Auth: Google OAuth + email magic link                                   | ✅ **Done — M1 live in prod** (Google primary; magic link behind `NEXT_PUBLIC_AUTH_EMAIL`)                                |
 | 4   | [CET-4](https://linear.app/mohidkz/issue/CET-4)   | Groups: create / invite / join + roles                                  | ✅ **Done — M2 live in prod** (D35 join model; succession = M7)                                                           |
 | 5   | [CET-5](https://linear.app/mohidkz/issue/CET-5)   | Admin task-list editor                                                  | ✅ **Done — M2 live in prod** (drag-reorder UI = later polish)                                                            |
 | 6   | [CET-6](https://linear.app/mohidkz/issue/CET-6)   | Tap counter + progress rings                                            | ✅ **Done — M3 live in prod** (2026-07-05)                                                                                |
