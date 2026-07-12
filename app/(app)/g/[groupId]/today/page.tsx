@@ -122,7 +122,7 @@ export default async function TodayPage({
 
   return (
     <>
-      <TimezoneSync current={tz} />
+      <TimezoneSync groupId={active.groupId} current={tz} />
       <TodayLive
         groupId={active.groupId}
         taskIds={(tasks ?? []).map((t) => t.id)}

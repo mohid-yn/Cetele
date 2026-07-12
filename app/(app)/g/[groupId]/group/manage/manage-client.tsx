@@ -108,9 +108,11 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 function TaskRow({
+  groupId,
   task,
   onRemove,
 }: {
+  groupId: string;
   task: ManageTask;
   onRemove: (task: ManageTask) => void;
 }) {
@@ -122,7 +124,7 @@ function TaskRow({
 
   const save = () =>
     run(
-      () => act.updateTask(task.id, { label, subtitle, target }),
+      () => act.updateTask(groupId, task.id, { label, subtitle, target }),
       () => setEditing(false),
     );
 
@@ -449,7 +451,7 @@ export function ManageClient({
                       variant="ghost"
                       className="text-danger hover:bg-danger-500/10"
                       onClick={() =>
-                        inviteAct.run(() => act.revokeInvite(i.id))
+                        inviteAct.run(() => act.revokeInvite(group.id, i.id))
                       }
                     >
                       Revoke
@@ -473,7 +475,12 @@ export function ManageClient({
         </p>
         <ul className="flex flex-col gap-2">
           {tasks.map((t) => (
-            <TaskRow key={t.id} task={t} onRemove={setRemovingTask} />
+            <TaskRow
+              key={t.id}
+              groupId={group.id}
+              task={t}
+              onRemove={setRemovingTask}
+            />
           ))}
           {tasks.length === 0 && (
             <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
@@ -665,7 +672,8 @@ export function ManageClient({
         open={!!removingTask}
         onClose={() => setRemovingTask(null)}
         onConfirm={() =>
-          removingTask && taskAct.run(() => act.deleteTask(removingTask.id))
+          removingTask &&
+          taskAct.run(() => act.deleteTask(group.id, removingTask.id))
         }
         title={`Remove "${removingTask?.label ?? ""}"?`}
         description="This task and its logged counts are removed for everyone in the group."

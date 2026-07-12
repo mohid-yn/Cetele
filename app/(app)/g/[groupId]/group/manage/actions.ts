@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ACTIVE_GROUP_COOKIE } from "@/lib/active-group";
+import { groupHref } from "@/lib/group-href";
 
 /**
  * M2 Server Actions for the manage screen. Deliberately thin: RLS + the 0007
@@ -15,6 +16,13 @@ import { ACTIVE_GROUP_COOKIE } from "@/lib/active-group";
  */
 
 type Result = { error: string | null };
+
+/** Bust the manage screen. Concrete path, never the `/g/[groupId]/…` template:
+ *  a template leaves the client Router Cache holding the RSC payload the nav
+ *  prefetched *before* the write, so navigating back replays stale data. */
+function revalidateManage(groupId: string) {
+  revalidatePath(groupHref(groupId, "/group/manage"));
+}
 
 const ok: Result = { error: null };
 const fail = (message: string): Result => ({ error: message });
@@ -37,7 +45,7 @@ export async function renameGroup(
     .eq("id", groupId);
   if (error) return fail(error.message);
 
-  revalidatePath("/g/[groupId]/group/manage", "page");
+  revalidateManage(groupId);
   revalidatePath("/groups");
   return ok;
 }
@@ -64,7 +72,7 @@ export async function transferOwnership(
   });
   if (error) return fail(error.message);
 
-  revalidatePath("/g/[groupId]/group/manage", "page");
+  revalidateManage(groupId);
   revalidatePath("/groups");
   return ok;
 }
@@ -79,7 +87,7 @@ export async function claimOwnership(groupId: string): Promise<Result> {
   const { error } = await supabase.rpc("claim_ownership", { p_group: groupId });
   if (error) return fail(error.message);
 
-  revalidatePath("/g/[groupId]/group/manage", "page");
+  revalidateManage(groupId);
   revalidatePath("/groups");
   return ok;
 }
@@ -124,11 +132,12 @@ export async function addTask(
   });
   if (error) return fail(error.message);
 
-  revalidatePath("/g/[groupId]/group/manage", "page");
+  revalidateManage(groupId);
   return ok;
 }
 
 export async function updateTask(
+  groupId: string,
   taskId: string,
   input: { label: string; subtitle: string; target: string },
 ): Promise<Result> {
@@ -146,16 +155,19 @@ export async function updateTask(
     .eq("id", taskId);
   if (error) return fail(error.message);
 
-  revalidatePath("/g/[groupId]/group/manage", "page");
+  revalidateManage(groupId);
   return ok;
 }
 
-export async function deleteTask(taskId: string): Promise<Result> {
+export async function deleteTask(
+  groupId: string,
+  taskId: string,
+): Promise<Result> {
   const supabase = await createClient();
   const { error } = await supabase.from("tasks").delete().eq("id", taskId);
   if (error) return fail(error.message);
 
-  revalidatePath("/g/[groupId]/group/manage", "page");
+  revalidateManage(groupId);
   return ok;
 }
 
@@ -178,7 +190,7 @@ export async function setMemberRole(
     .eq("user_id", userId);
   if (error) return fail(error.message);
 
-  revalidatePath("/g/[groupId]/group/manage", "page");
+  revalidateManage(groupId);
   return ok;
 }
 
@@ -194,7 +206,7 @@ export async function removeMember(
     .eq("user_id", userId);
   if (error) return fail(error.message);
 
-  revalidatePath("/g/[groupId]/group/manage", "page");
+  revalidateManage(groupId);
   return ok;
 }
 
@@ -221,15 +233,18 @@ export async function createInvite(
   });
   if (error) return fail(error.message);
 
-  revalidatePath("/g/[groupId]/group/manage", "page");
+  revalidateManage(groupId);
   return ok;
 }
 
-export async function revokeInvite(inviteId: string): Promise<Result> {
+export async function revokeInvite(
+  groupId: string,
+  inviteId: string,
+): Promise<Result> {
   const supabase = await createClient();
   const { error } = await supabase.from("invites").delete().eq("id", inviteId);
   if (error) return fail(error.message);
 
-  revalidatePath("/g/[groupId]/group/manage", "page");
+  revalidateManage(groupId);
   return ok;
 }

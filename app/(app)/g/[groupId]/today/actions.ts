@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
+import { groupHref, GROUP_WRITE_PATHS } from "@/lib/group-href";
 
 /**
  * The tap path (M3). All integrity rules live in the increment_count RPC
@@ -11,6 +12,7 @@ import { q } from "@/lib/db-log";
  * so the optimistic client can reconcile.
  */
 export async function incrementCount(
+  groupId: string,
   taskId: string,
   date: string,
   delta: number,
@@ -26,7 +28,8 @@ export async function incrementCount(
   );
   if (error) return { count: null, error: error.message };
 
-  revalidatePath("/g/[groupId]/today", "page");
+  // Concrete paths, not the route template — see GROUP_WRITE_PATHS.
+  for (const sub of GROUP_WRITE_PATHS) revalidatePath(groupHref(groupId, sub));
   return { count: data, error: null };
 }
 
@@ -35,6 +38,7 @@ export async function incrementCount(
  * validates the IANA name (garbage throws), so this stays a thin relay.
  */
 export async function setTimezone(
+  groupId: string,
   timezone: string,
 ): Promise<{ error: string | null }> {
   if (!timezone || timezone.length > 64) return { error: "Invalid timezone" };
@@ -50,6 +54,6 @@ export async function setTimezone(
     .eq("id", me);
   if (error) return { error: error.message };
 
-  revalidatePath("/g/[groupId]/today", "page");
+  revalidatePath(groupHref(groupId, "/today"));
   return { error: null };
 }

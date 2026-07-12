@@ -27,6 +27,20 @@ export function groupHref(groupId: string, sub: GroupSubPath = "/today") {
 }
 
 /**
+ * The group screens a write can change. Server Actions revalidate these
+ * **concrete** paths (`/g/<id>/today`), never the route template
+ * (`/g/[groupId]/today`): a template only busts the server's Full Route Cache,
+ * which these dynamic pages don't use, and leaves the **client Router Cache**
+ * holding the RSC payload the nav prefetched *before* the write. Navigating
+ * back then replays that pre-write payload — the count-edit-then-reopen bug.
+ */
+export const GROUP_WRITE_PATHS: GroupSubPath[] = [
+  "/today",
+  "/group",
+  "/progress",
+];
+
+/**
  * Extract the group id from a path like `/g/<id>/today`. Returns null when the
  * path isn't group-scoped (e.g. /groups, /profile). Shared by the nav and the
  * switcher so both resolve the active group from the URL, not a cookie.

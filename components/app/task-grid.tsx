@@ -14,7 +14,7 @@
  */
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button, Input } from "@/components/ui";
 import { setCount } from "@/app/(app)/g/[groupId]/group/actions";
@@ -77,6 +77,8 @@ export function TaskGrid({
   editable?: boolean;
 }) {
   const router = useRouter();
+  // The grid always renders under /g/[groupId]/… (group Members, own Progress).
+  const groupId = String(useParams().groupId ?? "");
   const [picked, setPicked] = React.useState<Picked | null>(null);
   const [draft, setDraft] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -103,7 +105,13 @@ export function TaskGrid({
     const value = Math.max(0, Math.round(Number(draft) || 0));
     setSaving(true);
     setError(null);
-    const { error } = await setCount(userId, picked.taskId, picked.date, value);
+    const { error } = await setCount(
+      groupId,
+      userId,
+      picked.taskId,
+      picked.date,
+      value,
+    );
     setSaving(false);
     if (error) {
       setError(error);

@@ -13,7 +13,34 @@
 // error) to reinstall + wipe the old cache on activate. Fetch logic unchanged
 // from v2. Pairs with the proxy safety net that routes a `/?code=` landing to
 // /auth/callback for the server-side exchange.
-const CACHE = "cetele-static-v3";
+//
+// v4 (2026-07-12): **cache only static assets — never app data.** v2/v3 skipped
+// navigations but still cache-first-cached every *other* same-origin GET, and an
+// RSC payload fetch is not a navigation: it's a `dest: empty` GET. So the app's
+// own React Server Component payloads were being cached permanently, keyed by
+// URL, with no expiry and no notion of who was signed in. Two consequences:
+//   1. Stale data. A page's payload is captured (notably by a nav *prefetch*),
+//      then replayed after a write — an admin corrects a member's count, walks
+//      back to the screen, and sees the pre-edit number. The network is never
+//      consulted, so no amount of revalidatePath/staleTimes on the Next side
+//      helps: the service worker sits in front of all of it.
+//   2. Worse, those payloads are authenticated and RLS-scoped *per user*. Same
+//      URL + cache-first + no auth check means one user's cached group data can
+//      be handed to the next person to sign in on a shared device.
+// The rule is now an allowlist: hashed build output and static files only.
+// Anything that can carry user data goes to the network, always.
+const CACHE = "cetele-static-v4";
+
+/** Immutable build output + static files. Everything else is app data. */
+function isStaticAsset(url) {
+  return (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/icons/") ||
+    /\.(?:css|js|woff2?|png|jpe?g|svg|gif|webp|ico|webmanifest)$/.test(
+      url.pathname,
+    )
+  );
+}
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -45,7 +72,12 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/auth")) return;
   if (request.mode === "navigate") return;
 
-  // Same-origin static GET: cache-first, fall back to network, never throw.
+  // Anything that isn't an immutable static asset is app data (RSC payloads,
+  // Server Action responses, route handlers) — always go to the network, so a
+  // signed-in user never reads another request's cached rows. See v4 above.
+  if (!isStaticAsset(url)) return;
+
+  // Static asset: cache-first, fall back to network, never throw.
   event.respondWith(
     caches.match(request).then(
       (cached) =>

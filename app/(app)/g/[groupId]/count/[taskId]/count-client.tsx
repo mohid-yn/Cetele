@@ -62,7 +62,7 @@ export function CountClient({
       if (delta <= 0) continue;
       // serialise flushes so a slow call can't be overtaken by the next one
       inflight.current = inflight.current.then(async () => {
-        const res = await incrementCount(task.id, d, delta);
+        const res = await incrementCount(groupId, task.id, d, delta);
         if (res.error || res.count == null) {
           // reject → roll the optimistic taps back and surface the reason
           setCounts((c) => ({ ...c, [d]: Math.max(0, (c[d] ?? 0) - delta) }));
@@ -77,7 +77,7 @@ export function CountClient({
       });
     }
     return inflight.current;
-  }, [task.id]);
+  }, [groupId, task.id]);
 
   const queue = React.useCallback(
     (delta: number) => {

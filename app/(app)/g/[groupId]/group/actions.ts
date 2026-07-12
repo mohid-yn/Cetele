@@ -3,6 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
+import { groupHref, GROUP_WRITE_PATHS } from "@/lib/group-href";
+
+/** Bust every group screen a count-write can change — concrete paths, so the
+ *  client Router Cache drops its prefetched (pre-write) payloads too. */
+function revalidateGroup(groupId: string) {
+  for (const sub of GROUP_WRITE_PATHS) revalidatePath(groupHref(groupId, sub));
+}
 
 /**
  * M5 Server Actions for the group hub's admin-oversight writes (D29). Both
@@ -15,6 +22,7 @@ import { q } from "@/lib/db-log";
 /** D29: set the exact count for one member/task/day — admin proxy-log or the
  *  member correcting their own record (the editable fortnight grid). */
 export async function setCount(
+  groupId: string,
   userId: string,
   taskId: string,
   date: string,
@@ -32,9 +40,7 @@ export async function setCount(
   );
   if (error) return { error: error.message };
 
-  revalidatePath("/g/[groupId]/group", "page");
-  revalidatePath("/g/[groupId]/progress", "page");
-  revalidatePath("/g/[groupId]/today", "page");
+  revalidateGroup(groupId);
   return { error: null };
 }
 
@@ -73,8 +79,6 @@ export async function logForGroup(
   const firstError = results.find((r) => r.error)?.error;
   if (firstError) return { error: firstError.message };
 
-  revalidatePath("/g/[groupId]/group", "page");
-  revalidatePath("/g/[groupId]/progress", "page");
-  revalidatePath("/g/[groupId]/today", "page");
+  revalidateGroup(groupId);
   return { error: null };
 }
