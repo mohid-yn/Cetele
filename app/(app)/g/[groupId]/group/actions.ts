@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
 import { groupHref, GROUP_WRITE_PATHS } from "@/lib/group-href";
@@ -81,4 +82,49 @@ export async function logForGroup(
 
   revalidateGroup(groupId);
   return { error: null };
+}
+
+/**
+ * Leave a circle (CET-27 follow-up — `/privacy` has always promised this).
+ *
+ * Authority is the `memberships_delete_self` policy (0001): you may delete your
+ * own row, and only if `role <> 'owner'`. So an owner leaving is refused by RLS
+ * rather than by a check here — which is the invariant that keeps the 0012
+ * last-member trigger a safety net rather than a routine path: the owner must
+ * transfer or delete the circle first, so nobody can walk out of a group and
+ * strand it. A blocked delete matches no row (RLS filters, it doesn't error),
+ * so a zero-row result IS the refusal.
+ *
+ * Your logs stay (D41): every group-facing figure is derived from the current
+ * member list, so leaving stops you counting without erasing dhikr that happened
+ * — and rejoining brings your history back with you.
+ */
+export async function leaveGroup(
+  groupId: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const { data: claims } = await supabase.auth.getClaims();
+  const me = claims?.claims?.sub;
+  if (!me) return { error: "You are signed out." };
+
+  const { data, error } = await q(
+    "leaveGroup.delete membership",
+    supabase
+      .from("memberships")
+      .delete()
+      .eq("group_id", groupId)
+      .eq("user_id", me)
+      .select("group_id"),
+  );
+  if (error) return { error: error.message };
+  if (!data?.length) {
+    return {
+      error:
+        "You own this circle — transfer ownership or delete it before leaving.",
+    };
+  }
+
+  revalidatePath("/groups");
+  redirect("/groups");
 }

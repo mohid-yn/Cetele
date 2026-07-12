@@ -113,8 +113,14 @@ export default async function TodayPage({
     })
     .sort((a, b) => Number(b.isMe) - Number(a.isMe) || b.closed - a.closed);
 
-  // collective: everyone's counts today vs the group-wide goal
-  const total = (todayLogs ?? []).reduce((s, l) => s + l.count, 0);
+  // collective: everyone's counts today vs the group-wide goal. Counted over the
+  // CURRENT members only (D41) — `logs` outlive a membership, so summing the raw
+  // rows would keep counting someone who has left (the goal already scales to
+  // the live member count, so an ex-member would push the ring past 100%).
+  const memberIds = new Set((members ?? []).map((m) => m.user_id));
+  const total = (todayLogs ?? [])
+    .filter((l) => memberIds.has(l.user_id))
+    .reduce((s, l) => s + l.count, 0);
   const goal =
     (members?.length ?? 0) *
     (tasks ?? []).reduce((s, t) => s + t.target_count, 0);

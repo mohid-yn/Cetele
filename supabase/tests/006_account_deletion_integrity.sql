@@ -133,5 +133,45 @@ reset role;
 select is((select count(*) from public.groups where name='Real Circle'),
   1::bigint, 'the group exists');
 
+-- ----------------------------------------------------------------------------
+-- Leaving a circle (CET-27 follow-up). Authority is memberships_delete_self
+-- (0001): your own row, and only if you are not the owner. RLS *filters* rather
+-- than errors, so an owner's leave matches zero rows — that IS the refusal, and
+-- it is what stops anyone walking out of a circle and stranding it (which the
+-- 0012 trigger would then silently delete).
+-- ----------------------------------------------------------------------------
+-- mem2 is a co-admin of g_pair (its owner's account was deleted above, so the
+-- circle is ownerless-but-populated — they can still leave).
+select pg_temp.impersonate('c7000000-0000-0000-0000-000000000003');
+select lives_ok(
+  $$delete from public.memberships
+     where group_id='c7000000-0000-0000-0000-0000000000a2'
+       and user_id='c7000000-0000-0000-0000-000000000003'$$,
+  'a co-admin can leave a circle');
+reset role;
+select is((select count(*) from public.memberships where group_id='c7000000-0000-0000-0000-0000000000a2'),
+  0::bigint, 'their membership is gone');
+select is((select count(*) from public.groups where id='c7000000-0000-0000-0000-0000000000a2'),
+  0::bigint, 'the last member leaving takes the empty circle with them (0012 trigger)');
+
+-- An owner cannot leave: the delete matches no row, so the membership survives
+-- and the circle is never stranded.
+insert into public.groups (id, name, created_by) values
+  ('c7000000-0000-0000-0000-0000000000a4', 'Owned Circle', 'c7000000-0000-0000-0000-000000000003');
+insert into public.memberships (user_id, group_id, role) values
+  ('c7000000-0000-0000-0000-000000000003', 'c7000000-0000-0000-0000-0000000000a4', 'owner');
+
+select pg_temp.impersonate('c7000000-0000-0000-0000-000000000003');
+select lives_ok(
+  $$delete from public.memberships
+     where group_id='c7000000-0000-0000-0000-0000000000a4'
+       and user_id='c7000000-0000-0000-0000-000000000003'$$,
+  'an owner''s leave is filtered by RLS, not an error');
+reset role;
+select is((select role from public.memberships where group_id='c7000000-0000-0000-0000-0000000000a4'),
+  'owner', 'the owner is still in their circle (leave refused → transfer or delete first)');
+select is((select count(*) from public.groups where id='c7000000-0000-0000-0000-0000000000a4'),
+  1::bigint, 'the circle survives — an owner can never strand it by leaving');
+
 select * from finish();
 rollback;

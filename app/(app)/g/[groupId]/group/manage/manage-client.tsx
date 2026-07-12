@@ -13,6 +13,7 @@ import {
 } from "@/components/ui";
 import { ArrowLeftIcon, PlusIcon, CheckIcon } from "@/components/demo/icons";
 import { RoleToggle, selectCls } from "@/components/demo/role-toggle";
+import { useAction } from "@/lib/use-action";
 import * as act from "./actions";
 
 /**
@@ -47,24 +48,6 @@ export type ManageInvite = {
   role: "admin" | "member";
   code: string;
 };
-
-/** Run a Server Action inside a transition, surfacing its error. */
-function useAction() {
-  const [pending, startTransition] = React.useTransition();
-  const [error, setError] = React.useState<string | null>(null);
-  const run = (
-    fn: () => Promise<{ error: string | null }>,
-    after?: () => void,
-  ) => {
-    setError(null);
-    startTransition(async () => {
-      const res = await fn();
-      if (res?.error) setError(res.error);
-      else after?.();
-    });
-  };
-  return { pending, error, run };
-}
 
 function ErrorNote({ error }: { error: string | null }) {
   if (!error) return null;

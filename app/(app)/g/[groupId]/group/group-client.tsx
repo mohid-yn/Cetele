@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { buttonVariants, Button, Dialog } from "@/components/ui";
+import { buttonVariants, Button, Dialog, ConfirmDialog } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/demo/page-header";
 import { SectionHeading } from "@/components/demo/section-heading";
@@ -16,13 +16,14 @@ import {
 import { GroupSwitcher } from "@/components/app/group-switcher";
 import { SteadfastnessBoard } from "@/components/app/steadfastness-board";
 import { groupHref } from "@/lib/group-href";
+import { useAction } from "@/lib/use-action";
 import {
   CheckIcon,
   ChevronRightIcon,
   GridIcon,
   SettingsIcon,
 } from "@/components/demo/icons";
-import { logForGroup } from "./actions";
+import { logForGroup, leaveGroup } from "./actions";
 
 type Role = "owner" | "admin" | "member";
 type Tab = "overview" | "standings" | "members";
@@ -104,6 +105,12 @@ export function GroupClient({
   );
   const [groupLogOpen, setGroupLogOpen] = React.useState(false);
   const [logging, setLogging] = React.useState<string | null>(null);
+  const [leaveOpen, setLeaveOpen] = React.useState(false);
+  const leaveAct = useAction();
+
+  // My own role in this circle — an owner can't leave (they must transfer or
+  // delete first), so the Members tab shows them that instead of a Leave button.
+  const myRole = contributions.find((c) => c.isMe)?.role;
 
   // Overall collective progress today (the live headline).
   const collectiveTotal = taskTotals.reduce((s, t) => s + t.total, 0);
@@ -389,8 +396,57 @@ export function GroupClient({
               <SteadfastnessBoard board={steadfastness} bar={steadfastBar} />
             </div>
           )}
+
+          {/* Leave the circle. Lives here, not in Manage — a plain member can't
+              open Manage, and leaving is the one group action every role has.
+              The owner can't leave (RLS): they must hand the circle over or
+              close it, so nobody walks out and strands it. */}
+          <div className="mt-6 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3">
+            {myRole === "owner" ? (
+              <p className="text-sm text-muted-foreground">
+                You own this circle. To leave, transfer ownership to someone
+                else — or delete the circle — from{" "}
+                <Link
+                  href={groupHref(groupId, "/group/manage")}
+                  className="font-medium text-primary"
+                >
+                  Manage
+                </Link>
+                .
+              </p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setLeaveOpen(true)}
+                  disabled={leaveAct.pending}
+                  className="text-sm font-medium text-danger disabled:opacity-60"
+                >
+                  {leaveAct.pending ? "Leaving…" : "Leave this circle"}
+                </button>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  You&apos;ll stop counting toward the circle&apos;s goals. The
+                  dhikr you logged stays — rejoin and it counts again.
+                </p>
+                {leaveAct.error && (
+                  <p role="alert" className="mt-2 text-xs text-danger">
+                    {leaveAct.error}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
         </section>
       )}
+
+      <ConfirmDialog
+        open={leaveOpen}
+        onClose={() => setLeaveOpen(false)}
+        onConfirm={() => leaveAct.run(() => leaveGroup(groupId))}
+        title="Leave this circle?"
+        description="You'll no longer see it or count toward its goals. The dhikr you logged stays with the circle, and rejoining brings it back."
+        confirmLabel="Leave"
+      />
 
       {canManage && (
         <MemberBreakdownDialog

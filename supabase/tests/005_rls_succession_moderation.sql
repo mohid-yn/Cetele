@@ -194,8 +194,13 @@ select lives_ok(
   $$select public.set_count('f7000000-0000-0000-0000-000000000003','f7000000-0000-0000-0000-0000000000c1', current_date-1, 4)$$,
   'member self-corrects');
 reset role;
-select is((select count(*) from public.audit_log where action='proxy_log'),
-  1::bigint, 'a self-edit is not audited as a proxy');
+-- Scoped to this fixture's target, not a global count: a local DB that has had
+-- the e2e suite run against it carries real proxy_log rows (e2e writes aren't
+-- rolled back), and a global count would read those as a failure here.
+select is((select count(*) from public.audit_log
+             where action='proxy_log'
+               and target_user_id='f7000000-0000-0000-0000-000000000003'),
+  1::bigint, 'a self-edit is not audited as a proxy (still just the one)');
 
 -- audit_log RLS: the target member sees their own proxy entry; an outsider none
 select pg_temp.impersonate('f7000000-0000-0000-0000-000000000003'); -- m (target)
