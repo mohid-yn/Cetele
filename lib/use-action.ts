@@ -14,12 +14,18 @@ export function useAction() {
   const run = (
     fn: () => Promise<{ error: string | null }>,
     after?: () => void,
+    /** Undo optimistic UI — without it a refused write still *looks* applied. */
+    onError?: () => void,
   ) => {
     setError(null);
     startTransition(async () => {
       const res = await fn();
-      if (res?.error) setError(res.error);
-      else after?.();
+      if (res?.error) {
+        setError(res.error);
+        onError?.();
+      } else {
+        after?.();
+      }
     });
   };
   return { pending, error, run };

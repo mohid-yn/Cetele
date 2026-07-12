@@ -10,6 +10,10 @@ const PUBLIC_PATHS = [
   "/onboarding",
   "/privacy",
   "/terms",
+  // The push dispatcher (M8) is called by pg_cron, which has no session — it
+  // authenticates with a Bearer secret instead (see the route). Without this
+  // the gate 307s it to the login page and no reminder is ever sent.
+  "/api/push",
 ];
 
 function isPublic(pathname: string) {

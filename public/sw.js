@@ -29,7 +29,10 @@
 //      be handed to the next person to sign in on a shared device.
 // The rule is now an allowlist: hashed build output and static files only.
 // Anything that can carry user data goes to the network, always.
-const CACHE = "cetele-static-v4";
+// v5 (2026-07-12): adds the Web Push handlers (M8/CET-11). Caching logic is
+// UNCHANGED from v4 — the allowlist rule below still stands, and this bump is
+// what makes browsers pick up the new push/notificationclick listeners.
+const CACHE = "cetele-static-v5";
 
 /** Immutable build output + static files. Everything else is app data. */
 function isStaticAsset(url) {
@@ -56,6 +59,56 @@ self.addEventListener("activate", (event) => {
         ),
       )
       .then(() => self.clients.claim()),
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Web Push (M8 / CET-11). The payload is built by /api/push/dispatch.
+//
+// iOS only delivers these to a PWA installed to the Home Screen (16.4+) — hence
+// the install-coaching screen in the app. Android/desktop need no install.
+// ---------------------------------------------------------------------------
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    // A push with no/!JSON payload still deserves to show something rather than
+    // silently drop (some browsers penalise a push that shows no notification).
+  }
+
+  const title = data.title || "Cetele";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "Time for your dhikr.",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      // Same tag ⇒ a re-sent reminder replaces the old one instead of stacking.
+      tag: data.tag || "cetele-reminder",
+      data: { url: data.url || "/today" },
+    }),
+  );
+});
+
+// Tapping the notification focuses an open tab (navigating it to the target) or
+// opens a new one — never leaves the user staring at a dead notification.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target =
+    (event.notification.data && event.notification.data.url) || "/";
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        for (const client of clients) {
+          if ("focus" in client) {
+            client.navigate(target);
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow(target);
+      }),
   );
 });
 

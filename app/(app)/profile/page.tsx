@@ -1,132 +1,88 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { q } from "@/lib/db-log";
+import { ProfileClient, type ReminderTask } from "./profile-client";
 
-import * as React from "react";
-import Link from "next/link";
-import { Avatar, Badge, Button, Card } from "@/components/ui";
-import { cn } from "@/lib/utils";
-import { useMock, sel } from "@/lib/mock/store";
-import { FlameIcon, ChevronRightIcon } from "@/components/demo/icons";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { Reminders } from "@/components/demo/reminders";
+/**
+ * Profile — the last screen off the mock (M8/M9). Identity + reminders (D30) +
+ * push (D10) + appearance + account.
+ *
+ * Reminders are per TASK and span every circle the member belongs to (a reminder
+ * is a personal setting, not a group one), so the tasks are read across all
+ * their memberships under RLS.
+ */
+export default async function ProfilePage() {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const me = claims?.claims?.sub as string | undefined;
+  if (!me) redirect("/");
 
-function Toggle({
-  label,
-  hint,
-  defaultOn = false,
-}: {
-  label: string;
-  hint?: string;
-  defaultOn?: boolean;
-}) {
-  const [on, setOn] = React.useState(defaultOn);
+  const [{ data: profile }, { data: memberships }, { data: streak }] = await q(
+    "profile.reads (profile+memberships+streak)",
+    Promise.all([
+      supabase.from("profiles").select("name").eq("id", me).maybeSingle(),
+      supabase
+        .from("memberships")
+        .select("group_id, role, groups(name)")
+        .eq("user_id", me),
+      supabase
+        .from("streaks")
+        .select("current")
+        .eq("user_id", me)
+        .maybeSingle(),
+    ]),
+  );
+
+  const groupIds = (memberships ?? []).map((m) => m.group_id);
+
+  // Tasks across every circle I'm in, plus my reminder for each (RLS: reminders
+  // are self-only, so this can only ever return mine).
+  const [{ data: tasks }, { data: reminders }] = await q(
+    "profile.reads (tasks+reminders)",
+    Promise.all([
+      supabase
+        .from("tasks")
+        .select("id, label, group_id")
+        .in("group_id", groupIds.length ? groupIds : [ZERO_UUID])
+        .order("sort_order"),
+      supabase
+        .from("reminders")
+        .select("task_id, time_of_day, enabled")
+        .eq("user_id", me),
+    ]),
+  );
+
+  const byTask = new Map(
+    (reminders ?? []).map((r) => [
+      r.task_id,
+      { time: (r.time_of_day as string).slice(0, 5), enabled: r.enabled },
+    ]),
+  );
+  const groupNames = new Map(
+    (memberships ?? []).map((m) => [m.group_id, m.groups?.name ?? "Circle"]),
+  );
+
+  const reminderTasks: ReminderTask[] = (tasks ?? []).map((t) => ({
+    taskId: t.id,
+    label: t.label,
+    groupName: groupNames.get(t.group_id) ?? "Circle",
+    // Default to a sensible morning time until the member picks one.
+    time: byTask.get(t.id)?.time ?? "07:00",
+    enabled: byTask.get(t.id)?.enabled ?? false,
+  }));
+
+  const primary = (memberships ?? [])[0];
+
   return (
-    <div className="flex items-center justify-between gap-3 py-2.5">
-      <div>
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-      </div>
-      <button
-        role="switch"
-        aria-checked={on}
-        aria-label={label}
-        onClick={() => setOn((v) => !v)}
-        className={cn(
-          "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-[var(--duration-fast)]",
-          on ? "bg-accent" : "bg-neutral-300",
-        )}
-      >
-        <span
-          className={cn(
-            "absolute top-0.5 size-5 rounded-full bg-neutral-0 shadow-sm transition-[left] duration-[var(--duration-fast)]",
-            on ? "left-[1.375rem]" : "left-0.5",
-          )}
-        />
-      </button>
-    </div>
+    <ProfileClient
+      name={profile?.name ?? "You"}
+      role={primary?.role ?? null}
+      groupName={primary ? (primary.groups?.name ?? null) : null}
+      streak={streak?.current ?? 0}
+      tasks={reminderTasks}
+      vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""}
+    />
   );
 }
 
-export default function ProfilePage() {
-  const { state } = useMock();
-  const me = sel.currentUser(state);
-  const group = sel.activeGroup(state);
-  const role = sel.membershipRole(state, me.id, group.id);
-  const streak = sel.streak(state, me.id);
-
-  return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
-      {/* Identity */}
-      <header className="flex flex-col items-center gap-2 pt-2 text-center">
-        <Avatar name={me.name} size="xl" />
-        <div>
-          <h1 className="font-display text-xl font-bold text-foreground">
-            {me.name}
-          </h1>
-          <div className="mt-1 flex flex-wrap justify-center gap-1.5">
-            {role === "owner" && <Badge variant="accent">Owner</Badge>}
-            {role === "admin" && <Badge variant="primary">Co-admin</Badge>}
-            <Badge variant="neutral">{group.name}</Badge>
-          </div>
-        </div>
-        <p className="text-sm text-balance text-muted-foreground">
-          You&apos;re someone who does dhikr daily.
-        </p>
-      </header>
-
-      {/* Streak / badges / consistency now live on Progress — link there */}
-      <Link
-        href="/progress"
-        className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:bg-muted/50"
-      >
-        <div className="flex items-center gap-3">
-          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-primary-700">
-            <FlameIcon className="size-5" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              Streak, badges &amp; consistency
-            </p>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {streak?.current ?? 0}-day streak · view your Progress
-            </p>
-          </div>
-        </div>
-        <ChevronRightIcon className="size-5 text-muted-foreground" />
-      </Link>
-
-      {/* Reminders + habit-stacking (CET-11) */}
-      <Reminders />
-
-      {/* Appearance */}
-      <section>
-        <h2 className="mb-1 text-sm font-semibold text-foreground">
-          Appearance
-        </h2>
-        <Card className="flex items-center justify-between gap-3 p-4">
-          <div>
-            <p className="text-sm font-medium text-foreground">Theme</p>
-            <p className="text-xs text-muted-foreground">
-              Easier on the eyes for night dhikr
-            </p>
-          </div>
-          <ThemeToggle />
-        </Card>
-      </section>
-
-      {/* Settings (mock) */}
-      <section>
-        <h2 className="mb-1 text-sm font-semibold text-foreground">Settings</h2>
-        <Card className="divide-y divide-border px-4 py-1">
-          <Toggle label="Tap sound" defaultOn />
-          <Toggle label="Haptics" defaultOn />
-        </Card>
-      </section>
-
-      <form action="/auth/signout" method="post">
-        <Button type="submit" variant="outline" className="w-full">
-          Sign out
-        </Button>
-      </form>
-    </div>
-  );
-}
+const ZERO_UUID = "00000000-0000-0000-0000-000000000000";

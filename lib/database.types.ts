@@ -62,46 +62,29 @@ export type Database = {
           id?: string;
           target_user_id?: string | null;
         };
-        Relationships: [];
-      };
-      reports: {
-        Row: {
-          created_at: string;
-          group_id: string | null;
-          id: string;
-          reason: string;
-          reported_user_id: string | null;
-          reporter_id: string;
-          resolution_note: string | null;
-          resolved_at: string | null;
-          resolved_by: string | null;
-          status: string;
-        };
-        Insert: {
-          created_at?: string;
-          group_id?: string | null;
-          id?: string;
-          reason: string;
-          reported_user_id?: string | null;
-          reporter_id: string;
-          resolution_note?: string | null;
-          resolved_at?: string | null;
-          resolved_by?: string | null;
-          status?: string;
-        };
-        Update: {
-          created_at?: string;
-          group_id?: string | null;
-          id?: string;
-          reason?: string;
-          reported_user_id?: string | null;
-          reporter_id?: string;
-          resolution_note?: string | null;
-          resolved_at?: string | null;
-          resolved_by?: string | null;
-          status?: string;
-        };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "audit_log_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "audit_log_target_user_id_fkey";
+            columns: ["target_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       daily_completion: {
         Row: {
@@ -321,6 +304,157 @@ export type Database = {
         };
         Relationships: [];
       };
+      push_subscriptions: {
+        Row: {
+          auth: string;
+          created_at: string;
+          endpoint: string;
+          id: string;
+          p256dh: string;
+          user_agent: string | null;
+          user_id: string;
+        };
+        Insert: {
+          auth: string;
+          created_at?: string;
+          endpoint: string;
+          id?: string;
+          p256dh: string;
+          user_agent?: string | null;
+          user_id: string;
+        };
+        Update: {
+          auth?: string;
+          created_at?: string;
+          endpoint?: string;
+          id?: string;
+          p256dh?: string;
+          user_agent?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reminders: {
+        Row: {
+          created_at: string;
+          enabled: boolean;
+          id: string;
+          last_sent_on: string | null;
+          task_id: string;
+          time_of_day: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          enabled?: boolean;
+          id?: string;
+          last_sent_on?: string | null;
+          task_id: string;
+          time_of_day: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          enabled?: boolean;
+          id?: string;
+          last_sent_on?: string | null;
+          task_id?: string;
+          time_of_day?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reminders_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reminders_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reports: {
+        Row: {
+          created_at: string;
+          group_id: string | null;
+          id: string;
+          reason: string;
+          reported_user_id: string | null;
+          reporter_id: string;
+          resolution_note: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          status: string;
+        };
+        Insert: {
+          created_at?: string;
+          group_id?: string | null;
+          id?: string;
+          reason: string;
+          reported_user_id?: string | null;
+          reporter_id: string;
+          resolution_note?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+        };
+        Update: {
+          created_at?: string;
+          group_id?: string | null;
+          id?: string;
+          reason?: string;
+          reported_user_id?: string | null;
+          reporter_id?: string;
+          resolution_note?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reports_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reports_reported_user_id_fkey";
+            columns: ["reported_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reports_reporter_id_fkey";
+            columns: ["reporter_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reports_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       streaks: {
         Row: {
           current: number;
@@ -408,14 +542,23 @@ export type Database = {
           isSetofReturn: false;
         };
       };
-      can_claim_ownership: {
-        Args: { p_group: string };
-        Returns: boolean;
+      can_claim_ownership: { Args: { p_group: string }; Returns: boolean };
+      claim_due_reminders: {
+        Args: never;
+        Returns: {
+          auth: string;
+          current_count: number;
+          endpoint: string;
+          group_id: string;
+          p256dh: string;
+          reminder_id: string;
+          target_count: number;
+          task_id: string;
+          task_label: string;
+          user_id: string;
+        }[];
       };
-      claim_ownership: {
-        Args: { p_group: string };
-        Returns: undefined;
-      };
+      claim_ownership: { Args: { p_group: string }; Returns: undefined };
       create_group: {
         Args: { p_name: string };
         Returns: {
@@ -466,6 +609,10 @@ export type Database = {
           p_user: string;
         };
         Returns: number;
+      };
+      set_reminder: {
+        Args: { p_enabled: boolean; p_task: string; p_time: string };
+        Returns: undefined;
       };
       transfer_ownership: {
         Args: { p_group: string; p_new_owner: string };
