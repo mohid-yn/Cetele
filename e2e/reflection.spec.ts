@@ -46,6 +46,18 @@ async function signIn(page: Page, email: string) {
   await page.waitForURL(/\/groups|\/g\//);
 }
 
+/**
+ * Wait for the ring-close celebration, then tap it away. It's a full-screen
+ * modal that only self-dismisses after 4.2s, so clicking straight through to
+ * the page underneath just races that timer (the click gets intercepted and
+ * retried until the card clears) — which is what made this spec flaky.
+ */
+async function closeCelebration(page: Page) {
+  await expect(page.getByText("Ring closed!")).toBeVisible();
+  await page.getByRole("dialog").click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+}
+
 /** Create a group + one task via the real UI (owner flow). */
 async function createGroupWithTask(
   page: Page,
@@ -107,7 +119,7 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
   await pageB.waitForURL("**/count/**");
   const pad = pageB.getByRole("button", { name: "Tap to count" });
   for (let i = 0; i < 10; i++) await pad.click();
-  await expect(pageB.getByText("Ring closed!")).toBeVisible();
+  await closeCelebration(pageB);
   await pageB.click('button:has-text("Back to today")');
   await pageB.waitForURL("**/today");
 

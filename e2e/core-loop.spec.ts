@@ -42,6 +42,18 @@ async function signIn(page: Page, email: string) {
   await page.waitForURL(/\/groups|\/g\//);
 }
 
+/**
+ * Wait for the ring-close celebration, then tap it away. It's a full-screen
+ * modal that only self-dismisses after 4.2s, so clicking straight through to
+ * the page underneath just races that timer (the click gets intercepted and
+ * retried until the card clears) — which is what made these specs flaky.
+ */
+async function closeCelebration(page: Page) {
+  await expect(page.getByText("Ring closed!")).toBeVisible();
+  await page.getByRole("dialog").click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+}
+
 test("tap → count persists → ring closes → streak advances", async ({
   page,
 }) => {
@@ -79,7 +91,7 @@ test("tap → count persists → ring closes → streak advances", async ({
   await pad.click();
   await pad.click();
   await expect(page.getByText("Completed — tap to keep going")).toBeVisible();
-  await expect(page.getByText("Ring closed!")).toBeVisible();
+  await closeCelebration(page);
 
   // heading back waits for the debounced flush, so the DB has the count
   await page.click('button:has-text("Back to today")');
@@ -110,7 +122,7 @@ test("back-fill: yesterday's ring can still be closed (D8)", async ({
   await pad.click();
   await pad.click();
   await pad.click();
-  await expect(page.getByText("Ring closed!")).toBeVisible();
+  await closeCelebration(page);
   await page.click('button:has-text("Back to today")');
   await page.waitForURL("**/today");
 
