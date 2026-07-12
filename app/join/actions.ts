@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ACTIVE_GROUP_COOKIE } from "@/lib/active-group";
 import { groupHref } from "@/lib/group-href";
+import { signOutIfStaleSession } from "@/lib/stale-session";
 
 /**
  * Accept an invite (D34/D35): the accept_invite RPC validates the code + email
@@ -19,6 +20,7 @@ export async function acceptInvite(
   const { data, error } = await supabase.rpc("accept_invite", {
     p_code: code,
   });
+  await signOutIfStaleSession(error);
   if (error) return { error: error.message };
 
   (await cookies()).set(ACTIVE_GROUP_COOKIE, data.id, {

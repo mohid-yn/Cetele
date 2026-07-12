@@ -82,7 +82,12 @@ export default function LoginPage() {
       }
       // Not signed in: surface a failed OAuth exchange (callback →
       // /?auth-error=1) instead of a silent bounce back to login.
-      if (new URLSearchParams(location.search).get("auth-error")) {
+      const authError = new URLSearchParams(location.search).get("auth-error");
+      if (authError === "expired") {
+        // signOutIfStaleSession sent us here: the account behind the session no
+        // longer exists (deleted), so this is a re-sign-in, not a failure.
+        setError("Your session has expired. Please sign in again.");
+      } else if (authError) {
         setError("Sign-in didn't complete. Please try again.");
       }
     });
