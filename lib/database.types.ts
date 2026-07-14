@@ -86,6 +86,108 @@ export type Database = {
           },
         ];
       };
+      badge_awards: {
+        Row: {
+          badge_id: string;
+          earned_on: string;
+          group_id: string;
+          user_id: string;
+        };
+        Insert: {
+          badge_id: string;
+          earned_on: string;
+          group_id: string;
+          user_id: string;
+        };
+        Update: {
+          badge_id?: string;
+          earned_on?: string;
+          group_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "badge_awards_badge_id_fkey";
+            columns: ["badge_id"];
+            isOneToOne: false;
+            referencedRelation: "badges";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "badge_awards_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "badge_awards_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      badges: {
+        Row: {
+          description: string;
+          glyph: string;
+          id: string;
+          kind: string;
+          label: string;
+          sort_order: number;
+          threshold: number;
+          window_days: number | null;
+        };
+        Insert: {
+          description: string;
+          glyph: string;
+          id: string;
+          kind: string;
+          label: string;
+          sort_order: number;
+          threshold: number;
+          window_days?: number | null;
+        };
+        Update: {
+          description?: string;
+          glyph?: string;
+          id?: string;
+          kind?: string;
+          label?: string;
+          sort_order?: number;
+          threshold?: number;
+          window_days?: number | null;
+        };
+        Relationships: [];
+      };
+      banner_dismissals: {
+        Row: {
+          dismissed_at: string;
+          key: string;
+          user_id: string;
+        };
+        Insert: {
+          dismissed_at?: string;
+          key: string;
+          user_id: string;
+        };
+        Update: {
+          dismissed_at?: string;
+          key?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "banner_dismissals_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       daily_completion: {
         Row: {
           completion_pct: number;
@@ -336,6 +438,58 @@ export type Database = {
           {
             foreignKeyName: "push_subscriptions_user_id_fkey";
             columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reactions: {
+        Row: {
+          created_at: string;
+          date: string;
+          from_user_id: string;
+          group_id: string;
+          id: string;
+          kind: string;
+          to_user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          date: string;
+          from_user_id: string;
+          group_id: string;
+          id?: string;
+          kind: string;
+          to_user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          date?: string;
+          from_user_id?: string;
+          group_id?: string;
+          id?: string;
+          kind?: string;
+          to_user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reactions_from_user_id_fkey";
+            columns: ["from_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reactions_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reactions_to_user_id_fkey";
+            columns: ["to_user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
@@ -622,6 +776,11 @@ export type Database = {
       set_reminder: {
         Args: { p_enabled: boolean; p_task: string; p_time: string };
         Returns: undefined;
+      };
+      sync_badges: { Args: { p_group: string }; Returns: undefined };
+      toggle_reaction: {
+        Args: { p_group: string; p_kind: string; p_to: string };
+        Returns: boolean;
       };
       transfer_ownership: {
         Args: { p_group: string; p_new_owner: string };

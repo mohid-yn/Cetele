@@ -13,6 +13,7 @@ import {
   AUTH_NEXT_MAX_AGE,
   sanitizeNextPath,
 } from "@/lib/auth-next";
+import { stashTimeZoneCookie } from "@/lib/timezone";
 import { devMagicLink } from "./dev-auth";
 
 /**
@@ -59,6 +60,10 @@ function stashNextPath() {
   if (next) {
     document.cookie = `${AUTH_NEXT_COOKIE}=${encodeURIComponent(next)}; path=/; max-age=${AUTH_NEXT_MAX_AGE}; samesite=lax`;
   }
+  // The browser is the only party that knows the member's timezone, and the
+  // auth callback needs it BEFORE the first authenticated render (D44) — so it
+  // rides a cookie out of here, exactly like the destination path above.
+  stashTimeZoneCookie();
 }
 
 export default function LoginPage() {

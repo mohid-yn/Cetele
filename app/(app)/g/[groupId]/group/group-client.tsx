@@ -7,6 +7,9 @@ import { buttonVariants, Button, Dialog, ConfirmDialog } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/demo/page-header";
 import { SectionHeading } from "@/components/demo/section-heading";
+import { GroupGarden } from "@/components/app/group-garden";
+import { PairGoal, type Pair } from "@/components/app/pair-goal";
+import type { Garden } from "@/lib/retention";
 import { MemberRow } from "@/components/demo/member-row";
 import { Segmented } from "@/components/demo/segmented";
 import {
@@ -77,6 +80,8 @@ export function GroupClient({
   steadfastBar,
   names,
   viewerId,
+  garden,
+  pair,
 }: {
   groupId: string;
   groupName: string;
@@ -97,6 +102,10 @@ export function GroupClient({
   steadfastBar: number;
   names: Record<string, string>;
   viewerId: string;
+  /** The collective living artefact (CET-17) — derived, stores nothing. */
+  garden: Garden;
+  /** This week's winnable pair goal (CET-22); null in a circle of one. */
+  pair: Pair | null;
 }) {
   const router = useRouter();
   const [tab, setTab] = React.useState<Tab>("overview");
@@ -175,6 +184,10 @@ export function GroupClient({
       {/* ---- Overview: the live collective progress ---- */}
       {tab === "overview" && (
         <>
+          {/* The circle's garden (CET-17) — the emotional layer, leading the
+              tab: it's the one thing here that isn't a number. */}
+          <GroupGarden garden={garden} />
+
           <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <p className="text-sm text-muted-foreground">
               <span
@@ -265,6 +278,11 @@ export function GroupClient({
       {/* ---- Standings: the (for-fun) weekly ranking ---- */}
       {tab === "standings" && (
         <>
+          {/* The pair goal (CET-22) leads the ranking, deliberately: a whole-
+              group leaderboard disheartens the bottom half, so the first thing
+              you meet here is a goal you WIN TOGETHER rather than a rank. */}
+          {pair && <PairGoal pair={pair} />}
+
           <p className="text-xs text-muted-foreground">
             The weekly ranking is for fun — showing up matters more than the
             number. Ranked by days active this week, then total count.

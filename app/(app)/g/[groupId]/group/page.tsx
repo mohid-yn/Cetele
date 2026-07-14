@@ -5,6 +5,8 @@ import { localDateISO, isoDaysAgo } from "@/lib/local-date";
 import { q } from "@/lib/db-log";
 import type { BreakdownMember } from "@/components/app/member-breakdown";
 import type { GridRow } from "@/components/app/task-grid";
+import type { Pair } from "@/components/app/pair-goal";
+import { gardenStage, pickBuddy, PAIR_TARGET } from "@/lib/retention";
 import { GroupLive } from "./group-live";
 import {
   GroupClient,
@@ -208,10 +210,39 @@ export default async function GroupPage({
   // M6 — the group's 90-day collective consistency (the North Star, PRD §9).
   // An aggregate RPC so a plain member sees the figure without reading peers'
   // individual rollup rows (RLS forbids that; the RPC returns only the number).
-  const { data: groupConsistency90 } = await q(
-    "group.group_consistency (90d)",
-    supabase.rpc("group_consistency", { p_group: groupId, p_days: 90 }),
+  // The 30-day figure alongside it drives the garden (CET-17).
+  const [{ data: groupConsistency90 }, { data: groupConsistency30 }] = await q(
+    "group.group_consistency (90d + 30d)",
+    Promise.all([
+      supabase.rpc("group_consistency", { p_group: groupId, p_days: 90 }),
+      supabase.rpc("group_consistency", { p_group: groupId, p_days: 30 }),
+    ]),
   );
+
+  // CET-17 — the garden. Stores nothing: it blends the circle's durable 30-day
+  // consistency with today's collective progress, so tapping toward the goal
+  // visibly grows it in-session rather than only tomorrow.
+  const todayTotal = taskTotals.reduce((s, t) => s + t.total, 0);
+  const todayGoal = taskTotals.reduce((s, t) => s + t.goal, 0);
+  const garden = gardenStage(
+    groupConsistency30 ?? 0,
+    todayGoal ? todayTotal / todayGoal : 0,
+  );
+
+  // CET-22 — the pair goal. Also stores nothing: the buddy is a deterministic
+  // pick, and "days active this week" is the figure Standings already computed.
+  const buddyId = pickBuddy(me, memberIds);
+  const daysActive = (u: string) =>
+    standings.find((s) => s.userId === u)?.daysActive ?? 0;
+  const pair: Pair | null = buddyId
+    ? {
+        myName: names[me] ?? "You",
+        buddyName: names[buddyId] ?? "Member",
+        combined: daysActive(me) + daysActive(buddyId),
+        target: PAIR_TARGET,
+        met: daysActive(me) + daysActive(buddyId) >= PAIR_TARGET,
+      }
+    : null;
 
   // M6 — the admin-only steadfastness board (D31): each member's recent
   // consistency RATE = avg(completion_pct) over their last-90 rollup rows
@@ -279,6 +310,8 @@ export default async function GroupPage({
         steadfastBar={STEADFAST_BAR}
         names={names}
         viewerId={me}
+        garden={garden}
+        pair={pair}
       />
     </>
   );

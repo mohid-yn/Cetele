@@ -9,12 +9,20 @@ import { StreakChip } from "@/components/demo/streak-chip";
 import { DayStrip, fmtLongDate } from "@/components/demo/day-strip";
 import { CheckIcon, ChevronRightIcon } from "@/components/demo/icons";
 import { groupHref } from "@/lib/group-href";
+import type { Landmark } from "@/lib/retention";
+import {
+  PeerReactions,
+  type ReactionTally,
+} from "@/components/app/peer-reactions";
+import { FreshStartBanner } from "@/components/app/fresh-start";
+import { WelcomeCard } from "@/components/app/welcome-card";
 
 /**
- * Client leaf for the server-first Today (M3). Layout/copy mirror the mock
- * screen; data arrives as props. The v2 mock extras (fresh-start banner, peer
- * reactions) return with their own backends — the circle list here is the
- * real, reaction-less core.
+ * Client leaf for the server-first Today (M3 + the v2 retention layer). Layout
+ * and copy mirror the mock screen; data arrives as props. Today now carries
+ * three of the six v2 surfaces: the fresh-start banner (CET-19), the endowed-
+ * progress welcome (CET-21), and one-tap peer reactions on a finished peer
+ * (CET-18).
  */
 
 export type TodayTask = {
@@ -24,8 +32,20 @@ export type TodayTask = {
   target: number;
 };
 
+export type CircleMember = {
+  userId: string;
+  name: string;
+  closed: number;
+  total: number;
+  isMe: boolean;
+  /** Every ring closed — the trigger for a reaction row. */
+  done: boolean;
+  tally: ReactionTally;
+};
+
 export function TodayClient({
   groupId,
+  groupName,
   firstName,
   todayISO,
   streak,
@@ -33,16 +53,26 @@ export function TodayClient({
   counts,
   circle,
   collectivePct,
+  cheersForMe,
+  landmark,
+  welcome,
 }: {
   groupId: string;
+  groupName: string;
   firstName: string;
   todayISO: string;
   streak: number;
   tasks: TodayTask[];
   /** date → taskId → my count (last 14 days) */
   counts: Record<string, Record<string, number>>;
-  circle: { name: string; closed: number; total: number; isMe: boolean }[];
+  circle: CircleMember[];
   collectivePct: number;
+  /** Encouragements I've received today (CET-18). */
+  cheersForMe: number;
+  /** A fresh-start landmark to surface, if any (CET-19). */
+  landmark: Landmark | null;
+  /** Day-one endowed-progress welcome (CET-21). */
+  welcome: boolean;
 }) {
   const [date, setDate] = React.useState(todayISO);
   const isToday = date === todayISO;
@@ -73,6 +103,13 @@ export function TodayClient({
     .filter((r) => !r.done)
     .sort((a, b) => b.count / b.task.target - a.count / a.task.target)[0];
 
+  // Where a banner's "Begin today" sends you: the nearest-to-done ring, else the
+  // first task. Null when the circle has no tasks yet (nothing to begin).
+  const beginTask = next?.task ?? tasks[0];
+  const beginHref = beginTask
+    ? groupHref(groupId, `/count/${beginTask.id}`)
+    : null;
+
   return (
     <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
       <PageHeader
@@ -87,6 +124,19 @@ export function TodayClient({
         subtitle={<span className="font-medium text-foreground">{glance}</span>}
         action={<StreakChip current={streak} />}
       />
+
+      {/* Day one (CET-21) or a fresh start (CET-19) — never both, and only on
+          today: back-filling an old day is not a moment to re-onboard someone. */}
+      {isToday && welcome && (
+        <WelcomeCard
+          groupName={groupName}
+          collectivePct={collectivePct}
+          beginHref={beginHref}
+        />
+      )}
+      {isToday && !welcome && landmark && (
+        <FreshStartBanner landmark={landmark} beginHref={beginHref} />
+      )}
 
       {/* Day picker — log for today, or back-fill a day that's gone by (D8). */}
       <div>
@@ -202,32 +252,55 @@ export function TodayClient({
         )}
       </section>
 
-      {/* Your circle today — the accountability glance (real data, M3) */}
+      {/* Your circle today — the accountability glance, now with the one-tap
+          encouragement (CET-18) under anyone who has closed every ring. */}
       {circle.length > 1 && (
         <section>
-          <SectionHeading>Your circle today</SectionHeading>
+          <SectionHeading
+            action={
+              cheersForMe > 0
+                ? `you received ${cheersForMe} today 🤲`
+                : undefined
+            }
+          >
+            Your circle today
+          </SectionHeading>
           <ul className="flex flex-col gap-1.5">
             {circle.map((m) => (
               <li
-                key={m.name + String(m.isMe)}
-                className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm"
+                key={m.userId}
+                className="rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm"
               >
-                <span className="min-w-0 flex-1 truncate font-medium text-foreground">
-                  {m.name}
-                  {m.isMe && (
-                    <span className="ml-1.5 text-xs text-muted-foreground">
-                      (you)
+                <div className="flex items-center gap-3">
+                  <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+                    {m.name}
+                    {m.isMe && (
+                      <span className="ml-1.5 text-xs text-muted-foreground">
+                        (you)
+                      </span>
+                    )}
+                  </span>
+                  {m.done ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+                      <CheckIcon className="size-4" /> all rings closed
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {m.closed}/{m.total} rings
                     </span>
                   )}
-                </span>
-                {m.closed >= m.total && m.total > 0 ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
-                    <CheckIcon className="size-4" /> all rings closed
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {m.closed}/{m.total} rings
-                  </span>
+                </div>
+                {/* You cheer a peer who finished — never yourself (the RPC
+                    refuses a self-reaction; don't offer the affordance). */}
+                {m.done && !m.isMe && (
+                  <div className="mt-2">
+                    <PeerReactions
+                      groupId={groupId}
+                      toUserId={m.userId}
+                      toName={m.name}
+                      tally={m.tally}
+                    />
+                  </div>
                 )}
               </li>
             ))}

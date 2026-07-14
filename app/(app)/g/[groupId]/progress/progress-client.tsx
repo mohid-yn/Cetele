@@ -3,6 +3,7 @@
 import { Card, CardContent, Badge } from "@/components/ui";
 import { PageHeader } from "@/components/demo/page-header";
 import { SectionHeading } from "@/components/demo/section-heading";
+import { BadgesGrid, type EarnedBadge } from "@/components/app/badges";
 import { FlameIcon, ShieldIcon } from "@/components/demo/icons";
 import { TaskGrid, type GridRow } from "@/components/app/task-grid";
 
@@ -33,6 +34,7 @@ export function ProgressClient({
   viewerId,
   names,
   hasTasks,
+  badges,
 }: {
   current: number;
   longest: number;
@@ -46,6 +48,8 @@ export function ProgressClient({
   viewerId: string;
   names: Record<string, string>;
   hasTasks: boolean;
+  /** Escalating achievement badges (CET-20) — earned ones carry a date. */
+  badges: EarnedBadge[];
 }) {
   const tone =
     daysFull >= days * 0.8
@@ -117,6 +121,9 @@ export function ProgressClient({
           {bandFull} of the last {bandWindow} days fully completed.
         </p>
       </Card>
+
+      {/* Achievements (CET-20) — earned, escalating, and permanent (D43). */}
+      <BadgesGrid badges={badges} />
 
       {/* Never miss twice — forgiveness */}
       <Card className="p-4">

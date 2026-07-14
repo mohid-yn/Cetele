@@ -4,6 +4,7 @@ import { resolveGroup } from "@/lib/active-group";
 import { localDateISO, isoDaysAgo } from "@/lib/local-date";
 import { q } from "@/lib/db-log";
 import type { GridRow } from "@/components/app/task-grid";
+import type { EarnedBadge } from "@/components/app/badges";
 import { ProgressClient } from "./progress-client";
 
 const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
@@ -137,8 +138,41 @@ export default async function ProgressPage({
       ).length
     : 0;
 
+  // CET-20 — badges. sync_badges awards anything newly crossed BEFORE we read,
+  // so hitting a threshold today shows up now rather than after tonight's sweep.
+  // Awards are append-only (D43): this can grant a badge, never take one back.
+  await q(
+    "progress.sync_badges",
+    supabase.rpc("sync_badges", { p_group: groupId }),
+  );
+  const [{ data: catalog }, { data: awards }] = await q(
+    "progress.badges (catalog + my awards)",
+    Promise.all([
+      supabase
+        .from("badges")
+        .select("id, glyph, label, description")
+        .order("sort_order"),
+      supabase
+        .from("badge_awards")
+        .select("badge_id, earned_on")
+        .eq("user_id", me)
+        .eq("group_id", groupId),
+    ]),
+  );
+  const earnedOn = new Map(
+    (awards ?? []).map((a) => [a.badge_id, a.earned_on as string]),
+  );
+  const badges: EarnedBadge[] = (catalog ?? []).map((b) => ({
+    id: b.id,
+    glyph: b.glyph,
+    label: b.label,
+    description: b.description,
+    earnedOn: earnedOn.get(b.id) ?? null,
+  }));
+
   return (
     <ProgressClient
+      badges={badges}
       current={streak?.current ?? 0}
       longest={streak?.longest ?? 0}
       freezesLeft={streak?.freezes_left ?? 0}

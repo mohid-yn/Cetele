@@ -2,6 +2,7 @@ import { type EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { AUTH_NEXT_COOKIE, sanitizeNextPath } from "@/lib/auth-next";
+import { TZ_COOKIE, applyStashedTimeZone } from "@/lib/timezone";
 
 /**
  * Magic-link landing: exchanges the emailed credential for a session cookie.
@@ -26,15 +27,31 @@ export async function GET(request: NextRequest) {
 
   const success = (res: NextResponse) => {
     res.cookies.delete(AUTH_NEXT_COOKIE);
+    res.cookies.delete(TZ_COOKIE);
     return res;
   };
 
+  // Same as the OAuth callback: the browser's timezone lands on the profile
+  // before the first authenticated render, so no date is ever a guess (D44).
+  const withTimezone = async (userId: string | undefined) =>
+    applyStashedTimeZone(
+      supabase,
+      userId,
+      request.cookies.get(TZ_COOKIE)?.value,
+    );
+
   if (token_hash && type) {
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash });
-    if (!error) return success(NextResponse.redirect(redirectTo));
+    const { data, error } = await supabase.auth.verifyOtp({ type, token_hash });
+    if (!error) {
+      await withTimezone(data.user?.id);
+      return success(NextResponse.redirect(redirectTo));
+    }
   } else if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return success(NextResponse.redirect(redirectTo));
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      await withTimezone(data.user?.id);
+      return success(NextResponse.redirect(redirectTo));
+    }
   }
 
   redirectTo.pathname = "/";
