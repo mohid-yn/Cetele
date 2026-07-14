@@ -20,7 +20,7 @@ import { Card, buttonVariants } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { Landmark } from "@/lib/retention";
 import { dismissBanner } from "@/app/(app)/g/[groupId]/today/actions";
-import { SproutIcon } from "@/components/demo/icons";
+import { SproutIcon } from "@/components/app/icons";
 
 export function FreshStartBanner({
   landmark,

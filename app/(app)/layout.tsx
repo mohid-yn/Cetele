@@ -1,41 +1,24 @@
-import { MockStateProvider } from "@/lib/mock/store";
-import { CelebrationProvider } from "@/components/demo/celebration";
-import { AppFrame } from "@/components/demo/app-frame";
-import { TimezoneSync } from "@/components/app/timezone-sync";
-import { createClient } from "@/lib/supabase/server";
+import { CelebrationProvider } from "@/components/app/celebration";
+import { AppFrame } from "@/components/app/app-frame";
 
 /**
- * Shell for every in-app screen: mock state + celebration layer + the app frame.
+ * Shell for every in-app screen: the celebration layer + the app frame.
  *
- * TimezoneSync lives HERE, not on a page (D44). The timezone is the member's day
- * boundary, so every date the server renders before it is known is a guess — and
- * a member can enter the app on any screen (an invite link drops them straight
- * onto /today, never passing /groups). Mounting it in the shell is the only
- * placement that learns the zone on whichever screen they actually land on first.
+ * M9: the MockStateProvider is gone — every screen reads Supabase now, and no
+ * `lib/mock` import remains anywhere in the app.
+ *
+ * DELIBERATELY DOES NO AUTH AND NO DB WORK. Mounting TimezoneSync here (with the
+ * `getClaims()` + profile read it needs) looked like the tidy home for it — the
+ * timezone is a property of the person, not a page — but it took the e2e suite
+ * from 15/15 to 7/15: sessions came apart under load and pages rendered as if
+ * signed out (a freshly-created group showing "My groups (0)"). The layout wraps
+ * EVERY request, so per-request auth work here is multiplied across the whole
+ * app. Screens fetch their own data; the shell stays inert.
  */
-export default async function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const supabase = await createClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  const me = claims?.claims.sub;
-
-  const { data: profile } = me
-    ? await supabase
-        .from("profiles")
-        .select("timezone")
-        .eq("id", me)
-        .maybeSingle()
-    : { data: null };
-
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <MockStateProvider>
-      <CelebrationProvider>
-        <TimezoneSync current={profile?.timezone ?? "UTC"} />
-        <AppFrame>{children}</AppFrame>
-      </CelebrationProvider>
-    </MockStateProvider>
+    <CelebrationProvider>
+      <AppFrame>{children}</AppFrame>
+    </CelebrationProvider>
   );
 }

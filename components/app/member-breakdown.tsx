@@ -13,7 +13,7 @@
 
 import { Dialog, Badge } from "@/components/ui";
 import { TaskGrid, type GridRow } from "./task-grid";
-import { FlameIcon } from "@/components/demo/icons";
+import { FlameIcon } from "@/components/app/icons";
 
 export type BreakdownMember = {
   id: string;

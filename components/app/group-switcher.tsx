@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { q } from "@/lib/db-log";
-import { ChevronDownIcon, CheckIcon, GridIcon } from "@/components/demo/icons";
+import { ChevronDownIcon, CheckIcon, GridIcon } from "@/components/app/icons";
 import { groupHref, groupIdFromPath, groupSubPath } from "@/lib/group-href";
 
 type Role = "owner" | "admin" | "member";

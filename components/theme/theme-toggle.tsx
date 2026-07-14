@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useTheme, type Theme } from "./theme-provider";
-import { SunIcon, MoonIcon } from "@/components/demo/icons";
+import { SunIcon, MoonIcon } from "@/components/app/icons";
 
 const OPTIONS: { value: Theme; label: string; Icon: typeof SunIcon }[] = [
   { value: "light", label: "Light", Icon: SunIcon },

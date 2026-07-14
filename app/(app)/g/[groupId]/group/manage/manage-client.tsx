@@ -11,8 +11,8 @@ import {
   Input,
   ConfirmDialog,
 } from "@/components/ui";
-import { ArrowLeftIcon, PlusIcon, CheckIcon } from "@/components/demo/icons";
-import { RoleToggle, selectCls } from "@/components/demo/role-toggle";
+import { ArrowLeftIcon, PlusIcon, CheckIcon } from "@/components/app/icons";
+import { RoleToggle, selectCls } from "@/components/app/role-toggle";
 import { useAction } from "@/lib/use-action";
 import * as act from "./actions";
 

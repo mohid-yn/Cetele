@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Avatar, Badge, Button, Card } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { FlameIcon, ChevronRightIcon } from "@/components/demo/icons";
+import { FlameIcon, ChevronRightIcon } from "@/components/app/icons";
 import { useAction } from "@/lib/use-action";
 import {
   pushSupported,

@@ -7,7 +7,6 @@ const PUBLIC_PATHS = [
   "/",
   "/auth",
   "/designsystem",
-  "/onboarding",
   "/privacy",
   "/terms",
   // The push dispatcher (M8) is called by pg_cron, which has no session — it

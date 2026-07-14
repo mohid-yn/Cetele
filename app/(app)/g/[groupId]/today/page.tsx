@@ -13,6 +13,7 @@ import {
 import type { ReactionTally } from "@/components/app/peer-reactions";
 import { TodayClient, type CircleMember } from "./today-client";
 import { TodayLive } from "./today-live";
+import { TimezoneSync } from "@/components/app/timezone-sync";
 
 /** An empty tally — every kind at zero, nothing of mine. */
 const emptyTally = (): ReactionTally =>
@@ -215,6 +216,11 @@ export default async function TodayPage({
 
   return (
     <>
+      {/* D44 fallback: the zone normally lands at the auth callback, before any
+          render. This catches a traveller or a pre-cookie account. It rides the
+          `timezone` this page already fetched — no extra query, and NOT in the
+          layout, where per-request auth work destabilised every screen. */}
+      <TimezoneSync current={tz} />
       <TodayLive
         groupId={active.groupId}
         taskIds={(tasks ?? []).map((t) => t.id)}

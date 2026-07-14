@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@/components/ui";
 import { AppIconLogo } from "@/components/ui/logo";
-import { GoogleIcon, MailIcon } from "@/components/demo/icons";
+import { GoogleIcon, MailIcon } from "@/components/app/icons";
 import { createClient } from "@/lib/supabase/client";
 import {
   AUTH_NEXT_COOKIE,

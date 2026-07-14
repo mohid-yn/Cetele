@@ -1,6 +1,6 @@
 import { Card, CardContent, Badge } from "@/components/ui";
-import { SectionHeading } from "@/components/demo/section-heading";
-import { MemberRow } from "@/components/demo/member-row";
+import { SectionHeading } from "@/components/app/section-heading";
+import { MemberRow } from "@/components/app/member-row";
 import type { Steadfast } from "@/app/(app)/g/[groupId]/group/group-client";
 
 /**

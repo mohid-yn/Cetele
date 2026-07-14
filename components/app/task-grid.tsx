@@ -18,7 +18,7 @@ import { useRouter, useParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button, Input } from "@/components/ui";
 import { setCount } from "@/app/(app)/g/[groupId]/group/actions";
-import { CheckIcon } from "@/components/demo/icons";
+import { CheckIcon } from "@/components/app/icons";
 
 export type GridCell = {
   date: string;

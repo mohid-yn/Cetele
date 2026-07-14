@@ -1,10 +1,10 @@
 "use client";
 
 import { Card, CardContent, Badge } from "@/components/ui";
-import { PageHeader } from "@/components/demo/page-header";
-import { SectionHeading } from "@/components/demo/section-heading";
+import { PageHeader } from "@/components/app/page-header";
+import { SectionHeading } from "@/components/app/section-heading";
 import { BadgesGrid, type EarnedBadge } from "@/components/app/badges";
-import { FlameIcon, ShieldIcon } from "@/components/demo/icons";
+import { FlameIcon, ShieldIcon } from "@/components/app/icons";
 import { TaskGrid, type GridRow } from "@/components/app/task-grid";
 
 /**

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Badge, Card, buttonVariants } from "@/components/ui";
-import { PageHeader } from "@/components/demo/page-header";
-import { SectionHeading } from "@/components/demo/section-heading";
-import { UsersIcon } from "@/components/demo/icons";
+import { PageHeader } from "@/components/app/page-header";
+import { SectionHeading } from "@/components/app/section-heading";
+import { UsersIcon } from "@/components/app/icons";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
 import { groupHref } from "@/lib/group-href";

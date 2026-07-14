@@ -3,11 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { ProgressRing, buttonVariants } from "@/components/ui";
-import { PageHeader } from "@/components/demo/page-header";
-import { SectionHeading } from "@/components/demo/section-heading";
-import { StreakChip } from "@/components/demo/streak-chip";
-import { DayStrip, fmtLongDate } from "@/components/demo/day-strip";
-import { CheckIcon, ChevronRightIcon } from "@/components/demo/icons";
+import { PageHeader } from "@/components/app/page-header";
+import { SectionHeading } from "@/components/app/section-heading";
+import { StreakChip } from "@/components/app/streak-chip";
+import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
+import { CheckIcon, ChevronRightIcon } from "@/components/app/icons";
 import { groupHref } from "@/lib/group-href";
 import type { Landmark } from "@/lib/retention";
 import {

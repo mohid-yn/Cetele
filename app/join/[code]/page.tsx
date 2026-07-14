@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui";
-import { UsersIcon } from "@/components/demo/icons";
+import { UsersIcon } from "@/components/app/icons";
 import { createClient } from "@/lib/supabase/server";
 import { AcceptButton } from "./join-client";
 

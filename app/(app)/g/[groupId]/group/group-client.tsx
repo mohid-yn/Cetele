@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { buttonVariants, Button, Dialog, ConfirmDialog } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { PageHeader } from "@/components/demo/page-header";
-import { SectionHeading } from "@/components/demo/section-heading";
+import { PageHeader } from "@/components/app/page-header";
+import { SectionHeading } from "@/components/app/section-heading";
 import { GroupGarden } from "@/components/app/group-garden";
 import { PairGoal, type Pair } from "@/components/app/pair-goal";
 import type { Garden } from "@/lib/retention";
-import { MemberRow } from "@/components/demo/member-row";
-import { Segmented } from "@/components/demo/segmented";
+import { MemberRow } from "@/components/app/member-row";
+import { Segmented } from "@/components/app/segmented";
 import {
   MemberBreakdownDialog,
   type BreakdownMember,
@@ -25,7 +25,7 @@ import {
   ChevronRightIcon,
   GridIcon,
   SettingsIcon,
-} from "@/components/demo/icons";
+} from "@/components/app/icons";
 import { logForGroup, leaveGroup } from "./actions";
 
 type Role = "owner" | "admin" | "member";

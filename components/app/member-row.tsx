@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Avatar, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import type { MemberRole } from "@/lib/mock/types";
+import type { MemberRole } from "@/lib/roles";
 
 /**
  * One circle member, rendered consistently wherever we list people (the Today

@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Button, Dialog, Field, Input } from "@/components/ui";
-import { PlusIcon } from "@/components/demo/icons";
+import { PlusIcon } from "@/components/app/icons";
 import { createGroup } from "./actions";
 
 /** Client leaf: the "New group" button + dialog, submitting a Server Action. */
 export function NewGroupButton() {
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState("");
   const [pending, startTransition] = React.useTransition();
@@ -18,10 +20,18 @@ export function NewGroupButton() {
       const res = await createGroup(name);
       if (res.error) {
         setError(res.error);
-      } else {
-        setName("");
-        setOpen(false);
+        return;
       }
+      setName("");
+      // Refresh BEFORE closing the dialog. createGroup already revalidates
+      // /groups, but the new circle was intermittently missing from the list
+      // afterwards — the row was in the DB, `auth.uid()` resolved fine, and the
+      // page still rendered its pre-create state, so the refetch was simply
+      // being dropped. Unmounting the dialog in the same transition as the
+      // action's re-render is what drops it; refreshing first makes the refetch
+      // part of the flow rather than a side effect we hope lands.
+      router.refresh();
+      setOpen(false);
     });
   };
 

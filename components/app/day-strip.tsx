@@ -9,7 +9,6 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { isoDate } from "@/lib/mock/data";
 import { isoDaysAgo } from "@/lib/local-date";
 import { CheckIcon } from "./icons";
 
@@ -38,14 +37,16 @@ export function DayStrip({
   onChange: (date: string) => void;
   isDone?: (date: string) => boolean;
   days?: number;
-  /** ISO anchor for "Today" — the user's profile-timezone date (D34). Falls
-   *  back to the device clock (the mock screens' behaviour). */
-  today?: string;
+  /**
+   * ISO anchor for "Today" — the member's profile-timezone date (D34). REQUIRED
+   * since M9: it used to fall back to the device clock (what the mock did), but
+   * the device clock is not the member's day boundary, and quietly disagreeing
+   * with the server about which day it is, is exactly the class of bug D44 was.
+   */
+  today: string;
   className?: string;
 }) {
-  const dates = Array.from({ length: days }, (_, i) =>
-    today ? isoDaysAgo(today, i) : isoDate(i),
-  );
+  const dates = Array.from({ length: days }, (_, i) => isoDaysAgo(today, i));
   return (
     <div className={cn("-mx-4 overflow-x-auto px-4", className)}>
       <div className="flex gap-1.5 pb-1">

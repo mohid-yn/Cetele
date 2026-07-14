@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { MemberRole } from "@/lib/mock/types";
+import type { MemberRole } from "@/lib/roles";
 
 /** Token-styled native <select> className, shared by the admin forms. */
 export const selectCls =
