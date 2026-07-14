@@ -11,28 +11,36 @@ export function NewGroupButton() {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState("");
-  const [pending, startTransition] = React.useTransition();
+  const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const submit = () => {
+  /**
+   * Deliberately NOT wrapped in a useTransition.
+   *
+   * The new circle was intermittently missing from the list afterwards — the row
+   * was in the DB, `auth.uid()` resolved, no query errored, and the page had
+   * simply rendered its pre-create state. The refetch was being dropped: closing
+   * the dialog unmounts a portalled subtree in the SAME transition that carries
+   * the action's re-render, and under load the router update lost the race.
+   *
+   * So the sequence is made explicit and un-batched instead: await the write,
+   * close the dialog, then refresh. `pending` is plain state — all the
+   * transition was buying here was the disabled button, which this gives us
+   * without putting the refetch in a race it can lose.
+   */
+  const submit = async () => {
     setError(null);
-    startTransition(async () => {
-      const res = await createGroup(name);
-      if (res.error) {
-        setError(res.error);
-        return;
-      }
-      setName("");
-      // Refresh BEFORE closing the dialog. createGroup already revalidates
-      // /groups, but the new circle was intermittently missing from the list
-      // afterwards — the row was in the DB, `auth.uid()` resolved fine, and the
-      // page still rendered its pre-create state, so the refetch was simply
-      // being dropped. Unmounting the dialog in the same transition as the
-      // action's re-render is what drops it; refreshing first makes the refetch
-      // part of the flow rather than a side effect we hope lands.
-      router.refresh();
-      setOpen(false);
-    });
+    setPending(true);
+    const res = await createGroup(name);
+    setPending(false);
+
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    setName("");
+    setOpen(false);
+    router.refresh();
   };
 
   return (
