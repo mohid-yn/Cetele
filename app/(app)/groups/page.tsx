@@ -83,7 +83,7 @@ export default async function GroupsHomePage() {
   };
 
   return (
-    <div className="rise-in flex flex-col gap-6 px-4 pt-5 pb-6">
+    <div className="flex flex-col gap-6 px-4 pt-5 pb-6">
       <PageHeader
         title="Groups"
         subtitle="Circles you own or help run"

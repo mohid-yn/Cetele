@@ -7,6 +7,7 @@ import {
   ThemeProvider,
   THEME_NO_FLASH_SCRIPT,
 } from "@/components/theme/theme-provider";
+import { MotionProvider } from "@/components/motion/motion-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,8 +55,10 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         <script dangerouslySetInnerHTML={{ __html: THEME_NO_FLASH_SCRIPT }} />
         <ThemeProvider>
-          {children}
-          <ServiceWorkerRegister />
+          <MotionProvider>
+            {children}
+            <ServiceWorkerRegister />
+          </MotionProvider>
         </ThemeProvider>
       </body>
     </html>

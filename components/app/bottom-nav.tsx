@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { springGlide } from "@/lib/motion";
 import { NAV_ITEMS, resolveNavItem } from "./nav-items";
 import { useActiveGroupId } from "@/lib/use-active-group";
 
@@ -28,12 +30,19 @@ export function BottomNav() {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors duration-[var(--duration-fast)]",
+                  "relative flex flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors duration-[var(--duration-fast)]",
                   active
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
+                {active && (
+                  <motion.div
+                    layoutId="bottom-nav-active"
+                    transition={springGlide}
+                    className="absolute inset-x-4 top-0 h-0.5 rounded-full bg-primary"
+                  />
+                )}
                 <Icon className={cn("size-6", active && "stroke-[2.4]")} />
                 {shortLabel}
               </Link>

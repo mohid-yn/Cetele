@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
+import { EASE_BRAND, DURATION } from "@/lib/motion";
 import { Button } from "./button";
 
 export interface DialogProps {
@@ -54,45 +56,64 @@ export function Dialog({
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  if (!open || typeof document === "undefined") return null;
+  if (typeof document === "undefined") return null;
 
-  // Portal to <body> so the modal escapes any transformed ancestor (e.g. a page
-  // wrapper left with a `transform` by its entrance animation) — otherwise
+  // Portal to <body> so the modal escapes any transformed ancestor (e.g. the
+  // page-transition wrapper, which keeps a `transform`) — otherwise
   // `position: fixed` resolves against that ancestor and the dialog/backdrop are
-  // offset instead of covering the whole viewport.
+  // offset instead of covering the whole viewport. AnimatePresence stays mounted
+  // (never early-returns on !open) so the card + backdrop animate OUT on close,
+  // not just in — the overlay itself lives inside the conditional, so nothing
+  // covers the screen while closed.
   return createPortal(
-    <div className="fixed inset-0 z-[var(--z-modal)] grid place-items-center p-4">
-      <div
-        className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden
-      />
-      <div
-        ref={cardRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        tabIndex={-1}
-        className={cn(
-          "relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-xl outline-none",
-          className,
-        )}
-        style={{
-          animation: "celebrate-in var(--duration-base) var(--ease-brand)",
-        }}
-      >
-        {title && (
-          <h2 className="font-display text-lg font-bold text-foreground">
-            {title}
-          </h2>
-        )}
-        {description && (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        )}
-        {children && <div className="mt-4">{children}</div>}
-        {footer && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
-      </div>
-    </div>,
+    <AnimatePresence>
+      {open && (
+        <div
+          key="dialog"
+          className="fixed inset-0 z-[var(--z-modal)] grid place-items-center p-4"
+        >
+          <motion.div
+            className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+            onClick={onClose}
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: DURATION.fast, ease: EASE_BRAND }}
+          />
+          <motion.div
+            ref={cardRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            tabIndex={-1}
+            className={cn(
+              "relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-xl outline-none",
+              className,
+            )}
+            initial={{ opacity: 0, scale: 0.94, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 6 }}
+            transition={{ duration: DURATION.base, ease: EASE_BRAND }}
+          >
+            {title && (
+              <h2 className="font-display text-lg font-bold text-foreground">
+                {title}
+              </h2>
+            )}
+            {description && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {description}
+              </p>
+            )}
+            {children && <div className="mt-4">{children}</div>}
+            {footer && (
+              <div className="mt-5 flex justify-end gap-2">{footer}</div>
+            )}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>,
     document.body,
   );
 }

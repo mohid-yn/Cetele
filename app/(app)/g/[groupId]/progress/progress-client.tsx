@@ -61,7 +61,7 @@ export function ProgressClient({
           : "every day is a fresh start";
 
   return (
-    <div className="rise-in flex flex-col gap-5 px-4 pt-5 pb-6">
+    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
       <PageHeader
         title="Progress"
         subtitle={
