@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/client";
 import { q } from "@/lib/db-log";
 import { ChevronDownIcon, CheckIcon, GridIcon } from "@/components/app/icons";
 import { groupHref, groupIdFromPath, groupSubPath } from "@/lib/group-href";
+import { writeActiveGroupCookie } from "@/components/app/remember-active-group";
 
 type Role = "owner" | "admin" | "member";
 type Group = { id: string; name: string; role: Role };
@@ -142,7 +143,13 @@ export function GroupSwitcher({
             href={groupHref(g.id, sub)}
             role="option"
             aria-selected={activeOne}
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              // Record the choice immediately (not just when the target page
+              // mounts), so a switch → Profile jump can't briefly resolve to the
+              // old circle.
+              writeActiveGroupCookie(g.id);
+              setOpen(false);
+            }}
             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-muted"
           >
             <span className="grid size-4 shrink-0 place-items-center">

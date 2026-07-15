@@ -3,6 +3,14 @@
 import * as React from "react";
 import { ACTIVE_GROUP_COOKIE } from "@/lib/group-href";
 
+/** Write the last-visited-group cookie now (client-side). Shared by the mount
+ *  effect below and the switcher, so clicking a circle records it immediately —
+ *  before the navigation even completes — not only once the target page mounts. */
+export function writeActiveGroupCookie(groupId: string): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${ACTIVE_GROUP_COOKIE}=${groupId}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+}
+
 /**
  * Records the last-visited group in the `cetele-active-group` cookie — the
  * signal `resolveActiveGroup` uses for /profile and the bare /today|/group|
@@ -19,7 +27,7 @@ import { ACTIVE_GROUP_COOKIE } from "@/lib/group-href";
  */
 export function RememberActiveGroup({ groupId }: { groupId: string }) {
   React.useEffect(() => {
-    document.cookie = `${ACTIVE_GROUP_COOKIE}=${groupId}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+    writeActiveGroupCookie(groupId);
   }, [groupId]);
   return null;
 }
