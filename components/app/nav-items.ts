@@ -39,6 +39,16 @@ export const NAV_ITEMS: readonly (ScopedItem | FlatItem)[] = [
 ] as const;
 
 /**
+ * The nav for someone with NO circle yet (a group-only app has nothing to show
+ * on the group tabs). Collapses to the front door + you — Today/Group/Progress
+ * would just be dead links to /groups otherwise.
+ */
+export const NO_GROUP_NAV_ITEMS: readonly FlatItem[] = [
+  { href: "/groups", label: "Groups", shortLabel: "Groups", Icon: GridIcon },
+  { href: "/profile", label: "Profile", shortLabel: "Profile", Icon: UserIcon },
+] as const;
+
+/**
  * Resolve a nav item to a concrete href + active state for the current path.
  * Group-scoped items point at the active group (or /groups when there is none);
  * a scoped item is active when the current group sub-path matches.

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
 import { groupHref } from "@/lib/group-href";
 import { NewGroupButton } from "./new-group";
+import { JoinByCode } from "./join-by-code";
 
 /**
  * Groups home — the Drive-style "My Drive" for circles (D26). First screen
@@ -82,6 +83,50 @@ export default async function GroupsHomePage() {
     );
   };
 
+  // A group-only app: with no circle at all, /groups is the front door — for a
+  // brand-new member AND for anyone who just left/deleted their last circle. So
+  // it welcomes rather than showing an empty list.
+  const noGroups = mine.length === 0;
+
+  if (noGroups) {
+    return (
+      <div className="flex min-h-[70vh] flex-col justify-center gap-6 px-4 py-8">
+        <div className="text-center">
+          <h1 className="font-display text-2xl font-bold text-foreground">
+            Start your first circle
+          </h1>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-balance text-muted-foreground">
+            Cetele is built around a circle — a small group that keeps a shared
+            dhikr goal together. Create one and invite your people, or join one
+            you&rsquo;ve been invited to.
+          </p>
+        </div>
+
+        <Card className="mx-auto flex w-full max-w-sm flex-col gap-4 p-5">
+          <div className="flex flex-col items-center gap-2">
+            <NewGroupButton />
+            <span className="text-xs text-muted-foreground">
+              You&rsquo;ll be the owner — invite others afterwards.
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              Have an invite?
+            </p>
+            <JoinByCode />
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 px-4 pt-5 pb-6">
       <PageHeader
@@ -94,7 +139,8 @@ export default async function GroupsHomePage() {
         <SectionHeading>My groups ({owned.length})</SectionHeading>
         {owned.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-            You don&rsquo;t own any groups yet — create one to get started.
+            You don&rsquo;t own any groups yet — create one, or you&rsquo;re a
+            member of the circles below.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">

@@ -49,9 +49,9 @@ test("magic link → session → real /groups → create group → sign out", as
   await page.goto(link!);
   await page.waitForURL(/\/groups|\/g\//);
 
-  // 4. /groups renders (empty) from the real DB
+  // 4. /groups renders the no-circle front door from the real DB
   await page.goto("/groups");
-  await expect(page.getByText("You don’t own any groups yet")).toBeVisible();
+  await expect(page.getByText("Start your first circle")).toBeVisible();
 
   // 5. create a real group via the create_group RPC. Creating lands you in the
   //    new circle's Manage screen (CET-30); returning to /groups then shows it

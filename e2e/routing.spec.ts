@@ -154,6 +154,6 @@ test("deep-link: a circle URL is shareable, and a stranger is turned away", asyn
   await signIn(pageB, OUTSIDER);
   await pageB.goto(deepUrl);
   await pageB.waitForURL("**/groups");
-  await expect(pageB.getByText("create one to get started")).toBeVisible();
+  await expect(pageB.getByText("Start your first circle")).toBeVisible();
   await expect(pageB.getByText("Deep Circle")).toHaveCount(0);
 });

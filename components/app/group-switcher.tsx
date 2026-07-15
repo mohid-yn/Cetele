@@ -22,7 +22,8 @@ import { Badge } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { q } from "@/lib/db-log";
 import { ChevronDownIcon, CheckIcon, GridIcon } from "@/components/app/icons";
-import { groupHref, groupIdFromPath, groupSubPath } from "@/lib/group-href";
+import { groupHref, groupSubPath } from "@/lib/group-href";
+import { useActiveGroupId } from "@/lib/use-active-group";
 import { writeActiveGroupCookie } from "@/components/app/remember-active-group";
 
 type Role = "owner" | "admin" | "member";
@@ -57,8 +58,11 @@ export function GroupSwitcher({
     setOpen(true);
   };
 
-  // The active group + the tab to preserve both come from the URL.
-  const activeId = groupIdFromPath(pathname);
+  // The active group is the one in the URL, or — on group-independent screens
+  // like /profile and /groups — the last-visited one (cookie). Resolving it
+  // URL-only left the switcher showing "Select group" on Profile even though a
+  // circle was active. The tab to preserve still comes from the URL.
+  const activeId = useActiveGroupId();
   const sub = groupSubPath(pathname);
 
   React.useEffect(() => {

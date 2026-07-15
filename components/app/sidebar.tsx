@@ -4,18 +4,20 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS, resolveNavItem } from "./nav-items";
+import { NAV_ITEMS, NO_GROUP_NAV_ITEMS, resolveNavItem } from "./nav-items";
 import { GroupSwitcher } from "@/components/app/group-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { WebAppLogo } from "@/components/ui/logo";
 import { useActiveGroupId } from "@/lib/use-active-group";
+import { useHasGroups } from "@/lib/use-has-groups";
 import { groupHref } from "@/lib/group-href";
 
 /** Persistent left nav for desktop (≥lg). Mirrors the mobile bottom bar. */
 export function Sidebar() {
   const pathname = usePathname();
   const groupId = useActiveGroupId();
-  const items = NAV_ITEMS;
+  const hasGroups = useHasGroups();
+  const items = hasGroups ? NAV_ITEMS : NO_GROUP_NAV_ITEMS;
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-card p-4 lg:flex">
@@ -28,8 +30,11 @@ export function Sidebar() {
         <WebAppLogo className="h-8 w-auto" />
       </Link>
 
-      {/* Active group (switcher when the user belongs to more than one) */}
-      <GroupSwitcher className="mb-2 w-full justify-between px-2 py-1.5 text-sm font-semibold" />
+      {/* Active group (switcher when the user belongs to more than one). Hidden
+          with no circle — there's nothing to switch between. */}
+      {hasGroups && (
+        <GroupSwitcher className="mb-2 w-full justify-between px-2 py-1.5 text-sm font-semibold" />
+      )}
 
       {/* Nav */}
       <nav aria-label="Primary" className="flex flex-col gap-1">

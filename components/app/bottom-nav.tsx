@@ -6,13 +6,18 @@ import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { springGlide } from "@/lib/motion";
-import { NAV_ITEMS, resolveNavItem } from "./nav-items";
+import { NAV_ITEMS, NO_GROUP_NAV_ITEMS, resolveNavItem } from "./nav-items";
 import { useActiveGroupId } from "@/lib/use-active-group";
+import { useHasGroups } from "@/lib/use-has-groups";
 
 /** Mobile tab bar pinned to the bottom of the app column (hidden on desktop). */
 export function BottomNav() {
   const pathname = usePathname();
   const groupId = useActiveGroupId();
+  const hasGroups = useHasGroups();
+  // No circle yet → collapse to the front door + you (the group tabs would be
+  // dead links to /groups).
+  const items = hasGroups ? NAV_ITEMS : NO_GROUP_NAV_ITEMS;
 
   return (
     <nav
@@ -20,8 +25,13 @@ export function BottomNav() {
       className="sticky bottom-0 z-[var(--z-sticky)] border-t border-border bg-card/95 shadow-up backdrop-blur lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="mx-auto grid max-w-[28rem] grid-cols-4">
-        {NAV_ITEMS.map((item) => {
+      <ul
+        className={cn(
+          "mx-auto grid max-w-[28rem]",
+          hasGroups ? "grid-cols-4" : "grid-cols-2",
+        )}
+      >
+        {items.map((item) => {
           const { href, active } = resolveNavItem(item, pathname, groupId);
           const { shortLabel, Icon } = item;
           return (

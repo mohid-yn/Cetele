@@ -63,7 +63,7 @@ test("tap → count persists → ring closes → streak advances", async ({
   // /groups — the no-group home (CET-25; the old /today empty state is gone).
   await page.goto("/today");
   await page.waitForURL("**/groups");
-  await expect(page.getByText("create one to get started")).toBeVisible();
+  await expect(page.getByText("Start your first circle")).toBeVisible();
 
   // create a group + one small task (target 3 keeps the loop quick)
   await page.click('button:has-text("New group")');
