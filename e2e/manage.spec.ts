@@ -58,10 +58,7 @@ test("owner: create group → manage → tasks → open invite", async ({ page }
   await page.click('button:has-text("New group")');
   await page.fill("#new-group-name", "M2 Circle");
   await page.click('button:has-text("Create group")');
-  await expect(page.getByText("M2 Circle")).toBeVisible();
-
-  // open the real manage screen (sets the active-group cookie)
-  await page.click('a:has-text("Manage")');
+  // Creating a circle lands you straight in its Manage screen (CET-30).
   await page.waitForURL("**/group/manage");
   await expect(page.getByRole("heading", { name: "Manage" })).toBeVisible();
 

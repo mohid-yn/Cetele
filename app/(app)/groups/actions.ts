@@ -34,19 +34,27 @@ export async function setTimezone(
   return { error: null };
 }
 
-/** Create a group via the create_group RPC (atomic group + owner membership). */
-export async function createGroup(name: string) {
+/**
+ * Create a group via the create_group RPC (atomic group + owner membership).
+ * Returns the new group's id so the client can navigate INTO it (CET-30): a
+ * route change is a guaranteed server fetch, where refetching the /groups list
+ * in place raced the dialog unmount and the new circle was intermittently
+ * missing. `revalidatePath` stays too, so a later return to the list is fresh.
+ */
+export async function createGroup(
+  name: string,
+): Promise<{ groupId: string | null; error: string | null }> {
   const trimmed = name.trim();
-  if (!trimmed) return { error: "Group name is required" };
+  if (!trimmed) return { groupId: null, error: "Group name is required" };
 
   const supabase = await createClient();
-  const { error } = await q(
+  const { data, error } = await q(
     "rpc.create_group",
     supabase.rpc("create_group", { p_name: trimmed }),
   );
   await signOutIfStaleSession(error);
-  if (error) return { error: error.message };
+  if (error) return { groupId: null, error: error.message };
 
   revalidatePath("/groups");
-  return { error: null };
+  return { groupId: data?.id ?? null, error: null };
 }

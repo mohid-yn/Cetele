@@ -64,9 +64,7 @@ async function createCircle(
   await page.click('button:has-text("New group")');
   await page.fill("#new-group-name", name);
   await page.click('button:has-text("Create group")');
-
-  const card = page.getByRole("listitem").filter({ hasText: name });
-  await card.getByRole("link", { name: "Manage" }).click();
+  // Creating a circle lands you straight in its Manage screen (CET-30).
   await page.waitForURL("**/group/manage");
   await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill(task);
   await page.getByPlaceholder("Daily target").last().fill("10");

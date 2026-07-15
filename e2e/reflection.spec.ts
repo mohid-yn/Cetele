@@ -69,8 +69,7 @@ async function createGroupWithTask(
   await page.click('button:has-text("New group")');
   await page.fill("#new-group-name", name);
   await page.click('button:has-text("Create group")');
-  const card = page.getByRole("listitem").filter({ hasText: name });
-  await card.getByRole("link", { name: "Manage" }).click();
+  // Creating a circle lands you straight in its Manage screen (CET-30).
   await page.waitForURL("**/group/manage");
   await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill(task);
   await page.getByPlaceholder("Daily target").last().fill(String(target));
@@ -92,7 +91,6 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
   await pageA.click('button:has-text("New group")');
   await pageA.fill("#new-group-name", "Reflect Circle");
   await pageA.click('button:has-text("Create group")');
-  await pageA.click('a:has-text("Manage")');
   await pageA.waitForURL("**/group/manage");
   await pageA.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Tasbih");
   await pageA.getByPlaceholder("Daily target").last().fill("10");

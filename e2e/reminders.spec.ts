@@ -54,7 +54,6 @@ test("a member sets a per-task reminder time, and it persists", async ({
   await page.click('button:has-text("New group")');
   await page.fill("#new-group-name", `Reminder Circle ${STAMP}`);
   await page.click('button:has-text("Create group")');
-  await page.click('a:has-text("Manage")');
   await page.waitForURL("**/group/manage");
   await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Salawat");
   await page.getByPlaceholder("Target").fill("100");

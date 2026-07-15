@@ -58,9 +58,7 @@ test("owner creates a circle and an open invite", async ({ page }) => {
   await page.click('button:has-text("New group")');
   await page.fill("#new-group-name", CIRCLE);
   await page.click('button:has-text("Create group")');
-  await expect(page.getByText(CIRCLE)).toBeVisible();
-
-  await page.click('a:has-text("Manage")');
+  // Creating a circle lands you straight in its Manage screen (CET-30).
   await page.waitForURL("**/group/manage");
 
   await page.click('button:has-text("Create invite")');

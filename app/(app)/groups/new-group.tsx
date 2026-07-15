@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button, Dialog, Field, Input } from "@/components/ui";
 import { PlusIcon } from "@/components/app/icons";
+import { groupHref } from "@/lib/group-href";
 import { createGroup } from "./actions";
 
 /** Client leaf: the "New group" button + dialog, submitting a Server Action. */
@@ -15,32 +16,30 @@ export function NewGroupButton() {
   const [error, setError] = React.useState<string | null>(null);
 
   /**
-   * Deliberately NOT wrapped in a useTransition.
-   *
-   * The new circle was intermittently missing from the list afterwards — the row
-   * was in the DB, `auth.uid()` resolved, no query errored, and the page had
-   * simply rendered its pre-create state. The refetch was being dropped: closing
-   * the dialog unmounts a portalled subtree in the SAME transition that carries
-   * the action's re-render, and under load the router update lost the race.
-   *
-   * So the sequence is made explicit and un-batched instead: await the write,
-   * close the dialog, then refresh. `pending` is plain state — all the
-   * transition was buying here was the disabled button, which this gives us
-   * without putting the refetch in a race it can lose.
+   * On success we NAVIGATE into the new circle rather than refetch the list we
+   * are on (CET-30). The list was intermittently missing the new circle even
+   * though the write succeeded — refetching `/groups` in place raced the dialog
+   * unmount and the router update was dropped under load. A route change is a
+   * guaranteed server fetch, so it can't lose that race; Manage is also the
+   * natural next step (you just made a circle — now add its tasks).
    */
   const submit = async () => {
     setError(null);
     setPending(true);
     const res = await createGroup(name);
-    setPending(false);
 
     if (res.error) {
+      setPending(false);
       setError(res.error);
       return;
     }
     setName("");
     setOpen(false);
-    router.refresh();
+    if (res.groupId) {
+      router.push(groupHref(res.groupId, "/group/manage"));
+    } else {
+      router.refresh(); // no id came back — at least refetch the list
+    }
   };
 
   return (

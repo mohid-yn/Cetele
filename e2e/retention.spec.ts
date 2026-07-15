@@ -65,7 +65,7 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   await pageA.click('button:has-text("New group")');
   await pageA.fill("#new-group-name", "Garden Circle");
   await pageA.click('button:has-text("Create group")');
-  await pageA.click('a:has-text("Manage")');
+  // Creating a circle lands you straight in its Manage screen (CET-30).
   await pageA.waitForURL("**/group/manage");
   await pageA.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Tasbih");
   await pageA.getByPlaceholder("Daily target").last().fill("3");

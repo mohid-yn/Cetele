@@ -53,10 +53,14 @@ test("magic link → session → real /groups → create group → sign out", as
   await page.goto("/groups");
   await expect(page.getByText("You don’t own any groups yet")).toBeVisible();
 
-  // 5. create a real group via the create_group RPC
+  // 5. create a real group via the create_group RPC. Creating lands you in the
+  //    new circle's Manage screen (CET-30); returning to /groups then shows it
+  //    in the list (which also exercises that the list is fresh on return).
   await page.click('button:has-text("New group")');
   await page.fill("#new-group-name", "E2E Circle");
   await page.click('button:has-text("Create group")');
+  await page.waitForURL("**/group/manage");
+  await page.goto("/groups");
   await expect(page.getByText("E2E Circle")).toBeVisible();
   await expect(page.getByText("1 member")).toBeVisible();
 

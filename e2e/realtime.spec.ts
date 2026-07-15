@@ -66,7 +66,6 @@ test("collective counter climbs live when a peer taps", async ({ browser }) => {
   await pageA.click('button:has-text("New group")');
   await pageA.fill("#new-group-name", "Live Circle");
   await pageA.click('button:has-text("Create group")');
-  await pageA.click('a:has-text("Manage")');
   await pageA.waitForURL("**/group/manage");
   await pageA.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Tasbih");
   await pageA.getByPlaceholder("Daily target").last().fill("10");
