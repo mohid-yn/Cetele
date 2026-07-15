@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { resolveActiveGroup } from "@/lib/active-group";
 import { q } from "@/lib/db-log";
 import { ProfileClient, type ReminderTask } from "./profile-client";
 
@@ -71,7 +72,14 @@ export default async function ProfilePage() {
     enabled: byTask.get(t.id)?.enabled ?? false,
   }));
 
-  const primary = (memberships ?? [])[0];
+  // The identity pill reflects the group you're actually in — the active /
+  // last-visited group (D26 cookie), not an arbitrary first membership row.
+  // Falls back to the first membership if there's no active group resolved.
+  const active = await resolveActiveGroup();
+  const primary =
+    (active &&
+      (memberships ?? []).find((m) => m.group_id === active.groupId)) ||
+    (memberships ?? [])[0];
 
   return (
     <ProfileClient

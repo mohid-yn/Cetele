@@ -1,6 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { ACTIVE_GROUP_COOKIE, groupIdFromPath } from "@/lib/group-href";
 
 /** Routes that need no session (everything else requires sign-in). */
 const PUBLIC_PATHS = [
@@ -88,16 +87,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Record the last-visited group (CET-25): a signed-in visit to /g/<id>/…
-  // refreshes the cookie so bare /today etc. and the nav can fall back to it.
-  // Middleware may write cookies (a page render can't), so it lives here.
-  const gid = groupIdFromPath(request.nextUrl.pathname);
-  if (gid && data?.claims) {
-    supabaseResponse.cookies.set(ACTIVE_GROUP_COOKIE, gid, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-    });
-  }
+  // NB: the last-visited-group cookie (CET-25) is NOT written here any more.
+  // It used to be — "a signed-in visit to /g/<id>/… refreshes the cookie" — but
+  // Next 16 gives middleware no way to tell a real navigation from a PREFETCH
+  // (prefetch requests arrive with no Next-Router-Prefetch / RSC / Sec-Purpose
+  // header at all here), and both the switcher and the /groups cards prefetch
+  // every circle's route. So merely rendering those silently rewrote the "active
+  // group" to a circle the user never opened, and /profile + bare /today then
+  // resolved to the wrong one. It's now set client-side, only when a group page
+  // actually mounts (components/app/remember-active-group) — an effect a
+  // prefetch never runs.
 
   return supabaseResponse;
 }
