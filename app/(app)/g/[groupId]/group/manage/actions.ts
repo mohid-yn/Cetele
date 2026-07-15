@@ -106,10 +106,19 @@ function parseTask(input: { label: string; subtitle: string; target: string }) {
   return { error: null, label, subtitle, target } as const;
 }
 
+/** The task row shape the manage list renders (mirrors ManageTask). */
+type NewTask = {
+  id: string;
+  label: string;
+  subtitle: string | null;
+  target_count: number;
+  sort_order: number;
+};
+
 export async function addTask(
   groupId: string,
   input: { label: string; subtitle: string; target: string },
-): Promise<Result> {
+): Promise<Result & { task?: NewTask }> {
   const parsed = parseTask(input);
   if (parsed.error) return fail(parsed.error);
 
@@ -123,17 +132,23 @@ export async function addTask(
     .limit(1)
     .maybeSingle();
 
-  const { error } = await supabase.from("tasks").insert({
-    group_id: groupId,
-    label: parsed.label,
-    subtitle: parsed.subtitle,
-    target_count: parsed.target,
-    sort_order: (last?.sort_order ?? -1) + 1,
-  });
+  // Return the inserted row so the client can append it optimistically — the
+  // manage list must not depend on a post-write refetch landing (CET-30).
+  const { data: task, error } = await supabase
+    .from("tasks")
+    .insert({
+      group_id: groupId,
+      label: parsed.label,
+      subtitle: parsed.subtitle,
+      target_count: parsed.target,
+      sort_order: (last?.sort_order ?? -1) + 1,
+    })
+    .select("id, label, subtitle, target_count, sort_order")
+    .single();
   if (error) return fail(error.message);
 
   revalidateManage(groupId);
-  return ok;
+  return { error: null, task };
 }
 
 export async function updateTask(
@@ -214,27 +229,36 @@ export async function removeMember(
 // Invites (D34/D35 — shareable link/code; nothing is ever emailed)
 // ---------------------------------------------------------------------------
 
+/** The invite row shape the manage list renders (mirrors ManageInvite). */
+type NewInvite = {
+  id: string;
+  email: string | null;
+  role: "admin" | "member";
+  code: string;
+};
+
 export async function createInvite(
   groupId: string,
   role: "admin" | "member",
   email: string,
-): Promise<Result> {
+): Promise<Result & { invite?: NewInvite }> {
   if (role !== "admin" && role !== "member") return fail("Invalid role");
   const locked = email.trim().toLowerCase();
   if (locked && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(locked))
     return fail("That doesn't look like an email address");
 
   const supabase = await createClient();
-  // Code is DB-minted (0007 column default; clients can't write it).
-  const { error } = await supabase.from("invites").insert({
-    group_id: groupId,
-    role,
-    email: locked || null,
-  });
+  // Code is DB-minted (0007 column default; clients can't write it). Return the
+  // inserted row so the client can append it optimistically (CET-30).
+  const { data: invite, error } = await supabase
+    .from("invites")
+    .insert({ group_id: groupId, role, email: locked || null })
+    .select("id, email, role, code")
+    .single();
   if (error) return fail(error.message);
 
   revalidateManage(groupId);
-  return ok;
+  return { error: null, invite: invite as NewInvite };
 }
 
 export async function revokeInvite(

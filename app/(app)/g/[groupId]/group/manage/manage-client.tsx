@@ -58,6 +58,25 @@ function ErrorNote({ error }: { error: string | null }) {
   );
 }
 
+/**
+ * Local state seeded from a prop, re-seeded whenever the prop's identity changes
+ * (a genuine server refetch / navigation delivers a new array). React's endorsed
+ * "adjust state during render" pattern — no effect, so no set-state-in-effect —
+ * lets the manage lists apply a mutation optimistically (CET-30) while still
+ * picking up server-driven changes (e.g. an ownership transfer) when they arrive.
+ */
+function usePropState<T>(
+  prop: T,
+): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [state, setState] = React.useState(prop);
+  const [seed, setSeed] = React.useState(prop);
+  if (prop !== seed) {
+    setSeed(prop);
+    setState(prop);
+  }
+  return [state, setState];
+}
+
 /** Read-only field with a copy button (invite link / code). */
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = React.useState(false);
@@ -94,10 +113,12 @@ function TaskRow({
   groupId,
   task,
   onRemove,
+  onSaved,
 }: {
   groupId: string;
   task: ManageTask;
   onRemove: (task: ManageTask) => void;
+  onSaved: (task: ManageTask) => void;
 }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = React.useState(false);
@@ -108,7 +129,17 @@ function TaskRow({
   const save = () =>
     run(
       () => act.updateTask(groupId, task.id, { label, subtitle, target }),
-      () => setEditing(false),
+      () => {
+        // Optimistic: hand the edited row up so the list re-renders now (CET-30),
+        // mirroring the trim/parse the action applies server-side.
+        onSaved({
+          ...task,
+          label: label.trim(),
+          subtitle: subtitle.trim() || null,
+          target_count: parseInt(target, 10),
+        });
+        setEditing(false);
+      },
     );
 
   if (editing) {
@@ -188,9 +219,9 @@ export function ManageClient({
   group,
   me,
   myRole,
-  members,
-  tasks,
-  invites,
+  members: propMembers,
+  tasks: propTasks,
+  invites: propInvites,
   canClaim,
 }: {
   group: ManageGroup;
@@ -201,6 +232,12 @@ export function ManageClient({
   invites: ManageInvite[];
   canClaim: boolean;
 }) {
+  // The three lists render from local state (CET-30): a mutation shows the
+  // moment its action succeeds, without waiting on a refetch that can be dropped.
+  const [members, setMembers] = usePropState(propMembers);
+  const [tasks, setTasks] = usePropState(propTasks);
+  const [invites, setInvites] = usePropState(propInvites);
+
   const isOwner = myRole === "owner";
   const owner = members.find((m) => m.role === "owner");
 
@@ -247,7 +284,8 @@ export function ManageClient({
           subtitle: newSubtitle,
           target: newTarget,
         }),
-      () => {
+      (res) => {
+        if (res.task) setTasks((ts) => [...ts, res.task!]);
         setNewLabel("");
         setNewSubtitle("");
         setNewTarget("100");
@@ -338,8 +376,14 @@ export function ManageClient({
                       disabled={isSelf || membersAct.pending}
                       onChange={(r) => {
                         if (r === "admin" || r === "member")
-                          membersAct.run(() =>
-                            act.setMemberRole(group.id, m.userId, r),
+                          membersAct.run(
+                            () => act.setMemberRole(group.id, m.userId, r),
+                            () =>
+                              setMembers((ms) =>
+                                ms.map((x) =>
+                                  x.userId === m.userId ? { ...x, role: r } : x,
+                                ),
+                              ),
                           );
                       }}
                     />
@@ -399,7 +443,8 @@ export function ManageClient({
                 onClick={() =>
                   inviteAct.run(
                     () => act.createInvite(group.id, inviteRole, inviteEmail),
-                    () => {
+                    (res) => {
+                      if (res.invite) setInvites((iv) => [...iv, res.invite!]);
                       setInviteEmail("");
                       setInviteRole("member");
                     },
@@ -434,7 +479,11 @@ export function ManageClient({
                       variant="ghost"
                       className="text-danger hover:bg-danger-500/10"
                       onClick={() =>
-                        inviteAct.run(() => act.revokeInvite(group.id, i.id))
+                        inviteAct.run(
+                          () => act.revokeInvite(group.id, i.id),
+                          () =>
+                            setInvites((iv) => iv.filter((x) => x.id !== i.id)),
+                        )
                       }
                     >
                       Revoke
@@ -463,6 +512,9 @@ export function ManageClient({
               groupId={group.id}
               task={t}
               onRemove={setRemovingTask}
+              onSaved={(u) =>
+                setTasks((ts) => ts.map((x) => (x.id === u.id ? u : x)))
+              }
             />
           ))}
           {tasks.length === 0 && (
@@ -643,8 +695,12 @@ export function ManageClient({
         onClose={() => setRemovingMember(null)}
         onConfirm={() =>
           removingMember &&
-          membersAct.run(() =>
-            act.removeMember(group.id, removingMember.userId),
+          membersAct.run(
+            () => act.removeMember(group.id, removingMember.userId),
+            () =>
+              setMembers((ms) =>
+                ms.filter((x) => x.userId !== removingMember.userId),
+              ),
           )
         }
         title={`Remove ${removingMember?.name ?? ""}?`}
@@ -656,7 +712,10 @@ export function ManageClient({
         onClose={() => setRemovingTask(null)}
         onConfirm={() =>
           removingTask &&
-          taskAct.run(() => act.deleteTask(group.id, removingTask.id))
+          taskAct.run(
+            () => act.deleteTask(group.id, removingTask.id),
+            () => setTasks((ts) => ts.filter((x) => x.id !== removingTask.id)),
+          )
         }
         title={`Remove "${removingTask?.label ?? ""}"?`}
         description="This task and its logged counts are removed for everyone in the group."

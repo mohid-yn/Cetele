@@ -22,9 +22,11 @@ export function useAction() {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const run = async (
-    fn: () => Promise<{ error: string | null }>,
-    after?: () => void,
+  const run = async <R extends { error: string | null }>(
+    fn: () => Promise<R>,
+    /** Runs on success. Receives the action's result, so a caller can apply an
+     *  optimistic update from what the action returned (e.g. the new row). */
+    after?: (res: R) => void,
     /** Undo optimistic UI — without it a refused write still *looks* applied. */
     onError?: () => void,
   ) => {
@@ -36,11 +38,12 @@ export function useAction() {
       setError(res.error);
       onError?.();
     } else {
-      after?.();
-      // Not inside a useTransition (CET-30): a transition DEPRIORITISES this
-      // refresh, so under load it was arriving after the assertion window — the
-      // manage list (invites/members/tasks) kept its pre-mutation state though
-      // the write had landed. A plain refresh on a mounted screen lands promptly.
+      after?.(res);
+      // Reconcile in the background. The manage lists apply their change
+      // optimistically in `after` (CET-30) so the UI is correct regardless of
+      // whether this refresh lands — a router.refresh() right after a Server
+      // Action's own revalidatePath can coalesce and be dropped. A redirecting
+      // action returns nothing, so it is skipped (no refetching a route we left).
       if (res) router.refresh();
     }
   };
