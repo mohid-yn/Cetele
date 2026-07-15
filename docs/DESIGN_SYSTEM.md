@@ -185,5 +185,5 @@ Rules:
 ## 6. Maintenance
 
 - Changing the brand = edit the scales/semantic tokens in `app/globals.css`. Nothing else.
-- PWA icons follow the brand: regenerate with `python3 scripts/gen_icons.py` after a color change.
+- PWA icons follow the brand: regenerate with `node scripts/gen-icons.mjs` after a color change.
 - When you add/alter a component, update `/designsystem` so the living reference stays truthful.

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@/components/ui";
@@ -160,16 +159,20 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-dvh lg:grid lg:grid-cols-2">
-      {/* Left — brand imagery (desktop only) */}
-      <div className="relative hidden bg-primary-700 lg:block">
-        <Image
-          src="/login-hero.png"
-          alt=""
-          fill
-          priority
-          sizes="50vw"
-          className="object-cover"
-        />
+      {/* Left — brand panel (desktop only) */}
+      <div className="relative hidden bg-primary-700 lg:grid lg:place-items-center lg:p-12">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <AppIconLogo className="size-32 rounded-[2rem] shadow-2xl" />
+          <div>
+            <p className="font-display text-4xl font-bold text-primary-foreground">
+              Cetele
+            </p>
+            <p className="mt-3 max-w-xs text-balance text-primary-100">
+              Track your daily dhikr together — a shared tally that makes
+              remembrance a habit.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Right — sign-in */}

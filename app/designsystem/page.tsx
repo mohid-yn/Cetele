@@ -192,7 +192,7 @@ export default function DesignSystemPage() {
         <Section
           id="brand"
           title="Brand marks"
-          description="The Cetele logo — a gold nalayn silhouette on emerald. Colours come from design tokens, so both marks adapt to light/dark. AppIconLogo is the square hero mark (login, splash); WebAppLogo is the horizontal wordmark for headers and the app sidebar. Import from @/components/ui/logo."
+          description="The Cetele logo — a green mark with a gold arrow, from public/logo.svg (a fixed-colour brand asset, not theme-token-driven). AppIconLogo is the square hero mark on a light tile (login, splash); WebAppLogo is the horizontal icon + wordmark for headers and the app sidebar. Import from @/components/ui/logo."
         >
           <Card>
             <CardContent className="flex flex-wrap items-center gap-8 pt-6">

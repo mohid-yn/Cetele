@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="ceteleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#006b3c" />
+      <stop offset="50%" stop-color="#00522c" />
+      <stop offset="100%" stop-color="#004020" />
+    </linearGradient>
+    <linearGradient id="ceteleLightGreen" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#008a4f" />
+      <stop offset="100%" stop-color="#00b064" />
+    </linearGradient>
+    <linearGradient id="ceteleGold" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d4af37" />
+      <stop offset="50%" stop-color="#f3cd44" />
+      <stop offset="100%" stop-color="#ffee75" />
+    </linearGradient>
+    <filter id="ceteleShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="2" dy="4" stdDeviation="5" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <path d="M 440,160
+           L 440,360
+           A 120,120 0 0,1 320,480
+           L 192,480
+           A 160,160 0 0,1 32,320
+           L 32,192
+           A 160,160 0 0,1 192,32
+           L 340,32
+           A 40,40 0 0,1 370,60
+           L 320,130
+           A 40,40 0 0,0 290,120
+           L 192,120
+           A 72,72 0 0,0 120,192
+           L 120,320
+           A 72,72 0 0,0 192,392
+           L 320,392
+           A 40,40 0 0,0 360,352
+           L 360,240 Z"
+        fill="url(#ceteleGreen)" />
+
+  <path d="M 32,192
+           A 160,160 0 0,1 192,32
+           L 340,32
+           L 320,130
+           L 192,120
+           A 72,72 0 0,0 120,192 Z"
+        fill="url(#ceteleLightGreen)" opacity="0.85" />
+
+  <polygon points="260,255 375,180 470,60 380,45"
+           fill="url(#ceteleGold)"
+           filter="url(#ceteleShadow)" />
+
+  <polygon points="260,255 380,45 325,120"
+           fill="#e5b823" opacity="0.6" />
+</svg>
