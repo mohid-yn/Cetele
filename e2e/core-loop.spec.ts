@@ -125,6 +125,7 @@ test("back-fill: yesterday's ring can still be closed (D8)", async ({
   await page.click('button:has-text("Back to today")');
   await page.waitForURL("**/today");
 
-  // yesterday now shows as done on the strip (✓), streak untouched (1)
-  await expect(page.getByText("1 day streak")).toBeVisible();
+  // yesterday now shows as done on the strip (✓), and the repaired day joins
+  // the chain retroactively — back-filling FEEDS the streak (D48): 2 days.
+  await expect(page.getByText("2 day streak")).toBeVisible();
 });

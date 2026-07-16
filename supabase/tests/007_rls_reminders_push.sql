@@ -131,7 +131,11 @@ delete from public.reminders where user_id='c8000000-0000-0000-0000-00000000000b
 -- No device yet → nothing to send to, so the day's send is NOT burned.
 select is((select count(*) from public.claim_due_reminders()), 0::bigint,
   'a member with no device is never claimed');
-select is((select last_sent_on from public.reminders), null,
+-- Fixture-scoped, not a bare table scan: a prior e2e run leaves real reminders
+-- rows behind in the local DB, and a global scalar subquery dies "more than one
+-- row" on them (the 005 lesson — see the STATUS gotchas table).
+select is((select last_sent_on from public.reminders
+            where user_id='c8000000-0000-0000-0000-00000000000a'), null,
   '...and their reminder is left un-stamped for when they do subscribe');
 
 -- Register the device the way the app does — through the RPC (this is the exact
@@ -172,7 +176,9 @@ select is((select count(*) from public.claim_due_reminders()), 1::bigint,
   'a due reminder with a device is claimed');
 select is((select count(*) from public.claim_due_reminders()), 0::bigint,
   'the SAME claim returns nothing a second time — atomic, so no double-send');
-select is((select last_sent_on from public.reminders), (now() at time zone 'UTC')::date,
+select is((select last_sent_on from public.reminders
+            where user_id='c8000000-0000-0000-0000-00000000000a'),
+  (now() at time zone 'UTC')::date,
   'the claim stamped last_sent_on in the member''s own day');
 
 -- A closed ring is never nagged (D8).

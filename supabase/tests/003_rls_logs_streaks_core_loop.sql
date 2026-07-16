@@ -356,5 +356,65 @@ select throws_matching(
   'task not found', 'outsider cannot self-log a foreign task');
 reset role;
 
+-- ----------------------------------------------------------------------------
+-- D48 (0017) — back-filling repairs the streak
+-- ----------------------------------------------------------------------------
+-- m completed today earlier (streak 1). Back-filling YESTERDAY joins it to the
+-- chain retroactively — the "log today first, then notice the gap" order.
+select pg_temp.impersonate('d0000000-0000-0000-0000-000000000003'); -- m
+select lives_ok(
+  $$select public.set_count('d0000000-0000-0000-0000-000000000003',
+                            'd0000000-0000-0000-0000-0000000000c1', current_date - 1, 10)$$,
+  'm back-fills yesterday to full');
+reset role;
+select is(
+  (select array[current, longest] from public.streaks
+    where user_id = 'd0000000-0000-0000-0000-000000000003'),
+  array[2, 2], 'back-filling yesterday retroactively extends the streak (D48)');
+
+-- r: a RESET streak rebuilds from the repaired days. History: t-3/t-2 complete,
+-- t-1 missed (8/10 from the self-correct test), today complete; then simulate
+-- the post-reset state the rollover job leaves, and repair the missed day.
+select pg_temp.impersonate('d0000000-0000-0000-0000-000000000005'); -- r
+select lives_ok(
+  $$select public.set_count('d0000000-0000-0000-0000-000000000005',
+                            'd0000000-0000-0000-0000-0000000000c1', current_date - 2, 10)$$,
+  'r back-fills t-2');
+select lives_ok(
+  $$select public.set_count('d0000000-0000-0000-0000-000000000005',
+                            'd0000000-0000-0000-0000-0000000000c1', current_date - 3, 10)$$,
+  'r back-fills t-3');
+reset role;
+update public.streaks
+set current = 0, longest = 8, freezes_left = 0, last_active = current_date - 4
+where user_id = 'd0000000-0000-0000-0000-000000000005';
+select pg_temp.impersonate('d0000000-0000-0000-0000-000000000005'); -- r
+select lives_ok(
+  $$select public.set_count('d0000000-0000-0000-0000-000000000005',
+                            'd0000000-0000-0000-0000-0000000000c1', current_date - 1, 10)$$,
+  'r repairs the missed day');
+reset role;
+select is(
+  (select array[current, longest, freezes_left] from public.streaks
+    where user_id = 'd0000000-0000-0000-0000-000000000005'),
+  array[4, 8, 1],
+  'repairing the gap rebuilds the whole visible chain (t-3..today = 4); longest kept (D48)');
+select is(
+  (select last_active from public.streaks
+    where user_id = 'd0000000-0000-0000-0000-000000000005'),
+  current_date, 'the repaired chain is anchored at the present');
+
+-- …but an isolated OLD completion never fakes a live streak
+select pg_temp.impersonate('d0000000-0000-0000-0000-000000000005'); -- r
+select lives_ok(
+  $$select public.set_count('d0000000-0000-0000-0000-000000000005',
+                            'd0000000-0000-0000-0000-0000000000c1', current_date - 6, 10)$$,
+  'r logs an isolated day far in the past');
+reset role;
+select is(
+  (select current from public.streaks
+    where user_id = 'd0000000-0000-0000-0000-000000000005'),
+  4, 'an isolated old completion does not change the live streak');
+
 select * from finish();
 rollback;
