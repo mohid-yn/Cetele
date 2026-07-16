@@ -13,10 +13,16 @@ import { useHasGroups } from "@/lib/use-has-groups";
 import { groupHref } from "@/lib/group-href";
 
 /** Persistent left nav for desktop (≥lg). Mirrors the mobile bottom bar. */
-export function Sidebar() {
+export function Sidebar({
+  initialHasGroups,
+  initialGroupId,
+}: {
+  initialHasGroups: boolean;
+  initialGroupId: string | null;
+}) {
   const pathname = usePathname();
-  const groupId = useActiveGroupId();
-  const hasGroups = useHasGroups();
+  const groupId = useActiveGroupId(initialGroupId);
+  const hasGroups = useHasGroups(initialHasGroups);
   const items = hasGroups ? NAV_ITEMS : NO_GROUP_NAV_ITEMS;
 
   return (
@@ -33,7 +39,10 @@ export function Sidebar() {
       {/* Active group (switcher when the user belongs to more than one). Hidden
           with no circle — there's nothing to switch between. */}
       {hasGroups && (
-        <GroupSwitcher className="mb-2 w-full justify-between px-2 py-1.5 text-sm font-semibold" />
+        <GroupSwitcher
+          initialGroupId={initialGroupId}
+          className="mb-2 w-full justify-between px-2 py-1.5 text-sm font-semibold"
+        />
       )}
 
       {/* Nav */}

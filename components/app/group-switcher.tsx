@@ -34,9 +34,11 @@ const ROLE_RANK: Record<Role, number> = { owner: 0, admin: 1, member: 2 };
 export function GroupSwitcher({
   className,
   initialName,
+  initialGroupId = null,
 }: {
   className?: string;
   initialName?: string;
+  initialGroupId?: string | null;
 }) {
   const pathname = usePathname();
   const [groups, setGroups] = React.useState<Group[]>([]);
@@ -62,7 +64,7 @@ export function GroupSwitcher({
   // like /profile and /groups — the last-visited one (cookie). Resolving it
   // URL-only left the switcher showing "Select group" on Profile even though a
   // circle was active. The tab to preserve still comes from the URL.
-  const activeId = useActiveGroupId();
+  const activeId = useActiveGroupId(initialGroupId);
   const sub = groupSubPath(pathname);
 
   React.useEffect(() => {

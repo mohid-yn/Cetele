@@ -2,9 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
-import { groupHref, GROUP_WRITE_PATHS } from "@/lib/group-href";
+import {
+  groupHref,
+  GROUP_WRITE_PATHS,
+  ACTIVE_GROUP_COOKIE,
+} from "@/lib/group-href";
 
 /** Bust every group screen a count-write can change — concrete paths, so the
  *  client Router Cache drops its prefetched (pre-write) payloads too. */
@@ -123,6 +128,16 @@ export async function leaveGroup(
       error:
         "You own this circle — transfer ownership or delete it before leaving.",
     };
+  }
+
+  // If the circle you just left was your last-visited one, forget the hint —
+  // otherwise the switcher/nav on group-independent screens (/profile) would
+  // resolve the active group to one you no longer belong to. (deleteGroup clears
+  // it unconditionally; here we only clear when it matches, so leaving circle A
+  // doesn't wipe an active-group cookie pointing at circle B.)
+  const cookieStore = await cookies();
+  if (cookieStore.get(ACTIVE_GROUP_COOKIE)?.value === groupId) {
+    cookieStore.delete(ACTIVE_GROUP_COOKIE);
   }
 
   revalidatePath("/groups");

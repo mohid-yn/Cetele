@@ -11,10 +11,16 @@ import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
 
 /** Mobile tab bar pinned to the bottom of the app column (hidden on desktop). */
-export function BottomNav() {
+export function BottomNav({
+  initialHasGroups,
+  initialGroupId,
+}: {
+  initialHasGroups: boolean;
+  initialGroupId: string | null;
+}) {
   const pathname = usePathname();
-  const groupId = useActiveGroupId();
-  const hasGroups = useHasGroups();
+  const groupId = useActiveGroupId(initialGroupId);
+  const hasGroups = useHasGroups(initialHasGroups);
   // No circle yet → collapse to the front door + you (the group tabs would be
   // dead links to /groups).
   const items = hasGroups ? NAV_ITEMS : NO_GROUP_NAV_ITEMS;
