@@ -71,8 +71,10 @@ test("owner creates a circle and an open invite", async ({ page }) => {
   process.env.E2E_LEAVE_JOIN_LINK = joinLink;
 
   // The owner is told to transfer or delete — never offered a Leave button.
+  // (Scoped to <main>: the sidebar's group switcher also shows the active
+  // circle's name on /groups, and clicking THAT would open the menu instead.)
   await page.goto("/groups");
-  await page.getByText(CIRCLE).click();
+  await page.getByRole("main").getByText(CIRCLE).click();
   await page.waitForURL(/\/g\/.*\/today/);
   await page.goto(page.url().replace("/today", "/group"));
   await page.getByRole("tab", { name: "Members" }).click();
@@ -106,7 +108,7 @@ test("a member leaves: the circle disappears from their list", async ({
 
   // Booted back to the circles home, and the circle is no longer theirs.
   await page.waitForURL("/groups");
-  await expect(page.getByText(CIRCLE)).toHaveCount(0);
+  await expect(page.getByRole("main").getByText(CIRCLE)).toHaveCount(0);
 
   await signOut(page);
 });
@@ -115,7 +117,9 @@ test("the circle survives, back to one member", async ({ page }) => {
   await signIn(page, OWNER);
   await page.goto("/groups");
 
-  await expect(page.getByText(CIRCLE)).toBeVisible();
+  // Scoped to <main> — the sidebar switcher can also carry the circle's name
+  // on /groups (a bare getByText then hits Playwright strict mode).
+  await expect(page.getByRole("main").getByText(CIRCLE)).toBeVisible();
   await expect(page.getByText("1 member", { exact: true })).toBeVisible();
 
   await signOut(page);

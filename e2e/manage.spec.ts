@@ -83,7 +83,9 @@ test("owner: create group → manage → tasks → open invite", async ({ page }
     .locator("section", { hasText: "Group name" })
     .getByRole("button", { name: "Save", exact: true })
     .click();
-  await expect(page.getByText("M2 Circle Renamed").first()).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("M2 Circle Renamed").first(),
+  ).toBeVisible();
 
   // create an OPEN invite (reusable, D35) and capture its /join link
   await page.click('button:has-text("Create invite")');
@@ -145,7 +147,11 @@ test("joiner: signed-out invite link → ?next= → sign in → accept → membe
 
   // …and the circle shows up in the groups list with the new member counted.
   await page.goto("/groups");
-  await expect(page.getByText("M2 Circle Renamed")).toBeVisible();
+  // Scoped to <main> — the sidebar switcher also shows the active circle's
+  // name on /groups (bare getByText hits strict mode).
+  await expect(
+    page.getByRole("main").getByText("M2 Circle Renamed"),
+  ).toBeVisible();
   await expect(page.getByText("2 members")).toBeVisible();
 
   // re-opening the link as a member is a friendly no-op

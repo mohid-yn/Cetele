@@ -61,7 +61,9 @@ test("magic link → session → real /groups → create group → sign out", as
   await page.click('button:has-text("Create group")');
   await page.waitForURL("**/group/manage");
   await page.goto("/groups");
-  await expect(page.getByText("E2E Circle")).toBeVisible();
+  // Scoped to <main> — the sidebar switcher also shows the active circle's
+  // name on /groups, so a bare getByText is ambiguous (strict mode).
+  await expect(page.getByRole("main").getByText("E2E Circle")).toBeVisible();
   await expect(page.getByText("1 member")).toBeVisible();
 
   // 6. sign out → gates snap shut
