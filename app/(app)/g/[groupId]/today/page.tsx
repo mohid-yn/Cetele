@@ -229,6 +229,7 @@ export default async function TodayPage({
         groupId={active.groupId}
         groupName={group?.name ?? "your circle"}
         firstName={(profile?.name ?? "Friend").split(" ")[0]}
+        timeZone={tz}
         todayISO={todayISO}
         streak={streak?.current ?? 0}
         tasks={(tasks ?? []).map((t) => ({

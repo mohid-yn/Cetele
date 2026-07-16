@@ -11,6 +11,7 @@
 
 import * as React from "react";
 import { Card } from "@/components/ui";
+import { prefersReducedMotion } from "@/lib/motion";
 import { SparkIcon } from "./icons";
 
 interface CelebrateOptions {
@@ -130,6 +131,11 @@ export function CelebrationProvider({
     };
 
     burstRef.current = () => {
+      // The CSS reduced-motion guard can't reach a raw-canvas rAF loop, and
+      // MotionConfig only governs `motion` components — so this is checked here.
+      // The milestone card still shows (it's information, and its CSS animation
+      // is already neutered by the global guard); only the particles are motion.
+      if (prefersReducedMotion()) return;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       const colors = readPalette();
@@ -162,7 +168,13 @@ export function CelebrationProvider({
 
   const celebrate = React.useCallback((opts?: CelebrateOptions) => {
     burstRef.current();
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    // The multi-buzz flourish is celebration, not feedback — reduced-motion
+    // users get the card without the fireworks.
+    if (
+      typeof navigator !== "undefined" &&
+      "vibrate" in navigator &&
+      !prefersReducedMotion()
+    ) {
       navigator.vibrate?.([0, 40, 30, 60]);
     }
     if (!opts?.confettiOnly) {

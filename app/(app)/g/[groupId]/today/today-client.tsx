@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ProgressRing, buttonVariants } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
@@ -9,6 +10,7 @@ import { StreakChip } from "@/components/app/streak-chip";
 import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
 import { CheckIcon, ChevronRightIcon } from "@/components/app/icons";
 import { groupHref } from "@/lib/group-href";
+import { useLocalToday } from "@/lib/use-local-today";
 import type { Landmark } from "@/lib/retention";
 import {
   PeerReactions,
@@ -47,7 +49,8 @@ export function TodayClient({
   groupId,
   groupName,
   firstName,
-  todayISO,
+  timeZone,
+  todayISO: serverTodayISO,
   streak,
   tasks,
   counts,
@@ -60,6 +63,8 @@ export function TodayClient({
   groupId: string;
   groupName: string;
   firstName: string;
+  /** The member's day boundary (profiles.timezone, D34). */
+  timeZone: string;
   todayISO: string;
   streak: number;
   tasks: TodayTask[];
@@ -74,7 +79,15 @@ export function TodayClient({
   /** Day-one endowed-progress welcome (CET-21). */
   welcome: boolean;
 }) {
-  const [date, setDate] = React.useState(todayISO);
+  const router = useRouter();
+  const [date, setDate] = React.useState(serverTodayISO);
+  // Track the member's REAL local today across their midnight (a PWA is exactly
+  // the app left open overnight): when the day flips, follow it if they were on
+  // "today" and refresh so rings/circle re-read the new day's server data.
+  const todayISO = useLocalToday(timeZone, serverTodayISO, (next, prev) => {
+    setDate((d) => (d === prev ? next : d));
+    router.refresh();
+  });
   const isToday = date === todayISO;
 
   const countOn = (taskId: string, d: string) => counts[d]?.[taskId] ?? 0;

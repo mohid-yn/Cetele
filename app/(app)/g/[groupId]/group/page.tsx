@@ -6,7 +6,12 @@ import { q } from "@/lib/db-log";
 import type { BreakdownMember } from "@/components/app/member-breakdown";
 import type { GridRow } from "@/components/app/task-grid";
 import type { Pair } from "@/components/app/pair-goal";
-import { gardenStage, pickBuddy, PAIR_TARGET } from "@/lib/retention";
+import {
+  gardenStage,
+  pickBuddy,
+  isoWeekKey,
+  PAIR_TARGET,
+} from "@/lib/retention";
 import { GroupLive } from "./group-live";
 import {
   GroupClient,
@@ -230,8 +235,10 @@ export default async function GroupPage({
   );
 
   // CET-22 — the pair goal. Also stores nothing: the buddy is a deterministic
-  // pick, and "days active this week" is the figure Standings already computed.
-  const buddyId = pickBuddy(me, memberIds);
+  // MUTUAL pick (adjacent pairing, rotated weekly — my buddy's buddy is me), and
+  // "days active this week" is the figure Standings already computed. Null in an
+  // odd-sized circle for whoever sits out this week — the card just isn't shown.
+  const buddyId = pickBuddy(me, memberIds, isoWeekKey(todayISO));
   const daysActive = (u: string) =>
     standings.find((s) => s.userId === u)?.daysActive ?? 0;
   const pair: Pair | null = buddyId

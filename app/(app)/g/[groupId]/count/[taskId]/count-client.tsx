@@ -10,6 +10,7 @@ import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
 import { ArrowLeftIcon } from "@/components/app/icons";
 import { playComplete, playTen } from "@/lib/sound";
 import { groupHref } from "@/lib/group-href";
+import { useLocalToday } from "@/lib/use-local-today";
 import { incrementCount } from "../../today/actions";
 
 /**
@@ -24,12 +25,15 @@ const FLUSH_MS = 600;
 export function CountClient({
   groupId,
   task,
-  todayISO,
+  timeZone,
+  todayISO: serverTodayISO,
   initialDate,
   initialCounts,
 }: {
   groupId: string;
   task: { id: string; label: string; subtitle: string | null; target: number };
+  /** The member's day boundary (profiles.timezone, D34). */
+  timeZone: string;
   todayISO: string;
   initialDate: string;
   initialCounts: Record<string, number>; // date → my count (last 14 days)
@@ -40,11 +44,21 @@ export function CountClient({
   const [date, setDate] = React.useState(initialDate);
   const [counts, setCounts] = React.useState(initialCounts);
   const [error, setError] = React.useState<string | null>(null);
+  const justCompleted = React.useRef(false);
+  // The server's todayISO is a render-time snapshot; a PWA left open (or
+  // resumed) past the member's midnight would keep writing taps to YESTERDAY —
+  // silently, since the RPC's 14-day window accepts it. Track the real local
+  // today; when it flips, follow it if the user was ON "today" (backfilling an
+  // old day deliberately is left alone) and refresh for the new day's data.
+  const todayISO = useLocalToday(timeZone, serverTodayISO, (next, prev) => {
+    setDate((d) => (d === prev ? next : d));
+    justCompleted.current = false; // a new day's ring hasn't been closed
+    router.refresh();
+  });
   const isToday = date === todayISO;
 
   const count = counts[date] ?? 0;
   const remaining = Math.max(0, task.target - count);
-  const justCompleted = React.useRef(false);
 
   // -- batched flushing -------------------------------------------------------
   const pending = React.useRef<Record<string, number>>({});

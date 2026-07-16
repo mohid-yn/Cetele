@@ -14,6 +14,7 @@ import {
 import { ArrowLeftIcon, PlusIcon, CheckIcon } from "@/components/app/icons";
 import { RoleToggle, selectCls } from "@/components/app/role-toggle";
 import { useAction } from "@/lib/use-action";
+import { usePropState } from "@/lib/use-prop-state";
 import * as act from "./actions";
 
 /**
@@ -56,25 +57,6 @@ function ErrorNote({ error }: { error: string | null }) {
       {error}
     </p>
   );
-}
-
-/**
- * Local state seeded from a prop, re-seeded whenever the prop's identity changes
- * (a genuine server refetch / navigation delivers a new array). React's endorsed
- * "adjust state during render" pattern — no effect, so no set-state-in-effect —
- * lets the manage lists apply a mutation optimistically (CET-30) while still
- * picking up server-driven changes (e.g. an ownership transfer) when they arrive.
- */
-function usePropState<T>(
-  prop: T,
-): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const [state, setState] = React.useState(prop);
-  const [seed, setSeed] = React.useState(prop);
-  if (prop !== seed) {
-    setSeed(prop);
-    setState(prop);
-  }
-  return [state, setState];
 }
 
 /** Read-only field with a copy button (invite link / code). */

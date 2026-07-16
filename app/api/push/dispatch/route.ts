@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { configureWebPush, sendToDevices } from "@/lib/push/send";
@@ -39,8 +40,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "not configured" }, { status: 503 });
   }
   // Only pg_cron holds the secret. Anything else gets nothing back — not even
-  // a hint that there were reminders due.
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
+  // a hint that there were reminders due. Constant-time comparison, so the
+  // check can't leak how much of a guessed secret matched.
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const got = Buffer.from(request.headers.get("authorization") ?? "");
+  if (got.length !== expected.length || !timingSafeEqual(got, expected)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

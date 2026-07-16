@@ -15,6 +15,19 @@
 
 import type { Transition, Variants } from "motion/react";
 
+/**
+ * The OS reduced-motion preference, for effects the CSS guard and MotionConfig
+ * can't reach: the raw-canvas confetti (rAF, not CSS animation) and celebratory
+ * vibration patterns. Plain feedback ticks (a tap's 18ms buzz) are feedback, not
+ * motion — they don't branch on this.
+ */
+export function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 /** Durations in SECONDS (Motion's unit), mirroring the ms tokens. */
 export const DURATION = {
   fast: 0.15,

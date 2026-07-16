@@ -57,16 +57,35 @@ export const GARDEN_STAGE_COPY = [
 // ---------------------------------------------------------------------------
 
 /**
- * A deterministic accountability buddy, picked from the sorted peer list by a
- * hash of your own id. Stable — it must not reshuffle between renders (you'd be
- * cheering a different person each visit), so it derives from ids alone and
- * never from array order, which the DB does not guarantee.
+ * A deterministic accountability buddy — MUTUAL by construction: everyone is
+ * paired adjacently over the same rotated, sorted id list (`i ^ 1`), so my
+ * buddy's buddy is always me — "you won the week together" is then true for
+ * both people, not just the viewer (the old hash-of-my-id pick was one-way).
+ *
+ * Stable within a week (derived from ids + the ISO week key, never from array
+ * order, which the DB does not guarantee), and rotated BY week: pairs refresh
+ * weekly ("Pair goal · this week"), and in an odd-sized circle the person left
+ * without a partner (→ null, the card simply doesn't render) is someone
+ * different each week instead of the same member forever.
  */
-export function pickBuddy(meId: string, memberIds: string[]): string | null {
-  const peers = memberIds.filter((id) => id !== meId).sort();
-  if (!peers.length) return null;
-  const h = Array.from(meId).reduce((a, c) => a + c.charCodeAt(0), 0);
-  return peers[h % peers.length];
+export function pickBuddy(
+  meId: string,
+  memberIds: string[],
+  weekKey: string,
+): string | null {
+  const ids = [...new Set(memberIds)].sort();
+  if (ids.length < 2) return null;
+  const h =
+    Array.from(weekKey).reduce(
+      (a, c) => (a * 31 + c.charCodeAt(0)) >>> 0,
+      7,
+    ) >>> 0;
+  const rot = h % ids.length;
+  const rotated = ids.slice(rot).concat(ids.slice(0, rot));
+  const i = rotated.indexOf(meId);
+  if (i === -1) return null;
+  const j = i ^ 1; // adjacent pairing: (0,1), (2,3), … — symmetric
+  return j < rotated.length ? rotated[j] : null; // odd one out this week
 }
 
 /** Combined active-days this week that a pair must reach to win together. */
@@ -119,8 +138,9 @@ const COPY: Record<LandmarkType, { title: string; body: string }> = {
   },
 };
 
-/** ISO-8601 week key (`2026-W29`) — Monday-based, matching the week landmark. */
-function isoWeekKey(iso: string): string {
+/** ISO-8601 week key (`2026-W29`) — Monday-based, matching the week landmark.
+ *  Also the weekly rotation seed for `pickBuddy` (exported for its callers). */
+export function isoWeekKey(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   const t = new Date(Date.UTC(y, m - 1, d));
   // Shift to the Thursday of this week: ISO weeks are numbered by their Thursday.

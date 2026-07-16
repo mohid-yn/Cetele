@@ -59,7 +59,8 @@ export default async function CountPage({
     );
   }
 
-  const todayISO = localDateISO(profile?.timezone ?? "UTC");
+  const timeZone = profile?.timezone ?? "UTC";
+  const todayISO = localDateISO(timeZone);
   const { data: logs } = await supabase
     .from("logs")
     .select("date, count")
@@ -79,6 +80,7 @@ export default async function CountPage({
   return (
     <CountClient
       groupId={groupId}
+      timeZone={timeZone}
       task={{
         id: task.id,
         label: task.label,

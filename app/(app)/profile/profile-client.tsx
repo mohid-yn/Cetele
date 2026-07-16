@@ -6,6 +6,7 @@ import { Avatar, Badge, Button, Card } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { FlameIcon, ChevronRightIcon } from "@/components/app/icons";
 import { useAction } from "@/lib/use-action";
+import { usePropState } from "@/lib/use-prop-state";
 import {
   pushSupported,
   needsIosInstall,
@@ -283,8 +284,12 @@ function TestPushCard() {
 /** One task's reminder: a clock time the member picks, plus on/off (D30). */
 function ReminderRow({ task }: { task: ReminderTask }) {
   const act = useAction();
-  const [time, setTime] = React.useState(task.time);
-  const [enabled, setEnabled] = React.useState(task.enabled);
+  // Prop-seeded (not a one-shot useState): useAction's post-save router.refresh
+  // delivers the server's truth back through the prop, and re-seeding from it is
+  // what reconciles a mixed-outcome pair of saves (time change failed, toggle
+  // landed) — a plain useState would keep showing the rolled-back guess forever.
+  const [time, setTime] = usePropState(task.time);
+  const [enabled, setEnabled] = usePropState(task.enabled);
   // Saves are serialised per row: picking a time and flipping the toggle fire
   // two writes in quick succession, and if they overlap on the wire the older
   // one can land last and undo the newer. Chaining keeps last-write-wins true.

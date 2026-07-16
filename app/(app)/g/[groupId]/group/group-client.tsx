@@ -116,7 +116,8 @@ export function GroupClient({
   viewerId: string;
   /** The collective living artefact (CET-17) — derived, stores nothing. */
   garden: Garden;
-  /** This week's winnable pair goal (CET-22); null in a circle of one. */
+  /** This week's winnable pair goal (CET-22); null in a circle of one, or for
+   *  the member sitting out this week in an odd-sized circle. */
   pair: Pair | null;
 }) {
   const router = useRouter();

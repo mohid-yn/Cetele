@@ -56,12 +56,18 @@ export function TodayLive({
       );
 
     // Carry the auth token so realtime applies our RLS (only our groups' logs).
+    // `cancelled` guards the async gap: if the effect cleans up (fast tab-hop)
+    // before getSession resolves, subscribing anyway would re-open a channel
+    // that removeChannel already tore down — a leaked live subscription.
+    let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
       if (data.session) supabase.realtime.setAuth(data.session.access_token);
       channel.subscribe((status) => dlog("realtime.today status", status));
     });
 
     return () => {
+      cancelled = true;
       clearTimeout(timer);
       supabase.removeChannel(channel);
     };

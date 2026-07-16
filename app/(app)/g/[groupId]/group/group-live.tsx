@@ -49,12 +49,17 @@ export function GroupLive({
         },
       );
 
+    // `cancelled` guards the async gap: a subscribe landing after cleanup would
+    // re-open a channel removeChannel already tore down (see today-live.tsx).
+    let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
       if (data.session) supabase.realtime.setAuth(data.session.access_token);
       channel.subscribe((status) => dlog("realtime.group status", status));
     });
 
     return () => {
+      cancelled = true;
       clearTimeout(timer);
       supabase.removeChannel(channel);
     };

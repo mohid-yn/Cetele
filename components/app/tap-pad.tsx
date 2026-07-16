@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ProgressRing } from "@/components/ui";
 import { playTap } from "@/lib/sound";
+import { prefersReducedMotion } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 interface TapPadProps {
@@ -24,7 +25,12 @@ export function TapPad({ value, max, sound, onTap }: TapPadProps) {
   const handleTap = () => {
     if (sound) playTap();
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate?.(done ? [0, 30, 20, 40] : 18);
+      // The short tick is tactile FEEDBACK (the tasbih-bead feel) and stays; the
+      // multi-buzz completion pattern is celebratory — reduced-motion users get
+      // the plain tick there too.
+      navigator.vibrate?.(
+        done && !prefersReducedMotion() ? [0, 30, 20, 40] : 18,
+      );
     }
     setPopKey((k) => k + 1);
     onTap();
