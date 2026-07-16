@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
+import { localDateISO } from "@/lib/local-date";
+import { signOutIfStaleSession } from "@/lib/stale-session";
 import {
   groupHref,
   GROUP_WRITE_PATHS,
@@ -44,6 +46,7 @@ export async function setCount(
       p_count: count,
     }),
   );
+  await signOutIfStaleSession(error);
   if (error) return { error: error.message };
 
   revalidateGroup(groupId);
@@ -51,38 +54,82 @@ export async function setCount(
 }
 
 /** D29: the in-person halaqah "log for the group" — mark one task done for
- *  every member on a day. Fans out to `set_count` per member (the RPC re-checks
- *  admin authority + membership on each); at halaqah scale a handful of calls. */
+ *  every member TODAY. Fans out to `set_count` per member (the RPC re-checks
+ *  admin authority + membership on each); at halaqah scale a handful of calls.
+ *
+ *  Two rules the fan-out must respect (both bit for real):
+ *  * "Today" is each MEMBER's local today (profiles.timezone, D34) — computed
+ *    here, not passed in. The admin's date was refused by set_count's window
+ *    for any member whose day boundary sits behind the admin's ("date outside
+ *    the 14-day correction window"), and the halaqah moment falls on the
+ *    member's own calendar day anyway.
+ *  * Never LOWER a count. set_count is an exact-set, so blanket-setting the
+ *    target erased anything a member had counted past it — extra dhikr is
+ *    explicitly welcome (0008's sanity-cap comment), and "mark done" must
+ *    top people up, not trim them. At/above target → skip. */
 export async function logForGroup(
   groupId: string,
   taskId: string,
-  date: string,
   count: number,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
 
-  // Readable under RLS (I'm a member of this group). RPC re-verifies I'm admin.
+  // Members + their timezones (profiles are group-readable under RLS); the
+  // RPC re-verifies I'm an admin on every write.
   const { data: members, error: membersError } = await q(
     "logForGroup.members",
-    supabase.from("memberships").select("user_id").eq("group_id", groupId),
+    supabase
+      .from("memberships")
+      .select("user_id, profiles(timezone)")
+      .eq("group_id", groupId),
   );
   if (membersError) return { error: membersError.message };
   if (!members?.length) return { error: null };
 
+  const dateOf = new Map(
+    members.map((m) => [
+      m.user_id,
+      localDateISO(m.profiles?.timezone ?? "UTC"),
+    ]),
+  );
+
+  // What each member already has on THEIR today, so full rings are skipped.
+  const { data: existing, error: existingError } = await q(
+    "logForGroup.existing counts",
+    supabase
+      .from("logs")
+      .select("user_id, date, count")
+      .eq("task_id", taskId)
+      .in("date", [...new Set(dateOf.values())]),
+  );
+  if (existingError) return { error: existingError.message };
+  const current = new Map(
+    (existing ?? []).map((l) => [`${l.user_id}|${l.date}`, l.count]),
+  );
+
+  const due = members
+    .map((m) => ({
+      userId: m.user_id,
+      date: dateOf.get(m.user_id) ?? localDateISO("UTC"),
+    }))
+    .filter((m) => (current.get(`${m.userId}|${m.date}`) ?? 0) < count);
+  if (!due.length) return { error: null };
+
   const results = await q(
-    `logForGroup.set_count ×${members.length}`,
+    `logForGroup.set_count ×${due.length}`,
     Promise.all(
-      members.map((m) =>
+      due.map((m) =>
         supabase.rpc("set_count", {
-          p_user: m.user_id,
+          p_user: m.userId,
           p_task: taskId,
-          p_date: date,
+          p_date: m.date,
           p_count: count,
         }),
       ),
     ),
   );
   const firstError = results.find((r) => r.error)?.error;
+  await signOutIfStaleSession(firstError ?? null);
   if (firstError) return { error: firstError.message };
 
   revalidateGroup(groupId);

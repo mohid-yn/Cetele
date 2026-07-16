@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
+import { signOutIfStaleSession } from "@/lib/stale-session";
 import { groupHref, GROUP_WRITE_PATHS } from "@/lib/group-href";
 import type { ReactionKind } from "@/lib/retention";
 
@@ -27,6 +28,7 @@ export async function incrementCount(
       p_delta: delta,
     }),
   );
+  await signOutIfStaleSession(error);
   if (error) return { count: null, error: error.message };
 
   // Concrete paths, not the route template — see GROUP_WRITE_PATHS.
@@ -55,6 +57,7 @@ export async function toggleReaction(
       p_kind: kind,
     }),
   );
+  await signOutIfStaleSession(error);
   if (error) return { reacted: false, error: error.message };
 
   // Only /today shows reactions — no need to bust the other group screens.

@@ -28,5 +28,11 @@ export function sanitizeNextPath(next: string | null | undefined) {
   } catch {
     return null;
   }
+  // Backslashes and C0 controls are rejected outright, not just `//`: URL
+  // parsers treat `\` as `/` and strip tab/newline BEFORE parsing, so
+  // `/\evil.com` and "/\t/evil.com" both resolve to https://evil.com/ when a
+  // client-side router does `new URL(value, origin)` — a `//`-only check is an
+  // open redirect.
+  if (/[\\\x00-\x1f]/.test(value)) return null;
   return value.startsWith("/") && !value.startsWith("//") ? value : null;
 }

@@ -80,7 +80,6 @@ export function GroupClient({
   groupName,
   memberCount,
   canManage,
-  todayISO,
   days,
   tasks,
   taskTotals,
@@ -99,7 +98,6 @@ export function GroupClient({
   groupName: string;
   memberCount: number;
   canManage: boolean;
-  todayISO: string;
   days: number;
   tasks: GroupTask[];
   taskTotals: TaskTotal[];
@@ -127,6 +125,7 @@ export function GroupClient({
   );
   const [groupLogOpen, setGroupLogOpen] = React.useState(false);
   const [logging, setLogging] = React.useState<string | null>(null);
+  const [logError, setLogError] = React.useState<string | null>(null);
   const [leaveOpen, setLeaveOpen] = React.useState(false);
   const leaveAct = useAction();
 
@@ -142,9 +141,16 @@ export function GroupClient({
     : 0;
 
   async function markGroupTaskDone(taskId: string, target: number) {
+    setLogError(null);
     setLogging(taskId);
-    await logForGroup(groupId, taskId, todayISO, target);
+    // Each member's "today" is computed server-side from THEIR timezone (D34).
+    const res = await logForGroup(groupId, taskId, target);
     setLogging(null);
+    if (res?.error) {
+      // A refused write must say so — silently reverting reads as data loss.
+      setLogError(res.error);
+      return;
+    }
     router.refresh();
   }
 
@@ -551,6 +557,11 @@ export function GroupClient({
               );
             })}
           </ul>
+          {logError && (
+            <p role="alert" className="mt-2 text-xs text-danger">
+              {logError}
+            </p>
+          )}
         </Dialog>
       )}
     </div>

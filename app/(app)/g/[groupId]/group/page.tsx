@@ -67,7 +67,7 @@ export default async function GroupPage({
         .order("sort_order"),
       supabase
         .from("memberships")
-        .select("user_id, role, profiles(name)")
+        .select("user_id, role, profiles(name, timezone)")
         .eq("group_id", groupId),
     ]),
   );
@@ -81,13 +81,17 @@ export default async function GroupPage({
 
   // One scan: every member's last-fortnight logs (group-readable). Subsets of
   // this feed today's collective, the 7-day ranking, and the 14-day grids.
+  // One extra day of depth (DAYS, not DAYS-1): the admin breakdown renders each
+  // member's fortnight by THEIR OWN day boundary (D34), and a member sitting
+  // behind the viewer's timezone has a "13 days ago" that is the viewer's
+  // 14 days ago. Consumers all key on explicit dates, so the slack is inert.
   const { data: logs } = await q(
     "group.logs (14d, all members)",
     supabase
       .from("logs")
       .select("user_id, task_id, date, count, logged_by")
       .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
-      .gte("date", isoDaysAgo(todayISO, DAYS - 1)),
+      .gte("date", isoDaysAgo(todayISO, DAYS)),
   );
 
   // Admin oversight needs peer streaks (RLS: self + members of groups I admin).
@@ -117,9 +121,6 @@ export default async function GroupPage({
   const names: Record<string, string> = {};
   for (const m of memberList) names[m.user_id] = m.profiles?.name ?? "Member";
 
-  const dates14 = Array.from({ length: DAYS }, (_, i) =>
-    isoDaysAgo(todayISO, DAYS - 1 - i),
-  );
   const last7 = new Set(
     Array.from({ length: 7 }, (_, i) => isoDaysAgo(todayISO, i)),
   );
@@ -173,13 +174,21 @@ export default async function GroupPage({
     .sort((a, b) => b.daysActive - a.daysActive || b.total - a.total);
 
   // Members breakdown — the admin-only fortnight grid + summary, per member.
+  // Each member's grid spans THEIR last 14 days (profiles.timezone, D34), not
+  // the viewer's: set_count validates its window against the TARGET member's
+  // clock, so a viewer-timezone grid handed an admin a "today" cell the RPC
+  // refused for any member whose day boundary sits behind theirs.
   const breakdowns: Record<string, BreakdownMember> = {};
   if (canManage) {
     for (const m of memberList) {
+      const mToday = localDateISO(m.profiles?.timezone ?? "UTC");
+      const mDates = Array.from({ length: DAYS }, (_, i) =>
+        isoDaysAgo(mToday, DAYS - 1 - i),
+      );
       const rows: GridRow[] = taskList.map((t) => ({
         taskId: t.id,
         label: t.label,
-        cells: dates14.map((date) => {
+        cells: mDates.map((date) => {
           const cell = index.get(`${m.user_id}|${t.id}|${date}`);
           const count = cell?.count ?? 0;
           const target = t.target_count;
@@ -194,7 +203,7 @@ export default async function GroupPage({
         }),
       }));
       const daysFull = taskList.length
-        ? dates14.filter((d) =>
+        ? mDates.filter((d) =>
             taskList.every(
               (t) => countOf(m.user_id, t.id, d) >= t.target_count,
             ),
@@ -301,7 +310,6 @@ export default async function GroupPage({
         groupName={group?.name ?? "Circle"}
         memberCount={memberList.length}
         canManage={canManage}
-        todayISO={todayISO}
         days={DAYS}
         tasks={taskList.map((t) => ({
           id: t.id,

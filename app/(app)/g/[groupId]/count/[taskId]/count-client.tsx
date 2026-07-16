@@ -62,6 +62,12 @@ export function CountClient({
 
   // -- batched flushing -------------------------------------------------------
   const pending = React.useRef<Record<string, number>>({});
+  // EVERY optimistic delta the server hasn't confirmed yet — pending (still
+  // debouncing) PLUS batches already handed to the in-flight chain. Reconciling
+  // against `pending` alone made the count visibly dip on a slow network: a
+  // second batch had been dequeued but not yet answered, so the first batch's
+  // reconcile briefly erased those taps.
+  const unconfirmed = React.useRef<Record<string, number>>({});
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const inflight = React.useRef<Promise<void>>(Promise.resolve());
 
@@ -77,15 +83,19 @@ export function CountClient({
       // serialise flushes so a slow call can't be overtaken by the next one
       inflight.current = inflight.current.then(async () => {
         const res = await incrementCount(groupId, task.id, d, delta);
+        unconfirmed.current[d] = (unconfirmed.current[d] ?? 0) - delta;
+        // `res` is undefined when the action redirected (stale session) — the
+        // navigation is already happening; just don't touch state.
+        if (!res) return;
         if (res.error || res.count == null) {
           // reject → roll the optimistic taps back and surface the reason
           setCounts((c) => ({ ...c, [d]: Math.max(0, (c[d] ?? 0) - delta) }));
           setError(res.error ?? "Couldn't save — try again");
         } else {
-          // authoritative count + anything the user tapped since this batch
+          // authoritative count + everything still awaiting confirmation
           setCounts((c) => ({
             ...c,
-            [d]: res.count! + (pending.current[d] ?? 0),
+            [d]: res.count! + Math.max(0, unconfirmed.current[d] ?? 0),
           }));
         }
       });
@@ -98,6 +108,7 @@ export function CountClient({
       setError(null);
       setCounts((c) => ({ ...c, [date]: (c[date] ?? 0) + delta }));
       pending.current[date] = (pending.current[date] ?? 0) + delta;
+      unconfirmed.current[date] = (unconfirmed.current[date] ?? 0) + delta;
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => void flush(), FLUSH_MS);
     },

@@ -32,8 +32,22 @@ export function useAction() {
   ) => {
     setError(null);
     setPending(true);
-    const res = await fn();
-    setPending(false);
+    let res: R;
+    try {
+      res = await fn();
+    } catch (e) {
+      // A REJECTED action (network drop mid-flight, a browser API throwing) is
+      // not a redirect — a redirecting Server Action resolves undefined on the
+      // client, it doesn't throw. Without this catch the rejection escaped as
+      // unhandled and `pending` stayed true forever (a button stuck "Saving…").
+      setError(
+        e instanceof Error ? e.message : "Something went wrong — try again.",
+      );
+      onError?.();
+      return;
+    } finally {
+      setPending(false);
+    }
     if (res?.error) {
       setError(res.error);
       onError?.();

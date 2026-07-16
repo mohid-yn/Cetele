@@ -255,8 +255,16 @@ export function ManageClient({
   const transferCandidates = members.filter((m) => m.role !== "owner");
   const transferName = members.find((m) => m.userId === transferId)?.name;
 
-  const joinUrl = (code: string) =>
-    `${typeof location !== "undefined" ? location.origin : ""}/join/${code}`;
+  // Resolved after mount: reading location.origin during render made the SSR
+  // HTML ("" + path) disagree with the first client render (full URL) — a React
+  // hydration text mismatch on every invite link. Both now render the bare path
+  // first; the origin fills in post-mount.
+  const [origin, setOrigin] = React.useState("");
+  React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only value, same pattern as the theme provider
+    setOrigin(location.origin);
+  }, []);
+  const joinUrl = (code: string) => `${origin}/join/${code}`;
 
   const addTask = () =>
     taskAct.run(

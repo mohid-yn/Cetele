@@ -71,31 +71,37 @@ export function ProfileClient({
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  async function enablePush() {
-    const sub = await subscribeToPush(vapidPublicKey);
-    if (!sub) {
-      // Declined (or blocked at the OS level) — say so plainly and stop. Never
-      // re-prompt: the browser wouldn't ask again anyway, and nagging is exactly
-      // what D8 rules out.
-      setSubscribed(false);
-      return;
-    }
-    pushAct.run(
-      () => savePushSubscription(sub),
-      () => setSubscribed(true),
-    );
+  // The browser half (subscribe/unsubscribe) runs INSIDE pushAct.run, not
+  // before it: pushManager.subscribe can reject (a push-service hiccup, an
+  // enterprise policy), and awaited outside the runner that rejection escaped
+  // as unhandled — the button did nothing, with no message.
+  function enablePush() {
+    pushAct.run(async () => {
+      const sub = await subscribeToPush(vapidPublicKey);
+      if (!sub) {
+        // Declined (or blocked at the OS level) — say so plainly and stop.
+        // Never re-prompt: the browser wouldn't ask again anyway, and nagging
+        // is exactly what D8 rules out.
+        setSubscribed(false);
+        return { error: null };
+      }
+      const res = await savePushSubscription(sub);
+      if (!res?.error) setSubscribed(true);
+      return res;
+    });
   }
 
-  async function disablePush() {
-    const endpoint = await unsubscribeFromPush();
-    if (!endpoint) {
-      setSubscribed(false);
-      return;
-    }
-    pushAct.run(
-      () => removePushSubscription(endpoint),
-      () => setSubscribed(false),
-    );
+  function disablePush() {
+    pushAct.run(async () => {
+      const endpoint = await unsubscribeFromPush();
+      if (!endpoint) {
+        setSubscribed(false);
+        return { error: null };
+      }
+      const res = await removePushSubscription(endpoint);
+      if (!res?.error) setSubscribed(false);
+      return res;
+    });
   }
 
   return (

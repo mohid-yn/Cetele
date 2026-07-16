@@ -105,7 +105,7 @@ export function TaskGrid({
     const value = Math.max(0, Math.round(Number(draft) || 0));
     setSaving(true);
     setError(null);
-    const { error } = await setCount(
+    const res = await setCount(
       groupId,
       userId,
       picked.taskId,
@@ -113,8 +113,9 @@ export function TaskGrid({
       value,
     );
     setSaving(false);
-    if (error) {
-      setError(error);
+    if (!res) return; // the action redirected (stale session) — let it navigate
+    if (res.error) {
+      setError(res.error);
       return;
     }
     // Reflect the change in the open panel immediately; the grid cells reconcile

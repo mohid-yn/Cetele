@@ -194,6 +194,45 @@ select is(
     where user_id = 'd0000000-0000-0000-0000-000000000005'),
   array[8, 8, 1], 'consecutive day: streak +1, longest follows, freeze re-armed (never miss twice)');
 
+-- the midnight race (0016): one missed day + a freeze in hand, ring closed
+-- BEFORE the hourly rollover job has run → refresh_streak applies the freeze
+-- inline instead of resetting (same net state as job-then-complete).
+update public.streaks
+set current = 3, longest = 6, freezes_left = 1, last_active = current_date - 2
+where user_id = 'd0000000-0000-0000-0000-000000000002'; -- a
+select pg_temp.impersonate('d0000000-0000-0000-0000-000000000002'); -- a
+select lives_ok(
+  $$select public.increment_count('d0000000-0000-0000-0000-0000000000c1', current_date, 10)$$,
+  'a closes the ring before the rollover job has judged yesterday');
+reset role;
+select is(
+  (select array[current, longest, freezes_left] from public.streaks
+    where user_id = 'd0000000-0000-0000-0000-000000000002'),
+  array[4, 6, 1],
+  'early completion consumes the freeze inline: one covered miss, streak continues');
+
+-- …but the same shape WITHOUT a freeze still resets (no over-forgiveness)
+update public.streaks
+set current = 9, freezes_left = 0, last_active = current_date - 2
+where user_id = 'd0000000-0000-0000-0000-000000000002';
+select pg_temp.impersonate('d0000000-0000-0000-0000-000000000002'); -- a
+select lives_ok(
+  $$select public.increment_count('d0000000-0000-0000-0000-0000000000c1', current_date, 1)$$,
+  'a counts again on the already-complete day');
+reset role;
+select is(
+  (select current from public.streaks
+    where user_id = 'd0000000-0000-0000-0000-000000000002'),
+  1, 'no freeze left: a missed day still resets to 1');
+
+-- restore a's pristine state — the multi-group section below reuses a and
+-- assumes an untouched streak row + no logs (superuser DML, like the fixtures)
+delete from public.logs
+  where user_id = 'd0000000-0000-0000-0000-000000000002';
+update public.streaks
+  set current = 0, longest = 0, freezes_left = 1, last_active = null
+  where user_id = 'd0000000-0000-0000-0000-000000000002';
+
 -- ----------------------------------------------------------------------------
 -- rollover job — freeze covers exactly one miss; two misses reset
 -- ----------------------------------------------------------------------------
