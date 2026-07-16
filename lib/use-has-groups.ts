@@ -20,18 +20,19 @@ import { refreshGroups, useGroupsSnapshot } from "@/lib/groups-store";
  */
 export function useHasGroups(initialHasGroups: boolean): boolean {
   const pathname = usePathname();
-  const { hasGroups, loaded } = useGroupsSnapshot();
+  const { groups, loaded } = useGroupsSnapshot();
   const onGroupPage = groupIdFromPath(pathname) !== null;
 
   React.useEffect(() => {
     // On a group page the URL already proves membership, and useHasGroups would
-    // discard the count anyway — so skip the needless head-count query there and
-    // only re-count on the group-independent screens that actually depend on it.
+    // discard the fetch anyway — so skip the query there and only re-fetch on
+    // the group-independent screens that actually depend on it. (The switcher
+    // refreshes on EVERY navigation for its menu; the store dedupes overlap.)
     if (!onGroupPage) void refreshGroups();
   }, [pathname, onGroupPage]);
 
   // The URL is proof. Otherwise trust the server hint until the first client
-  // count returns (`loaded`), then the authoritative store value.
+  // fetch returns (`loaded`), then the authoritative store value.
   if (onGroupPage) return true;
-  return loaded ? hasGroups : initialHasGroups;
+  return loaded ? groups.length > 0 : initialHasGroups;
 }

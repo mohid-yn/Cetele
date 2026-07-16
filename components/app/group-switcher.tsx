@@ -2,15 +2,19 @@
 
 /**
  * Group switcher (CET-25) — the Slack/Notion workspace-switcher pattern, now
- * path-based. Fetches the circles the signed-in user belongs to (RLS-scoped)
- * and renders each as a prefetched <Link> to `/g/[groupId]/<currentTab>`, so
- * hovering preloads that group's screen and clicking switches instantly — no
- * Server Action round-trip, no cookie write on the client (the proxy records
- * last-visited from the path). Keeps the same tab across the switch.
+ * path-based. Renders each circle as a prefetched <Link> to
+ * `/g/[groupId]/<currentTab>`, so hovering preloads that group's screen and
+ * clicking switches instantly — no Server Action round-trip, no cookie write on
+ * the client (the proxy records last-visited from the path). Keeps the same tab
+ * across the switch.
  *
- * Self-fetching so it can live in the (still-mock) app shell without threading
- * server data through it; `initialName` avoids a flash where the caller (the
- * server-first /group hub) already knows the active group's name.
+ * The circle list comes from the shared groups store (`lib/groups-store`),
+ * refreshed on every navigation — NOT a private fetch-on-mount: the app shell
+ * survives client-side navigation, so a one-shot fetch went stale the moment
+ * you created/joined/left a circle (a second group never appeared in the menu,
+ * and the trigger fell back to "Select group" because the stale list couldn't
+ * name the active circle). `initialName` still avoids a flash where the caller
+ * (the server-first /group hub) already knows the active group's name.
  */
 
 import * as React from "react";
@@ -19,17 +23,13 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui";
-import { createClient } from "@/lib/supabase/client";
-import { q } from "@/lib/db-log";
 import { ChevronDownIcon, CheckIcon, GridIcon } from "@/components/app/icons";
 import { groupHref, groupSubPath } from "@/lib/group-href";
 import { useActiveGroupId } from "@/lib/use-active-group";
+import { refreshGroups, useGroupsSnapshot } from "@/lib/groups-store";
 import { writeActiveGroupCookie } from "@/components/app/remember-active-group";
 
 type Role = "owner" | "admin" | "member";
-type Group = { id: string; name: string; role: Role };
-
-const ROLE_RANK: Record<Role, number> = { owner: 0, admin: 1, member: 2 };
 
 export function GroupSwitcher({
   className,
@@ -41,7 +41,7 @@ export function GroupSwitcher({
   initialGroupId?: string | null;
 }) {
   const pathname = usePathname();
-  const [groups, setGroups] = React.useState<Group[]>([]);
+  const { groups } = useGroupsSnapshot();
   const [open, setOpen] = React.useState(false);
   // Where to anchor the portaled menu (fixed, viewport coords). The menu is
   // portaled to <body> so nothing in the page can paint over it (D46's page-
@@ -67,35 +67,12 @@ export function GroupSwitcher({
   const activeId = useActiveGroupId(initialGroupId);
   const sub = groupSubPath(pathname);
 
+  // Re-fetch on every navigation (create → manage, join → today, leave →
+  // /groups all navigate), so the menu is never stale. The store coalesces
+  // concurrent callers, so overlapping with useHasGroups costs nothing extra.
   React.useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const supabase = createClient();
-      const { data: claims } = await supabase.auth.getClaims();
-      const me = claims?.claims.sub;
-      if (!me) return;
-      const { data } = await q(
-        "switcher.memberships",
-        supabase
-          .from("memberships")
-          .select("role, groups(id, name)")
-          .eq("user_id", me),
-      );
-      const list: Group[] = (data ?? [])
-        .filter((r) => r.groups)
-        .map((r) => ({
-          id: r.groups!.id,
-          name: r.groups!.name,
-          role: r.role as Role,
-        }))
-        .sort((a, b) => ROLE_RANK[a.role] - ROLE_RANK[b.role]);
-      if (cancelled) return;
-      setGroups(list);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void refreshGroups();
+  }, [pathname]);
 
   React.useEffect(() => {
     if (!open) return;
