@@ -614,7 +614,11 @@ export function ManageClient({
             <ErrorNote error={ownershipAct.error} />
 
             <div className="border-t border-border pt-3">
-              <p className="mb-1 text-sm font-medium text-danger">
+              {/* Danger zone: the heading stays neutral — ONE red element, the
+                  action itself (a real outlined button, escalating to the solid
+                  destructive confirm in the dialog). A red heading + red button
+                  was double-shouting, and the ghost button read as plain text. */}
+              <p className="mb-1 text-sm font-medium text-foreground">
                 Delete this group
               </p>
               <p className="mb-2 text-xs text-muted-foreground">
@@ -622,8 +626,9 @@ export function ManageClient({
                 can&rsquo;t be undone.
               </p>
               <Button
-                variant="ghost"
-                className="text-danger hover:bg-danger-500/10"
+                variant="outline"
+                size="sm"
+                className="border-danger-500/40 text-danger hover:border-danger-500/60 hover:bg-danger-500/10"
                 onClick={() => setDeleteOpen(true)}
               >
                 Delete group
