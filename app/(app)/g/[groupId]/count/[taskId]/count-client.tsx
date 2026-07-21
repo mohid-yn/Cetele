@@ -304,25 +304,32 @@ export function CountClient({
           onTap={handleTap}
         />
 
-        {/* Corrections, kept quiet: gold is spent on the one primary action
-            below, and an undo should never compete with it for the thumb. */}
-        <div className="mt-3 flex items-center gap-1">
+        {/* Corrections read as ONE recessive tray, not two floating buttons:
+            a soft pill on the muted tint, hairline-divided, muted label. Gold
+            is spent on the primary action below and the ring owns the screen —
+            an undo must be findable without competing with either. Segments are
+            44px so they stay thumb-sized on a phone at any viewport. */}
+        <div className="mt-4 inline-flex items-center overflow-hidden rounded-full border border-border bg-card shadow-sm">
           {count > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              leadingIcon={<MinusIcon />}
-              disabled={correcting}
-              aria-label="Undo one count"
-              onClick={() => void commitExact((c) => c - 1)}
-            >
-              1
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={correcting}
+                aria-label="Undo one count"
+                className="rounded-none text-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                onClick={() => void commitExact((c) => c - 1)}
+              >
+                <MinusIcon />
+              </Button>
+              <span aria-hidden className="h-6 w-px bg-border" />
+            </>
           )}
           <Button
             variant="ghost"
             size="sm"
             disabled={correcting}
+            className="h-11 rounded-none px-5 text-muted-foreground hover:bg-muted hover:text-foreground"
             onClick={() => {
               setDraft(String(count));
               setEditOpen(true);
