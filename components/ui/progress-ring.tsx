@@ -48,7 +48,10 @@ export function ProgressRing({
       style={{ width: size, height: size }}
       {...props}
     >
-      <svg width={size} height={size} className="-rotate-90">
+      {/* viewBox, not width/height: the ring's GEOMETRY stays in `size` units
+          while its rendered box follows the wrapper, so a caller can scale it
+          (e.g. to viewport height on a short phone) with CSS alone. */}
+      <svg viewBox={`0 0 ${size} ${size}`} className="h-full w-full -rotate-90">
         <circle
           cx={size / 2}
           cy={size / 2}

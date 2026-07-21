@@ -272,3 +272,31 @@ test("Mark done closes the ring without ending the session", async ({
     "4",
   );
 });
+
+test("on a short phone the primary action is not covered by the nav", async ({
+  page,
+}) => {
+  // The reported bug: at 667px tall, the count screen's content ran past the
+  // viewport and the sticky bottom nav sat on top of the action row.
+  await page.setViewportSize({ width: 375, height: 667 });
+  await signIn(page, USER);
+
+  await page.goto("/today");
+  await page
+    .getByRole("main")
+    .getByRole("listitem")
+    .getByRole("link", { name: /Salawat/ })
+    .click();
+  await page.waitForURL("**/count/**");
+
+  const action = page.getByRole("button", { name: /Mark done|Back to today/ });
+  await expect(action).toBeVisible();
+  const btn = (await action.boundingBox())!;
+  const nav = (await page
+    .getByRole("navigation", { name: "Primary" })
+    .boundingBox())!;
+
+  // fully inside the viewport, and clear of the nav rather than behind it
+  expect(btn.y + btn.height).toBeLessThanOrEqual(667);
+  expect(btn.y + btn.height).toBeLessThanOrEqual(nav.y + 1);
+});

@@ -185,7 +185,10 @@ export function GroupSwitcher({
         aria-expanded={open}
         onClick={() => (open ? setOpen(false) : openMenu())}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-lg text-foreground transition-colors hover:bg-muted",
+          // max-w-full + min-w-0 are what let the inner `truncate` engage: without
+          // them the button grows past the header's title column and a long circle
+          // name runs underneath the header actions.
+          "inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-lg text-foreground transition-colors hover:bg-muted",
           className,
         )}
       >

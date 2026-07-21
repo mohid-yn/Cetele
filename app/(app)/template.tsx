@@ -3,6 +3,7 @@
 import * as React from "react";
 import { motion } from "motion/react";
 import { EASE_BRAND, DURATION } from "@/lib/motion";
+import { scrollAppToTop } from "@/lib/app-scroll";
 
 /**
  * Per-navigation page transition. A `template` (unlike a `layout`) re-mounts on
@@ -16,6 +17,14 @@ import { EASE_BRAND, DURATION } from "@/lib/motion";
  * root MotionConfig.
  */
 export default function Template({ children }: { children: React.ReactNode }) {
+  // The shell scrolls its content region, not the window, so the router's own
+  // scroll-to-top no longer lands anywhere useful. This template re-mounts on
+  // every navigation, which makes it the one place that reliably knows a new
+  // screen has arrived.
+  React.useEffect(() => {
+    scrollAppToTop();
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}

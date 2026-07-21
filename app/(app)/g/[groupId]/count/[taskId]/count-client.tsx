@@ -295,7 +295,7 @@ export function CountClient({
         </p>
       )}
 
-      <div className="flex flex-1 flex-col items-center justify-center">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 py-2">
         <TapPad
           value={count}
           max={task.target}
@@ -309,7 +309,7 @@ export function CountClient({
             is spent on the primary action below and the ring owns the screen —
             an undo must be findable without competing with either. Segments are
             44px so they stay thumb-sized on a phone at any viewport. */}
-        <div className="mt-4 inline-flex items-center overflow-hidden rounded-full border border-border bg-card shadow-sm">
+        <div className="inline-flex items-center overflow-hidden rounded-full border border-border bg-card shadow-sm">
           {count > 0 && (
             <>
               <Button
@@ -340,52 +340,60 @@ export function CountClient({
         </div>
       </div>
 
-      {remaining === 0 ? (
-        // Ring already closed — just a way back.
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => {
-            void flush().then(() => router.push(groupHref(groupId, "/today")));
-          }}
-        >
-          Back to today
-        </Button>
-      ) : (
-        <div
-          className={cn(
-            "grid gap-2",
-            // Only offer +10 when it can't overshoot the target.
-            remaining > 10 ? "grid-cols-2" : "grid-cols-1",
-          )}
-        >
-          {remaining > 10 && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (sound) playTen();
-                addCapped(10);
-              }}
-            >
-              +10
-            </Button>
-          )}
-          {/* One tap to finish: fill to the target and celebrate — then STAY.
+      {/* The action bar is PINNED to the foot of the scroll region. A 260px
+          ring plus a 14-day strip cannot fit a 667px phone alongside it, and
+          the one thing that must never fall below the fold is the primary
+          action. Sticky costs nothing when the screen already fits. */}
+      <div className="sticky bottom-0 -mx-4 mt-2 bg-background px-4 pt-2">
+        {remaining === 0 ? (
+          // Ring already closed — just a way back.
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              void flush().then(() =>
+                router.push(groupHref(groupId, "/today")),
+              );
+            }}
+          >
+            Back to today
+          </Button>
+        ) : (
+          <div
+            className={cn(
+              "grid gap-2",
+              // Only offer +10 when it can't overshoot the target.
+              remaining > 10 ? "grid-cols-2" : "grid-cols-1",
+            )}
+          >
+            {remaining > 10 && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (sound) playTen();
+                  addCapped(10);
+                }}
+              >
+                +10
+              </Button>
+            )}
+            {/* One tap to finish: fill to the target and celebrate — then STAY.
               Counting past a closed ring is normal (extra dhikr is welcome, and
               manual taps have always been uncapped), so finishing shouldn't be
               the one path that ends the session for you. The closed state
               offers "Back to today", and the header keeps its way out. */}
-          <Button
-            variant="accent"
-            onClick={() => {
-              addCapped(remaining);
-              void flush();
-            }}
-          >
-            Mark done
-          </Button>
-        </div>
-      )}
+            <Button
+              variant="accent"
+              onClick={() => {
+                addCapped(remaining);
+                void flush();
+              }}
+            >
+              Mark done
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Exact entry — a number, not a slider: the targets here run into the
           hundreds, so a drag can't land on the value you actually counted. */}

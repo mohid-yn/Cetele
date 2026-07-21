@@ -221,8 +221,9 @@ export function GroupClient({
                 {collectivePct}%
               </p>
               <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">
-                {collectiveTotal.toLocaleString()} of{" "}
-                {collectiveGoal.toLocaleString()} toward today&rsquo;s goal
+                {/* One expression, not text-around-expressions: JSX drops the
+                    space at a line break, which rendered "100toward". */}
+                {`${collectiveTotal.toLocaleString()} of ${collectiveGoal.toLocaleString()} toward today\u2019s goal`}
               </p>
             </section>
 

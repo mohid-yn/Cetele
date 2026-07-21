@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cookies } from "next/headers";
 import { ACTIVE_GROUP_COOKIE } from "@/lib/group-href";
+import { APP_SCROLL_ID } from "@/lib/app-scroll";
 import { BottomNav } from "./bottom-nav";
 import { Sidebar } from "./sidebar";
 
@@ -27,14 +28,24 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
   const initialHasGroups = initialGroupId !== null;
 
   return (
-    <div className="flex min-h-dvh bg-background">
+    // A real app shell: the frame is exactly one viewport tall and the CONTENT
+    // scrolls inside it. Previously the whole document scrolled while the
+    // bottom nav was `sticky bottom-0`, so on any screen taller than the
+    // viewport the nav sat on top of the last element — the count screen's
+    // primary action was covered on a 667px-tall phone. Giving the scroll to
+    // `main` means the nav is a sibling of the scroll region, never over it,
+    // and no screen has to reserve space for it.
+    <div className="flex h-dvh bg-background">
       <Sidebar
         initialHasGroups={initialHasGroups}
         initialGroupId={initialGroupId}
       />
 
-      <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-        <main className="flex flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <main
+          id={APP_SCROLL_ID}
+          className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+        >
           <div className="mx-auto flex w-full max-w-[28rem] flex-1 flex-col lg:max-w-3xl">
             {children}
           </div>

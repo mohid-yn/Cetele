@@ -52,12 +52,22 @@ export function TapPad({
       disabled={disabled}
       aria-label="Tap to count"
       className={cn(
-        "group relative grid w-full place-items-center rounded-3xl py-8 transition-transform",
+        "group relative grid w-full place-items-center rounded-3xl py-4 transition-transform",
         "focus-visible:outline-none active:scale-[0.99]",
         disabled && "pointer-events-none opacity-60",
       )}
     >
-      <ProgressRing value={value} max={max} size={260} thickness={18}>
+      {/* 260px is the intent, but a 667px-tall phone cannot hold that plus the
+          day strip and the action bar — so the ring yields to viewport height
+          instead of pushing the primary action off the screen. Tall screens are
+          unaffected (the cap wins). */}
+      <ProgressRing
+        value={value}
+        max={max}
+        size={260}
+        thickness={18}
+        style={{ width: "min(16rem, 28dvh)", height: "min(16rem, 28dvh)" }}
+      >
         <div className="flex flex-col items-center">
           <span
             key={popKey}
@@ -73,7 +83,7 @@ export function TapPad({
           </span>
         </div>
       </ProgressRing>
-      <span className="mt-5 text-sm font-medium text-muted-foreground">
+      <span className="mt-4 text-sm font-medium text-muted-foreground">
         {done ? "Completed — tap to keep going" : "Tap anywhere to count"}
       </span>
     </button>
