@@ -133,11 +133,16 @@ test("back-fill: yesterday's ring can still be closed (D8)", async ({
 test("correcting down: undo one, then set an exact count", async ({ page }) => {
   await signIn(page, USER);
 
-  // today's ring is closed (3/3) from the first spec — open it from the roster
+  // Today's ring is closed (3/3) from the first spec — open it from the roster.
+  // Scoped to the list, not the link's name: the gold "Continue <task>" CTA is
+  // a second match whenever the ring is incomplete, and the roster link's
+  // accessible name picks up the ring's own text ("3 Salawat 3 / 3"), so
+  // neither a bare nor an anchored name match is stable across both states.
   await page.goto("/today");
   await page
     .getByRole("main")
-    .getByRole("link", { name: /^Salawat/ })
+    .getByRole("listitem")
+    .getByRole("link", { name: /Salawat/ })
     .click();
   await page.waitForURL("**/count/**");
   const ring = page.getByRole("progressbar");
@@ -163,7 +168,8 @@ test("correcting down: undo one, then set an exact count", async ({ page }) => {
   // the ring for real, celebration and all
   await page
     .getByRole("main")
-    .getByRole("link", { name: /^Salawat/ })
+    .getByRole("listitem")
+    .getByRole("link", { name: /Salawat/ })
     .click();
   await page.waitForURL("**/count/**");
   await page.click('button:has-text("Edit count")');
@@ -191,7 +197,8 @@ test("the celebration fires on CLOSING a ring, not on tapping a closed one", asy
   await page.goto("/today");
   await page
     .getByRole("main")
-    .getByRole("link", { name: /^Salawat/ })
+    .getByRole("listitem")
+    .getByRole("link", { name: /Salawat/ })
     .click();
   await page.waitForURL("**/count/**");
   await expect(page.getByRole("progressbar")).toHaveAttribute(
