@@ -32,16 +32,19 @@ review_ — is **met**.
 | Repo         | `mohid-yn/Cetele` — `main` auto-deploys to prod                                                          |
 | Supabase     | ref `kwzlrztcwxjunvdhdoqu`, region Seoul (`ap-northeast-2`); Vercel functions colocated in `icn1`        |
 | Migrations   | `0001`–`0017`, all pushed to prod, history 17/17 no drift                                                |
-| Tests        | pgTAP **316** across 8 suites (`pnpm test:rls`) · Playwright e2e **19** across 9 specs (`pnpm test:e2e`) |
+| Tests        | pgTAP **316** across 8 suites (`pnpm test:rls`) · Playwright e2e **20** across 9 specs (`pnpm test:e2e`) |
 | Backend plan | M0–M9 **all shipped** ([`docs/BACKEND_BUILD_PLAN.md`](../docs/BACKEND_BUILD_PLAN.md))                    |
 | Linear       | CET-1…CET-31 all **Done** except CET-10 (variable-reward milestones, deferred)                           |
 | Working tree | clean; `main` = `origin/main`; no feature branches outstanding                                           |
 
-**Last work (2026-07-21):** the count screen gained a way to go **down** — a ghost `− 1` and an exact-number
-`Edit count` under the ring (no migration; `set_count` already allowed it, the gap was UI). Deliberately not a
-slider: targets run into the hundreds, so a drag can't land on the value you actually counted. Owner-reported bug
-fixed alongside it: **the celebration re-fired when you returned to a finished ring and tapped it** — a reward you
-can summon on demand is not a reward. Pre-existing on `main` since the count screen was written. e2e 19/19.
+**Last work (2026-07-21) — the count screen, four changes:** (1) it gained a way to go **down** — an undo and an
+exact-number `Edit count`, presented as one hairline-divided pill in the card language, 44px segments, verified in
+a real browser at 360/390/768/1280 in both themes (no migration; `set_count` already allowed it, the gap was UI).
+Deliberately **not a slider** — targets run into the hundreds, so a drag can't land on the value you actually
+counted. (2) Owner-reported: **the celebration re-fired when you returned to a finished ring and tapped it** — a
+reward you can summon on demand is not a reward; pre-existing since the screen was written. (3) **"Mark done" no
+longer navigates away**, amending the earlier count-screen UX call: manual tapping already let you carry on, so
+finishing was the one path that ended the session for you, and counting past target is normal here. (4) e2e 20/20.
 
 **Before that (2026-07-16):** two full-repo review sweeps (15 fixes total — open redirect, mark-all-done clobber,
 midnight freeze race, stale-session holes, and more; migration `0016`) and **D48** — back-filling a day now repairs
