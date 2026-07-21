@@ -32,12 +32,18 @@ review_ — is **met**.
 | Repo         | `mohid-yn/Cetele` — `main` auto-deploys to prod                                                          |
 | Supabase     | ref `kwzlrztcwxjunvdhdoqu`, region Seoul (`ap-northeast-2`); Vercel functions colocated in `icn1`        |
 | Migrations   | `0001`–`0017`, all pushed to prod, history 17/17 no drift                                                |
-| Tests        | pgTAP **316** across 8 suites (`pnpm test:rls`) · Playwright e2e **17** across 9 specs (`pnpm test:e2e`) |
+| Tests        | pgTAP **316** across 8 suites (`pnpm test:rls`) · Playwright e2e **19** across 9 specs (`pnpm test:e2e`) |
 | Backend plan | M0–M9 **all shipped** ([`docs/BACKEND_BUILD_PLAN.md`](../docs/BACKEND_BUILD_PLAN.md))                    |
 | Linear       | CET-1…CET-31 all **Done** except CET-10 (variable-reward milestones, deferred)                           |
 | Working tree | clean; `main` = `origin/main`; no feature branches outstanding                                           |
 
-**Last work (2026-07-16):** two full-repo review sweeps (15 fixes total — open redirect, mark-all-done clobber,
+**Last work (2026-07-21):** the count screen gained a way to go **down** — a ghost `− 1` and an exact-number
+`Edit count` under the ring (no migration; `set_count` already allowed it, the gap was UI). Deliberately not a
+slider: targets run into the hundreds, so a drag can't land on the value you actually counted. Owner-reported bug
+fixed alongside it: **the celebration re-fired when you returned to a finished ring and tapped it** — a reward you
+can summon on demand is not a reward. Pre-existing on `main` since the count screen was written. e2e 19/19.
+
+**Before that (2026-07-16):** two full-repo review sweeps (15 fixes total — open redirect, mark-all-done clobber,
 midnight freeze race, stale-session holes, and more; migration `0016`) and **D48** — back-filling a day now repairs
 the streak (migration `0017`).
 
@@ -104,6 +110,7 @@ Each of these is a production bug we already paid for. Treat them as constraints
 | **Writes that must be atomic are RPC-only**, in the DB: counting, reminders, reactions, membership creation, ownership moves.                                                                                       | PostgREST `upsert` compiles over every column sent; a client read-then-write let two concurrent saves interleave so the **loser's** value won. (D42, D35, D43)                                                                                                                                            |
 | **Never write worship that didn't happen.** No fabricated counts, ever — not for onboarding, not for demos.                                                                                                         | Endowed-progress onboarding was specced as "a pre-filled first contribution." We refuse: the newcomer is endowed with the **circle's genuine momentum** instead, which is also the true thing. (D43)                                                                                                      |
 | **An earned badge is permanent**; nothing the member earned is ever revoked. `badge_awards` is append-only, INSERT granted to nobody.                                                                               | Re-deriving badges from a live window silently **un-earned** them on a dip — a punishment mechanic, against D8/D28. A badge you could insert yourself would be _claimed_, not _earned_. (D43)                                                                                                             |
+| **A celebration marks a TRANSITION, never a state.** Fire it on the tap that closes the ring; never on arriving at, or tapping, a ring that is already closed.                                                      | The guard was a ref starting `false` on every mount, so it meant "have I celebrated this mount?" not "was this ring already closed?" — returning to a finished ring and tapping re-fired the congratulations. A reward you can summon on demand stops being one. (2026-07-21)                             |
 | **No god view.** Nobody — including the operator — sees a group they don't belong to. Super-admin powers are recovery + moderation only, granted out-of-band in Supabase.                                           | The privacy promise is load-bearing for a worship app; `/admin` was retired for it. (D26, D27)                                                                                                                                                                                                            |
 | **App audio must never resemble music** — no melodies, pitched tones, or instrument timbres, including celebration sounds. Unpitched noise clicks; recorded nature sounds are the sanctioned path for richer audio. | Owner is Hanafi; ruling basis [askimam 125634](https://islamqa.org/hanafi/askimam/125634/). (D37)                                                                                                                                                                                                         |
 | **Token contract, lint-enforced.** Every UI value comes from a token in `app/globals.css`. Raw hex/`rgb()`/`hsl()` in `.ts`/`.tsx` is an **ESLint error**. Sole sanctioned literal: `lib/brand.ts`.                 | Need a new value? Add a token, don't inline. (D14)                                                                                                                                                                                                                                                        |
