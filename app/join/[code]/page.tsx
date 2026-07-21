@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { buttonVariants } from "@/components/ui";
+import { buttonVariants, cardVariants } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { UsersIcon } from "@/components/app/icons";
 import { createClient } from "@/lib/supabase/server";
 import { AcceptButton } from "./join-client";
@@ -93,7 +94,12 @@ export default async function JoinPage({
           Cetele
         </h1>
       </div>
-      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 text-center shadow-sm">
+      <div
+        className={cn(
+          cardVariants({ padding: "md" }),
+          "flex flex-col gap-3 text-center",
+        )}
+      >
         {body}
       </div>
     </main>

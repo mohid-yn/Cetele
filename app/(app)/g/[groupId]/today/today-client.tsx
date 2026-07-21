@@ -3,7 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ProgressRing, buttonVariants } from "@/components/ui";
+import {
+  ProgressRing,
+  Screen,
+  buttonVariants,
+  cardVariants,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { StreakChip } from "@/components/app/streak-chip";
@@ -124,7 +130,7 @@ export function TodayClient({
     : null;
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+    <Screen>
       <PageHeader
         title={
           <div>
@@ -200,7 +206,10 @@ export function TodayClient({
             <li key={t.id}>
               <Link
                 href={`${groupHref(groupId, `/count/${t.id}`)}${isToday ? "" : `?date=${date}`}`}
-                className="flex items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none"
+                className={cn(
+                  cardVariants({ padding: "compact" }),
+                  "flex items-center gap-4 transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none",
+                )}
               >
                 <ProgressRing
                   value={count}
@@ -320,6 +329,6 @@ export function TodayClient({
           </ul>
         </section>
       )}
-    </div>
+    </Screen>
   );
 }

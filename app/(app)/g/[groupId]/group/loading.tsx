@@ -1,9 +1,9 @@
-import { Skeleton } from "@/components/ui";
+import { Screen, Skeleton } from "@/components/ui";
 
 /** Instant shell for /group while the server reads the circle's fortnight. */
 export default function GroupLoading() {
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+    <Screen>
       {/* Header: group name + actions */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-2">
@@ -35,6 +35,6 @@ export default function GroupLoading() {
           </div>
         ))}
       </div>
-    </div>
+    </Screen>
   );
 }

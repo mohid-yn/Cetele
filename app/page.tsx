@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, cardVariants } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { AppIconLogo } from "@/components/ui/logo";
 import { GoogleIcon, MailIcon } from "@/components/app/icons";
 import { createClient } from "@/lib/supabase/client";
@@ -193,7 +194,12 @@ export default function LoginPage() {
           </div>
 
           {/* Sign-in card */}
-          <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-md">
+          <div
+            className={cn(
+              cardVariants({ padding: "lg" }),
+              "mt-8 flex flex-col gap-3 shadow-md",
+            )}
+          >
             {DEV_LOGIN && (
               <>
                 <Button

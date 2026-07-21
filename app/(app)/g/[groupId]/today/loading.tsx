@@ -1,9 +1,9 @@
-import { Skeleton } from "@/components/ui";
+import { Screen, Skeleton } from "@/components/ui";
 
 /** Instant shell for /today while the server reads rings + streak + circle. */
 export default function TodayLoading() {
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+    <Screen>
       {/* Header: greeting + streak chip */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-2">
@@ -42,6 +42,6 @@ export default function TodayLoading() {
           ))}
         </div>
       </div>
-    </div>
+    </Screen>
   );
 }

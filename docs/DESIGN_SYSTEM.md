@@ -92,7 +92,24 @@ retention-correct "done" colour. Map meaning once and never reassign it:
 
 ### Spacing
 
-- 4px base (`--spacing`, Tailwind scale). Stick to `1 2 3 4 6 8 12 16`. Inside cards use `p-6`; stack gaps `gap-1.5`–`gap-6`.
+4px base (`--spacing`, Tailwind scale). **Rhythm comes from the layout primitives, not from hand-picked utilities** — the previous "stick to `1 2 3 4 6 8 12 16`" rule was advisory and the codebase drifted to **58 distinct steps**, because nothing owned the decision.
+
+| Primitive  | Use                                                                                                                                          | Gap steps                                       |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `<Screen>` | The page wrapper for every in-app screen — one column, one rhythm, one set of edge paddings (`px-4 pt-5 pb-6`). Never re-write this by hand. | default `xl`                                    |
+| `<Stack>`  | Vertical rhythm inside a screen or card.                                                                                                     | `none xs sm md lg xl 2xl` → `gap-0/1/2/3/4/5/6` |
+| `<Row>`    | Horizontal cluster — icon + label, header actions, a chip group. Takes `wrap` so it degrades on narrow viewports.                            | same scale                                      |
+
+- **Card padding is a named ladder**, not a free choice: `<Card padding="compact|md|lg">` → `p-3` (dense row) / `p-5` (default content card) / `p-6` (emphasis). For a card that must be a link or a `<section>`, use `cardVariants({ padding })` — the same arrangement `buttonVariants` has.
+- Off-scale one-offs (`gap-2.5`, `mt-0.5` …) are legacy. Don't add more; convert when you touch a file.
+
+### Flex, and the footgun that cost us a release
+
+A flex child defaults to `min-height: auto` — it **refuses to shrink below its content**, so a too-tall child overflows its parent instead of adapting, and with `justify-center` it overflows _both_ ends. That is what put the count screen's correction tray on top of its action row.
+
+- Any flex child that must shrink needs **`min-h-0`** (`<Stack scrollable>` sets it, with the overflow it implies).
+- Size to the viewport with `min()` / `clamp()` and `dvh`, not fixed px + breakpoints: the ring is `min(16rem, 28dvh)`, so tall screens keep the full size and short ones shrink instead of pushing the primary action off-screen.
+- The app shell owns one scroll region (`lib/app-scroll`). The bottom nav is a **sibling** of it, never over it, so no screen has to reserve space for the nav.
 
 ### Radii
 

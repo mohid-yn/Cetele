@@ -2,7 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Avatar, Badge, Button, Card } from "@/components/ui";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  Screen,
+  cardVariants,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { FlameIcon, ChevronRightIcon } from "@/components/app/icons";
 import { useAction } from "@/lib/use-action";
@@ -105,7 +113,7 @@ export function ProfileClient({
   }
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+    <Screen>
       {/* Identity */}
       <header className="flex flex-col items-center gap-2 pt-2 text-center">
         <Avatar name={name} size="xl" />
@@ -126,7 +134,10 @@ export function ProfileClient({
 
       <Link
         href="/progress"
-        className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:bg-muted/50"
+        className={cn(
+          cardVariants({ padding: "md" }),
+          "flex items-center justify-between gap-3 transition-colors hover:bg-muted/50",
+        )}
       >
         <div className="flex items-center gap-3">
           <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-primary-700">
@@ -236,7 +247,7 @@ export function ProfileClient({
           Sign out
         </Button>
       </form>
-    </div>
+    </Screen>
   );
 }
 

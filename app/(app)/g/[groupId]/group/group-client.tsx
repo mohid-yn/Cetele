@@ -5,7 +5,14 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
 import { DURATION, EASE_BRAND } from "@/lib/motion";
-import { buttonVariants, Button, Dialog, ConfirmDialog } from "@/components/ui";
+import {
+  Button,
+  ConfirmDialog,
+  Dialog,
+  Screen,
+  buttonVariants,
+  cardVariants,
+} from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
@@ -155,7 +162,7 @@ export function GroupClient({
   }
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+    <Screen>
       <PageHeader
         title={
           <GroupSwitcher
@@ -209,7 +216,7 @@ export function GroupClient({
               tab: it's the one thing here that isn't a number. */}
             <GroupGarden garden={garden} />
 
-            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <section className={cardVariants({ padding: "md" })}>
               <p className="text-sm text-muted-foreground">
                 <span
                   aria-hidden
@@ -228,7 +235,7 @@ export function GroupClient({
             </section>
 
             {/* M6 — the durable North Star (90-day collective consistency) */}
-            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <section className={cardVariants({ padding: "md" })}>
               <div className="flex items-baseline justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
@@ -565,6 +572,6 @@ export function GroupClient({
           )}
         </Dialog>
       )}
-    </div>
+    </Screen>
   );
 }

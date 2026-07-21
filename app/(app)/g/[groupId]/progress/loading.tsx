@@ -1,9 +1,9 @@
-import { Skeleton } from "@/components/ui";
+import { Screen, Skeleton } from "@/components/ui";
 
 /** Instant shell for /progress while the server reads streak + the 14-day grid. */
 export default function ProgressLoading() {
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+    <Screen>
       {/* Header */}
       <div className="flex flex-col gap-2">
         <Skeleton className="h-7 w-32" />
@@ -37,6 +37,6 @@ export default function ProgressLoading() {
           ))}
         </div>
       </div>
-    </div>
+    </Screen>
   );
 }

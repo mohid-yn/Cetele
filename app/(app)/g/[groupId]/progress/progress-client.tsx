@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, Badge } from "@/components/ui";
+import { Badge, Card, CardContent, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { BadgesGrid, type EarnedBadge } from "@/components/app/badges";
@@ -61,7 +61,7 @@ export function ProgressClient({
           : "every day is a fresh start";
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+    <Screen>
       <PageHeader
         title="Progress"
         subtitle={
@@ -172,6 +172,6 @@ export function ProgressClient({
           </div>
         </CardContent>
       </Card>
-    </div>
+    </Screen>
   );
 }
