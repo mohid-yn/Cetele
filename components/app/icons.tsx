@@ -56,6 +56,12 @@ export const PlusIcon = (p: IconProps) => (
   </svg>
 );
 
+export const MinusIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5 12h14" />
+  </svg>
+);
+
 export const CheckIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M20 6 9 17l-5-5" />

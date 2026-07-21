@@ -2,28 +2,38 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui";
+import { Button, Dialog, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useCelebration } from "@/components/app/celebration";
 import { TapPad } from "@/components/app/tap-pad";
 import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
-import { ArrowLeftIcon } from "@/components/app/icons";
+import { ArrowLeftIcon, MinusIcon } from "@/components/app/icons";
 import { playComplete, playTen } from "@/lib/sound";
 import { groupHref } from "@/lib/group-href";
 import { useLocalToday } from "@/lib/use-local-today";
 import { incrementCount } from "../../today/actions";
+import { setCount } from "../../group/actions";
 
 /**
  * The optimistic tap pad (M3). Every tap lands locally at once; deltas are
  * batched per day and flushed to the increment_count RPC on a short debounce
  * (the RPC enforces the count-integrity bounds — the client only needs to be
  * honest, not trusted). A rejected flush rolls the local count back.
+ *
+ * Corrections go the other way. `increment_count` only accepts positive deltas
+ * (that one-directional guarantee is part of the count-integrity story), so
+ * undoing a stray tap — or fixing a number outright — rides `set_count`, the
+ * same exact-set the fortnight grid uses (D29 self-correct). An exact-set can
+ * never be issued while taps are still in flight: it would either clobber them
+ * or be clobbered, which is the count-dip family of bugs this screen has
+ * already paid for. `commitExact` settles the queue first and holds the pad.
  */
 
 const FLUSH_MS = 600;
 
 export function CountClient({
   groupId,
+  userId,
   task,
   timeZone,
   todayISO: serverTodayISO,
@@ -31,6 +41,8 @@ export function CountClient({
   initialCounts,
 }: {
   groupId: string;
+  /** The viewer — set_count's target, so a correction is always a self-edit. */
+  userId: string;
   task: { id: string; label: string; subtitle: string | null; target: number };
   /** The member's day boundary (profiles.timezone, D34). */
   timeZone: string;
@@ -44,7 +56,22 @@ export function CountClient({
   const [date, setDate] = React.useState(initialDate);
   const [counts, setCounts] = React.useState(initialCounts);
   const [error, setError] = React.useState<string | null>(null);
+  const [correcting, setCorrecting] = React.useState(false);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [draft, setDraft] = React.useState("");
   const justCompleted = React.useRef(false);
+
+  // A mirror of `counts` that is readable synchronously. A correction has to
+  // know the settled count the instant its flush resolves — reading React state
+  // there would see a value from before the flush's own reconciliation.
+  const countsRef = React.useRef(initialCounts);
+  const applyCounts = React.useCallback(
+    (fn: (c: Record<string, number>) => Record<string, number>) => {
+      countsRef.current = fn(countsRef.current);
+      setCounts(countsRef.current);
+    },
+    [],
+  );
   // The server's todayISO is a render-time snapshot; a PWA left open (or
   // resumed) past the member's midnight would keep writing taps to YESTERDAY —
   // silently, since the RPC's 14-day window accepts it. Track the real local
@@ -89,11 +116,11 @@ export function CountClient({
         if (!res) return;
         if (res.error || res.count == null) {
           // reject → roll the optimistic taps back and surface the reason
-          setCounts((c) => ({ ...c, [d]: Math.max(0, (c[d] ?? 0) - delta) }));
+          applyCounts((c) => ({ ...c, [d]: Math.max(0, (c[d] ?? 0) - delta) }));
           setError(res.error ?? "Couldn't save — try again");
         } else {
           // authoritative count + everything still awaiting confirmation
-          setCounts((c) => ({
+          applyCounts((c) => ({
             ...c,
             [d]: res.count! + Math.max(0, unconfirmed.current[d] ?? 0),
           }));
@@ -101,18 +128,69 @@ export function CountClient({
       });
     }
     return inflight.current;
-  }, [groupId, task.id]);
+  }, [groupId, task.id, applyCounts]);
 
   const queue = React.useCallback(
     (delta: number) => {
       setError(null);
-      setCounts((c) => ({ ...c, [date]: (c[date] ?? 0) + delta }));
+      applyCounts((c) => ({ ...c, [date]: (c[date] ?? 0) + delta }));
       pending.current[date] = (pending.current[date] ?? 0) + delta;
       unconfirmed.current[date] = (unconfirmed.current[date] ?? 0) + delta;
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => void flush(), FLUSH_MS);
     },
-    [date, flush],
+    [date, flush, applyCounts],
+  );
+
+  // -- corrections ------------------------------------------------------------
+  // Set the day to an exact number (undo a stray tap, or fix the count
+  // outright). Every tap already queued is settled FIRST so the two paths can't
+  // race, and the pad is held for the round-trip so a tap made mid-flight can't
+  // be silently overwritten by the set that's already on its way.
+  const commitExact = React.useCallback(
+    async (next: (settled: number) => number) => {
+      const d = date; // the day can flip under a slow round-trip
+      setError(null);
+      setCorrecting(true);
+      try {
+        await flush();
+        const value = Math.max(0, Math.round(next(countsRef.current[d] ?? 0)));
+        if (value === (countsRef.current[d] ?? 0)) return true;
+        const res = await setCount(groupId, userId, task.id, d, value);
+        if (!res) return false; // the action redirected (stale session)
+        if (res.error) {
+          setError(res.error);
+          return false;
+        }
+        applyCounts((c) => ({ ...c, [d]: value }));
+        // Dropping back below the target re-arms the celebration, so closing
+        // the ring a second time still feels like closing it — and a correction
+        // that lands ON the target closes it just as truly as a tap did.
+        if (value < task.target) {
+          justCompleted.current = false;
+        } else if (!justCompleted.current) {
+          justCompleted.current = true;
+          if (sound) playComplete();
+          celebrate({ title: "Ring closed! 🎉" });
+        }
+        router.refresh();
+        return true;
+      } finally {
+        setCorrecting(false);
+      }
+    },
+    [
+      date,
+      flush,
+      applyCounts,
+      groupId,
+      userId,
+      task.id,
+      task.target,
+      router,
+      sound,
+      celebrate,
+    ],
   );
 
   // best-effort flush when the screen unmounts mid-debounce
@@ -205,8 +283,37 @@ export function CountClient({
           value={count}
           max={task.target}
           sound={sound}
+          disabled={correcting}
           onTap={handleTap}
         />
+
+        {/* Corrections, kept quiet: gold is spent on the one primary action
+            below, and an undo should never compete with it for the thumb. */}
+        <div className="mt-3 flex items-center gap-1">
+          {count > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              leadingIcon={<MinusIcon />}
+              disabled={correcting}
+              aria-label="Undo one count"
+              onClick={() => void commitExact((c) => c - 1)}
+            >
+              1
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={correcting}
+            onClick={() => {
+              setDraft(String(count));
+              setEditOpen(true);
+            }}
+          >
+            Edit count
+          </Button>
+        </div>
       </div>
 
       {remaining === 0 ? (
@@ -253,6 +360,59 @@ export function CountClient({
           </Button>
         </div>
       )}
+
+      {/* Exact entry — a number, not a slider: the targets here run into the
+          hundreds, so a drag can't land on the value you actually counted. */}
+      <Dialog
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title="Edit count"
+        description={`${task.label} · ${isToday ? "today" : fmtLongDate(date)}`}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              disabled={correcting}
+              onClick={() => setEditOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={correcting || draft.trim() === ""}
+              onClick={() => {
+                const value = Number(draft);
+                if (!Number.isFinite(value)) return;
+                void commitExact(() => value).then((ok) => {
+                  if (ok) setEditOpen(false);
+                });
+              }}
+            >
+              {correcting ? "Saving…" : "Save"}
+            </Button>
+          </>
+        }
+      >
+        <Input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          aria-label={`Count for ${task.label}`}
+        />
+        <p className="mt-2 text-xs text-muted-foreground">
+          Target {task.target.toLocaleString()}. Setting a lower number never
+          shortens a streak you already earned.
+        </p>
+        {/* A refusal (out of range, outside the 14-day window) has to be read
+            here — the page-level alert is behind the backdrop. */}
+        {error && (
+          <p role="alert" className="mt-2 text-xs text-danger">
+            {error}
+          </p>
+        )}
+      </Dialog>
     </div>
   );
 }

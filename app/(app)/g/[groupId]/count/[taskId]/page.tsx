@@ -80,6 +80,7 @@ export default async function CountPage({
   return (
     <CountClient
       groupId={groupId}
+      userId={me}
       timeZone={timeZone}
       task={{
         id: task.id,

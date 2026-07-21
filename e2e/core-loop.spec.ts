@@ -129,3 +129,55 @@ test("back-fill: yesterday's ring can still be closed (D8)", async ({
   // the chain retroactively — back-filling FEEDS the streak (D48): 2 days.
   await expect(page.getByText("2 day streak")).toBeVisible();
 });
+
+test("correcting down: undo one, then set an exact count", async ({ page }) => {
+  await signIn(page, USER);
+
+  // today's ring is closed (3/3) from the first spec — open it from the roster
+  await page.goto("/today");
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: /Salawat/ })
+    .click();
+  await page.waitForURL("**/count/**");
+  const ring = page.getByRole("progressbar");
+  await expect(ring).toHaveAttribute("aria-valuenow", "3");
+
+  // −1 takes back a stray tap and reopens the ring
+  await page.getByRole("button", { name: "Undo one count" }).click();
+  await expect(ring).toHaveAttribute("aria-valuenow", "2");
+  await expect(page.getByText("Tap anywhere to count")).toBeVisible();
+
+  // it is a real write, not just optimistic UI: a reload serves 2 from the DB
+  await page.reload();
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "2",
+  );
+
+  // correcting DOWN never takes back a streak already earned (D48)
+  await page.goto("/today");
+  await expect(page.getByText("2 day streak")).toBeVisible();
+
+  // the exact editor sets a number outright — and landing on the target closes
+  // the ring for real, celebration and all
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: /Salawat/ })
+    .click();
+  await page.waitForURL("**/count/**");
+  await page.click('button:has-text("Edit count")');
+  await page.getByRole("dialog").getByRole("spinbutton").fill("3");
+  await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+  // the editor closes first, so the celebration is the only dialog left — two
+  // at once would make `closeCelebration`'s locator ambiguous under strict mode
+  await expect(page.getByRole("dialog", { name: "Edit count" })).toBeHidden();
+  await closeCelebration(page);
+  await expect(page.getByText("Completed — tap to keep going")).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "3",
+  );
+});

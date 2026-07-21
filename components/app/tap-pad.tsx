@@ -11,6 +11,9 @@ interface TapPadProps {
   max: number;
   /** Whether sound is on. */
   sound: boolean;
+  /** Held while an exact-set correction is in flight, so a tap can't be
+   *  overwritten by the set that's already on its way. */
+  disabled?: boolean;
   onTap: () => void;
 }
 
@@ -18,7 +21,13 @@ interface TapPadProps {
  * The tasbih-style tap target: a big ring you tap to count, with haptics, a
  * click tone, and a number "pop" on each press. The visual + tactile hook.
  */
-export function TapPad({ value, max, sound, onTap }: TapPadProps) {
+export function TapPad({
+  value,
+  max,
+  sound,
+  disabled = false,
+  onTap,
+}: TapPadProps) {
   const [popKey, setPopKey] = React.useState(0);
   const done = value >= max;
 
@@ -40,10 +49,12 @@ export function TapPad({ value, max, sound, onTap }: TapPadProps) {
     <button
       type="button"
       onClick={handleTap}
+      disabled={disabled}
       aria-label="Tap to count"
       className={cn(
         "group relative grid w-full place-items-center rounded-3xl py-8 transition-transform",
         "focus-visible:outline-none active:scale-[0.99]",
+        disabled && "pointer-events-none opacity-60",
       )}
     >
       <ProgressRing value={value} max={max} size={260} thickness={18}>
