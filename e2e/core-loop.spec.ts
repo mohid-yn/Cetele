@@ -137,7 +137,7 @@ test("correcting down: undo one, then set an exact count", async ({ page }) => {
   await page.goto("/today");
   await page
     .getByRole("main")
-    .getByRole("link", { name: /Salawat/ })
+    .getByRole("link", { name: /^Salawat/ })
     .click();
   await page.waitForURL("**/count/**");
   const ring = page.getByRole("progressbar");
@@ -163,7 +163,7 @@ test("correcting down: undo one, then set an exact count", async ({ page }) => {
   // the ring for real, celebration and all
   await page
     .getByRole("main")
-    .getByRole("link", { name: /Salawat/ })
+    .getByRole("link", { name: /^Salawat/ })
     .click();
   await page.waitForURL("**/count/**");
   await page.click('button:has-text("Edit count")');
@@ -180,4 +180,46 @@ test("correcting down: undo one, then set an exact count", async ({ page }) => {
     "aria-valuenow",
     "3",
   );
+});
+
+test("the celebration fires on CLOSING a ring, not on tapping a closed one", async ({
+  page,
+}) => {
+  await signIn(page, USER);
+
+  // walk back into the ring finished by the previous spec
+  await page.goto("/today");
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: /^Salawat/ })
+    .click();
+  await page.waitForURL("**/count/**");
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "3",
+  );
+
+  // extra dhikr past the target is welcome, but it is not a fresh completion:
+  // congratulating it again is what makes the reward cheap
+  await page.getByRole("button", { name: "Tap to count" }).click();
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "4",
+  );
+  await expect(page.getByText("Ring closed!")).toBeHidden();
+
+  // same for a finished day picked off the strip (yesterday, closed earlier).
+  // The count assertion has to come first: it proves the tap has been handled,
+  // so a hidden celebration means absent, not merely not-yet-rendered.
+  await page.getByRole("button", { name: /Yest\./ }).click();
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "3",
+  );
+  await page.getByRole("button", { name: "Tap to count" }).click();
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "4",
+  );
+  await expect(page.getByText("Ring closed!")).toBeHidden();
 });

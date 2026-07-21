@@ -59,12 +59,24 @@ export function CountClient({
   const [correcting, setCorrecting] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
   const [draft, setDraft] = React.useState("");
-  const justCompleted = React.useRef(false);
+  // "This day's ring was ALREADY closed before the current tap" — the guard
+  // that keeps the celebration rare. It must be seeded from the day's real
+  // count, not from `false`: a ref that starts unclosed on every mount means
+  // returning to a finished ring and tapping it re-fires the congratulations,
+  // which is exactly how a reward stops meaning anything. Re-seeded whenever
+  // the day being counted changes.
+  const justCompleted = React.useRef(
+    (initialCounts[initialDate] ?? 0) >= task.target,
+  );
 
   // A mirror of `counts` that is readable synchronously. A correction has to
   // know the settled count the instant its flush resolves — reading React state
   // there would see a value from before the flush's own reconciliation.
   const countsRef = React.useRef(initialCounts);
+  const ringClosed = React.useCallback(
+    (d: string) => (countsRef.current[d] ?? 0) >= task.target,
+    [task.target],
+  );
   const applyCounts = React.useCallback(
     (fn: (c: Record<string, number>) => Record<string, number>) => {
       countsRef.current = fn(countsRef.current);
@@ -78,8 +90,11 @@ export function CountClient({
   // today; when it flips, follow it if the user was ON "today" (backfilling an
   // old day deliberately is left alone) and refresh for the new day's data.
   const todayISO = useLocalToday(timeZone, serverTodayISO, (next, prev) => {
-    setDate((d) => (d === prev ? next : d));
-    justCompleted.current = false; // a new day's ring hasn't been closed
+    setDate((d) => {
+      const now = d === prev ? next : d;
+      justCompleted.current = ringClosed(now);
+      return now;
+    });
     router.refresh();
   });
   const isToday = date === todayISO;
@@ -260,7 +275,9 @@ export function CountClient({
         today={todayISO}
         isDone={(d) => (counts[d] ?? 0) >= task.target}
         onChange={(d) => {
-          justCompleted.current = false;
+          // switching to a day that's already finished must not re-arm the
+          // celebration for it
+          justCompleted.current = ringClosed(d);
           setDate(d);
         }}
       />
