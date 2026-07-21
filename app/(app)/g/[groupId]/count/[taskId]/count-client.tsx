@@ -363,14 +363,16 @@ export function CountClient({
               +10
             </Button>
           )}
-          {/* One tap to finish: fill to the target, celebrate, and head back. */}
+          {/* One tap to finish: fill to the target and celebrate — then STAY.
+              Counting past a closed ring is normal (extra dhikr is welcome, and
+              manual taps have always been uncapped), so finishing shouldn't be
+              the one path that ends the session for you. The closed state
+              offers "Back to today", and the header keeps its way out. */}
           <Button
             variant="accent"
             onClick={() => {
               addCapped(remaining);
-              void flush().then(() =>
-                router.push(groupHref(groupId, "/today")),
-              );
+              void flush();
             }}
           >
             Mark done

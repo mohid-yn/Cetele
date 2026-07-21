@@ -230,3 +230,45 @@ test("the celebration fires on CLOSING a ring, not on tapping a closed one", asy
   );
   await expect(page.getByText("Ring closed!")).toBeHidden();
 });
+
+test("Mark done closes the ring without ending the session", async ({
+  page,
+}) => {
+  await signIn(page, USER);
+
+  await page.goto("/today");
+  await page
+    .getByRole("main")
+    .getByRole("listitem")
+    .getByRole("link", { name: /Salawat/ })
+    .click();
+  await page.waitForURL("**/count/**");
+
+  // the oldest day on the strip is untouched by the specs above (they only
+  // reach today and yesterday, which are labelled), so it gives us an open ring
+  await page
+    .getByRole("button", { name: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d+$/ })
+    .last()
+    .click();
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "0",
+  );
+
+  const url = page.url();
+  await page.getByRole("button", { name: "Mark done" }).click();
+  await closeCelebration(page);
+
+  // it fills the ring and STAYS PUT: finishing must not be the one path that
+  // ends the session, because counting past the target is normal and welcome
+  expect(page.url()).toBe(url);
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "3",
+  );
+  await page.getByRole("button", { name: "Tap to count" }).click();
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "4",
+  );
+});
