@@ -7,7 +7,7 @@ _cetele_ — a group that splits and completes a shared dhikr goal together.
 
 ## Start here (resume context)
 
-1. **[.claude/STATUS.md](.claude/STATUS.md)** — current state, locked decisions, and ordered next steps. **Read first — it is the only doc that tracks status.**
+1. **[.claude/STATUS.md](.claude/STATUS.md)** — current state, how we work, the invariants, and the decisions that still bind. **Read first — it is the only doc that tracks status.** Full history (every decision in full, every shipped milestone) is archived in [.claude/history/](.claude/history/) — consult it only when you need the _why_ behind a specific decision number.
 2. **[docs/PRD.md](docs/PRD.md)** — the product spec (features, roles, data model, success metrics). This is the editable source of truth; `docs/PRD.docx` is a generated Word copy for the user.
 
 When resuming: read STATUS.md, continue from its "Next steps". When work state
