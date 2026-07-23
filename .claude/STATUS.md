@@ -5,7 +5,7 @@
 > Full historical detail (every decision D1–D48 in full, every shipped milestone, every review) lives in
 > [`.claude/history/STATUS-2026-07-16-full.md`](history/STATUS-2026-07-16-full.md). This file is the onboarding doc; that one is the archive.
 
-_Last updated: 2026-07-21 · Phase: **feature-complete and live in production**, awaiting the stakeholder review._
+_Last updated: 2026-07-24 · Phase: **feature-complete and live in production**, awaiting the stakeholder review._
 
 ---
 
@@ -37,7 +37,19 @@ review_ — is **met**.
 | Linear       | CET-1…CET-31 all **Done** except CET-10 (variable-reward milestones, deferred)                           |
 | Working tree | clean; `main` = `origin/main`; no feature branches outstanding                                           |
 
-**Last work (2026-07-21) — the count screen, four changes:** (1) it gained a way to go **down** — an undo and an
+**Last work (2026-07-24) — the spacing/design pass (shipped to prod, no migration):** UI-only, merged from
+`container-queries`. (1) **Layout primitives own the rhythm** — `Screen`/`Stack`/`Row` (earlier) plus a new **`Grid`**
+that keys columns off its _own slot_ via container queries (Tailwind v4 `@container`, no plugin), not the window;
+the rings and badges grids use it. (2) **Spacing stepped up one notch, app-wide** — `Screen` gap `xl→2xl`, edge
+padding `px-5 pt-6 pb-8`, card ladder `p-4/p-6/p-8`; five hand-rolled screens that never used `<Screen>` were
+brought onto the same edge padding so nothing is tighter. (3) **Device-review fixes:** day-strip scrollbar overlap
+(`no-scrollbar` util), group tab panels had no inter-section rhythm (wrapped in `Stack`), the member-breakdown day
+grid was ~15px cells → now 44px, horizontally scrollable, label pinned, opens on today. (4) **UI sweep** (frontend
+review): role badges no longer clip on long names (name truncates, badge `shrink-0`), the group garden scales with
+its card instead of cropping on desktop (`aspect-[320/130]`), groups empty-state centered, one celebration glyph not
+two, reminder time field normalized. All verified in a real browser at 390/1280; build+lint+tsc+format green.
+
+**Before that (2026-07-21) — the count screen, four changes:** (1) it gained a way to go **down** — an undo and an
 exact-number `Edit count`, presented as one hairline-divided pill in the card language, 44px segments, verified in
 a real browser at 360/390/768/1280 in both themes (no migration; `set_count` already allowed it, the gap was UI).
 Deliberately **not a slider** — targets run into the hundreds, so a drag can't land on the value you actually
