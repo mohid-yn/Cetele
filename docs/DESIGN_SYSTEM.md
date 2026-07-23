@@ -96,12 +96,12 @@ retention-correct "done" colour. Map meaning once and never reassign it:
 
 | Primitive  | Use                                                                                                                                              | Gap steps                                       |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| `<Screen>` | The page wrapper for every in-app screen — one column, one rhythm, one set of edge paddings (`px-4 pt-5 pb-6`). Never re-write this by hand.     | default `xl`                                    |
+| `<Screen>` | The page wrapper for every in-app screen — one column, one rhythm, one set of edge paddings (`px-5 pt-6 pb-8`). Never re-write this by hand.     | default `2xl`                                   |
 | `<Stack>`  | Vertical rhythm inside a screen or card.                                                                                                         | `none xs sm md lg xl 2xl` → `gap-0/1/2/3/4/5/6` |
 | `<Row>`    | Horizontal cluster — icon + label, header actions, a chip group. Takes `wrap` so it degrades on narrow viewports.                                | same scale                                      |
 | `<Grid>`   | A grid whose columns key off its **own slot**, not the window. `cols="cards"` (1 → 2) or `cols="tiles"` (3 → 6); `as="ul"` keeps list semantics. | same scale                                      |
 
-- **Card padding is a named ladder**, not a free choice: `<Card padding="compact|md|lg">` → `p-3` (dense row) / `p-5` (default content card) / `p-6` (emphasis). For a card that must be a link or a `<section>`, use `cardVariants({ padding })` — the same arrangement `buttonVariants` has.
+- **Card padding is a named ladder**, not a free choice: `<Card padding="compact|md|lg">` → `p-4` (dense row) / `p-6` (default content card) / `p-8` (emphasis). For a card that must be a link or a `<section>`, use `cardVariants({ padding })` — the same arrangement `buttonVariants` has.
 - Off-scale one-offs (`gap-2.5`, `mt-0.5` …) are legacy. Don't add more; convert when you touch a file.
 
 ### Flex, and the footgun that cost us a release

@@ -174,11 +174,11 @@ Grid.displayName = "Grid";
 export const Screen = React.forwardRef<
   HTMLDivElement,
   StackProps & { padded?: boolean }
->(({ className, gap = "xl", padded = true, ...props }, ref) => (
+>(({ className, gap = "2xl", padded = true, ...props }, ref) => (
   <Stack
     ref={ref}
     gap={gap}
-    className={cn("flex-1", padded && "px-4 pt-5 pb-6", className)}
+    className={cn("flex-1", padded && "px-5 pt-6 pb-8", className)}
     {...props}
   />
 ));

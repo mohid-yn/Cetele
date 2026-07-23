@@ -48,7 +48,7 @@ export function DayStrip({
 }) {
   const dates = Array.from({ length: days }, (_, i) => isoDaysAgo(today, i));
   return (
-    <div className={cn("-mx-4 no-scrollbar overflow-x-auto px-4", className)}>
+    <div className={cn("-mx-5 no-scrollbar overflow-x-auto px-5", className)}>
       <div className="flex gap-1.5">
         {dates.map((d, i) => {
           const active = d === value;

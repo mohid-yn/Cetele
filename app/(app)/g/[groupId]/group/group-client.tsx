@@ -213,7 +213,7 @@ export function GroupClient({
         {/* ---- Overview: the live collective progress ---- */}
         {tab === "overview" && (
           <motion.div key="overview" {...panel}>
-            <Stack>
+            <Stack gap="2xl">
               {/* The circle's garden (CET-17) — the emotional layer, leading the
                 tab: it's the one thing here that isn't a number. */}
               <GroupGarden garden={garden} />
@@ -310,7 +310,7 @@ export function GroupClient({
         {/* ---- Standings: the (for-fun) weekly ranking ---- */}
         {tab === "standings" && (
           <motion.div key="standings" {...panel}>
-            <Stack>
+            <Stack gap="2xl">
               {/* The pair goal (CET-22) leads the ranking, deliberately: a whole-
               group leaderboard disheartens the bottom half, so the first thing
               you meet here is a goal you WIN TOGETHER rather than a rank. */}

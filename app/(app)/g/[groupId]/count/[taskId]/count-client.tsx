@@ -241,7 +241,7 @@ export function CountClient({
   };
 
   return (
-    <div className="flex flex-1 flex-col px-4 pt-4 pb-6">
+    <div className="flex flex-1 flex-col px-5 pt-5 pb-8">
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
@@ -344,7 +344,7 @@ export function CountClient({
           ring plus a 14-day strip cannot fit a 667px phone alongside it, and
           the one thing that must never fall below the fold is the primary
           action. Sticky costs nothing when the screen already fits. */}
-      <div className="sticky bottom-0 -mx-4 mt-2 bg-background px-4 pt-2">
+      <div className="sticky bottom-0 -mx-5 mt-2 bg-background px-5 pt-2">
         {remaining === 0 ? (
           // Ring already closed — just a way back.
           <Button

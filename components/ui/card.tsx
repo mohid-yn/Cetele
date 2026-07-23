@@ -19,11 +19,11 @@ const cardVariants = cva(
         /** Callers that own their own padding (e.g. Card + CardHeader). */
         none: "",
         /** A dense row: avatar/ring + label. */
-        compact: "p-3",
+        compact: "p-4",
         /** The default content card. */
-        md: "p-5",
+        md: "p-6",
         /** Emphasis — a card that carries a screen. */
-        lg: "p-6",
+        lg: "p-8",
       },
     },
     defaultVariants: { padding: "none" },
