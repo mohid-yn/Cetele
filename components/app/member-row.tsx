@@ -36,20 +36,23 @@ export function MemberRow({
       {leading}
       <Avatar name={name} size={avatarSize} />
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
-          {name}
+        <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+          {/* The NAME truncates; the badges stay pinned. Truncate used to sit on
+              this whole flex row, so a long name ellipsised the badge itself
+              ("owne", "yo") instead of the name. */}
+          <span className="min-w-0 truncate">{name}</span>
           {role === "owner" && (
-            <Badge variant="accent" size="sm">
+            <Badge variant="accent" size="sm" className="shrink-0">
               owner
             </Badge>
           )}
           {role === "admin" && (
-            <Badge variant="primary" size="sm">
+            <Badge variant="primary" size="sm" className="shrink-0">
               co-admin
             </Badge>
           )}
           {you && (
-            <Badge variant="neutral" size="sm">
+            <Badge variant="neutral" size="sm" className="shrink-0">
               you
             </Badge>
           )}
