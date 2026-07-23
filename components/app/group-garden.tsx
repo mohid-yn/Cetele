@@ -141,9 +141,13 @@ export function GroupGarden({
 
   return (
     <Card className={cn("overflow-hidden p-0", className)}>
+      {/* Hold the illustration's own aspect ratio (matching the viewBox) so it
+          scales proportionally with the card. A fixed height + `w-full` made a
+          wide desktop card ~5:1 against a 2.46:1 scene, so `slice` zoomed ~2.3x
+          and center-cropped the ground and plant bases into an empty sky. */}
       <svg
         viewBox="0 0 320 130"
-        className="block h-36 w-full"
+        className="block aspect-[320/130] w-full"
         role="img"
         aria-label={`Group garden — ${GARDEN_STAGE_LABEL[stage]}`}
         preserveAspectRatio="xMidYMid slice"
