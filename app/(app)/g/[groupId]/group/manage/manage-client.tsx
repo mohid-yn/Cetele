@@ -283,7 +283,7 @@ export function ManageClient({
     );
 
   return (
-    <div className="flex flex-col gap-6 px-4 pt-4 pb-6">
+    <div className="flex flex-col gap-6 px-5 pt-6 pb-8">
       <div>
         <Link
           href="/groups"

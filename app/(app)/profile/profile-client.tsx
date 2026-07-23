@@ -355,7 +355,7 @@ function ReminderRow({ task }: { task: ReminderTask }) {
           value={time}
           aria-label={`Reminder time for ${task.label}`}
           onChange={(e) => save(e.target.value, enabled)}
-          className="rounded-lg border border-border bg-background px-2 py-1 text-sm text-foreground tabular-nums"
+          className="h-9 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground tabular-nums"
         />
         <button
           type="button"

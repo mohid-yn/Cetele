@@ -90,7 +90,7 @@ export default async function GroupsHomePage() {
 
   if (noGroups) {
     return (
-      <div className="flex min-h-[70vh] flex-col justify-center gap-6 px-4 py-8">
+      <div className="flex flex-1 flex-col justify-center gap-6 px-5 py-8">
         <div className="text-center">
           <h1 className="font-display text-2xl font-bold text-foreground">
             Start your first circle
@@ -128,7 +128,7 @@ export default async function GroupsHomePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 px-4 pt-5 pb-6">
+    <div className="flex flex-col gap-6 px-5 pt-6 pb-8">
       <PageHeader
         title="Groups"
         subtitle="Circles you own or help run"

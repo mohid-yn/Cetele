@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui";
 /** Instant shell for /count while the server reads the task + my fortnight. */
 export default function CountLoading() {
   return (
-    <div className="flex flex-1 flex-col px-4 pt-4 pb-6">
+    <div className="flex flex-1 flex-col px-5 pt-5 pb-8">
       {/* Back / sound row */}
       <div className="flex items-center justify-between">
         <Skeleton className="h-8 w-20 rounded-lg" />

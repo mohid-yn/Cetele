@@ -186,7 +186,7 @@ export function CountClient({
         } else if (!justCompleted.current) {
           justCompleted.current = true;
           if (sound) playComplete();
-          celebrate({ title: "Ring closed! 🎉" });
+          celebrate({ title: "Ring closed!" });
         }
         router.refresh();
         return true;
@@ -222,7 +222,7 @@ export function CountClient({
     if (next >= task.target && !justCompleted.current) {
       justCompleted.current = true;
       if (sound) playComplete();
-      celebrate({ title: "Ring closed! 🎉" });
+      celebrate({ title: "Ring closed!" });
     }
   };
 
