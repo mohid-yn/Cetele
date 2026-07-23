@@ -127,6 +127,23 @@ A repeating component (a ring card, a badge tile) should lay out from the width 
 
 `--shadow-xs sm md lg xl` → `shadow-*` — soft, neutral-tinted for a clean lift on white. Cards `sm`; menus/popovers `md`–`lg`; modals `xl`.
 
+### Depth
+
+Emphasis surfaces beyond the shadow ladder. **One hero per screen** — depth is hierarchy, not decoration.
+
+| Token                        | Use                                                                                      |
+| ---------------------------- | ---------------------------------------------------------------------------------------- |
+| `--gradient-hero`            | The screen's single emphasis surface. `bg-[image:var(--gradient-hero)]`.                 |
+| `--gradient-hero-sheen`      | Optional light wash, overlaid as its own absolutely-positioned layer.                    |
+| `--gradient-hero-foreground` | **Text on the hero.** See the trap below.                                                |
+| `--glow-primary`             | Emerald rim + drop — promotes the one thing to continue. `shadow-[var(--glow-primary)]`. |
+| `--glow-accent`              | Gold rim — **earned only** (an earned badge), never decoration.                          |
+| `--surface-raised`           | Faint emerald-tinted card for secondary heroes. `bg-[var(--surface-raised)]`.            |
+
+> **Trap:** use `--gradient-hero-foreground`, never `text-primary-foreground`, for text on the hero. On dark, `--primary` is the _light_ emerald, so `--primary-foreground` is near-black — invisible against these deep stops. The dedicated token measures **5.48:1** (light, lightest stop) and **6.37:1** (dark), so body text passes AA across the whole ramp.
+
+On dark, all six drop a step and the glows lose their coloured drop: depth on dark comes from lighter surfaces + a visible rim, not shadow.
+
 ### Motion
 
 `--duration-fast|base|slow` (150/220/360ms), `--ease-brand` (entrances), `--ease-spring` (celebration only). Respect `prefers-reduced-motion`.

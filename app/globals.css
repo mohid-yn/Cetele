@@ -190,6 +190,34 @@
   --info: #2563eb;
   --info-foreground: #ffffff;
 
+  /* ---- Depth (hero surfaces, glows, raised fills) ----
+     One emphasis surface per screen sits on --gradient-hero; the sheen is a
+     separate layer so it can be overlaid without a second colour stop list.
+     Contrast: white on primary-700 ≈ 5.5:1 and darkens to ≈10:1 at primary-900,
+     so body text passes AA across the whole ramp. Use --gradient-hero-foreground
+     (NOT --primary-foreground) for text on it — on dark, --primary-foreground is
+     near-black (dark's --primary is the *light* emerald), which would vanish
+     against these deep stops. Reference as bg-[image:var(--gradient-hero)],
+     shadow-[var(--glow-accent)], bg-[var(--surface-raised)]. */
+  --gradient-hero: linear-gradient(
+    135deg,
+    var(--color-primary-700) 0%,
+    var(--color-primary-800) 55%,
+    var(--color-primary-900) 100%
+  );
+  --gradient-hero-sheen: radial-gradient(
+    120% 100% at 100% 0%,
+    rgb(255 255 255 / 0.12),
+    transparent 60%
+  );
+  --gradient-hero-foreground: #ffffff;
+  --glow-primary:
+    0 0 0 1px var(--color-primary-600), 0 8px 24px -8px var(--color-primary-700);
+  --glow-accent:
+    0 0 0 1px var(--color-accent-500), 0 8px 24px -8px var(--color-accent-600);
+  /* faint emerald-tinted card for secondary heroes / earned surfaces */
+  --surface-raised: color-mix(in oklab, var(--card) 92%, var(--primary) 8%);
+
   /* ---- Layout & layering (use via z-[var(--z-modal)], max-w-[var(--container-page)]) ---- */
   --container-page: 64rem;
   --z-base: 0;
@@ -238,6 +266,33 @@
   --danger-foreground: #2a0a0a;
   --info: #60a5fa;
   --info-foreground: #061122;
+
+  /* ---- Depth · dark mirror ----
+     The hero keeps deep emerald stops (they read as a lit surface against the
+     brown page) but drops a step so it stays *above* the background rather than
+     punching a hole in it. Text on it is the warm off-white (≈8:1 on
+     primary-800), never --primary-foreground, which is near-black on dark.
+     The sheen halves — a 12% white wash glares on a dark field. Glows lose their
+     coloured drop (shadows barely register here) and keep the 1px rim, which is
+     what actually separates a surface on dark; --surface-raised leans harder on
+     the emerald tint for the same reason. */
+  --gradient-hero: linear-gradient(
+    135deg,
+    var(--color-primary-800) 0%,
+    var(--color-primary-900) 60%,
+    var(--color-primary-950) 100%
+  );
+  --gradient-hero-sheen: radial-gradient(
+    120% 100% at 100% 0%,
+    rgb(255 255 255 / 0.06),
+    transparent 60%
+  );
+  --gradient-hero-foreground: #f0e9dd;
+  --glow-primary:
+    0 0 0 1px var(--color-primary-700), 0 8px 24px -10px rgb(0 0 0 / 0.8);
+  --glow-accent:
+    0 0 0 1px var(--color-accent-600), 0 8px 24px -10px rgb(0 0 0 / 0.8);
+  --surface-raised: color-mix(in oklab, var(--card) 85%, var(--primary) 15%);
   /* NB: elevation on dark comes from the surface ladder above (lighter = raised)
      + the visible --border, not shadows — the soft slate shadow tokens are
      near-invisible on a dark field, and Tailwind v4 inlines them per-utility so

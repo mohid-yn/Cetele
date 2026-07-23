@@ -140,6 +140,7 @@ const NAV = [
   ["Spacing", "spacing"],
   ["Radii", "radii"],
   ["Elevation", "elevation"],
+  ["Depth", "depth"],
   ["Buttons", "buttons"],
   ["Badges", "badges"],
   ["Forms", "forms"],
@@ -362,6 +363,72 @@ export default function DesignSystemPage() {
                 <p className="font-mono text-xs text-muted-foreground">{s}</p>
               </div>
             ))}
+          </div>
+        </Section>
+
+        {/* DEPTH */}
+        <Section
+          id="depth"
+          title="Depth"
+          description="Hero surfaces, glows and raised fills. One hero per screen. Text on the hero gradient uses --gradient-hero-foreground — not --primary-foreground, which is near-black on dark."
+        >
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <div
+                  className="relative grid h-28 place-items-center overflow-hidden rounded-3xl shadow-lg"
+                  style={{ backgroundImage: "var(--gradient-hero)" }}
+                >
+                  <div
+                    className="absolute inset-0"
+                    style={{ backgroundImage: "var(--gradient-hero-sheen)" }}
+                    aria-hidden
+                  />
+                  <span
+                    className="relative font-display text-lg font-semibold"
+                    style={{ color: "var(--gradient-hero-foreground)" }}
+                  >
+                    Hero surface
+                  </span>
+                </div>
+                <p className="font-mono text-[11px] text-muted-foreground">
+                  --gradient-hero + --gradient-hero-sheen
+                </p>
+              </div>
+              <div className="space-y-2">
+                <div
+                  className="grid h-28 place-items-center rounded-3xl border border-border"
+                  style={{ background: "var(--surface-raised)" }}
+                >
+                  <span className="font-display text-lg font-semibold text-foreground">
+                    Raised surface
+                  </span>
+                </div>
+                <p className="font-mono text-[11px] text-muted-foreground">
+                  --surface-raised
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-6">
+              <div className="space-y-2 text-center">
+                <div
+                  className="size-24 rounded-xl bg-card"
+                  style={{ boxShadow: "var(--glow-primary)" }}
+                />
+                <p className="font-mono text-xs text-muted-foreground">
+                  --glow-primary
+                </p>
+              </div>
+              <div className="space-y-2 text-center">
+                <div
+                  className="size-24 rounded-xl bg-card"
+                  style={{ boxShadow: "var(--glow-accent)" }}
+                />
+                <p className="font-mono text-xs text-muted-foreground">
+                  --glow-accent
+                </p>
+              </div>
+            </div>
           </div>
         </Section>
 
