@@ -22,7 +22,7 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui";
+import { Badge, Eyebrow } from "@/components/ui";
 import { ChevronDownIcon, CheckIcon, GridIcon } from "@/components/app/icons";
 import { groupHref, groupSubPath } from "@/lib/group-href";
 import { useActiveGroupId } from "@/lib/use-active-group";
@@ -115,9 +115,7 @@ export function GroupSwitcher({
       style={{ position: "fixed", top: coords.top, left: coords.left }}
       className="z-[var(--z-modal)] min-w-[14rem] rounded-xl border border-border bg-card p-1 shadow-lg"
     >
-      <p className="px-2.5 py-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        Switch group
-      </p>
+      <Eyebrow className="px-2.5 py-1.5">Switch group</Eyebrow>
       {groups.map((g) => {
         const activeOne = g.id === activeId;
         return (

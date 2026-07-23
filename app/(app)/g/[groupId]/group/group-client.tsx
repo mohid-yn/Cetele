@@ -9,6 +9,7 @@ import {
   Button,
   ConfirmDialog,
   Dialog,
+  ProgressBar,
   Screen,
   Stack,
   buttonVariants,
@@ -252,12 +253,7 @@ export function GroupClient({
                     {groupConsistency90}%
                   </span>
                 </div>
-                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
-                    style={{ width: `${groupConsistency90}%` }}
-                  />
-                </div>
+                <ProgressBar value={groupConsistency90} className="mt-3" />
               </section>
 
               <section>
@@ -288,15 +284,10 @@ export function GroupClient({
                               {total.toLocaleString()} / {goal.toLocaleString()}
                             </span>
                           </div>
-                          <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className={cn(
-                                "h-full rounded-full transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]",
-                                met ? "bg-success" : "bg-primary",
-                              )}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
+                          <ProgressBar
+                            value={pct}
+                            tone={met ? "success" : "primary"}
+                          />
                         </li>
                       );
                     })}

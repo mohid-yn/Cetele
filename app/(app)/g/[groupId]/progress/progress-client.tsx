@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Card, CardContent, Screen } from "@/components/ui";
+import { Badge, Card, CardContent, ProgressBar, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { BadgesGrid, type EarnedBadge } from "@/components/app/badges";
@@ -111,12 +111,7 @@ export function ProgressClient({
             {band}%
           </span>
         </div>
-        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
-            style={{ width: `${band}%` }}
-          />
-        </div>
+        <ProgressBar value={band} className="mt-3" />
         <p className="mt-2 text-xs text-muted-foreground">
           {bandFull} of the last {bandWindow} days fully completed.
         </p>

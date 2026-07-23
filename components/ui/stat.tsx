@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Eyebrow } from "./eyebrow";
 
 export interface StatProps extends React.HTMLAttributes<HTMLDivElement> {
   label: string;
@@ -21,9 +22,7 @@ export function Stat({
 }: StatProps) {
   return (
     <div className={cn("flex flex-col gap-0.5", className)} {...props}>
-      <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </span>
+      <Eyebrow as="span">{label}</Eyebrow>
       <span className="flex items-center gap-1.5 font-display text-3xl leading-none font-bold text-foreground tabular-nums">
         {icon}
         {value}

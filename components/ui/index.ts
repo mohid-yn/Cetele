@@ -13,6 +13,10 @@ export { Badge, badgeVariants, type BadgeProps } from "./badge";
 export { Input, Label, Field, type FieldProps } from "./input";
 export { Avatar, avatarVariants, type AvatarProps } from "./avatar";
 export { ProgressRing, type ProgressRingProps } from "./progress-ring";
+export { ProgressBar, type ProgressBarProps } from "./progress-bar";
+export { StatRing, type StatRingProps } from "./stat-ring";
+export { HeroCard, HeroChip, type HeroCardProps } from "./hero-card";
+export { Eyebrow, type EyebrowProps } from "./eyebrow";
 export { Stat, type StatProps } from "./stat";
 export { Spinner } from "./spinner";
 export {

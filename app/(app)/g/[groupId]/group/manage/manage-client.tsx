@@ -7,6 +7,7 @@ import {
   Badge,
   Button,
   Card,
+  Eyebrow,
   Field,
   Input,
   ConfirmDialog,
@@ -449,9 +450,7 @@ export function ManageClient({
 
           {invites.length > 0 && (
             <div className="flex flex-col gap-3 border-t border-border pt-3">
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Active invites ({invites.length})
-              </p>
+              <Eyebrow>Active invites ({invites.length})</Eyebrow>
               {invites.map((i) => (
                 <div key={i.id} className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2 text-sm">

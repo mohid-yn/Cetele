@@ -13,7 +13,7 @@
  */
 
 import Link from "next/link";
-import { Card, buttonVariants } from "@/components/ui";
+import { Card, ProgressBar, buttonVariants } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 export function WelcomeCard({
@@ -44,16 +44,12 @@ export function WelcomeCard({
             </span>{" "}
             of today together, and you&apos;re part of it now.
           </p>
-          <div
-            className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted"
+          <ProgressBar
+            value={collectivePct}
+            className="mt-3"
             role="img"
             aria-label={`The circle is ${collectivePct}% toward today's goal`}
-          >
-            <div
-              className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
-              style={{ width: `${Math.min(100, collectivePct)}%` }}
-            />
-          </div>
+          />
           <p className="mt-2 text-xs text-muted-foreground">
             Close your first ring to add to it.
           </p>

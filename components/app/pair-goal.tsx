@@ -10,7 +10,7 @@
  * days-active figures are the ones Standings (M5) already computes.
  */
 
-import { Avatar, Card } from "@/components/ui";
+import { Avatar, Card, ProgressBar } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 export type Pair = {
@@ -50,15 +50,7 @@ export function PairGoal({ pair }: { pair: Pair }) {
         </span>
       </div>
 
-      <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-        <div
-          className={cn(
-            "h-full rounded-full transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]",
-            met ? "bg-success" : "bg-primary",
-          )}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <ProgressBar value={pct} tone={met ? "success" : "primary"} />
 
       <p className="mt-2 text-xs text-muted-foreground">
         {met ? (

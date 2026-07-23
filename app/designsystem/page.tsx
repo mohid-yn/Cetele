@@ -9,11 +9,16 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  Eyebrow,
   Field,
+  HeroCard,
+  HeroChip,
   Input,
+  ProgressBar,
   ProgressRing,
   Spinner,
   Stat,
+  StatRing,
 } from "@/components/ui";
 import { RingDemo } from "./ring-demo";
 import { AppIconLogo, WebAppLogo } from "@/components/ui/logo";
@@ -146,6 +151,7 @@ const NAV = [
   ["Forms", "forms"],
   ["Avatars", "avatars"],
   ["Progress", "progress"],
+  ["Patterns", "patterns"],
   ["Stats", "stats"],
 ] as const;
 
@@ -543,6 +549,54 @@ export default function DesignSystemPage() {
                 </ProgressRing>
                 <span className="text-xs text-muted-foreground">Complete</span>
               </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* PATTERNS */}
+        <Section
+          id="patterns"
+          title="Patterns"
+          description="Compositions built from the tokens above. Reach for these before hand-rolling — each one replaced a treatment that had drifted across several call sites."
+        >
+          <div className="space-y-8">
+            <div className="space-y-3">
+              <Eyebrow>HeroCard — one emphasis surface per screen</Eyebrow>
+              <HeroCard
+                medallion={<span className="text-2xl">🔥</span>}
+                label="Current streak"
+                stat="12 days"
+                caption="Your longest run yet — keep it alive."
+                trailing={<HeroChip>Best 12</HeroChip>}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Eyebrow>StatRing — a hero-sized ProgressRing</Eyebrow>
+              <div className="flex flex-wrap items-center gap-8">
+                <StatRing value={68} max={100} stat="68%" caption="today" />
+                <StatRing
+                  value={100}
+                  max={100}
+                  stat="100%"
+                  caption="complete"
+                />
+              </div>
+            </div>
+
+            <div className="max-w-md space-y-3">
+              <Eyebrow>
+                ProgressBar — primary and the &ldquo;met&rdquo; tone
+              </Eyebrow>
+              <ProgressBar value={42} />
+              <ProgressBar value={100} tone="success" />
+            </div>
+
+            <div className="space-y-3">
+              <Eyebrow>Eyebrow — the section label itself</Eyebrow>
+              <p className="text-sm text-muted-foreground">
+                Every small uppercase label above is this component.
+              </p>
             </div>
           </div>
         </Section>
