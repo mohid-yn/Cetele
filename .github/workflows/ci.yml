@@ -73,7 +73,23 @@ jobs:
           version: latest
 
       - name: Start Supabase stack (fresh migration replay + seed)
-        run: supabase start -x studio,imgproxy,vector,logflare
+        # `supabase start` intermittently fails to bind a container port on the
+        # GitHub runner (a Docker-networking race — seen as inbucket's
+        # `0.0.0.0:54324 address already in use`). It's non-deterministic: the
+        # same commit passes on a branch run and fails on main. Retry with a full
+        # teardown between attempts so a half-started stack can't keep the port.
+        run: |
+          for attempt in 1 2 3; do
+            if supabase start -x studio,imgproxy,vector,logflare; then
+              echo "Supabase stack up (attempt $attempt)."
+              exit 0
+            fi
+            echo "::warning::supabase start failed on attempt $attempt — tearing down and retrying"
+            supabase stop --no-backup || true
+            sleep 5
+          done
+          echo "::error::supabase start failed after 3 attempts"
+          exit 1
 
       - name: RLS + grants tests (pgTAP)
         run: supabase test db
