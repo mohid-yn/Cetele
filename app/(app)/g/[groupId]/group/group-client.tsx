@@ -10,6 +10,7 @@ import {
   ConfirmDialog,
   Dialog,
   Screen,
+  Stack,
   buttonVariants,
   cardVariants,
 } from "@/components/ui";
@@ -212,144 +213,150 @@ export function GroupClient({
         {/* ---- Overview: the live collective progress ---- */}
         {tab === "overview" && (
           <motion.div key="overview" {...panel}>
-            {/* The circle's garden (CET-17) — the emotional layer, leading the
-              tab: it's the one thing here that isn't a number. */}
-            <GroupGarden garden={garden} />
+            <Stack>
+              {/* The circle's garden (CET-17) — the emotional layer, leading the
+                tab: it's the one thing here that isn't a number. */}
+              <GroupGarden garden={garden} />
 
-            <section className={cardVariants({ padding: "md" })}>
-              <p className="text-sm text-muted-foreground">
-                <span
-                  aria-hidden
-                  className="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-success align-middle"
-                />
-                The circle today
-              </p>
-              <p className="mt-1 font-display text-4xl font-bold text-foreground tabular-nums">
-                {collectivePct}%
-              </p>
-              <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">
-                {/* One expression, not text-around-expressions: JSX drops the
-                    space at a line break, which rendered "100toward". */}
-                {`${collectiveTotal.toLocaleString()} of ${collectiveGoal.toLocaleString()} toward today\u2019s goal`}
-              </p>
-            </section>
-
-            {/* M6 — the durable North Star (90-day collective consistency) */}
-            <section className={cardVariants({ padding: "md" })}>
-              <div className="flex items-baseline justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    Steadfast together · 90 days
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    The circle&rsquo;s share of fully-completed days — the
-                    number we grow.
-                  </p>
-                </div>
-                <span className="font-display text-3xl font-bold text-primary tabular-nums">
-                  {groupConsistency90}%
-                </span>
-              </div>
-              <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
-                  style={{ width: `${groupConsistency90}%` }}
-                />
-              </div>
-            </section>
-
-            <section>
-              <SectionHeading>Collective progress</SectionHeading>
-              {taskTotals.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-                  No tasks yet.
+              <section className={cardVariants({ padding: "md" })}>
+                <p className="text-sm text-muted-foreground">
+                  <span
+                    aria-hidden
+                    className="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-success align-middle"
+                  />
+                  The circle today
                 </p>
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {taskTotals.map(({ taskId, label, total, goal }) => {
-                    const pct =
-                      goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
-                    const met = goal > 0 && total >= goal;
-                    return (
-                      <li key={taskId}>
-                        <div className="mb-1 flex items-baseline justify-between text-sm">
-                          <span className="flex items-center gap-1.5 font-medium text-foreground">
-                            {label}
-                            {met && (
-                              <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
-                                <CheckIcon className="size-3.5" />
-                                met
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-muted-foreground tabular-nums">
-                            {total.toLocaleString()} / {goal.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={cn(
-                              "h-full rounded-full transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]",
-                              met ? "bg-success" : "bg-primary",
-                            )}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
+                <p className="mt-1 font-display text-4xl font-bold text-foreground tabular-nums">
+                  {collectivePct}%
+                </p>
+                <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">
+                  {/* One expression, not text-around-expressions: JSX drops the
+                    space at a line break, which rendered "100toward". */}
+                  {`${collectiveTotal.toLocaleString()} of ${collectiveGoal.toLocaleString()} toward today\u2019s goal`}
+                </p>
+              </section>
+
+              {/* M6 — the durable North Star (90-day collective consistency) */}
+              <section className={cardVariants({ padding: "md" })}>
+                <div className="flex items-baseline justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      Steadfast together · 90 days
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      The circle&rsquo;s share of fully-completed days — the
+                      number we grow.
+                    </p>
+                  </div>
+                  <span className="font-display text-3xl font-bold text-primary tabular-nums">
+                    {groupConsistency90}%
+                  </span>
+                </div>
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
+                    style={{ width: `${groupConsistency90}%` }}
+                  />
+                </div>
+              </section>
+
+              <section>
+                <SectionHeading>Collective progress</SectionHeading>
+                {taskTotals.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+                    No tasks yet.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-3">
+                    {taskTotals.map(({ taskId, label, total, goal }) => {
+                      const pct =
+                        goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
+                      const met = goal > 0 && total >= goal;
+                      return (
+                        <li key={taskId}>
+                          <div className="mb-1 flex items-baseline justify-between text-sm">
+                            <span className="flex items-center gap-1.5 font-medium text-foreground">
+                              {label}
+                              {met && (
+                                <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
+                                  <CheckIcon className="size-3.5" />
+                                  met
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-muted-foreground tabular-nums">
+                              {total.toLocaleString()} / {goal.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-brand)]",
+                                met ? "bg-success" : "bg-primary",
+                              )}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+            </Stack>
           </motion.div>
         )}
 
         {/* ---- Standings: the (for-fun) weekly ranking ---- */}
         {tab === "standings" && (
           <motion.div key="standings" {...panel}>
-            {/* The pair goal (CET-22) leads the ranking, deliberately: a whole-
+            <Stack>
+              {/* The pair goal (CET-22) leads the ranking, deliberately: a whole-
               group leaderboard disheartens the bottom half, so the first thing
               you meet here is a goal you WIN TOGETHER rather than a rank. */}
-            {pair && <PairGoal pair={pair} />}
+              {pair && <PairGoal pair={pair} />}
 
-            <p className="text-xs text-muted-foreground">
-              The weekly ranking is for fun — showing up matters more than the
-              number. Ranked by days active this week, then total count.
-            </p>
-            <ol className="flex flex-col gap-2">
-              {standings.map((row, i) => (
-                <li
-                  key={row.userId}
-                  className={cn(
-                    "rounded-2xl border p-3 shadow-sm",
-                    row.isMe
-                      ? "border-accent-500/40 bg-accent-500/10"
-                      : "border-border bg-card",
-                  )}
-                >
-                  <MemberRow
-                    name={row.name}
-                    you={row.isMe}
-                    leading={
-                      <span className="w-7 shrink-0 text-center font-display text-lg font-bold text-muted-foreground tabular-nums">
-                        {i < 3 ? MEDALS[i] : i + 1}
-                      </span>
-                    }
-                    status={
-                      <span>{row.daysActive}/7 days active this week</span>
-                    }
-                    trailing={
-                      <div className="text-right">
-                        <p className="font-display text-base font-bold text-foreground tabular-nums">
-                          {row.total.toLocaleString()}
-                        </p>
-                        <p className="text-xs text-muted-foreground">counts</p>
-                      </div>
-                    }
-                  />
-                </li>
-              ))}
-            </ol>
+              <p className="text-xs text-muted-foreground">
+                The weekly ranking is for fun — showing up matters more than the
+                number. Ranked by days active this week, then total count.
+              </p>
+              <ol className="flex flex-col gap-2">
+                {standings.map((row, i) => (
+                  <li
+                    key={row.userId}
+                    className={cn(
+                      "rounded-2xl border p-3 shadow-sm",
+                      row.isMe
+                        ? "border-accent-500/40 bg-accent-500/10"
+                        : "border-border bg-card",
+                    )}
+                  >
+                    <MemberRow
+                      name={row.name}
+                      you={row.isMe}
+                      leading={
+                        <span className="w-7 shrink-0 text-center font-display text-lg font-bold text-muted-foreground tabular-nums">
+                          {i < 3 ? MEDALS[i] : i + 1}
+                        </span>
+                      }
+                      status={
+                        <span>{row.daysActive}/7 days active this week</span>
+                      }
+                      trailing={
+                        <div className="text-right">
+                          <p className="font-display text-base font-bold text-foreground tabular-nums">
+                            {row.total.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            counts
+                          </p>
+                        </div>
+                      }
+                    />
+                  </li>
+                ))}
+              </ol>
+            </Stack>
           </motion.div>
         )}
 

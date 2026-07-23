@@ -365,6 +365,17 @@ body {
   }
 }
 
+/* Hide the scrollbar on a horizontal chip strip (day picker, tab rows) — it
+   scrolls by touch/trackpad, and a native bar overlaps the chips on platforms
+   that render a classic (non-overlay) scrollbar. Content stays keyboard- and
+   wheel-scrollable; only the visual bar is suppressed. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Honour reduced-motion: keep meaning, drop the movement (a11y + worship-calm). */
 @media (prefers-reduced-motion: reduce) {
   *,

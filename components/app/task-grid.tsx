@@ -83,8 +83,19 @@ export function TaskGrid({
   const [draft, setDraft] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
 
-  const cols = `5.5rem repeat(${days}, minmax(0, 1fr))`;
+  // The grid now scrolls horizontally (cells are a real 44px tap target rather
+  // than a ~15px square you can't thumb), so open it scrolled to TODAY — the
+  // rightmost, most-logged day — instead of a fortnight ago.
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, []);
+
+  // Fixed 44px day columns (the tap-target floor), after the task-label column.
+  // Fixed, not `1fr`, so a thumb can land on one day; the row scrolls instead.
+  const cols = `5.5rem repeat(${days}, 2.75rem)`;
 
   function pick(taskId: string, taskLabel: string, c: GridCell) {
     setError(null);
@@ -135,50 +146,52 @@ export function TaskGrid({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        {rows.map((row) => (
+      <div ref={scrollRef} className="-m-1 no-scrollbar overflow-x-auto p-1">
+        <div className="flex w-max flex-col gap-1.5">
+          {rows.map((row) => (
+            <div
+              key={row.taskId}
+              className="grid items-center gap-1"
+              style={{ gridTemplateColumns: cols }}
+            >
+              <span className="sticky left-0 z-10 truncate bg-card pr-2 text-xs font-medium text-foreground">
+                {row.label}
+              </span>
+              {row.cells.map((c) => {
+                const isPicked =
+                  picked?.taskId === row.taskId && picked?.date === c.date;
+                return (
+                  <button
+                    key={c.date}
+                    type="button"
+                    onClick={() => pick(row.taskId, row.label, c)}
+                    title={`${fmtFull(c.date)} — ${c.count.toLocaleString()} / ${c.target.toLocaleString()}`}
+                    aria-label={`${row.label}, ${fmtFull(c.date)}: ${c.count} of ${c.target}`}
+                    className={cn(
+                      "grid aspect-square place-items-center rounded-md transition-transform hover:scale-105",
+                      cellClass(c.pct, c.count),
+                      isPicked &&
+                        "ring-2 ring-accent ring-offset-1 ring-offset-card",
+                    )}
+                  >
+                    {c.full && (
+                      <CheckIcon className="size-4 text-primary-foreground" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+          {/* Older → today caption under the grid */}
           <div
-            key={row.taskId}
-            className="grid items-center gap-1"
+            className="grid gap-1 text-[10px] text-muted-foreground"
             style={{ gridTemplateColumns: cols }}
+            aria-hidden
           >
-            <span className="truncate pr-1 text-xs font-medium text-foreground">
-              {row.label}
-            </span>
-            {row.cells.map((c) => {
-              const isPicked =
-                picked?.taskId === row.taskId && picked?.date === c.date;
-              return (
-                <button
-                  key={c.date}
-                  type="button"
-                  onClick={() => pick(row.taskId, row.label, c)}
-                  title={`${fmtFull(c.date)} — ${c.count.toLocaleString()} / ${c.target.toLocaleString()}`}
-                  aria-label={`${row.label}, ${fmtFull(c.date)}: ${c.count} of ${c.target}`}
-                  className={cn(
-                    "grid aspect-square place-items-center rounded-[3px] transition-transform hover:scale-110",
-                    cellClass(c.pct, c.count),
-                    isPicked &&
-                      "ring-2 ring-accent ring-offset-1 ring-offset-card",
-                  )}
-                >
-                  {c.full && (
-                    <CheckIcon className="size-2.5 text-primary-foreground" />
-                  )}
-                </button>
-              );
-            })}
+            <span />
+            <span className="col-span-7">{days} days ago</span>
+            <span className="col-span-7 text-right">today</span>
           </div>
-        ))}
-        {/* Older → today caption under the grid */}
-        <div
-          className="grid gap-1 text-[10px] text-muted-foreground"
-          style={{ gridTemplateColumns: cols }}
-          aria-hidden
-        >
-          <span />
-          <span className="col-span-7">{days} days ago</span>
-          <span className="col-span-7 text-right">today</span>
         </div>
       </div>
 
