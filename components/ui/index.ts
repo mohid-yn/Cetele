@@ -18,9 +18,12 @@ export { Spinner } from "./spinner";
 export {
   Stack,
   Row,
+  Grid,
   Screen,
+  gridVariants,
   type StackProps,
   type RowProps,
+  type GridProps,
   type Gap,
 } from "./layout";
 export { Skeleton } from "./skeleton";

@@ -94,11 +94,12 @@ retention-correct "done" colour. Map meaning once and never reassign it:
 
 4px base (`--spacing`, Tailwind scale). **Rhythm comes from the layout primitives, not from hand-picked utilities** — the previous "stick to `1 2 3 4 6 8 12 16`" rule was advisory and the codebase drifted to **58 distinct steps**, because nothing owned the decision.
 
-| Primitive  | Use                                                                                                                                          | Gap steps                                       |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `<Screen>` | The page wrapper for every in-app screen — one column, one rhythm, one set of edge paddings (`px-4 pt-5 pb-6`). Never re-write this by hand. | default `xl`                                    |
-| `<Stack>`  | Vertical rhythm inside a screen or card.                                                                                                     | `none xs sm md lg xl 2xl` → `gap-0/1/2/3/4/5/6` |
-| `<Row>`    | Horizontal cluster — icon + label, header actions, a chip group. Takes `wrap` so it degrades on narrow viewports.                            | same scale                                      |
+| Primitive  | Use                                                                                                                                              | Gap steps                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| `<Screen>` | The page wrapper for every in-app screen — one column, one rhythm, one set of edge paddings (`px-4 pt-5 pb-6`). Never re-write this by hand.     | default `xl`                                    |
+| `<Stack>`  | Vertical rhythm inside a screen or card.                                                                                                         | `none xs sm md lg xl 2xl` → `gap-0/1/2/3/4/5/6` |
+| `<Row>`    | Horizontal cluster — icon + label, header actions, a chip group. Takes `wrap` so it degrades on narrow viewports.                                | same scale                                      |
+| `<Grid>`   | A grid whose columns key off its **own slot**, not the window. `cols="cards"` (1 → 2) or `cols="tiles"` (3 → 6); `as="ul"` keeps list semantics. | same scale                                      |
 
 - **Card padding is a named ladder**, not a free choice: `<Card padding="compact|md|lg">` → `p-3` (dense row) / `p-5` (default content card) / `p-6` (emphasis). For a card that must be a link or a `<section>`, use `cardVariants({ padding })` — the same arrangement `buttonVariants` has.
 - Off-scale one-offs (`gap-2.5`, `mt-0.5` …) are legacy. Don't add more; convert when you touch a file.
@@ -110,6 +111,13 @@ A flex child defaults to `min-height: auto` — it **refuses to shrink below its
 - Any flex child that must shrink needs **`min-h-0`** (`<Stack scrollable>` sets it, with the overflow it implies).
 - Size to the viewport with `min()` / `clamp()` and `dvh`, not fixed px + breakpoints: the ring is `min(16rem, 28dvh)`, so tall screens keep the full size and short ones shrink instead of pushing the primary action off-screen.
 - The app shell owns one scroll region (`lib/app-scroll`). The bottom nav is a **sibling** of it, never over it, so no screen has to reserve space for the nav.
+
+### Container queries — respond to the slot, not the window
+
+A repeating component (a ring card, a badge tile) should lay out from the width of **the box it sits in**, not the browser window — so the same component compacts in a narrow card and fills in a wide slot, with no window breakpoint deciding it from afar. Prefer `<Grid>` over a hand-rolled `grid grid-cols-… lg:grid-cols-…`; the primitive owns the column scale so screens can't re-invent it.
+
+- **An element can't container-query its own size.** `<Grid>` therefore wraps the grid in a `@container` context and puts the `@`-variants on the grid inside. If you must hand-roll (e.g. the grid _is_ a styled surface), mark an ancestor `@container` and use `@sm:`/`@lg:` on the grid — never `sm:`/`lg:`, which key off the window.
+- Container breakpoints are Tailwind v4 defaults (`@sm` 24rem, `@lg` 32rem …) and need **no plugin**. They read the nearest ancestor `@container`.
 
 ### Radii
 

@@ -113,6 +113,58 @@ export const Row = React.forwardRef<HTMLDivElement, RowProps>(
 );
 Row.displayName = "Row";
 
+const gridVariants = cva("grid", {
+  variants: {
+    gap: GAP,
+    /**
+     * Column steps keyed to the grid's OWN slot width (a container query), never
+     * the window. Names describe the content whose comfortable width dictates
+     * the step, not a pixel breakpoint.
+     */
+    cols: {
+      /** Wide cards (a ring row, a summary): one column, two once the slot is roomy. */
+      cards: "grid-cols-1 @lg:grid-cols-2",
+      /** Small fixed tiles (badges): three, six once the slot is roomy. */
+      tiles: "grid-cols-3 @sm:grid-cols-6",
+    },
+  },
+  defaultVariants: { gap: "md", cols: "cards" },
+});
+
+export { gridVariants };
+
+export interface GridProps
+  extends
+    Omit<React.HTMLAttributes<HTMLDivElement>, "color">,
+    VariantProps<typeof gridVariants> {
+  /** The grid element itself. Defaults to `div`; pass `ul`/`ol` to keep list
+   *  semantics for a list of cards. */
+  as?: React.ElementType;
+}
+
+/**
+ * A grid whose column count responds to its OWN slot, not the window.
+ *
+ * An element can't container-query its own size, so the wrapper carries the
+ * container context and the grid inside reads it. That's the whole point: drop
+ * a `Grid` in a narrow card and it compacts; drop it in a wide slot and it
+ * fills — the same component, no window breakpoints leaking layout decisions
+ * across the app. Column steps come from the named `cols` scale, gaps from the
+ * shared spacing scale.
+ */
+export const Grid = React.forwardRef<HTMLDivElement, GridProps>(
+  ({ className, gap, cols, as: Comp = "div", ...props }, ref) => (
+    <div className="@container">
+      <Comp
+        ref={ref}
+        className={cn(gridVariants({ gap, cols }), className)}
+        {...props}
+      />
+    </div>
+  ),
+);
+Grid.displayName = "Grid";
+
 /**
  * The page wrapper every in-app screen sits in: one column, one rhythm, one
  * set of edge paddings. Screens describe their content; the frame owns the

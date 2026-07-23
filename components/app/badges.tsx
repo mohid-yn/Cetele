@@ -11,7 +11,7 @@
  * Presentational — the catalog and the earned dates both come from the DB.
  */
 
-import { Card } from "@/components/ui";
+import { Grid, cardVariants } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 export type EarnedBadge = {
@@ -43,7 +43,7 @@ export function BadgesGrid({ badges }: { badges: EarnedBadge[] }) {
         </span>
       </div>
 
-      <Card className="grid grid-cols-3 gap-3 p-4 sm:grid-cols-6">
+      <Grid cols="tiles" gap="md" className={cardVariants({ padding: "md" })}>
         {badges.map((b) => (
           <div
             key={b.id}
@@ -77,7 +77,7 @@ export function BadgesGrid({ badges }: { badges: EarnedBadge[] }) {
             )}
           </div>
         ))}
-      </Card>
+      </Grid>
     </section>
   );
 }

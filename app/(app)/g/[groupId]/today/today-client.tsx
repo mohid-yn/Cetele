@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Grid,
   ProgressRing,
   Screen,
   buttonVariants,
@@ -201,7 +202,7 @@ export function TodayClient({
         <SectionHeading action="tap to count">
           {isToday ? "Your rings today" : "Your rings"}
         </SectionHeading>
-        <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+        <Grid as="ul" cols="cards" gap="md">
           {rings.map(({ task: t, count, done }) => (
             <li key={t.id}>
               <Link
@@ -258,7 +259,7 @@ export function TodayClient({
               .
             </li>
           )}
-        </ul>
+        </Grid>
         {isToday && tasks.length > 0 && (
           <p className="mt-2.5 text-xs text-muted-foreground">
             <span
