@@ -21,7 +21,7 @@ export function PageHeader({
 }) {
   return (
     <header className={cn("flex items-start justify-between gap-3", className)}>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         {typeof title === "string" ? (
           <h1 className="font-display text-2xl font-bold text-foreground">
             {title}

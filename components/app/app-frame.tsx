@@ -46,7 +46,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
           id={APP_SCROLL_ID}
           className="flex min-h-0 flex-1 flex-col overflow-y-auto"
         >
-          <div className="mx-auto flex w-full max-w-[28rem] flex-1 flex-col lg:max-w-3xl">
+          <div className="mx-auto flex w-full max-w-[28rem] flex-1 flex-col lg:max-w-[var(--container-page)]">
             {children}
           </div>
         </main>

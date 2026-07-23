@@ -93,9 +93,10 @@ export function TaskGrid({
     if (el) el.scrollLeft = el.scrollWidth;
   }, []);
 
-  // Fixed 44px day columns (the tap-target floor), after the task-label column.
-  // Fixed, not `1fr`, so a thumb can land on one day; the row scrolls instead.
-  const cols = `5.5rem repeat(${days}, 2.75rem)`;
+  // Fixed 44px day columns (the tap-target floor). Fixed, not `1fr`, so a thumb
+  // can land on one day; the row scrolls instead. The task label now lives in a
+  // separate non-scrolling column, so this drives only the cells.
+  const cellCols = `repeat(${days}, 2.75rem)`;
 
   function pick(taskId: string, taskLabel: string, c: GridCell) {
     setError(null);
@@ -146,51 +147,68 @@ export function TaskGrid({
 
   return (
     <div className="flex flex-col gap-4">
-      <div ref={scrollRef} className="-m-1 no-scrollbar overflow-x-auto p-1">
-        <div className="flex w-max flex-col gap-1.5">
+      {/* A fixed label column that never scrolls, beside a cells region that does —
+          so a long task name can never paint over the day squares (the old sticky
+          column floated the label over the cells). Row heights match: h-11 == the
+          2.75rem aspect-square cell, gap-1.5 on both, so labels line up with rows. */}
+      <div className="flex gap-2">
+        <div className="flex shrink-0 flex-col gap-1.5">
           {rows.map((row) => (
             <div
               key={row.taskId}
-              className="grid items-center gap-1"
-              style={{ gridTemplateColumns: cols }}
+              className="flex h-11 max-w-[7.5rem] items-center pr-1"
             >
-              <span className="sticky left-0 z-10 truncate bg-card pr-2 text-xs font-medium text-foreground">
+              <span className="truncate text-xs font-medium text-foreground">
                 {row.label}
               </span>
-              {row.cells.map((c) => {
-                const isPicked =
-                  picked?.taskId === row.taskId && picked?.date === c.date;
-                return (
-                  <button
-                    key={c.date}
-                    type="button"
-                    onClick={() => pick(row.taskId, row.label, c)}
-                    title={`${fmtFull(c.date)} — ${c.count.toLocaleString()} / ${c.target.toLocaleString()}`}
-                    aria-label={`${row.label}, ${fmtFull(c.date)}: ${c.count} of ${c.target}`}
-                    className={cn(
-                      "grid aspect-square place-items-center rounded-md transition-transform hover:scale-105",
-                      cellClass(c.pct, c.count),
-                      isPicked &&
-                        "ring-2 ring-accent ring-offset-1 ring-offset-card",
-                    )}
-                  >
-                    {c.full && (
-                      <CheckIcon className="size-4 text-primary-foreground" />
-                    )}
-                  </button>
-                );
-              })}
             </div>
           ))}
-          {/* Older → today caption under the grid */}
-          <div
-            className="grid gap-1 text-[10px] text-muted-foreground"
-            style={{ gridTemplateColumns: cols }}
-            aria-hidden
-          >
-            <span />
-            <span className="col-span-7">{days} days ago</span>
-            <span className="col-span-7 text-right">today</span>
+          {/* spacer aligned to the caption row on the right */}
+          <div className="h-4" aria-hidden />
+        </div>
+
+        <div ref={scrollRef} className="-m-1 no-scrollbar overflow-x-auto p-1">
+          <div className="flex w-max flex-col gap-1.5">
+            {rows.map((row) => (
+              <div
+                key={row.taskId}
+                className="grid h-11 items-center gap-1"
+                style={{ gridTemplateColumns: cellCols }}
+              >
+                {row.cells.map((c) => {
+                  const isPicked =
+                    picked?.taskId === row.taskId && picked?.date === c.date;
+                  return (
+                    <button
+                      key={c.date}
+                      type="button"
+                      onClick={() => pick(row.taskId, row.label, c)}
+                      title={`${fmtFull(c.date)} — ${c.count.toLocaleString()} / ${c.target.toLocaleString()}`}
+                      aria-label={`${row.label}, ${fmtFull(c.date)}: ${c.count} of ${c.target}`}
+                      className={cn(
+                        "grid aspect-square place-items-center rounded-md transition-transform hover:scale-105",
+                        cellClass(c.pct, c.count),
+                        isPicked &&
+                          "ring-2 ring-accent ring-offset-1 ring-offset-card",
+                      )}
+                    >
+                      {c.full && (
+                        <CheckIcon className="size-4 text-primary-foreground" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+            {/* Older → today caption under the grid */}
+            <div
+              className="grid gap-1 text-[10px] text-muted-foreground"
+              style={{ gridTemplateColumns: cellCols }}
+              aria-hidden
+            >
+              <span className="col-span-7">{days} days ago</span>
+              <span className="col-span-7 text-right">today</span>
+            </div>
           </div>
         </div>
       </div>
