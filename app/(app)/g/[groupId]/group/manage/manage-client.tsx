@@ -292,9 +292,11 @@ export function ManageClient({
   return (
     <div className="flex flex-col gap-6 px-5 pt-6 pb-8 lg:px-8">
       <div>
+        {/* -ml-2 + py-2 so the tap area clears 44px without visually indenting
+            the label from the h1 below it. */}
         <Link
           href="/groups"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="-ml-2 inline-flex min-h-11 items-center gap-1.5 px-2 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" /> Back
         </Link>

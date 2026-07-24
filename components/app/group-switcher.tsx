@@ -186,7 +186,8 @@ export function GroupSwitcher({
           // max-w-full + min-w-0 are what let the inner `truncate` engage: without
           // them the button grows past the header's title column and a long circle
           // name runs underneath the header actions.
-          "inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-lg text-foreground transition-colors hover:bg-muted",
+          // min-h-11 = 44px tap target; the text-2xl title only stood 36px tall.
+          "inline-flex min-h-11 max-w-full min-w-0 items-center gap-1.5 rounded-lg text-foreground transition-colors hover:bg-muted",
           className,
         )}
       >

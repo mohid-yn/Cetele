@@ -60,7 +60,10 @@ export function DayStrip({
               aria-pressed={active}
               onClick={() => onChange(d)}
               className={cn(
-                "flex shrink-0 flex-col items-center gap-0.5 rounded-xl border px-2.5 py-1.5 transition-colors",
+                // min-w-11 = 44px. Cells were 38-43px wide (px-2.5 around a
+                // 1-2 digit day number); tall enough already. In a horizontal
+                // scroller, so a wider cell costs nothing but scroll length.
+                "flex min-w-11 shrink-0 flex-col items-center gap-0.5 rounded-xl border px-2.5 py-1.5 transition-colors",
                 active
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card text-muted-foreground hover:bg-muted",

@@ -57,7 +57,10 @@ export function ThemeToggle({ className }: { className?: string }) {
             aria-checked={active}
             onClick={() => setTheme(value)}
             className={cn(
-              "relative z-10 flex items-center justify-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-[var(--duration-fast)]",
+              // min-h-11 = 44px (was 32px, py-1.5). The two radios tile a
+              // 2-col grid edge to edge, so height can't crowd a neighbour, and
+              // the sliding thumb is inset-y-1 so it tracks the new height.
+              "relative z-10 flex min-h-11 items-center justify-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors duration-[var(--duration-fast)]",
               active
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground",
