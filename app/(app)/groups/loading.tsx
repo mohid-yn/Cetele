@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui";
 /** Instant shell for /groups while the server reads your memberships. */
 export default function GroupsLoading() {
   return (
-    <div className="flex flex-col gap-6 px-5 pt-6 pb-8">
+    <div className="flex flex-col gap-6 px-5 pt-6 pb-8 lg:px-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-2">

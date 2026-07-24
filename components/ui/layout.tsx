@@ -178,7 +178,11 @@ export const Screen = React.forwardRef<
   <Stack
     ref={ref}
     gap={gap}
-    className={cn("flex-1", padded && "px-5 pt-6 pb-8", className)}
+    // Edge padding steps up on desktop: once the column is allowed to fill a
+    // large monitor, 20px leaves the cards sitting almost on the edge. Keep
+    // this in sync with the four screens that hand-roll the same padding
+    // (groups, groups/loading, group/manage, manage/loading).
+    className={cn("flex-1", padded && "px-5 pt-6 pb-8 lg:px-8", className)}
     {...props}
   />
 ));

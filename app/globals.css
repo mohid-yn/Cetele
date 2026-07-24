@@ -218,7 +218,15 @@
   /* faint emerald-tinted card for secondary heroes / earned surfaces */
   --surface-raised: color-mix(in oklab, var(--card) 92%, var(--primary) 8%);
 
-  /* ---- Layout & layering (use via z-[var(--z-modal)], max-w-[var(--container-page)]) ---- */
+  /* ---- Layout & layering (use via z-[var(--z-modal)], max-w-[var(--container-page)]) ----
+     The page width is a LADDER, not a constant. A single 64rem cap looks right
+     on a 1280 laptop and wastes the screen on anything bigger: measured at
+     1920 it left 320px of dead gutter on each side — 38% of the area after the
+     sidebar — and roughly half of a 2560 monitor. Each step below is a real
+     class of display, and each keeps the gutter modest without ever letting a
+     row run the full width of an ultrawide (which is its own readability
+     problem). Steps are on the RAW viewport, so the sidebar's 16rem is already
+     accounted for by the gap between them. */
   --container-page: 64rem;
   --z-base: 0;
   --z-dropdown: 10;
@@ -226,6 +234,25 @@
   --z-overlay: 30;
   --z-modal: 40;
   --z-toast: 50;
+}
+
+/* The page-width ladder (see --container-page above). Large laptop → desktop →
+   ultrawide. `w-full` on the column means each step is a CAP, not a width, so
+   the content simply fills whatever is available below the next step. */
+@media (min-width: 1400px) {
+  :root {
+    --container-page: 82rem;
+  }
+}
+@media (min-width: 1700px) {
+  :root {
+    --container-page: 98rem;
+  }
+}
+@media (min-width: 2100px) {
+  :root {
+    --container-page: 118rem;
+  }
 }
 
 /* ----------------------------------------------------------------------------

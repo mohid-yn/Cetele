@@ -233,7 +233,15 @@ export function TodayClient({
           {rings.map(({ task: t, count, done }) => {
             // The one to continue gets an emerald rim, so the eye lands on the
             // same ring the gold "Continue" CTA above points at.
-            const promoted = !done && next?.task.id === t.id;
+            //
+            // Only when it is genuinely PART-DONE. `next` sorts the unfinished
+            // rings by count/target, so when they are all still on zero every
+            // ratio ties and the sort just returns the first one — the rim then
+            // landed on an arbitrary untouched ring and read as a stuck
+            // selection state rather than "carry on with this". The
+            // goal-gradient it exists to exploit needs progress to point at;
+            // with none, the gold CTA alone says where to start.
+            const promoted = !done && count > 0 && next?.task.id === t.id;
             return (
               <li key={t.id}>
                 <Link
