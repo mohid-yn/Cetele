@@ -75,6 +75,24 @@ export async function updateSession(request: NextRequest) {
   // here makes "users randomly logged out" bugs very hard to debug.
   const { data } = await supabase.auth.getClaims();
 
+  // Already signed in but sitting on the login page (`/`) — the PWA's start_url,
+  // a home-screen launch, a bookmark. Forward into the app HERE, server-side,
+  // before any HTML is sent. Without this the login page is served 200 and only
+  // a client-side effect redirects after the bundle hydrates and getClaims()
+  // resolves — so every launch flashes the login screen, and on a cold mobile
+  // PWA that flash lasts long enough that people tap "sign in" and conclude
+  // their login didn't persist. It did (the session cookie is good for months);
+  // the app was just always booting onto login. `getClaims()` has already
+  // refreshed the token if needed, so carry its cookies onto the redirect.
+  if (data?.claims && request.nextUrl.pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/today";
+    url.search = "";
+    const redirect = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    return redirect;
+  }
+
   if (!data?.claims && !isPublic(request.nextUrl.pathname)) {
     // Signed out on a protected route → back to the login page, carrying the
     // intended destination so sign-in can land there (e.g. /join/<code>).

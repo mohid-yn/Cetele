@@ -33,6 +33,17 @@ test("sign in → session → real /groups → create group → sign out", async
   await page.click('button:has-text("Dev sign-in")');
   await page.waitForURL(/\/today|\/groups|\/g\//);
 
+  // 3b. Session persistence: a signed-in visitor to the login page (`/`) — the
+  //     PWA's start_url, a home-screen launch — is forwarded into the app by the
+  //     proxy, SERVER-side. Regression guard: this used to be a client-only
+  //     effect, so `/` rendered the login screen first and only redirected after
+  //     hydration, which on a cold mobile PWA read as "my login didn't persist".
+  await page.goto("/");
+  await page.waitForURL(/\/today|\/groups|\/g\//);
+  await expect(page.getByRole("button", { name: /magic link/i })).toHaveCount(
+    0,
+  );
+
   // 4. /groups renders the no-circle front door from the real DB
   await page.goto("/groups");
   await expect(page.getByText("Start your first circle")).toBeVisible();
