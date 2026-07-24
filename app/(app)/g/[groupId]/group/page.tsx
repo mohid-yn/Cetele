@@ -121,15 +121,32 @@ export default async function GroupPage({
   const names: Record<string, string> = {};
   for (const m of memberList) names[m.user_id] = m.profiles?.name ?? "Member";
 
-  const last7 = new Set(
-    Array.from({ length: 7 }, (_, i) => isoDaysAgo(todayISO, i)),
-  );
+  // "Today" is per member, by THEIR OWN timezone (D34) — never the viewer's.
+  // A member logs on their own clock; when the viewer and a member sit on
+  // opposite sides of midnight (viewer UTC 24th, member Sydney 25th) the
+  // member's real today-contribution lands on a date the viewer's calendar
+  // hasn't reached, and keying the collective off the viewer's today dropped
+  // it — "the circle today" read 0 while the member's own Today showed the
+  // taps. The admin breakdown below already resolved each member by their own
+  // clock; the collective, per-member today, and the weekly window now match.
+  const memberToday = new Map<string, string>();
+  const memberLast7 = new Map<string, Set<string>>();
+  for (const m of memberList) {
+    const mToday = localDateISO(m.profiles?.timezone ?? "UTC");
+    memberToday.set(m.user_id, mToday);
+    memberLast7.set(
+      m.user_id,
+      new Set(Array.from({ length: 7 }, (_, i) => isoDaysAgo(mToday, i))),
+    );
+  }
+  const todayOf = (u: string) => memberToday.get(u) ?? todayISO;
 
-  // Overview — collective per-task total today vs (target × members).
+  // Overview — collective per-task total today vs (target × members). Each
+  // member counts on their own today, so a cross-timezone circle still sums.
   const taskTotals: TaskTotal[] = taskList.map((t) => ({
     taskId: t.id,
     label: t.label,
-    total: memberIds.reduce((s, u) => s + countOf(u, t.id, todayISO), 0),
+    total: memberIds.reduce((s, u) => s + countOf(u, t.id, todayOf(u)), 0),
     goal: t.target_count * memberList.length,
   }));
 
@@ -141,21 +158,23 @@ export default async function GroupPage({
       role: m.role as Contribution["role"],
       isMe: m.user_id === me,
       today: taskList.reduce(
-        (s, t) => s + countOf(m.user_id, t.id, todayISO),
+        (s, t) => s + countOf(m.user_id, t.id, todayOf(m.user_id)),
         0,
       ),
     }))
     .sort((a, b) => b.today - a.today);
 
-  // Standings — weekly ranking: days-active (any count) then total, over 7 days.
+  // Standings — weekly ranking: days-active (any count) then total, over each
+  // member's OWN last 7 days (same per-member-clock reasoning as the collective).
   // (No per-row streak: peer streaks aren't member-readable under RLS — that
   // column is admin-only, surfaced in the breakdown below.)
   const standings: Standing[] = memberList
     .map((m) => {
       let total = 0;
       const activeDates = new Set<string>();
+      const mLast7 = memberLast7.get(m.user_id) ?? new Set<string>();
       for (const t of taskList) {
-        for (const d of last7) {
+        for (const d of mLast7) {
           const c = countOf(m.user_id, t.id, d);
           if (c > 0) {
             total += c;
