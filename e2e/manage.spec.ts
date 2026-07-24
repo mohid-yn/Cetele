@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { signIn } from "./helpers";
 
 /**
  * The M2 loop, end-to-end against the real local stack:
@@ -7,7 +8,6 @@ import { test, expect, type Page } from "@playwright/test";
  * ?next= round-trip) → owner promotes then removes them. Exercises the D34/D35
  * join model and the 0007 RLS surface through the real UI.
  */
-const MAILPIT = "http://127.0.0.1:54324";
 const STAMP = Date.now();
 const OWNER = `e2e-owner-${STAMP}@example.com`;
 const JOINER = `e2e-joiner-${STAMP}@example.com`;
@@ -15,35 +15,6 @@ const JOINER = `e2e-joiner-${STAMP}@example.com`;
 test.describe.configure({ mode: "serial" });
 
 /** Magic-link sign-in via Mailpit (same flow the M1 spec verifies). */
-async function signIn(page: Page, email: string) {
-  await page.goto("/");
-  await page.fill('input[type="email"]', email);
-  await page.click('button:has-text("Email me a magic link")');
-  await expect(page.getByText("Check your email")).toBeVisible();
-
-  let link: string | undefined;
-  await expect
-    .poll(
-      async () => {
-        const list = await (
-          await fetch(`${MAILPIT}/api/v1/search?query=to:${email}&limit=1`)
-        ).json();
-        const id = list.messages?.[0]?.ID;
-        if (!id) return false;
-        const msg = await (
-          await fetch(`${MAILPIT}/api/v1/message/${id}`)
-        ).json();
-        link = msg.Text.match(/https?:\/\/[^\s"')\]]+/)?.[0];
-        return Boolean(link);
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
-
-  await page.goto(link!);
-  await page.waitForURL(/\/groups|\/g\//);
-}
-
 async function signOut(page: Page) {
   await page.goto("/profile");
   await page.click('button:has-text("Sign out")');
@@ -112,29 +83,14 @@ test("joiner: signed-out invite link → ?next= → sign in → accept → membe
   await page.goto(joinPath);
   await expect(page).toHaveURL(`/?next=${encodeURIComponent(joinPath)}`);
 
-  // sign in via magic link → lands back on the join page
+  // Sign in FROM THE LOGIN PAGE, so the ?next= round-trip is what's under test:
+  // the page stashes the sanitised next-path in a cookie and /auth/confirm
+  // consumes it, landing us back on the join link rather than /today. Driven
+  // through the dev button, which mints the same credential server-side with no
+  // email involved — the shared signIn() helper would skip the login page and
+  // with it the very cookie this asserts.
   await page.fill('input[type="email"]', JOINER);
-  await page.click('button:has-text("Email me a magic link")');
-  await expect(page.getByText("Check your email")).toBeVisible();
-  let link: string | undefined;
-  await expect
-    .poll(
-      async () => {
-        const list = await (
-          await fetch(`${MAILPIT}/api/v1/search?query=to:${JOINER}&limit=1`)
-        ).json();
-        const id = list.messages?.[0]?.ID;
-        if (!id) return false;
-        const msg = await (
-          await fetch(`${MAILPIT}/api/v1/message/${id}`)
-        ).json();
-        link = msg.Text.match(/https?:\/\/[^\s"')\]]+/)?.[0];
-        return Boolean(link);
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
-  await page.goto(link!);
+  await page.click('button:has-text("Dev sign-in")');
   await page.waitForURL(`**${joinPath}`);
 
   // the invite preview → accept → membership created

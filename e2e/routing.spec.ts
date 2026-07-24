@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { signIn } from "./helpers";
 
 /**
  * CET-26 — the two acceptance tests CET-25 called for and never wrote.
@@ -20,39 +21,9 @@ import { test, expect, type Page } from "@playwright/test";
  * flake that CET-25's own prefetching caused (sw.js caching per-user RSC
  * payloads → D39) is the reason not to reach into the framework here.
  */
-const MAILPIT = "http://127.0.0.1:54324";
 const STAMP = Date.now();
 const OWNER = `e2e-route-a-${STAMP}@example.com`;
 const OUTSIDER = `e2e-route-b-${STAMP}@example.com`;
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/");
-  await page.fill('input[type="email"]', email);
-  await page.click('button:has-text("Email me a magic link")');
-  await expect(page.getByText("Check your email")).toBeVisible();
-
-  let link: string | undefined;
-  await expect
-    .poll(
-      async () => {
-        const list = await (
-          await fetch(`${MAILPIT}/api/v1/search?query=to:${email}&limit=1`)
-        ).json();
-        const id = list.messages?.[0]?.ID;
-        if (!id) return false;
-        const msg = await (
-          await fetch(`${MAILPIT}/api/v1/message/${id}`)
-        ).json();
-        link = msg.Text.match(/https?:\/\/[^\s"')\]]+/)?.[0];
-        return Boolean(link);
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
-
-  await page.goto(link!);
-  await page.waitForURL(/\/groups|\/g\//);
-}
 
 /** Create a circle with one task; returns its groupId (from the URL). */
 async function createCircle(

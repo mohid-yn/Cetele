@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { signIn } from "./helpers";
 
 /**
  * M4 (CET-7) — the live collective counter, end-to-end against the real local
@@ -7,41 +8,11 @@ import { test, expect, type Page } from "@playwright/test";
  * navigates or reloads by hand — the counter climbs LIVE, driven by the
  * postgres_changes subscription (migration 0009) → debounced router.refresh.
  */
-const MAILPIT = "http://127.0.0.1:54324";
 const STAMP = Date.now();
 const A = `e2e-rt-a-${STAMP}@example.com`;
 const B = `e2e-rt-b-${STAMP}@example.com`;
 
 /** Magic-link sign-in via Mailpit (same flow the other specs verify). */
-async function signIn(page: Page, email: string) {
-  await page.goto("/");
-  await page.fill('input[type="email"]', email);
-  await page.click('button:has-text("Email me a magic link")');
-  await expect(page.getByText("Check your email")).toBeVisible();
-
-  let link: string | undefined;
-  await expect
-    .poll(
-      async () => {
-        const list = await (
-          await fetch(`${MAILPIT}/api/v1/search?query=to:${email}&limit=1`)
-        ).json();
-        const id = list.messages?.[0]?.ID;
-        if (!id) return false;
-        const msg = await (
-          await fetch(`${MAILPIT}/api/v1/message/${id}`)
-        ).json();
-        link = msg.Text.match(/https?:\/\/[^\s"')\]]+/)?.[0];
-        return Boolean(link);
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
-
-  await page.goto(link!);
-  await page.waitForURL(/\/groups|\/g\//);
-}
-
 /**
  * Wait for the ring-close celebration, then tap it away. It's a full-screen
  * modal that only self-dismisses after 4.2s, so clicking straight through to

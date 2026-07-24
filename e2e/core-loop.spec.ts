@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { signIn } from "./helpers";
 
 /**
  * The M3 core loop, end-to-end against the real local stack:
@@ -7,40 +8,10 @@ import { test, expect, type Page } from "@playwright/test";
  * back on /today the day reads complete and THE STREAK ADVANCED — persisted
  * across a reload (nothing lives in localStorage anymore).
  */
-const MAILPIT = "http://127.0.0.1:54324";
 const STAMP = Date.now();
 const USER = `e2e-core-${STAMP}@example.com`;
 
 test.describe.configure({ mode: "serial" });
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/");
-  await page.fill('input[type="email"]', email);
-  await page.click('button:has-text("Email me a magic link")');
-  await expect(page.getByText("Check your email")).toBeVisible();
-
-  let link: string | undefined;
-  await expect
-    .poll(
-      async () => {
-        const list = await (
-          await fetch(`${MAILPIT}/api/v1/search?query=to:${email}&limit=1`)
-        ).json();
-        const id = list.messages?.[0]?.ID;
-        if (!id) return false;
-        const msg = await (
-          await fetch(`${MAILPIT}/api/v1/message/${id}`)
-        ).json();
-        link = msg.Text.match(/https?:\/\/[^\s"')\]]+/)?.[0];
-        return Boolean(link);
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
-
-  await page.goto(link!);
-  await page.waitForURL(/\/groups|\/g\//);
-}
 
 /**
  * Wait for the ring-close celebration, then tap it away. It's a full-screen

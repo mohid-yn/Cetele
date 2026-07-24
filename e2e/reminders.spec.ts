@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { signIn } from "./helpers";
 
 /**
  * Reminder settings (M8 / CET-11 / D30): a member sets a per-task clock time and
@@ -9,40 +10,10 @@ import { test, expect, type Page } from "@playwright/test";
  * send path (claim → VAPID-signed encrypted push → 410 prune) is covered
  * against a real Postgres by pgTAP 007 plus a live dispatch run.
  */
-const MAILPIT = "http://127.0.0.1:54324";
 const STAMP = Date.now();
 const USER = `e2e-rem-${STAMP}@example.com`;
 
 test.describe.configure({ mode: "serial" });
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/");
-  await page.fill('input[type="email"]', email);
-  await page.click('button:has-text("Email me a magic link")');
-  await expect(page.getByText("Check your email")).toBeVisible();
-
-  let link: string | undefined;
-  await expect
-    .poll(
-      async () => {
-        const list = await (
-          await fetch(`${MAILPIT}/api/v1/search?query=to:${email}&limit=1`)
-        ).json();
-        const id = list.messages?.[0]?.ID;
-        if (!id) return false;
-        const msg = await (
-          await fetch(`${MAILPIT}/api/v1/message/${id}`)
-        ).json();
-        link = msg.Text.match(/https?:\/\/[^\s"')\]]+/)?.[0];
-        return Boolean(link);
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
-
-  await page.goto(link!);
-  await page.waitForURL(/\/groups|\/g\//);
-}
 
 test("a member sets a per-task reminder time, and it persists", async ({
   page,

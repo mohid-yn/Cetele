@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { signIn } from "./helpers";
 
 /**
  * Leaving a circle (CET-27 follow-up — /privacy has always promised it).
@@ -8,42 +9,12 @@ import { test, expect, type Page } from "@playwright/test";
  * list, while the OWNER is offered transfer-or-delete instead of a Leave button
  * (RLS refuses an owner's leave, so nobody can strand a circle by walking out).
  */
-const MAILPIT = "http://127.0.0.1:54324";
 const STAMP = Date.now();
 const OWNER = `e2e-leave-owner-${STAMP}@example.com`;
 const JOINER = `e2e-leave-joiner-${STAMP}@example.com`;
 const CIRCLE = `Leave Circle ${STAMP}`;
 
 test.describe.configure({ mode: "serial" });
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/");
-  await page.fill('input[type="email"]', email);
-  await page.click('button:has-text("Email me a magic link")');
-  await expect(page.getByText("Check your email")).toBeVisible();
-
-  let link: string | undefined;
-  await expect
-    .poll(
-      async () => {
-        const list = await (
-          await fetch(`${MAILPIT}/api/v1/search?query=to:${email}&limit=1`)
-        ).json();
-        const id = list.messages?.[0]?.ID;
-        if (!id) return false;
-        const msg = await (
-          await fetch(`${MAILPIT}/api/v1/message/${id}`)
-        ).json();
-        link = msg.Text.match(/https?:\/\/[^\s"')\]]+/)?.[0];
-        return Boolean(link);
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
-
-  await page.goto(link!);
-  await page.waitForURL(/\/groups|\/g\//);
-}
 
 async function signOut(page: Page) {
   await page.goto("/profile");

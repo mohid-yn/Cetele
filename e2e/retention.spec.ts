@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { signIn } from "./helpers";
 
 /**
  * The v2 retention layer, end-to-end against the real local stack (CET-17…22).
@@ -11,39 +12,9 @@ import { test, expect, type Page } from "@playwright/test";
  *   * CET-17 group garden + CET-22 pair goal — derived surfaces on the Group hub
  *   * CET-20 badges — the earned/aspirational grid on Progress
  */
-const MAILPIT = "http://127.0.0.1:54324";
 const STAMP = Date.now();
 const A = `e2e-v2-a-${STAMP}@example.com`;
 const B = `e2e-v2-b-${STAMP}@example.com`;
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/");
-  await page.fill('input[type="email"]', email);
-  await page.click('button:has-text("Email me a magic link")');
-  await expect(page.getByText("Check your email")).toBeVisible();
-
-  let link: string | undefined;
-  await expect
-    .poll(
-      async () => {
-        const list = await (
-          await fetch(`${MAILPIT}/api/v1/search?query=to:${email}&limit=1`)
-        ).json();
-        const id = list.messages?.[0]?.ID;
-        if (!id) return false;
-        const msg = await (
-          await fetch(`${MAILPIT}/api/v1/message/${id}`)
-        ).json();
-        link = msg.Text.match(/https?:\/\/[^\s"')\]]+/)?.[0];
-        return Boolean(link);
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
-
-  await page.goto(link!);
-  await page.waitForURL(/\/groups|\/g\//);
-}
 
 async function closeCelebration(page: Page) {
   await expect(page.getByText("Ring closed!")).toBeVisible();

@@ -136,20 +136,9 @@ export default function LoginPage() {
     setPending(true);
     stashNextPath();
     const devEmail = email || DEV_EMAIL;
-    const since = Date.now();
-    const { error } = await supabase.auth.signInWithOtp({
-      email: devEmail,
-      options: {
-        emailRedirectTo: `${location.origin}/auth/confirm`,
-        shouldCreateUser: true,
-      },
-    });
-    if (error) {
-      setPending(false);
-      setError(error.message);
-      return;
-    }
-    const link = await devMagicLink(devEmail, since);
+    // No OTP send: the link is minted server-side with the service role, so
+    // signing in locally never depends on SMTP (see app/dev-auth.ts).
+    const link = await devMagicLink(devEmail, location.origin);
     if (!link) {
       setPending(false);
       setError("Dev sign-in failed — is `supabase start` running?");
