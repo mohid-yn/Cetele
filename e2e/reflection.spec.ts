@@ -122,8 +122,10 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
   await pageB.waitForURL("**/today");
 
   // B's personal /progress reads their real streak + 14-day grid.
+  // The streak hero moved onto HeroCard, which splits the old "N day streak"
+  // into an eyebrow + stat + caption; assert the label, not the caption copy.
   await pageB.goto("/progress");
-  await expect(pageB.getByText("day streak")).toBeVisible();
+  await expect(pageB.getByText("Current streak")).toBeVisible();
   await expect(pageB.getByText(/1 of the last 14 days/)).toBeVisible(); // completed today → 1 full day
   await expect(pageB.getByText("Last 14 days · task by task")).toBeVisible();
 
