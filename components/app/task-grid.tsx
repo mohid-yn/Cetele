@@ -15,10 +15,13 @@
 
 import * as React from "react";
 import { useRouter, useParams } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
+import { DURATION, easeBrand } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { Button, Input } from "@/components/ui";
 import { setCount } from "@/app/(app)/g/[groupId]/group/actions";
 import { CheckIcon } from "@/components/app/icons";
+import { InlineAlert } from "@/components/app/inline-alert";
 
 export type GridCell = {
   date: string;
@@ -213,77 +216,99 @@ export function TaskGrid({
         </div>
       </div>
 
-      {/* Picked-cell detail (+ editor when editable) */}
+      {/* Picked-cell detail (+ editor when editable). Only the CONTENTS
+          crossfade when you pick another day — the box itself stays put, so
+          picking a cell doesn't make the page jump under your thumb. */}
       <div className="rounded-xl border border-border bg-muted/40 px-3 py-2.5 text-sm">
-        {picked ? (
-          <div className="flex flex-col gap-2.5">
-            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <span className="font-medium text-foreground">
-                {fmtFull(picked.date)}
-              </span>
-              <span className="text-muted-foreground">
-                · {picked.taskLabel}
-              </span>
-              {loggedByName && (
-                <span className="text-xs text-muted-foreground">
-                  · logged by {loggedByName}
+        <AnimatePresence mode="wait" initial={false}>
+          {picked ? (
+            <motion.div
+              key={`${picked.taskId}-${picked.date}`}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={easeBrand(DURATION.fast)}
+              className="flex flex-col gap-2.5"
+            >
+              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="font-medium text-foreground">
+                  {fmtFull(picked.date)}
                 </span>
-              )}
-              <span className="ml-auto font-display font-semibold text-foreground tabular-nums">
-                {picked.count.toLocaleString()} /{" "}
-                {picked.target.toLocaleString()}
-                {picked.pct >= 1 ? (
-                  <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-semibold text-success">
-                    <CheckIcon className="size-3.5" />
-                    done
-                  </span>
-                ) : (
-                  <span className="ml-1.5 text-xs font-medium text-muted-foreground">
-                    {Math.round(picked.pct * 100)}%
+                <span className="text-muted-foreground">
+                  · {picked.taskLabel}
+                </span>
+                {loggedByName && (
+                  <span className="text-xs text-muted-foreground">
+                    · logged by {loggedByName}
                   </span>
                 )}
-              </span>
-            </p>
+                <span className="ml-auto font-display font-semibold text-foreground tabular-nums">
+                  {picked.count.toLocaleString()} /{" "}
+                  {picked.target.toLocaleString()}
+                  {picked.pct >= 1 ? (
+                    <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-semibold text-success">
+                      <CheckIcon className="size-3.5" />
+                      done
+                    </span>
+                  ) : (
+                    <span className="ml-1.5 text-xs font-medium text-muted-foreground">
+                      {Math.round(picked.pct * 100)}%
+                    </span>
+                  )}
+                </span>
+              </p>
 
-            {editable && (
-              <div className="flex flex-wrap items-center gap-2">
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  aria-label="Count for this day"
-                  className="h-9 w-24"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDraft(String(picked.target))}
-                >
-                  Mark done
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setDraft("0")}>
-                  Clear
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={save}
-                  disabled={!dirty || saving}
-                  className="ml-auto"
-                >
-                  {saving ? "Saving…" : "Save"}
-                </Button>
-              </div>
-            )}
-            {error && <p className="text-xs text-danger">{error}</p>}
-          </div>
-        ) : (
-          <p className="text-muted-foreground">
-            Tap any square to see that day&apos;s exact count
-            {editable ? " — or to log it" : ""}.
-          </p>
-        )}
+              {editable && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    aria-label="Count for this day"
+                    className="h-9 w-24"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDraft(String(picked.target))}
+                  >
+                    Mark done
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDraft("0")}
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={save}
+                    disabled={!dirty || saving}
+                    className="ml-auto"
+                  >
+                    {saving ? "Saving…" : "Save"}
+                  </Button>
+                </div>
+              )}
+              <InlineAlert>{error}</InlineAlert>
+            </motion.div>
+          ) : (
+            <motion.p
+              key="empty"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={easeBrand(DURATION.fast)}
+              className="text-muted-foreground"
+            >
+              Tap any square to see that day&apos;s exact count
+              {editable ? " — or to log it" : ""}.
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Legend — colour always paired with a label (§5 colour-blind safety) */}

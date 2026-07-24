@@ -23,6 +23,7 @@ import { GroupGarden } from "@/components/app/group-garden";
 import { PairGoal, type Pair } from "@/components/app/pair-goal";
 import type { Garden } from "@/lib/retention";
 import { MemberRow } from "@/components/app/member-row";
+import { InlineAlert } from "@/components/app/inline-alert";
 import { Segmented } from "@/components/app/segmented";
 import {
   MemberBreakdownDialog,
@@ -504,11 +505,7 @@ export function GroupClient({
                       You&apos;ll stop counting toward the circle&apos;s goals.
                       The dhikr you logged stays — rejoin and it counts again.
                     </p>
-                    {leaveAct.error && (
-                      <p role="alert" className="mt-2 text-xs text-danger">
-                        {leaveAct.error}
-                      </p>
-                    )}
+                    <InlineAlert className="mt-2">{leaveAct.error}</InlineAlert>
                   </>
                 )}
               </div>
@@ -585,11 +582,7 @@ export function GroupClient({
               );
             })}
           </ul>
-          {logError && (
-            <p role="alert" className="mt-2 text-xs text-danger">
-              {logError}
-            </p>
-          )}
+          <InlineAlert className="mt-2">{logError}</InlineAlert>
         </Dialog>
       )}
     </Screen>

@@ -3,6 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
+import { DURATION, easeBrand } from "@/lib/motion";
 import {
   Avatar,
   Eyebrow,
@@ -152,17 +154,36 @@ export function TodayClient({
       />
 
       {/* Day one (CET-21) or a fresh start (CET-19) — never both, and only on
-          today: back-filling an old day is not a moment to re-onboard someone. */}
-      {isToday && welcome && (
-        <WelcomeCard
-          groupName={groupName}
-          collectivePct={collectivePct}
-          beginHref={beginHref}
-        />
-      )}
-      {isToday && !welcome && landmark && (
-        <FreshStartBanner landmark={landmark} beginHref={beginHref} />
-      )}
+          today: back-filling an old day is not a moment to re-onboard someone.
+          These mount and unmount conditionally, so they ease rather than pop. */}
+      <AnimatePresence initial={false}>
+        {isToday && welcome && (
+          <motion.div
+            key="welcome"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={easeBrand(DURATION.base)}
+          >
+            <WelcomeCard
+              groupName={groupName}
+              collectivePct={collectivePct}
+              beginHref={beginHref}
+            />
+          </motion.div>
+        )}
+        {isToday && !welcome && landmark && (
+          <motion.div
+            key="fresh-start"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={easeBrand(DURATION.base)}
+          >
+            <FreshStartBanner landmark={landmark} beginHref={beginHref} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Day picker — log for today, or back-fill a day that's gone by (D8). */}
       <div>

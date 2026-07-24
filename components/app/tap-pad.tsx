@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { ProgressRing } from "@/components/ui";
 import { playTap } from "@/lib/sound";
-import { prefersReducedMotion } from "@/lib/motion";
+import { DURATION, EASE_BRAND, prefersReducedMotion } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 interface TapPadProps {
@@ -75,6 +76,21 @@ export function TapPad({
           className="absolute inset-0 rounded-full glow-primary transition-opacity duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
           style={{ opacity: pct }}
         />
+
+        {/* One ripple per tap — FEEDBACK, not celebration, so it eases out
+            (ease-brand) and never springs. Keyed by popKey so each tap spawns
+            its own; MotionConfig reducedMotion="user" collapses it globally. */}
+        <AnimatePresence>
+          <motion.span
+            key={popKey}
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-full bg-primary/20"
+            initial={{ scale: 0.6, opacity: 0.25 }}
+            animate={{ scale: 1, opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: DURATION.base, ease: EASE_BRAND }}
+          />
+        </AnimatePresence>
         <ProgressRing
           value={value}
           max={max}

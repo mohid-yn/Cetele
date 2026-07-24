@@ -6,6 +6,7 @@ import { Button, Dialog, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useCelebration } from "@/components/app/celebration";
 import { TapPad } from "@/components/app/tap-pad";
+import { InlineAlert } from "@/components/app/inline-alert";
 import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
 import { ArrowLeftIcon, MinusIcon } from "@/components/app/icons";
 import { playComplete, playTen } from "@/lib/sound";
@@ -289,11 +290,7 @@ export function CountClient({
           </span>
         </p>
       )}
-      {error && (
-        <p role="alert" className="mt-2 text-center text-xs text-danger">
-          {error}
-        </p>
-      )}
+      <InlineAlert className="mt-2 text-center">{error}</InlineAlert>
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 py-2">
         <TapPad
