@@ -37,7 +37,21 @@ review_ — is **met**.
 | Linear       | CET-1…CET-31 all **Done** except CET-10 (variable-reward milestones, deferred)                           |
 | Working tree | clean; `main` = `origin/main`; no feature branches outstanding                                           |
 
-**Last work (2026-07-24) — the spacing/design pass (shipped to prod, no migration):** UI-only, merged from
+**In flight (2026-07-24) — the UI-fix + refinement pass, branch `mohidkhanzada/ui-refinement-motion`, NOT yet merged.**
+UI-only, no migration. Spec: `docs/INSTRUCTIONS_NEXT_STEPS.md`. Nine commits; build + lint + tsc + format green,
+e2e **21/21**, pgTAP **316/316**; every screen verified in a real browser at 390 + 1440 in both themes.
+**Part A** — three reported bugs: the Progress grid's sticky task label floated over the scrolling day cells (labels
+now own a fixed non-scrolling column); desktop content was stranded in a hardcoded `lg:max-w-3xl` (now the
+`--container-page` token, 64rem); the group header clipped "Fajr Cir…" because the title box was `min-w-0` but
+couldn't grow against `GroupSwitcher`'s `max-w-full` (`flex-1` breaks the circularity — measured 115/115, was
+107/115). **Part B** — six depth tokens + a `Depth` section on `/designsystem`; four extractions (`HeroCard`,
+`StatRing`, `ProgressBar`, `Eyebrow`) replacing five copy-pasted bars and three hand-written section labels;
+per-screen lifts on Today/Group/Progress/Count; interaction motion (picked-cell crossfade, `InlineAlert`, banner
+enter/exit, tap ripple) with **no** load-stagger (D46 holds).
+**Three traps the browser caught that a green build did not** — each is now an invariant below: the glow utilities,
+the hero foreground, and `Badge` on a gradient.
+
+**Before that (2026-07-24) — the spacing/design pass (shipped to prod, no migration):** UI-only, merged from
 `container-queries`. (1) **Layout primitives own the rhythm** — `Screen`/`Stack`/`Row` (earlier) plus a new **`Grid`**
 that keys columns off its _own slot_ via container queries (Tailwind v4 `@container`, no plugin), not the window;
 the rings and badges grids use it. (2) **Spacing stepped up one notch, app-wide** — `Screen` gap `xl→2xl`, edge
@@ -129,6 +143,8 @@ Each of these is a production bug we already paid for. Treat them as constraints
 | **No god view.** Nobody — including the operator — sees a group they don't belong to. Super-admin powers are recovery + moderation only, granted out-of-band in Supabase.                                           | The privacy promise is load-bearing for a worship app; `/admin` was retired for it. (D26, D27)                                                                                                                                                                                                            |
 | **App audio must never resemble music** — no melodies, pitched tones, or instrument timbres, including celebration sounds. Unpitched noise clicks; recorded nature sounds are the sanctioned path for richer audio. | Owner is Hanafi; ruling basis [askimam 125634](https://islamqa.org/hanafi/askimam/125634/). (D37)                                                                                                                                                                                                         |
 | **Token contract, lint-enforced.** Every UI value comes from a token in `app/globals.css`. Raw hex/`rgb()`/`hsl()` in `.ts`/`.tsx` is an **ESLint error**. Sole sanctioned literal: `lib/brand.ts`.                 | Need a new value? Add a token, don't inline. (D14)                                                                                                                                                                                                                                                        |
+| **A bare `var()` in an arbitrary shadow renders NOTHING.** Use the `glow-primary` / `glow-accent` `@utility` classes, never `shadow-[var(--glow-primary)]`.                                                         | Tailwind can't tell a shadow from a shadow-_colour_, so it picks colour: the class emits nothing, the underlying `shadow-sm` survives, and **there is no error**. The promoted Today ring shipped-looking-fine with a plain slate shadow until the computed `box-shadow` was measured. (2026-07-24)       |
+| **Text on the hero gradient uses `--gradient-hero-foreground`**, never `text-primary-foreground`; chips on it use `HeroChip`, never `Badge`.                                                                        | On dark, `--primary` is the _light_ emerald, so `--primary-foreground` is near-black — ~1.5:1 on the gradient. `Badge variant="outline"` sets `text-foreground`, measured **1.7:1** in light. Both look fine at a glance and fail on measurement. The sanctioned tokens hold ≥5.48:1. (2026-07-24)        |
 | **White-hat gamification only** — no shame, no punishment, no permanent/global ladder, no cumulative XP. Forgiveness is reliable or it doesn't work.                                                                | Rich-get-richer ranking demotivates the median and courts riya' for this audience; loss-aversion burns out. Leaderboards are within-group, weekly, resetting. (D8, D28, D31)                                                                                                                              |
 
 ---
