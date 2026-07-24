@@ -53,8 +53,11 @@ export function BadgesGrid({ badges }: { badges: EarnedBadge[] }) {
             <div
               className={cn(
                 "grid size-14 place-items-center rounded-2xl text-2xl transition-transform",
+                // An earned badge gets the gold rim — a sanctioned gold use
+                // (earned, D25) and the only one on this screen. Locked ones
+                // stay muted and flat, so the difference is the reward.
                 b.earnedOn
-                  ? "bg-accent-100 shadow-sm hover:-translate-y-0.5"
+                  ? "bg-[var(--surface-raised)] glow-accent hover:-translate-y-0.5 motion-reduce:transform-none"
                   : "bg-muted grayscale",
               )}
             >

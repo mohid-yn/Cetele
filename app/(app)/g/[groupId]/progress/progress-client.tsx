@@ -1,6 +1,14 @@
 "use client";
 
-import { Badge, Card, CardContent, ProgressBar, Screen } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  CardContent,
+  HeroCard,
+  HeroChip,
+  ProgressBar,
+  Screen,
+} from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { BadgesGrid, type EarnedBadge } from "@/components/app/badges";
@@ -75,26 +83,19 @@ export function ProgressClient({
         }
       />
 
-      {/* Streak hero — the motivational anchor */}
-      <Card className="bg-primary p-5 text-primary-foreground">
-        <div className="flex items-center gap-4">
-          <div className="grid size-16 shrink-0 place-items-center rounded-full bg-primary-foreground/10">
-            <FlameIcon className="size-8 text-accent" />
-          </div>
-          <div>
-            <p className="font-display text-4xl font-bold tabular-nums">
-              {current}
-            </p>
-            <p className="text-sm text-primary-foreground/70">day streak</p>
-          </div>
-          <div className="ml-auto text-right">
-            <p className="font-display text-2xl font-bold tabular-nums">
-              {longest}
-            </p>
-            <p className="text-xs text-primary-foreground/70">longest</p>
-          </div>
-        </div>
-      </Card>
+      {/* Streak hero — the motivational anchor, and this screen's ONE hero.
+          The flat bg-primary card becomes the gradient + sheen surface; the
+          flame keeps its gold (a celebration hue, and the only gold here).
+          `longest` moves into the trailing slot as a HeroChip — NOT a Badge:
+          Badge sets text-foreground, which is near-black on this gradient in
+          light theme (~1.7:1). See components/ui/hero-card.tsx. */}
+      <HeroCard
+        medallion={<FlameIcon className="size-8 text-accent" />}
+        label="Current streak"
+        stat={current.toLocaleString()}
+        caption={`day${current === 1 ? "" : "s"} in a row`}
+        trailing={<HeroChip>Longest {longest.toLocaleString()}</HeroChip>}
+      />
 
       {/* 30-day consistency band (D28 — a calm word + %, from the rollup) */}
       <Card className="p-5">
