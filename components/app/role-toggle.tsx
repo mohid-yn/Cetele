@@ -31,7 +31,12 @@ export function RoleToggle({
           aria-pressed={value === r}
           onClick={() => onChange(r)}
           className={
-            "rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40 " +
+            // min-h-11 = 44px. Was `py-1` → a 24px target: at or under the
+            // WCAG 2.5.8 (AA) floor and well under the 44 (Fluent 2 / Apple)
+            // and 48dp (Material 3) recommendations this app already follows
+            // elsewhere. Two adjacent segments can't use invisible hit-area
+            // expansion without overlapping each other, so the segments grow.
+            "flex min-h-11 items-center rounded-md px-3 text-sm font-medium transition-colors disabled:opacity-40 " +
             (value === r
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:text-foreground")

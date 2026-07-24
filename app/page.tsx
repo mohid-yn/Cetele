@@ -249,6 +249,8 @@ export default function LoginPage() {
                     type="email"
                     required
                     placeholder="you@email.com"
+                    aria-label="Email address"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -280,12 +282,22 @@ export default function LoginPage() {
           <p className="mt-5 text-center text-xs text-muted-foreground">
             Private by default. Your circle, your data.
           </p>
+          {/* 16px-tall targets. WCAG 2.5.8's inline exception technically
+              covers them, but they are a separated pair rather than prose, so
+              they get real vertical padding — clears the 24px AA floor without
+              moving anything around them. */}
           <p className="mt-1.5 text-center text-xs text-muted-foreground">
-            <Link href="/privacy" className="hover:text-foreground">
+            <Link
+              href="/privacy"
+              className="inline-block px-1 py-1.5 hover:text-foreground"
+            >
               Privacy
             </Link>
             <span aria-hidden> · </span>
-            <Link href="/terms" className="hover:text-foreground">
+            <Link
+              href="/terms"
+              className="inline-block px-1 py-1.5 hover:text-foreground"
+            >
               Terms
             </Link>
           </p>

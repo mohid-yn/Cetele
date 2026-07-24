@@ -129,15 +129,20 @@ function TaskRow({
     return (
       <li className="rounded-xl border border-border bg-card p-3 shadow-sm">
         <div className="flex flex-col gap-2">
+          {/* aria-label, not placeholder alone: a placeholder is not an
+              accessible name, and it vanishes the moment you start typing —
+              so mid-edit there was nothing naming these three fields. */}
           <Input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="Label"
+            aria-label="Task label"
           />
           <Input
             value={subtitle}
             onChange={(e) => setSubtitle(e.target.value)}
             placeholder="Subtitle (e.g. Arabic)"
+            aria-label="Task subtitle"
             dir="auto"
           />
           <Input
@@ -145,6 +150,7 @@ function TaskRow({
             inputMode="numeric"
             onChange={(e) => setTarget(e.target.value.replace(/\D/g, ""))}
             placeholder="Daily target"
+            aria-label="Daily target"
           />
           <div className="flex gap-2">
             <Button
@@ -341,11 +347,17 @@ export function ManageClient({
                 className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm"
               >
                 <Avatar name={m.name} size="sm" />
-                <div className="min-w-0 flex-1">
+                {/* `min-w-0 flex-1` alone let the name shrink to ~31px so the
+                    role toggle and Remove could stay on one line — "Dev
+                    Reviewer (you)" rendered as "Dev |" and "Yusuf" as "Yusu".
+                    A destructive action next to an unreadable name is the
+                    actual bug. A real basis makes the CONTROLS wrap to their
+                    own line instead, which is what `flex-wrap` was for. */}
+                <div className="min-w-0 flex-1 basis-40">
                   <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
                     {m.name}
                     {isSelf && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         (you)
                       </span>
                     )}
@@ -361,7 +373,9 @@ export function ManageClient({
                     owner
                   </Badge>
                 ) : (
-                  <>
+                  // One wrapping unit: the toggle and Remove travel together to
+                  // a second line rather than splitting across the row.
+                  <div className="ml-auto flex items-center gap-2">
                     <RoleToggle
                       value={m.role}
                       disabled={isSelf || membersAct.pending}
@@ -389,7 +403,7 @@ export function ManageClient({
                     >
                       Remove
                     </Button>
-                  </>
+                  </div>
                 )}
               </li>
             );
@@ -522,11 +536,13 @@ export function ManageClient({
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="Label (e.g. La ilaha illallah)"
+              aria-label="New task label"
             />
             <Input
               value={newSubtitle}
               onChange={(e) => setNewSubtitle(e.target.value)}
               placeholder="Subtitle (optional)"
+              aria-label="New task subtitle"
               dir="auto"
             />
             <Input
@@ -534,6 +550,7 @@ export function ManageClient({
               inputMode="numeric"
               onChange={(e) => setNewTarget(e.target.value.replace(/\D/g, ""))}
               placeholder="Daily target"
+              aria-label="New task daily target"
             />
             <Button
               variant="accent"

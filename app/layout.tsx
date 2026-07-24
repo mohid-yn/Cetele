@@ -47,7 +47,11 @@ export const viewport: Viewport = {
   themeColor: BRAND_THEME_COLOR,
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // NO `maximumScale` / `userScalable: false`. Capping the scale blocks
+  // pinch-zoom, which is a WCAG 1.4.4 (Resize Text) failure — and this is an
+  // app people read Arabic transliteration in. The usual reason to cap it is
+  // iOS Safari auto-zooming on focused inputs; that is fixed at the source
+  // instead, by giving `Input` a 16px type size on phones (see input.tsx).
   viewportFit: "cover",
 };
 

@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "How Cetele collects, uses, and protects your data.",
 };
 
-const SUPPORT_EMAIL = "muhammad.khanzada@sirius.vic.edu.au";
+const SUPPORT_EMAIL = "ynproject57@gmail.com";
 
 export default function PrivacyPage() {
   return (

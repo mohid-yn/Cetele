@@ -37,10 +37,16 @@ export default function LegalLayout({
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-2xl flex-wrap items-center gap-x-4 gap-y-1 px-6 py-4 text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} Cetele</span>
-          <Link href="/privacy" className="hover:text-foreground">
+          <Link
+            href="/privacy"
+            className="inline-block py-1.5 hover:text-foreground"
+          >
             Privacy
           </Link>
-          <Link href="/terms" className="hover:text-foreground">
+          <Link
+            href="/terms"
+            className="inline-block py-1.5 hover:text-foreground"
+          >
             Terms
           </Link>
         </div>

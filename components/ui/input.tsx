@@ -7,7 +7,13 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       ref={ref}
       type={type}
       className={cn(
-        "flex h-11 w-full rounded-lg border border-input bg-background px-3.5 text-sm",
+        // 16px on phones, 14px from `md` up. Not cosmetic: iOS Safari
+        // auto-zooms the page when you focus an input under 16px, and it never
+        // zooms back out. Capping the viewport scale is the usual "fix" for
+        // that, but capping scale breaks pinch-zoom for everyone (WCAG 1.4.4) —
+        // so the type size is the honest fix and the cap stayed off.
+        "flex h-11 w-full rounded-lg border border-input bg-background px-3.5",
+        "text-base md:text-sm",
         "text-foreground placeholder:text-muted-foreground",
         "transition-[border-color,box-shadow] duration-[var(--duration-fast)]",
         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",

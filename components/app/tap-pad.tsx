@@ -111,7 +111,13 @@ export function TapPad({
               key={popKey}
               className="font-display text-6xl font-bold text-foreground tabular-nums"
               style={{
-                animation: "count-pop var(--duration-fast) var(--ease-spring)",
+                // `--ease-brand`, not `--ease-spring`. lib/motion.ts reserves
+                // the spring for "earned celebrations ONLY" — and this fires on
+                // EVERY tap, hundreds of times a session. An overshoot bounce
+                // repeated that often stops reading as reward and starts
+                // reading as jitter, which is the wrong feel for dhikr. The
+                // spring stays where it is earned: the ring-close celebration.
+                animation: "count-pop var(--duration-fast) var(--ease-brand)",
               }}
             >
               {value.toLocaleString()}

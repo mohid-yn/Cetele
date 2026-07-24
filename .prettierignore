@@ -11,3 +11,10 @@ tsconfig.tsbuildinfo
 
 # Generated assets
 public/icons/
+
+# Vendored agent skills (installed by `npx impeccable install`, not ours to
+# format — 215 files failed format:check the moment they landed).
+.agents/skills/
+.github/skills/
+.claude/skills/
+.codex/

@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "The terms for using Cetele.",
 };
 
-const SUPPORT_EMAIL = "muhammad.khanzada@sirius.vic.edu.au";
+const SUPPORT_EMAIL = "ynproject57@gmail.com";
 
 export default function TermsPage() {
   return (

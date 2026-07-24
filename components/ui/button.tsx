@@ -27,7 +27,8 @@ const buttonVariants = cva(
           "bg-danger text-danger-foreground shadow-sm hover:bg-danger-600",
       },
       size: {
-        sm: "h-9 px-3 text-sm",
+        // 36px painted, 44px tappable — see `tap-area-44` in globals.css.
+        sm: "h-9 px-3 text-sm tap-area-44",
         md: "h-11 px-5 text-sm",
         lg: "h-13 px-7 text-base",
         icon: "size-11",

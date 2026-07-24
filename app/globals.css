@@ -88,12 +88,22 @@
   /* ---- Status hues ---- (success = emerald, slightly brighter than the
      brand primary so a closed "done" state pops; warning shifts to true orange
      so it never reads as the gold accent) ---- */
+  /* The -100/-800 steps exist so a tinted status chip can use the same
+     accessible pairing the brand chips already use (bg-*-100 / text-*-800).
+     The old `bg-*-500/15 + text-*-600` pairing measured 3.28:1 on the
+     "1 freeze left" chip — under the 4.5:1 AA floor for its 12px text. */
+  --color-success-100: #d1fae5;
   --color-success-500: #10b981;
   --color-success-600: #059669;
+  --color-success-800: #065f46;
+  --color-warning-100: #ffedd5;
   --color-warning-500: #ea580c;
   --color-warning-600: #c2410c;
+  --color-warning-800: #9a3412;
+  --color-danger-100: #fee2e2;
   --color-danger-500: #dc2626;
   --color-danger-600: #b91c1c;
+  --color-danger-800: #991b1b;
   --color-info-500: #2563eb;
   --color-info-600: #1d4ed8;
 
@@ -468,6 +478,28 @@ body {
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* Grows the TOUCH area to >=44px tall without moving or repainting anything —
+   Material 3 sanctions exactly this ("touch target expansion" beyond the
+   visible bounds), and it's how a 36px `sm` button reaches the 44px floor
+   (Fluent 2 / Apple HIG; Material asks 48dp) that this app already holds
+   itself to elsewhere.
+   VERTICAL ONLY, deliberately: side-by-side controls (Edit/Remove, segmented
+   toggles) sit 8px apart, so a horizontal expansion would overlap a
+   neighbour and steal its taps. Controls that are adjacent *vertically* are
+   further apart than the 4px this adds per side. */
+@utility tap-area-44 {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 44px;
+    transform: translateY(-50%);
   }
 }
 

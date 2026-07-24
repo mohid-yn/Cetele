@@ -10,9 +10,11 @@ const badgeVariants = cva(
         neutral: "border-transparent bg-muted text-muted-foreground",
         primary: "border-transparent bg-primary-100 text-primary-800",
         accent: "border-transparent bg-accent-100 text-accent-800",
-        success: "border-transparent bg-success-500/15 text-success-600",
-        warning: "border-transparent bg-warning-500/15 text-warning-600",
-        danger: "border-transparent bg-danger-500/15 text-danger-600",
+        // Same -100/-800 pairing as primary/accent above. The previous
+        // -500/15 + -600 pairing put 12px text at 3.28:1 (AA needs 4.5:1).
+        success: "border-transparent bg-success-100 text-success-800",
+        warning: "border-transparent bg-warning-100 text-warning-800",
+        danger: "border-transparent bg-danger-100 text-danger-800",
         outline: "border-border bg-transparent text-foreground",
       },
       size: {

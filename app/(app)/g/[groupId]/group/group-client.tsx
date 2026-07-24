@@ -169,10 +169,16 @@ export function GroupClient({
     <Screen>
       <PageHeader
         title={
-          <GroupSwitcher
-            className="-ml-2 px-2 py-0.5 font-display text-2xl font-bold"
-            initialName={groupName}
-          />
+          // The switcher IS this page's title, so it carries the h1 — without
+          // it the screen shipped with H2s only and no top-level heading, which
+          // leaves screen-reader users no landmark to jump to. (Today supplies
+          // its own h1 inside the node, so this can't move into PageHeader.)
+          <h1>
+            <GroupSwitcher
+              className="-ml-2 px-2 py-0.5 font-display text-2xl font-bold"
+              initialName={groupName}
+            />
+          </h1>
         }
         subtitle={
           <span>

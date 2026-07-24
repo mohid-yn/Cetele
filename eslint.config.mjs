@@ -44,6 +44,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored agent skills (installed by `npx impeccable install`).
+    ".agents/**",
+    ".github/skills/**",
+    ".claude/skills/**",
+    ".codex/**",
   ]),
 ]);
 
