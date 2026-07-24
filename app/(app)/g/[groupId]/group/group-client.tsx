@@ -12,6 +12,7 @@ import {
   ProgressBar,
   Screen,
   Stack,
+  StatRing,
   buttonVariants,
   cardVariants,
 } from "@/components/ui";
@@ -215,27 +216,48 @@ export function GroupClient({
         {tab === "overview" && (
           <motion.div key="overview" {...panel}>
             <Stack gap="2xl">
-              {/* The circle's garden (CET-17) — the emotional layer, leading the
-                tab: it's the one thing here that isn't a number. */}
-              <GroupGarden garden={garden} />
+              {/* The circle's garden (CET-17) — the emotional layer — and the
+                live collective number, as ONE hero block: stacked on a phone
+                (the garden leads; it's the one thing here that isn't a number),
+                side by side from lg.
 
-              <section className={cardVariants({ padding: "md" })}>
-                <p className="text-sm text-muted-foreground">
-                  <span
-                    aria-hidden
-                    className="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-success align-middle"
+                The pairing is also what keeps the garden sane on desktop. It's
+                aspect-[320/130] and the content column is now 64rem, so at full
+                width it rendered ~980x400 — mostly empty sky, pushing every
+                number below the fold. Cropping was rejected earlier
+                (2026-07-24), so give it half the row instead: same aspect, half
+                the height. */}
+              <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+                <GroupGarden garden={garden} />
+
+                <section
+                  className={cn(
+                    cardVariants({ padding: "md" }),
+                    "flex items-center gap-5",
+                  )}
+                >
+                  <StatRing
+                    value={collectivePct}
+                    max={100}
+                    size={112}
+                    stat={`${collectivePct}%`}
                   />
-                  The circle today
-                </p>
-                <p className="mt-1 font-display text-4xl font-bold text-foreground tabular-nums">
-                  {collectivePct}%
-                </p>
-                <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">
-                  {/* One expression, not text-around-expressions: JSX drops the
+                  <div className="min-w-0">
+                    <p className="text-sm text-muted-foreground">
+                      <span
+                        aria-hidden
+                        className="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-success align-middle"
+                      />
+                      The circle today
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground tabular-nums">
+                      {/* One expression, not text-around-expressions: JSX drops the
                     space at a line break, which rendered "100toward". */}
-                  {`${collectiveTotal.toLocaleString()} of ${collectiveGoal.toLocaleString()} toward today\u2019s goal`}
-                </p>
-              </section>
+                      {`${collectiveTotal.toLocaleString()} of ${collectiveGoal.toLocaleString()} toward today\u2019s goal`}
+                    </p>
+                  </div>
+                </section>
+              </div>
 
               {/* M6 — the durable North Star (90-day collective consistency) */}
               <section className={cardVariants({ padding: "md" })}>
