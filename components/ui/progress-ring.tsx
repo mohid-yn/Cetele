@@ -13,6 +13,16 @@ export interface ProgressRingProps extends React.HTMLAttributes<HTMLDivElement> 
   /** Track + progress colors (any CSS color). Defaults: muted track, emerald fill. */
   trackColor?: string;
   progressColor?: string;
+  /**
+   * Fill the parent box instead of locking the rendered box to `size` px.
+   * `size` still defines the ring's GEOMETRY (viewBox units), so `thickness`
+   * stays proportional as the box scales.
+   *
+   * Needed because `size` is applied as an INLINE width/height, which no
+   * className can override — a caller that sized the ring with `h-full w-full`
+   * silently got `size` px anyway. See the note on the wrapper below.
+   */
+  fluid?: boolean;
   /** Render content in the center (e.g. count, percent, icon). */
   children?: React.ReactNode;
 }
@@ -28,6 +38,7 @@ export function ProgressRing({
   thickness = 10,
   trackColor = "var(--muted)",
   progressColor = "var(--primary)",
+  fluid = false,
   className,
   children,
   ...props
@@ -44,12 +55,25 @@ export function ProgressRing({
       aria-valuenow={value}
       aria-valuemin={0}
       aria-valuemax={max}
-      className={cn("relative inline-grid place-items-center", className)}
-      style={{ width: size, height: size }}
+      className={cn(
+        // `shrink-0`: a ring is a circle at a chosen diameter, never a thing a
+        // flex parent may squash. The Group hero sat in `flex items-center
+        // gap-5` and was shrunk 112 → 103.4px wide while staying 112 tall, so
+        // the viewBox scaled to fit the SHORT side and drew the circle at
+        // 92.3px — 8% under spec, in a non-square box. (2026-07-24)
+        "relative inline-grid shrink-0 place-items-center",
+        fluid && "h-full w-full",
+        className,
+      )}
+      // Locked to `size` px unless `fluid`. This is an INLINE style, so it beats
+      // any width/height utility a caller passes in `className` — hence the
+      // explicit prop rather than letting callers "just add h-full w-full",
+      // which loses silently. (2026-07-24)
+      style={fluid ? undefined : { width: size, height: size }}
       {...props}
     >
       {/* viewBox, not width/height: the ring's GEOMETRY stays in `size` units
-          while its rendered box follows the wrapper, so a caller can scale it
+          while its rendered box follows the wrapper, so `fluid` can scale it
           (e.g. to viewport height on a short phone) with CSS alone. */}
       <svg viewBox={`0 0 ${size} ${size}`} className="h-full w-full -rotate-90">
         <circle

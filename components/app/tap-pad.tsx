@@ -96,9 +96,15 @@ export function TapPad({
           max={max}
           size={260}
           thickness={18}
+          // `fluid`, not `h-full w-full`: `size` is an inline style the class
+          // could never beat, so the ring rendered at a flat 260px inside this
+          // min(16rem, 28dvh) box — overflowing it to the RIGHT (grid falls
+          // back to start-alignment when an item overruns its track) and
+          // landing 12px off-centre from its own glow and the caption below.
+          fluid
           // A receding track lets the emerald fill carry the eye at hero size.
           trackColor="color-mix(in oklab, var(--muted) 60%, transparent)"
-          className="relative h-full w-full"
+          className="relative"
         >
           <div className="flex flex-col items-center">
             <span
