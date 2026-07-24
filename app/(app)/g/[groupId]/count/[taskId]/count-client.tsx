@@ -252,7 +252,18 @@ export function CountClient({
         >
           Today
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => setSound((s) => !s)}>
+        {/* Desktop only. On a phone the tap sound is controlled by the hardware
+            volume/mute — the natural gesture there — so an in-app toggle is
+            redundant. It stays for desktop, where there's no per-tab hardware
+            mute. Hidden below `lg`, the same phone/desktop line the nav uses
+            (bottom-nav is `lg:hidden`; this is its inverse). Sound still
+            defaults on; a phone user just mutes with the volume keys. */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setSound((s) => !s)}
+          className="hidden lg:inline-flex"
+        >
           {sound ? "🔊 Sound on" : "🔇 Sound off"}
         </Button>
       </div>
