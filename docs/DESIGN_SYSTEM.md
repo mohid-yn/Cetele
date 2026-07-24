@@ -131,14 +131,16 @@ A repeating component (a ring card, a badge tile) should lay out from the width 
 
 Emphasis surfaces beyond the shadow ladder. **One hero per screen** — depth is hierarchy, not decoration.
 
-| Token                        | Use                                                                                      |
-| ---------------------------- | ---------------------------------------------------------------------------------------- |
-| `--gradient-hero`            | The screen's single emphasis surface. `bg-[image:var(--gradient-hero)]`.                 |
-| `--gradient-hero-sheen`      | Optional light wash, overlaid as its own absolutely-positioned layer.                    |
-| `--gradient-hero-foreground` | **Text on the hero.** See the trap below.                                                |
-| `--glow-primary`             | Emerald rim + drop — promotes the one thing to continue. `shadow-[var(--glow-primary)]`. |
-| `--glow-accent`              | Gold rim — **earned only** (an earned badge), never decoration.                          |
-| `--surface-raised`           | Faint emerald-tinted card for secondary heroes. `bg-[var(--surface-raised)]`.            |
+| Token                        | Use                                                                                |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| `--gradient-hero`            | The screen's single emphasis surface. `bg-[image:var(--gradient-hero)]`.           |
+| `--gradient-hero-sheen`      | Optional light wash, overlaid as its own absolutely-positioned layer.              |
+| `--gradient-hero-foreground` | **Text on the hero.** See the trap below.                                          |
+| `--glow-primary`             | Emerald rim + drop — promotes the one thing to continue. Use `glow-primary`.       |
+| `--glow-accent`              | Gold rim — **earned only** (an earned badge), never decoration. Use `glow-accent`. |
+| `--surface-raised`           | Faint emerald-tinted card for secondary heroes. `bg-[var(--surface-raised)]`.      |
+
+> **Trap:** the glows are `@utility` classes (`glow-primary` / `glow-accent`), **not** `shadow-[var(--glow-primary)]`. A bare `var()` in an arbitrary shadow is ambiguous, so Tailwind treats it as a shadow _colour_: the class emits nothing, the underlying `shadow-sm` survives, and you get no error — it just silently doesn't render.
 
 > **Trap:** use `--gradient-hero-foreground`, never `text-primary-foreground`, for text on the hero. On dark, `--primary` is the _light_ emerald, so `--primary-foreground` is near-black — invisible against these deep stops. The dedicated token measures **5.48:1** (light, lightest stop) and **6.37:1** (dark), so body text passes AA across the whole ramp.
 

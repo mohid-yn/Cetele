@@ -417,21 +417,15 @@ export default function DesignSystemPage() {
             </div>
             <div className="flex flex-wrap gap-6">
               <div className="space-y-2 text-center">
-                <div
-                  className="size-24 rounded-xl bg-card"
-                  style={{ boxShadow: "var(--glow-primary)" }}
-                />
+                <div className="size-24 rounded-xl bg-card glow-primary" />
                 <p className="font-mono text-xs text-muted-foreground">
-                  --glow-primary
+                  glow-primary
                 </p>
               </div>
               <div className="space-y-2 text-center">
-                <div
-                  className="size-24 rounded-xl bg-card"
-                  style={{ boxShadow: "var(--glow-accent)" }}
-                />
+                <div className="size-24 rounded-xl bg-card glow-accent" />
                 <p className="font-mono text-xs text-muted-foreground">
-                  --glow-accent
+                  glow-accent
                 </p>
               </div>
             </div>

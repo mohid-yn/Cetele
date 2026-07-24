@@ -420,6 +420,19 @@ body {
   }
 }
 
+/* The depth glows as real utilities. `shadow-[var(--glow-primary)]` does NOT
+   work: a bare var() in an arbitrary shadow is ambiguous, so Tailwind treats it
+   as a shadow *colour* — the class emits nothing visible and the underlying
+   `shadow-sm` survives, silently. (Verified in the browser: the promoted Today
+   ring showed only the slate shadow.) These utilities are unambiguous and keep
+   the value in the token. */
+@utility glow-primary {
+  box-shadow: var(--glow-primary);
+}
+@utility glow-accent {
+  box-shadow: var(--glow-accent);
+}
+
 /* Hide the scrollbar on a horizontal chip strip (day picker, tab rows) — it
    scrolls by touch/trackpad, and a native bar overlaps the chips on platforms
    that render a classic (non-overlay) scrollbar. Content stays keyboard- and

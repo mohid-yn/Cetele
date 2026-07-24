@@ -4,7 +4,10 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Avatar,
+  Eyebrow,
   Grid,
+  ProgressBar,
   ProgressRing,
   Screen,
   buttonVariants,
@@ -139,6 +142,9 @@ export function TodayClient({
             <h1 className="font-display text-2xl font-bold text-foreground">
               {firstName}
             </h1>
+            {/* The date is the member's OWN today (useLocalToday, D34) — not the
+                selected day, which the day-strip note below already names. */}
+            <Eyebrow className="mt-0.5">{fmtLongDate(todayISO)}</Eyebrow>
           </div>
         }
         subtitle={<span className="font-medium text-foreground">{glance}</span>}
@@ -203,50 +209,68 @@ export function TodayClient({
           {isToday ? "Your rings today" : "Your rings"}
         </SectionHeading>
         <Grid as="ul" cols="cards" gap="md">
-          {rings.map(({ task: t, count, done }) => (
-            <li key={t.id}>
-              <Link
-                href={`${groupHref(groupId, `/count/${t.id}`)}${isToday ? "" : `?date=${date}`}`}
-                className={cn(
-                  cardVariants({ padding: "compact" }),
-                  "flex items-center gap-4 transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none",
-                )}
-              >
-                <ProgressRing
-                  value={count}
-                  max={t.target}
-                  size={60}
-                  thickness={7}
+          {rings.map(({ task: t, count, done }) => {
+            // The one to continue gets an emerald rim, so the eye lands on the
+            // same ring the gold "Continue" CTA above points at.
+            const promoted = !done && next?.task.id === t.id;
+            return (
+              <li key={t.id}>
+                <Link
+                  href={`${groupHref(groupId, `/count/${t.id}`)}${isToday ? "" : `?date=${date}`}`}
+                  className={cn(
+                    cardVariants({ padding: "compact" }),
+                    "flex items-center gap-4 transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-md motion-reduce:transform-none",
+                    promoted && "glow-primary",
+                  )}
                 >
-                  {done ? (
-                    <CheckIcon className="size-5 text-success" />
-                  ) : (
-                    <span className="text-xs font-bold text-foreground tabular-nums">
-                      {Math.round((count / t.target) * 100)}%
-                    </span>
-                  )}
-                </ProgressRing>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-base font-semibold text-foreground">
-                    {t.label}
-                  </p>
-                  {t.subtitle && (
-                    <p
-                      className="truncate text-sm text-muted-foreground"
-                      dir="rtl"
-                      lang="ar"
-                    >
-                      {t.subtitle}
+                  <ProgressRing
+                    value={count}
+                    max={t.target}
+                    size={72}
+                    thickness={8}
+                  >
+                    {done ? (
+                      <CheckIcon className="size-6 text-success" />
+                    ) : (
+                      <span className="text-sm font-bold text-foreground tabular-nums">
+                        {Math.round((count / t.target) * 100)}%
+                      </span>
+                    )}
+                  </ProgressRing>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-base font-semibold text-foreground">
+                      {t.label}
                     </p>
-                  )}
-                  <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-                    {count.toLocaleString()} / {t.target.toLocaleString()}
-                  </p>
-                </div>
-                <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
-              </Link>
-            </li>
-          ))}
+                    {/* Not truncated: the bigger ring left ~192px here and
+                        "Allahumma salli ala Muhammad" needs 203, so it clipped
+                        to "…humma salli ala Muhammad" — and with dir="rtl" the
+                        ellipsis lands at the START of the phrase. Clipping the
+                        front off a salawat is not a tradeoff worth making for
+                        one line of height; let it wrap. */}
+                    {t.subtitle && (
+                      <p
+                        className="text-sm text-muted-foreground"
+                        dir="rtl"
+                        lang="ar"
+                      >
+                        {t.subtitle}
+                      </p>
+                    )}
+                    <ProgressBar
+                      value={count}
+                      max={t.target}
+                      tone={done ? "success" : "primary"}
+                      className="mt-2 h-1.5"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                      {count.toLocaleString()} / {t.target.toLocaleString()}
+                    </p>
+                  </div>
+                  <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
+                </Link>
+              </li>
+            );
+          })}
           {rings.length === 0 && (
             <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
               No tasks yet — the group&rsquo;s admin sets the shared list under{" "}
@@ -294,21 +318,32 @@ export function TodayClient({
                 key={m.userId}
                 className="rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm"
               >
+                {/* Flat by design: these rows don't navigate, so they get no
+                    hover lift (§B.5 — a lift implies a click that isn't there). */}
                 <div className="flex items-center gap-3">
-                  <span className="min-w-0 flex-1 truncate font-medium text-foreground">
-                    {m.name}
-                    {m.isMe && (
-                      <span className="ml-1.5 text-xs text-muted-foreground">
-                        (you)
-                      </span>
-                    )}
-                  </span>
+                  <Avatar size="sm" name={m.name} />
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate font-medium text-foreground">
+                      {m.name}
+                      {m.isMe && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">
+                          (you)
+                        </span>
+                      )}
+                    </span>
+                    <ProgressBar
+                      value={m.closed}
+                      max={m.total || 1}
+                      tone={m.done ? "success" : "primary"}
+                      className="mt-1.5 h-1.5"
+                    />
+                  </div>
                   {m.done ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-success">
                       <CheckIcon className="size-4" /> all rings closed
                     </span>
                   ) : (
-                    <span className="text-xs text-muted-foreground tabular-nums">
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                       {m.closed}/{m.total} rings
                     </span>
                   )}
