@@ -32,14 +32,15 @@ review_ — is **met**.
 | Repo         | `mohid-yn/Cetele` — `main` auto-deploys to prod                                                          |
 | Supabase     | ref `kwzlrztcwxjunvdhdoqu`, region Seoul (`ap-northeast-2`); Vercel functions colocated in `icn1`        |
 | Migrations   | `0001`–`0017`, all pushed to prod, history 17/17 no drift                                                |
-| Tests        | pgTAP **316** across 8 suites (`pnpm test:rls`) · Playwright e2e **20** across 9 specs (`pnpm test:e2e`) |
+| Tests        | pgTAP **316** across 8 suites (`pnpm test:rls`) · Playwright e2e **21** across 9 specs (`pnpm test:e2e`) |
 | Backend plan | M0–M9 **all shipped** ([`docs/BACKEND_BUILD_PLAN.md`](../docs/BACKEND_BUILD_PLAN.md))                    |
 | Linear       | CET-1…CET-31 all **Done** except CET-10 (variable-reward milestones, deferred)                           |
 | Working tree | clean; `main` = `origin/main`; no feature branches outstanding                                           |
 
-**In flight (2026-07-24) — the UI-fix + refinement pass, branch `mohidkhanzada/ui-refinement-motion`, NOT yet merged.**
-UI-only, no migration. Spec: `docs/INSTRUCTIONS_NEXT_STEPS.md`. Nine commits; build + lint + tsc + format green,
-e2e **21/21**, pgTAP **316/316**; every screen verified in a real browser at 390 + 1440 in both themes.
+**Last work (2026-07-24) — the UI-fix + refinement pass (shipped to prod, no migration):** UI-only, merged from
+`mohidkhanzada/ui-refinement-motion`. Built from a local implementation brief kept **out** of the repo
+(`docs/INSTRUCTIONS_NEXT_STEPS.md`, gitignored) — everything durable from it is recorded here. Build + lint + tsc +
+format green, e2e **21/21**, pgTAP **316/316**; every screen verified in a real browser at 390 + 1440 in both themes.
 **Part A** — three reported bugs: the Progress grid's sticky task label floated over the scrolling day cells (labels
 now own a fixed non-scrolling column); desktop content was stranded in a hardcoded `lg:max-w-3xl` (now the
 `--container-page` token, 64rem); the group header clipped "Fajr Cir…" because the title box was `min-w-0` but
@@ -51,7 +52,7 @@ enter/exit, tap ripple) with **no** load-stagger (D46 holds).
 **Three traps the browser caught that a green build did not** — each is now an invariant below: the glow utilities,
 the hero foreground, and `Badge` on a gradient.
 
-**Before that (2026-07-24) — the spacing/design pass (shipped to prod, no migration):** UI-only, merged from
+**Before that (2026-07-24) — the spacing/design pass (also shipped to prod, no migration):** UI-only, merged from
 `container-queries`. (1) **Layout primitives own the rhythm** — `Screen`/`Stack`/`Row` (earlier) plus a new **`Grid`**
 that keys columns off its _own slot_ via container queries (Tailwind v4 `@container`, no plugin), not the window;
 the rings and badges grids use it. (2) **Spacing stepped up one notch, app-wide** — `Screen` gap `xl→2xl`, edge
