@@ -103,10 +103,12 @@ export function TaskGrid({
     if (el) el.scrollLeft = el.scrollWidth;
   }, []);
 
-  // Fixed 44px day columns (the tap-target floor). Fixed, not `1fr`, so a thumb
-  // can land on one day; the row scrolls instead. The task label now lives in a
-  // separate non-scrolling column, so this drives only the cells.
-  const cellCols = `repeat(${days}, 2.75rem)`;
+  // 44px is the tap-target FLOOR, not the size. It used to be a fixed width, so
+  // the grid stayed 668px wide however much room it had — 44% of the card at
+  // 1920, i.e. the wider the monitor the more it wasted. `minmax(floor, 1fr)`
+  // keeps the phone behaviour exactly (tracks bottom out at 44px, the row
+  // scrolls) and lets a desktop spend the space it actually has.
+  const cellCols = `repeat(${days}, minmax(2.75rem, 1fr))`;
 
   function pick(taskId: string, taskLabel: string, c: GridCell) {
     setError(null);
@@ -159,14 +161,16 @@ export function TaskGrid({
     <div className="flex flex-col gap-4">
       {/* A fixed label column that never scrolls, beside a cells region that does —
           so a long task name can never paint over the day squares (the old sticky
-          column floated the label over the cells). Row heights match: h-11 == the
-          2.75rem aspect-square cell, gap-1.5 on both, so labels line up with rows. */}
+          column floated the label over the cells). The label rows carry the SAME
+          height ladder as the cell rows (h-11 → lg:h-14 → 2xl:h-16) because that
+          is the only thing keeping the two columns in step now that the cells
+          grow with the viewport. */}
       <div className="flex gap-2">
         <div className="flex shrink-0 flex-col gap-1.5">
           {rows.map((row) => (
             <div
               key={row.taskId}
-              className="flex h-11 max-w-[7.5rem] items-center pr-1"
+              className="flex h-11 max-w-[7.5rem] items-center pr-1 lg:h-14 2xl:h-16"
             >
               <span className="truncate text-xs font-medium text-foreground">
                 {row.label}
@@ -177,12 +181,20 @@ export function TaskGrid({
           <div className="h-4" aria-hidden />
         </div>
 
-        <div ref={scrollRef} className="-m-1 no-scrollbar overflow-x-auto p-1">
-          <div className="flex w-max flex-col gap-1.5">
+        <div
+          ref={scrollRef}
+          className="-m-1 no-scrollbar min-w-0 flex-1 overflow-x-auto p-1"
+        >
+          {/* `min-w-max` keeps the phone contract (never squeeze a day below the
+              44px floor — overflow and scroll instead) and `w-full` lets a
+              desktop fill the card it sits in. The cap only bites on a genuine
+              ultrawide, where a full-width row is its own readability problem —
+              the same reasoning as the --container-page ladder. */}
+          <div className="flex w-full max-w-[88rem] min-w-max flex-col gap-1.5">
             {rows.map((row) => (
               <div
                 key={row.taskId}
-                className="grid h-11 items-center gap-1"
+                className="grid h-11 items-center gap-1 lg:h-14 2xl:h-16"
                 style={{ gridTemplateColumns: cellCols }}
               >
                 {row.cells.map((c) => {
@@ -196,7 +208,10 @@ export function TaskGrid({
                       title={`${fmtFull(c.date)} — ${c.count.toLocaleString()} / ${c.target.toLocaleString()}`}
                       aria-label={`${row.label}, ${fmtFull(c.date)}: ${c.count} of ${c.target}`}
                       className={cn(
-                        "grid aspect-square place-items-center rounded-md transition-transform hover:scale-105",
+                        // Height comes from the ROW, width from the track — an
+                        // `aspect-square` here would make a widened desktop cell
+                        // as TALL as it is wide and burst the row.
+                        "grid h-full w-full place-items-center rounded-md transition-transform hover:scale-105",
                         cellClass(c.pct, c.count),
                         isPicked &&
                           "ring-2 ring-accent ring-offset-1 ring-offset-card",
