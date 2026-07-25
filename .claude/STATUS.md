@@ -233,12 +233,14 @@ app/(app)/{groups,profile}      circle picker / front door · personal settings 
 app/join/[code]                 invite accept · app/(legal)/{privacy,terms} · app/designsystem  living UI reference
 components/{ui,app,motion,theme}   primitives (cva+cn) · shared app components · motion layer · theme toggle
 lib/                            supabase/ (server+client+service) · push/ · use-*.ts hooks · groups-store · motion.ts
+                                brand.ts (sanctioned colour literals) · apple-splash.js (iOS launch-image table)
+public/splash/                  36 generated iOS launch images (gen-splash.mjs); public/icons/ PWA icons (gen-icons.mjs)
 supabase/migrations/            0001–0017 · supabase/tests/ 001–008 pgTAP
 e2e/                            9 Playwright specs
 docs/                           PRD.md (+ .docx) · BACKEND_BUILD_PLAN.md · MIGRATION_MOCK_TO_SUPABASE.md
                                 DESIGN_SYSTEM.md · UI_PRACTICES.md
 research/                       01 landscape · 02 motivation/reward · 03 feature recommendations
-scripts/                        build_prd_docx.py · build_push_guide_pptx.py · gen-icons.mjs
+scripts/                        build_prd_docx.py · build_push_guide_pptx.py · gen-icons.mjs (PWA icons) · gen-splash.mjs (iOS splash)
 ```
 
 **Commands:** `pnpm dev` · `pnpm build` · `pnpm start` · `pnpm lint` · `pnpm exec tsc --noEmit` · `pnpm format:check`
