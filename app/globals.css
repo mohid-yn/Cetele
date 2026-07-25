@@ -155,6 +155,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  /* The unfilled part of any progress indicator — ring stroke or bar track.
+     Shared so a ring and a bar on the same screen can never disagree. */
+  --color-progress-track: var(--progress-track);
 
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -190,6 +193,12 @@
   --muted: #f0eadd; /* warm fill — chips, hover, recessed states */
   --muted-foreground: #6f675a; /* warm grey ≈ 5.6:1 on cream/white — passes AA */
   --border: #e7e0d0; /* warm hairline */
+  /* The unfilled arc of a progress ring. NOT --muted: that is a large-AREA fill
+     token, and a fill that reads fine behind a chip disappears as an 8–18px
+     stroke — measured 1.20:1 on a white card and 1.11:1 on cream, i.e. invisible.
+     This is sand, not grey: the big HUE gap from the emerald fill keeps the two
+     arcs unmistakable without needing the track to go dark enough to compete. */
+  --progress-track: #a89e88; /* ≈2.65:1 on card, 2.46:1 on cream */
   --input: #e7e0d0;
   --ring: #047857; /* emerald focus ring — calm & on-brand */
 
@@ -296,6 +305,9 @@
   --muted: #2e2419; /* chips / fills / hover — lighter again so states read */
   --muted-foreground: #b3a691; /* warm ≈7:1 on card — passes AA */
   --border: #3d3122; /* visible warm separator (shadows are weak on dark) */
+  /* Same story on dark, same measurement: --muted as a stroke was 1.10:1 on the
+     card. Lifted well past --border, which only has to separate two surfaces. */
+  --progress-track: #6b6154; /* ≈2.77:1 on card, 3.01:1 on the page */
   --input: #3d3122;
   --ring: #34d399; /* bright emerald focus — high-visibility on dark */
 

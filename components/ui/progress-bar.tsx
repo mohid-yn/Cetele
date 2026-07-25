@@ -48,7 +48,13 @@ export function ProgressBar({
 
   return (
     <div
-      className={cn("h-2.5 overflow-hidden rounded-full bg-muted", className)}
+      className={cn(
+        // Same track token as ProgressRing, for the same reason: `bg-muted` is
+        // a large-area fill, and at 10px tall it measured 1.2:1 on a card —
+        // the bar read as a floating fill with no length to judge it against.
+        "h-2.5 overflow-hidden rounded-full bg-progress-track",
+        className,
+      )}
       {...props}
     >
       <div

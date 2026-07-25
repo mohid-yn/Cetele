@@ -10,7 +10,9 @@ export interface ProgressRingProps extends React.HTMLAttributes<HTMLDivElement> 
   size?: number;
   /** Stroke width in px. */
   thickness?: number;
-  /** Track + progress colors (any CSS color). Defaults: muted track, emerald fill. */
+  /** Track + progress colors (any CSS color). Defaults: the sand track token,
+   *  emerald fill. Override only for a genuinely different surface — a track
+   *  thinned with alpha reads as no track at all. */
   trackColor?: string;
   progressColor?: string;
   /**
@@ -36,7 +38,7 @@ export function ProgressRing({
   max = 100,
   size = 96,
   thickness = 10,
-  trackColor = "var(--muted)",
+  trackColor = "var(--progress-track)",
   progressColor = "var(--primary)",
   fluid = false,
   className,

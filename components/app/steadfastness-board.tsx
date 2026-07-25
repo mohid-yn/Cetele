@@ -1,4 +1,4 @@
-import { Card, CardContent, Badge } from "@/components/ui";
+import { Card, CardContent, Badge, ProgressBar } from "@/components/ui";
 import { SectionHeading } from "@/components/app/section-heading";
 import { MemberRow } from "@/components/app/member-row";
 import type { Steadfast } from "@/app/(app)/g/[groupId]/group/group-client";
@@ -45,12 +45,7 @@ export function SteadfastnessBoard({
               }
               status={
                 m.eligible ? (
-                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${m.pct}%` }}
-                    />
-                  </div>
+                  <ProgressBar value={m.pct} className="mt-1 h-2" />
                 ) : (
                   <span>
                     Not enough data yet · {m.measuredDays}/14 days logged

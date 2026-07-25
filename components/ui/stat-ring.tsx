@@ -8,8 +8,11 @@ import { ProgressRing, type ProgressRingProps } from "./progress-ring";
  * `ProgressRing`, deliberately NOT a fork: the ring's geometry, completion
  * colour and reduced-motion behaviour stay in one place.
  *
- * `softTrack` dims the track so the fill carries more of the eye at hero size,
- * where the default `--muted` track competes with the emerald.
+ * There used to be a `softTrack` prop, on by default, that dimmed the track to
+ * 60% alpha so the fill "carried the eye at hero size". It was solving the
+ * wrong problem — the old `--muted` track was already at 1.2:1, so softening it
+ * bought nothing and cost the ring its shape. The fill leads by HUE and weight
+ * now, not by the track being absent. One track, one token, no fork.
  */
 export interface StatRingProps extends Omit<
   ProgressRingProps,
@@ -21,8 +24,6 @@ export interface StatRingProps extends Omit<
   caption?: React.ReactNode;
   /** Outer diameter in px. Hero default is larger than ProgressRing's 96. */
   size?: number;
-  /** Recede the track so the fill reads as the subject. */
-  softTrack?: boolean;
 }
 
 export function StatRing({
@@ -30,7 +31,6 @@ export function StatRing({
   caption,
   size = 128,
   thickness = 12,
-  softTrack = true,
   trackColor,
   className,
   ...props
@@ -39,12 +39,7 @@ export function StatRing({
     <ProgressRing
       size={size}
       thickness={thickness}
-      trackColor={
-        trackColor ??
-        (softTrack
-          ? "color-mix(in oklab, var(--muted) 60%, transparent)"
-          : undefined)
-      }
+      trackColor={trackColor}
       className={cn(className)}
       {...props}
     >

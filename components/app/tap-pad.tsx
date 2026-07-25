@@ -121,8 +121,12 @@ export function TapPad({
           // back to start-alignment when an item overruns its track) and
           // landing 12px off-centre from its own glow and the caption below.
           fluid
-          // A receding track lets the emerald fill carry the eye at hero size.
-          trackColor="color-mix(in oklab, var(--muted) 60%, transparent)"
+          // No trackColor override. This ring is the one you stare at for a
+          // whole session, and it had the faintest track in the app: --muted
+          // thinned to 60% alpha, ~1.1:1 on cream — the "receding track" was
+          // receding all the way out of sight, so at a low count there was no
+          // circle to read the arc against. It takes the token like every
+          // other ring.
           className="relative"
         >
           <div className="flex flex-col items-center">
