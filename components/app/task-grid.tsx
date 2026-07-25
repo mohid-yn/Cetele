@@ -34,9 +34,16 @@ export type GridCell = {
 export type GridRow = { taskId: string; label: string; cells: GridCell[] };
 
 /** Emerald intensity by share of the task's target hit that day (green = growth);
- *  no activity reads as a neutral cell, never red (D8). */
+ *  no activity reads as a neutral cell, never red (D8).
+ *
+ *  The empty cell is OUTLINED, not darkened. `bg-muted` alone measured 1.2:1 on
+ *  the card, so the grid's shape was invisible — but filling it with the
+ *  --progress-track tone would make a missed day visually HEAVIER than a barely-
+ *  touched one (`bg-primary/20`), inverting the ramp and reading as punishment,
+ *  which D8 rules out. A hairline at track strength makes the slot unmistakable
+ *  while its fill stays the lightest rung of the scale. */
 function cellClass(pct: number, count: number): string {
-  if (count <= 0) return "bg-muted";
+  if (count <= 0) return "bg-muted ring-1 ring-inset ring-progress-track";
   if (pct >= 1) return "bg-primary";
   if (pct >= 0.66) return "bg-primary/70";
   if (pct >= 0.33) return "bg-primary/45";
@@ -314,7 +321,7 @@ export function TaskGrid({
       {/* Legend — colour always paired with a label (§5 colour-blind safety) */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-3.5 rounded-[3px] bg-muted" />
+          <span className="size-3.5 rounded-[3px] bg-muted ring-1 ring-progress-track ring-inset" />
           Missed
         </span>
         <span className="inline-flex items-center gap-1.5">
