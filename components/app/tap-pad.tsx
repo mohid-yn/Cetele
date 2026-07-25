@@ -4,7 +4,8 @@ import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ProgressRing } from "@/components/ui";
 import { playTap } from "@/lib/sound";
-import { DURATION, EASE_BRAND, prefersReducedMotion } from "@/lib/motion";
+import { hapticTick } from "@/lib/haptics";
+import { DURATION, EASE_BRAND } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 interface TapPadProps {
@@ -30,19 +31,36 @@ export function TapPad({
   onTap,
 }: TapPadProps) {
   const [popKey, setPopKey] = React.useState(0);
+  const lastFeedbackAt = React.useRef(0);
   const done = value >= max;
   const pct = max > 0 ? Math.min(Math.max(value / max, 0), 1) : 0;
 
-  const handleTap = () => {
+  // The pad plays ONE tick per tap, always — the tasbih-bead feel. It used to
+  // branch to a "celebratory" pattern whenever `done`, but `done` is the
+  // PRE-tap value, so that never fired on the tap that closes the ring: it
+  // fired on every tap after it, which is a reward you can summon on demand.
+  // The close is celebrated once, on the transition, by `celebrateIfClosed` in
+  // count-client — that is the only place it belongs.
+  const fireFeedback = () => {
+    lastFeedbackAt.current = Date.now();
     if (sound) playTap();
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      // The short tick is tactile FEEDBACK (the tasbih-bead feel) and stays; the
-      // multi-buzz completion pattern is celebratory — reduced-motion users get
-      // the plain tick there too.
-      navigator.vibrate?.(
-        done && !prefersReducedMotion() ? [0, 30, 20, 40] : 18,
-      );
-    }
+    hapticTick();
+  };
+
+  // Feedback lands on finger-DOWN, not on `click` — which for touch resolves at
+  // touchend, so the tick arrived on release and read as lagging the press
+  // rather than being caused by it. The COUNT stays on `click` (keyboard
+  // activation, and the ripple/pop stay tied to the committed tap).
+  const handlePointerDown = () => {
+    if (disabled) return;
+    fireFeedback();
+  };
+
+  const handleTap = () => {
+    // Keyboard activation fires `click` with no preceding pointerdown; the
+    // timestamp lets that path feed itself without double-firing on touch,
+    // where pointerdown is always well under 400ms ahead of the click.
+    if (Date.now() - lastFeedbackAt.current > 400) fireFeedback();
     setPopKey((k) => k + 1);
     onTap();
   };
@@ -50,6 +68,7 @@ export function TapPad({
   return (
     <button
       type="button"
+      onPointerDown={handlePointerDown}
       onClick={handleTap}
       disabled={disabled}
       aria-label="Tap to count"

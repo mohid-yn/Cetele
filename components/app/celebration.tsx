@@ -12,6 +12,7 @@
 import * as React from "react";
 import { Card } from "@/components/ui";
 import { prefersReducedMotion } from "@/lib/motion";
+import { hapticCelebrate } from "@/lib/haptics";
 import { SparkIcon } from "./icons";
 
 interface CelebrateOptions {
@@ -168,15 +169,7 @@ export function CelebrationProvider({
 
   const celebrate = React.useCallback((opts?: CelebrateOptions) => {
     burstRef.current();
-    // The multi-buzz flourish is celebration, not feedback — reduced-motion
-    // users get the card without the fireworks.
-    if (
-      typeof navigator !== "undefined" &&
-      "vibrate" in navigator &&
-      !prefersReducedMotion()
-    ) {
-      navigator.vibrate?.([0, 40, 30, 60]);
-    }
+    hapticCelebrate();
     if (!opts?.confettiOnly) {
       const pick = MILESTONES[Math.floor(Math.random() * MILESTONES.length)];
       setCard({
