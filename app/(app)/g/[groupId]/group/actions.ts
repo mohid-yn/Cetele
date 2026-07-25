@@ -28,16 +28,18 @@ function revalidateGroup(groupId: string) {
  */
 
 /** D29: set the exact count for one member/task/day — admin proxy-log or the
- *  member correcting their own record (the editable fortnight grid). */
+ *  member correcting their own record (the editable fortnight grid). Returns the
+ *  authoritative count so an optimistic caller can reconcile from the write
+ *  itself, not a refetch (the count screen's undo/edit does this). */
 export async function setCount(
   groupId: string,
   userId: string,
   taskId: string,
   date: string,
   count: number,
-): Promise<{ error: string | null }> {
+): Promise<{ count: number | null; error: string | null }> {
   const supabase = await createClient();
-  const { error } = await q(
+  const { data, error } = await q(
     `rpc.set_count (=${count})`,
     supabase.rpc("set_count", {
       p_user: userId,
@@ -47,10 +49,10 @@ export async function setCount(
     }),
   );
   await signOutIfStaleSession(error);
-  if (error) return { error: error.message };
+  if (error) return { count: null, error: error.message };
 
   revalidateGroup(groupId);
-  return { error: null };
+  return { count: data, error: null };
 }
 
 /** D29: the in-person halaqah "log for the group" — mark one task done for

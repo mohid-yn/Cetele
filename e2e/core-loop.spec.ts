@@ -271,3 +271,81 @@ test("on a short phone the primary action is not covered by the nav", async ({
   expect(btn.y + btn.height).toBeLessThanOrEqual(667);
   expect(btn.y + btn.height).toBeLessThanOrEqual(nav.y + 1);
 });
+
+test("undo mid-flush can't dip the count under a slow network", async ({
+  page,
+}) => {
+  // The pad used to FREEZE on undo/edit — settle the tap queue, then set, both
+  // awaited — precisely because an exact-set racing an in-flight increment made
+  // the count bounce (the "count-dip" family). It's optimistic in both
+  // directions now, serialized behind one FIFO queue. This proves the dip can't
+  // come back even when every write is slow: tap to 3, undo to 2 BEFORE the taps
+  // have flushed, and the on-screen number must never flick up to 3 as the
+  // increment lands behind the undo.
+  test.slow(); // throttled writes — give it the headroom
+  await signIn(page, USER);
+
+  // an isolated circle + a task with headroom, so the undo lands mid-flush
+  await page.goto("/groups");
+  await page.click('button:has-text("New group")');
+  await page.fill("#new-group-name", "Latency Lab");
+  await page.click('button:has-text("Create group")');
+  await page.waitForURL("**/group/manage");
+  const groupId = page.url().match(/\/g\/([^/]+)\//)![1];
+  await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Tasbih");
+  await page.getByPlaceholder("Daily target").last().fill("10");
+  await page.click('button:has-text("Add task")');
+  await expect(page.getByText("target 10 / day")).toBeVisible();
+
+  await page.goto(`/g/${groupId}/today`);
+  await page
+    .getByRole("main")
+    .getByRole("listitem")
+    .getByRole("link", { name: /Tasbih/ })
+    .click();
+  await page.waitForURL("**/count/**");
+
+  // slow EVERY request so a server action takes ~half a second to answer —
+  // opening the window a reconcile-against-raw-server would have dipped in
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Network.enable");
+  const throttle = (on: boolean) =>
+    cdp.send("Network.emulateNetworkConditions", {
+      offline: false,
+      latency: on ? 500 : 0,
+      downloadThroughput: on ? (1024 * 1024) / 8 : -1,
+      uploadThroughput: on ? (1024 * 1024) / 8 : -1,
+    });
+  await throttle(true);
+
+  const ring = page.getByRole("progressbar");
+  const pad = page.getByRole("button", { name: "Tap to count" });
+  await pad.click();
+  await pad.click();
+  await pad.click();
+  await expect(ring).toHaveAttribute("aria-valuenow", "3"); // instant, optimistic
+
+  // undo before the 600ms debounce has even dispatched the taps
+  await page.getByRole("button", { name: "Undo one count" }).click();
+  await expect(ring).toHaveAttribute("aria-valuenow", "2");
+
+  // watch the number across the whole settling window: as the +3 increment
+  // lands, then the set(2) behind it, it must stay pinned at 2 — a "3" here is
+  // the dip returning.
+  const seen = new Set<string>();
+  const deadline = Date.now() + 3000;
+  while (Date.now() < deadline) {
+    seen.add((await ring.getAttribute("aria-valuenow")) ?? "");
+    await page.waitForTimeout(50);
+  }
+  expect(seen.has("3")).toBe(false);
+  await expect(ring).toHaveAttribute("aria-valuenow", "2");
+
+  // and it was a real write, not just optimistic paint: the DB serves 2
+  await throttle(false);
+  await page.reload();
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "2",
+  );
+});
