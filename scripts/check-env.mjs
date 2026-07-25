@@ -38,6 +38,10 @@ const REQUIRED = [
     "NEXT_PUBLIC_AUTH_DEV",
     'renders "Dev sign-in", which auth.spec + manage.spec click to test the real ?next= redirect',
   ],
+  [
+    "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+    'the profile screen branches on it — absent, it shows "reminders aren\'t configured" instead of the toggle or the iOS install steps',
+  ],
 ];
 
 // Same precedence the Playwright config uses: real environment wins, then
