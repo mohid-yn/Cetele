@@ -64,6 +64,14 @@ export function DayStrip({
                 // 1-2 digit day number); tall enough already. In a horizontal
                 // scroller, so a wider cell costs nothing but scroll length.
                 "flex min-w-11 shrink-0 flex-col items-center gap-0.5 rounded-xl border px-2.5 py-1.5 transition-colors",
+                // Desktop: the 14 days are a HARD cap (13 back + today), but on a
+                // wide screen they filled only ~2/3 of the row and left a 400px
+                // trailing gap that reads as "scroll for more days" — there are
+                // none. From lg they grow to equal width and fill the row, so the
+                // fixed window looks deliberate. On phones they stay 44px and
+                // scroll (grow is inert once the row overflows, and lg-gated
+                // anyway), so nothing about the mobile strip changes.
+                "lg:grow lg:basis-0",
                 active
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card text-muted-foreground hover:bg-muted",
