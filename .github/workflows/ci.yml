@@ -108,6 +108,12 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
           NEXT_PUBLIC_AUTH_EMAIL=1
+          # Two specs (auth, manage's signed-out invite → ?next= → sign-in) drive
+          # the REAL login UI rather than the helper, because the redirect and the
+          # cookie are what they assert — and that button is gated on this flag.
+          # It is build-inlined, so it has to be set before `pnpm build` below;
+          # production never sets it, so the button cannot appear there.
+          NEXT_PUBLIC_AUTH_DEV=1
           EOF
           # e2e sign-in mints its own magic link with the SERVICE ROLE instead of
           # sending email (e2e/helpers.ts), so the suite needs that key as well —
