@@ -78,8 +78,8 @@ export function TapPad({
         />
 
         {/* One ripple per tap — FEEDBACK, not celebration, so it eases out
-            (ease-brand) and never springs. Keyed by popKey so each tap spawns
-            its own; MotionConfig reducedMotion="user" collapses it globally. */}
+            (ease-brand), never the emphasis register. Keyed by popKey so each tap
+            spawns its own; MotionConfig reducedMotion="user" collapses it. */}
         <AnimatePresence>
           <motion.span
             key={popKey}
@@ -111,12 +111,12 @@ export function TapPad({
               key={popKey}
               className="font-display text-6xl font-bold text-foreground tabular-nums"
               style={{
-                // `--ease-brand`, not `--ease-spring`. lib/motion.ts reserves
-                // the spring for "earned celebrations ONLY" — and this fires on
-                // EVERY tap, hundreds of times a session. An overshoot bounce
+                // `--ease-brand`, not `--ease-emphasized`. The emphasized ease
+                // is reserved for "earned celebrations ONLY" — and this fires on
+                // EVERY tap, hundreds of times a session. A dramatic settle
                 // repeated that often stops reading as reward and starts
-                // reading as jitter, which is the wrong feel for dhikr. The
-                // spring stays where it is earned: the ring-close celebration.
+                // reading as jitter, the wrong feel for dhikr. The emphasis ease
+                // stays where it is earned: the ring-close celebration.
                 animation: "count-pop var(--duration-fast) var(--ease-brand)",
               }}
             >

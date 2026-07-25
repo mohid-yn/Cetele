@@ -212,7 +212,8 @@ export function CelebrationProvider({
           <Card
             className="w-full max-w-xs border-accent-200 p-6 text-center shadow-xl"
             style={{
-              animation: "celebrate-in var(--duration-slow) var(--ease-spring)",
+              animation:
+                "celebrate-in var(--duration-slow) var(--ease-emphasized)",
             }}
           >
             <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-accent-100 text-accent-700">

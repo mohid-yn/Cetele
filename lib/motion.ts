@@ -3,14 +3,15 @@
  * CSS motion tokens in `app/globals.css`. Everything here MIRRORS those tokens so
  * the two systems stay one design language, not two:
  *
- *   --ease-brand:    cubic-bezier(0.22, 1, 0.36, 1)   ← entrances (ease-out)
- *   --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1) ← earned celebrations ONLY
+ *   --ease-brand:      cubic-bezier(0.22, 1, 0.36, 1) ← entrances (ease-out quint)
+ *   --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1)  ← earned celebrations ONLY
  *   --duration-fast: 150ms · --duration-base: 220ms · --duration-slow: 360ms
  *
- * The philosophy from globals.css holds: ease-out for entrances, a bit of bounce
- * ONLY for earned/celebratory moments. Reduced motion is handled globally by
- * <MotionConfig reducedMotion="user"> in the root layout, so nothing here needs
- * to branch on it.
+ * The philosophy from globals.css holds: both eases are smooth ease-outs (real
+ * objects decelerate, they don't bounce); the emphasized one is just a more
+ * dramatic settle, reserved for earned/celebratory moments. Reduced motion is
+ * handled globally by <MotionConfig reducedMotion="user"> in the root layout,
+ * so nothing here needs to branch on it.
  */
 
 import type { Transition, Variants } from "motion/react";
@@ -38,6 +39,9 @@ export const DURATION = {
 /** The entrance ease — same cubic-bezier as --ease-brand. */
 export const EASE_BRAND = [0.22, 1, 0.36, 1] as const;
 
+/** The emphasis ease — same cubic-bezier as --ease-emphasized (ease-out expo). */
+export const EASE_EMPHASIZED = [0.16, 1, 0.3, 1] as const;
+
 /** A calm ease-out tween for entrances/layout — the default for everything. */
 export const easeBrand = (duration: number = DURATION.base): Transition => ({
   duration,
@@ -45,25 +49,29 @@ export const easeBrand = (duration: number = DURATION.base): Transition => ({
 });
 
 /**
- * A gentle spring for shared-layout indicators (nav pill, tab highlight) — the
- * glide should feel physical but must not overshoot into the celebration
- * register, so this is critically-ish damped, not bouncy.
+ * The emphasis tween — a dramatic-but-smooth settle for earned/celebratory
+ * moments (mirrors --ease-emphasized). No overshoot: the drama is in the
+ * deceleration, not a bounce. Reserve for earned moments; everything routine
+ * uses easeBrand.
+ */
+export const easeEmphasized = (
+  duration: number = DURATION.slow,
+): Transition => ({
+  duration,
+  ease: EASE_EMPHASIZED,
+});
+
+/**
+ * A physical glide for shared-layout indicators (nav pill, tab highlight). It
+ * should feel like a real object settling into place — high damping so it
+ * arrives cleanly without a visible bounce (damping ratio ≈ 0.98), never the
+ * springy overshoot that reads as dated.
  */
 export const springGlide: Transition = {
   type: "spring",
   stiffness: 420,
-  damping: 34,
+  damping: 38,
   mass: 0.9,
-};
-
-/**
- * The celebration spring — the ONLY place a visible bounce belongs (mirrors
- * --ease-spring's overshoot). Reserve for earned moments.
- */
-export const springCelebrate: Transition = {
-  type: "spring",
-  stiffness: 380,
-  damping: 18,
 };
 
 /** Fade + a small rise — the Motion equivalent of the `.rise-in` keyframe. */

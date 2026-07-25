@@ -45,7 +45,7 @@ function Plant({ x, v, i }: { x: number; v: number; i: number }) {
     <g
       style={{
         ...baseStyle,
-        animation: `garden-grow var(--duration-slow) var(--ease-spring) both`,
+        animation: `garden-grow var(--duration-slow) var(--ease-emphasized) both`,
         animationDelay: `${i * 70}ms`,
       }}
     >
@@ -86,7 +86,7 @@ function Plant({ x, v, i }: { x: number; v: number; i: number }) {
             style={{
               ...baseStyle,
               transformOrigin: "center",
-              animation: `bloom-pop var(--duration-slow) var(--ease-spring) both`,
+              animation: `bloom-pop var(--duration-slow) var(--ease-emphasized) both`,
             }}
           >
             {[0, 72, 144, 216, 288].map((a) => (
