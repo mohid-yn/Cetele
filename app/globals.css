@@ -172,6 +172,11 @@
 }
 
 :root {
+  /* Theme is a manual `.dark` class (set before paint by the no-flash script),
+     so color-scheme tracks the CLASS, not the system preference — this keeps the
+     UA canvas, scrollbars and form controls in step with the chosen theme, and
+     stops the brief pre-CSS canvas rendering dark under a system-dark device. */
+  color-scheme: light;
   /* Warm cream surface — softer and calmer than stark white for a worship app.
      Cards stay pure white so they lift off the cream by tone + border + shadow;
      muted fills/borders are warmed to match so nothing reads cool-grey. */
@@ -280,6 +285,7 @@
      muted), with a visible border so cards still separate. Warm brown-tinted
      neutrals give an earthy night surface (emerald + gold pop warmly on it).
      Surfaces sit above pure black so they never glare. */
+  color-scheme: dark;
   --background: #1a140f; /* deep warm brown — calm, not pure black */
   --foreground: #f0e9dd; /* warm off-white, not pure #fff */
   --card: #241c14; /* raised: clearly lighter/warmer than the page */
