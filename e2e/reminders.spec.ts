@@ -70,3 +70,59 @@ test("a member sets a per-task reminder time, and it persists", async ({
     "07:45",
   );
 });
+
+/**
+ * iOS delivers Web Push ONLY to a Home-Screen install, so an iPhone browser tab
+ * must be offered the install steps — never a "Turn on" button that cannot work.
+ * This shipped broken: the old check concluded "iOS needs installing" only when
+ * `PushManager` was ABSENT, but iOS 16.4+ exposes it in ordinary tabs, so every
+ * condition passed and the dead toggle rendered.
+ *
+ * The UA is the only lever Playwright has here (it cannot emulate Apple's push
+ * behaviour), which is exactly the input the decision is made from: a real
+ * iPhone tab differs only in that `PushManager` may also be missing, and both
+ * paths lead to the same branch.
+ */
+test("iOS in a browser tab is coached to install, not shown a dead push toggle", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    userAgent:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  await signIn(page, USER);
+  await page.goto("/profile");
+
+  // The install steps, in place of the toggle.
+  await expect(
+    page.getByText("Add Cetele to your Home Screen first"),
+  ).toBeVisible();
+  await expect(page.getByText("Add to Home Screen")).toBeVisible();
+
+  // And emphatically no push control: this is the whole point.
+  await expect(page.getByRole("button", { name: /^Turn on$/ })).toHaveCount(0);
+  await expect(page.getByText("Reminders on this device")).toHaveCount(0);
+
+  // Times stay editable — they live on the ACCOUNT and fire to whichever device
+  // is subscribed (D42), so a phone tab must still be able to set them.
+  await expect(page.getByLabel("Reminder time for Salawat")).toBeVisible();
+  await expect(
+    page.getByText("saved to your account, not to this browser"),
+  ).toBeVisible();
+
+  await context.close();
+});
+
+/** The control still appears where push genuinely works (default Chromium). */
+test("a push-capable browser still gets the reminder toggle", async ({
+  page,
+}) => {
+  await signIn(page, USER);
+  await page.goto("/profile");
+  await expect(page.getByText("Reminders on this device")).toBeVisible();
+  await expect(
+    page.getByText("Add Cetele to your Home Screen first"),
+  ).toHaveCount(0);
+});

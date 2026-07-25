@@ -38,24 +38,58 @@ export function pushSupported(): boolean {
   );
 }
 
-/**
- * iOS/iPadOS only delivers push to a PWA installed to the Home Screen (16.4+).
- * In a normal Safari tab there is no PushManager at all — so rather than show a
- * button that cannot work, the UI shows install coaching. This detects "iOS, not
- * installed", which is exactly that case.
- */
-export function needsIosInstall(): boolean {
+/** Running as an installed app rather than in a browser tab. */
+export function isInstalled(): boolean {
   if (typeof window === "undefined") return false;
-  const ua = navigator.userAgent;
-  const isIos =
-    /iPad|iPhone|iPod/.test(ua) ||
-    // iPadOS 13+ reports as a Mac; the touch points give it away.
-    (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-  const installed =
+  return (
     window.matchMedia("(display-mode: standalone)").matches ||
     // Safari's own flag (non-standard, iOS only).
-    (navigator as unknown as { standalone?: boolean }).standalone === true;
-  return isIos && !installed && !("PushManager" in window);
+    (navigator as unknown as { standalone?: boolean }).standalone === true
+  );
+}
+
+/** iOS/iPadOS — where every browser is WebKit and the install rule applies. */
+export function isIos(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent;
+  return (
+    /iPad|iPhone|iPod/.test(ua) ||
+    // iPadOS 13+ reports as a Mac; the touch points give it away.
+    (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+  );
+}
+
+/**
+ * What this device can actually do, as one value the UI switches on.
+ *
+ *  ready              — subscribing here will work
+ *  ios-needs-install  — iOS, in a browser tab: install to the Home Screen first
+ *  unsupported        — no Web Push in this browser at all
+ *  unconfigured       — our own VAPID key is missing, so nothing can be sent
+ *
+ * **This is decided by the PLATFORM RULE, not by feature detection**, and that
+ * distinction is the whole bug it replaces. The old check required
+ * `!("PushManager" in window)` to conclude "iOS needs installing" — but iOS
+ * 16.4+ exposes PushManager and Notification in ordinary Safari tabs, where
+ * subscribing still cannot work. So on a modern iPhone every condition passed,
+ * `pushSupported()` returned true, and the member was shown a live "Turn on"
+ * button that could never succeed. iOS gates push on being installed, whatever
+ * the globals say, so that is what we key on.
+ */
+export type PushEnvironment =
+  | "ready"
+  | "ios-needs-install"
+  | "unsupported"
+  | "unconfigured";
+
+export function pushEnvironment(vapidPublicKey: string): PushEnvironment {
+  if (typeof window === "undefined") return "unsupported";
+  // Ours to get right, and it fails silently at send time — so it outranks
+  // anything about the device. An empty key means the button is a lie.
+  if (!vapidPublicKey) return "unconfigured";
+  if (isIos() && !isInstalled()) return "ios-needs-install";
+  if (!pushSupported()) return "unsupported";
+  return "ready";
 }
 
 function keyToBase64(sub: PushSubscription, name: "p256dh" | "auth"): string {
@@ -65,34 +99,62 @@ function keyToBase64(sub: PushSubscription, name: "p256dh" | "auth"): string {
 }
 
 /**
- * Ask permission, then subscribe. Returns null if the user declines — a refusal
- * is a normal answer, not an error, and must never be nagged (D8).
+ * The outcome of asking, as something the UI can act on. A decline is a normal
+ * answer and never nagged (D8) — but "iOS refused because we are in a tab" is a
+ * different thing entirely, and it deserves install coaching rather than a raw
+ * `NotAllowedError` shown as an error message.
  */
+export type SubscribeResult =
+  | { ok: true; keys: PushKeys }
+  | { ok: false; reason: "declined" | "needs-install" | "unsupported" };
+
+/** Ask permission, then subscribe. */
 export async function subscribeToPush(
   vapidPublicKey: string,
-): Promise<PushKeys | null> {
-  if (!pushSupported()) return null;
+): Promise<SubscribeResult> {
+  const env = pushEnvironment(vapidPublicKey);
+  if (env === "ios-needs-install")
+    return { ok: false, reason: "needs-install" };
+  if (env !== "ready") return { ok: false, reason: "unsupported" };
 
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") return null;
+  // Belt and braces: if a future iOS starts allowing the call but still refuses
+  // to deliver, or our platform check is ever wrong, the refusal surfaces here.
+  // Either way the member gets install coaching, not a DOMException.
+  let permission: NotificationPermission;
+  try {
+    permission = await Notification.requestPermission();
+  } catch {
+    return { ok: false, reason: isIos() ? "needs-install" : "unsupported" };
+  }
+  if (permission !== "granted") return { ok: false, reason: "declined" };
 
   const registration = await navigator.serviceWorker.ready;
 
   // Reuse an existing subscription if the browser already has one for us —
   // re-subscribing would mint a new endpoint and orphan the stored row.
   const existing = await registration.pushManager.getSubscription();
-  const sub =
-    existing ??
-    (await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-    }));
+  let sub = existing;
+  if (!sub) {
+    try {
+      sub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      });
+    } catch {
+      // Permission granted but the push service still said no — on iOS that is
+      // the not-installed case again (it can grant then refuse).
+      return { ok: false, reason: isIos() ? "needs-install" : "unsupported" };
+    }
+  }
 
   return {
-    endpoint: sub.endpoint,
-    p256dh: keyToBase64(sub, "p256dh"),
-    auth: keyToBase64(sub, "auth"),
-    userAgent: navigator.userAgent,
+    ok: true,
+    keys: {
+      endpoint: sub.endpoint,
+      p256dh: keyToBase64(sub, "p256dh"),
+      auth: keyToBase64(sub, "auth"),
+      userAgent: navigator.userAgent,
+    },
   };
 }
 

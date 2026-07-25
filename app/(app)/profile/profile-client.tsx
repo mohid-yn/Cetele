@@ -8,16 +8,22 @@ import {
   Button,
   Card,
   Screen,
+  Spinner,
   cardVariants,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { FlameIcon, ChevronRightIcon } from "@/components/app/icons";
+import {
+  IosInstallGuide,
+  UnsupportedBrowserNote,
+  PushUnconfiguredNote,
+} from "@/components/app/install-guide";
 import { useAction } from "@/lib/use-action";
 import { usePropState } from "@/lib/use-prop-state";
 import {
-  pushSupported,
-  needsIosInstall,
+  pushEnvironment,
+  type PushEnvironment,
   subscribeToPush,
   unsubscribeFromPush,
   currentEndpoint,
@@ -65,19 +71,21 @@ export function ProfileClient({
   // Whether THIS device is subscribed can only be answered by the browser — the
   // server knows the member's devices, not which one you're holding.
   const [subscribed, setSubscribed] = React.useState<boolean | null>(null);
-  const [iosInstall, setIosInstall] = React.useState(false);
-  const [supported, setSupported] = React.useState(true);
+  // `null` until the browser has been asked. Rendering the toggle while this is
+  // unknown is what made the old UI misleading on iPhone: it showed a working
+  // control first and corrected itself afterwards, which on a slow first paint
+  // is indistinguishable from a control that works.
+  const [env, setEnv] = React.useState<PushEnvironment | null>(null);
 
   React.useEffect(() => {
     // Mount-time capability catch-up. None of this exists during SSR (no
     // navigator, no PushManager, no service worker), so it cannot be derived
     // during render — same pattern as the theme provider.
     /* eslint-disable react-hooks/set-state-in-effect */
-    setIosInstall(needsIosInstall());
-    setSupported(pushSupported());
+    setEnv(pushEnvironment(vapidPublicKey));
     currentEndpoint().then((e) => setSubscribed(Boolean(e)));
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
+  }, [vapidPublicKey]);
 
   // The browser half (subscribe/unsubscribe) runs INSIDE pushAct.run, not
   // before it: pushManager.subscribe can reject (a push-service hiccup, an
@@ -85,15 +93,23 @@ export function ProfileClient({
   // as unhandled — the button did nothing, with no message.
   function enablePush() {
     pushAct.run(async () => {
-      const sub = await subscribeToPush(vapidPublicKey);
-      if (!sub) {
-        // Declined (or blocked at the OS level) — say so plainly and stop.
-        // Never re-prompt: the browser wouldn't ask again anyway, and nagging
-        // is exactly what D8 rules out.
+      const result = await subscribeToPush(vapidPublicKey);
+      if (!result.ok) {
         setSubscribed(false);
+        // A decline is a normal answer — say nothing and never re-prompt: the
+        // browser wouldn't ask again anyway, and nagging is what D8 rules out.
+        if (result.reason === "declined") return { error: null };
+        // Anything else means this device genuinely can't, whatever our
+        // pre-flight thought. Re-resolve so the view swaps to the step the
+        // member can actually take (install coaching) instead of a stuck error.
+        setEnv(
+          result.reason === "needs-install"
+            ? "ios-needs-install"
+            : "unsupported",
+        );
         return { error: null };
       }
-      const res = await savePushSubscription(sub);
+      const res = await savePushSubscription(result.keys);
       if (!res?.error) setSubscribed(true);
       return res;
     });
@@ -161,26 +177,22 @@ export function ProfileClient({
           Reminders
         </h2>
 
-        {/* iOS can only push to an installed PWA — coach, don't show a dead button. */}
-        {iosInstall ? (
-          <Card className="p-4">
-            <p className="text-sm font-medium text-foreground">
-              Add Cetele to your Home Screen
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              On iPhone, reminders only work once Cetele is installed. Tap{" "}
-              <span aria-hidden>􀈂</span> <strong>Share</strong> in Safari, then{" "}
-              <strong>Add to Home Screen</strong> — and open Cetele from there.
-            </p>
-          </Card>
-        ) : !supported ? (
-          <Card className="p-4">
+        {/* One value, four outcomes — and NO toggle until we know this device can
+            honour it. iOS only pushes to an installed app, so there the install
+            IS the setup: coach the step, never render a dead switch. */}
+        {env === null ? (
+          <Card className="flex items-center gap-3 p-4">
+            <Spinner className="size-4" />
             <p className="text-xs text-muted-foreground">
-              This browser can&apos;t receive reminders. Try Chrome on Android,
-              a desktop browser, or install Cetele to your iPhone&apos;s Home
-              Screen.
+              Checking whether this device can receive reminders…
             </p>
           </Card>
+        ) : env === "ios-needs-install" ? (
+          <IosInstallGuide />
+        ) : env === "unconfigured" ? (
+          <PushUnconfiguredNote />
+        ) : env === "unsupported" ? (
+          <UnsupportedBrowserNote />
         ) : (
           <Card className="flex items-center justify-between gap-3 p-4">
             <div>
@@ -218,11 +230,26 @@ export function ProfileClient({
             No tasks yet — reminders appear once your circle has some.
           </p>
         ) : (
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {tasks.map((t) => (
-              <ReminderRow key={t.taskId} task={t} />
-            ))}
-          </ul>
+          <>
+            {/* The times stay editable even where this device can't receive, and
+                that is deliberate: a reminder time is stored on your ACCOUNT and
+                dispatched to whichever devices are subscribed (D42), so setting
+                them on a laptop to arrive on your phone is a real, working flow.
+                Disabling them here would break it. What was missing is saying
+                so, instead of letting the times look live on a device that will
+                never ring. */}
+            {env !== null && env !== "ready" && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                These times are saved to your account, not to this browser —
+                they&apos;ll arrive on any device where reminders are turned on.
+              </p>
+            )}
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {tasks.map((t) => (
+                <ReminderRow key={t.taskId} task={t} />
+              ))}
+            </ul>
+          </>
         )}
       </section>
 
