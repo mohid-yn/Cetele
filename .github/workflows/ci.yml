@@ -101,34 +101,29 @@ jobs:
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
 
-      # Well-known shared local-dev keys (identical on every machine — not secrets)
+      # The env comes from the COMMITTED .env.ci, never an inline heredoc. That
+      # heredoc was the bug: it was a second, invisible copy of the environment,
+      # and when e2e sign-in started needing the service role it silently fell a
+      # variable short — eleven specs failing like an app regression, for days.
       - name: Point the app at the CI stack
         run: |
-          cat > .env.local <<'EOF'
-          NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
-          NEXT_PUBLIC_AUTH_EMAIL=1
-          # Two specs (auth, manage's signed-out invite → ?next= → sign-in) drive
-          # the REAL login UI rather than the helper, because the redirect and the
-          # cookie are what they assert — and that button is gated on this flag.
-          # It is build-inlined, so it has to be set before `pnpm build` below;
-          # production never sets it, so the button cannot appear there.
-          NEXT_PUBLIC_AUTH_DEV=1
-          EOF
-          # e2e sign-in mints its own magic link with the SERVICE ROLE instead of
-          # sending email (e2e/helpers.ts), so the suite needs that key as well —
-          # without it every signing-in spec dies at helpers.ts, which is what
-          # happened here for days while local runs stayed green off .env.local.
-          # Read from the running stack rather than pasted: the CLI names it
-          # SERVICE_ROLE_KEY, the app wants SUPABASE_SERVICE_ROLE_KEY, and a
-          # pasted key would rot silently the next time the CLI rotates its
-          # local demo credentials.
+          cp .env.ci .env.local
+          # Appended, not committed: the CLI calls it SERVICE_ROLE_KEY while the
+          # app wants SUPABASE_SERVICE_ROLE_KEY, and a pasted copy would rot the
+          # next time the CLI rotates its local demo credentials.
           key=$(supabase status -o env | sed -n 's/^SERVICE_ROLE_KEY=//p' | tr -d '"')
           if [ -z "$key" ]; then
             echo "::error::could not read SERVICE_ROLE_KEY from the local stack"
             exit 1
           fi
           echo "SUPABASE_SERVICE_ROLE_KEY=$key" >> .env.local
+
+      # Before the build, because NEXT_PUBLIC_* is inlined at build time: a build
+      # made against an incomplete env stays broken even once the variable shows
+      # up, and that surfaces as "a spec can't find a button" rather than as the
+      # missing variable. `pnpm test:e2e` runs this too, so it cannot be skipped.
+      - name: Check the e2e environment is complete
+        run: pnpm check:env
 
       - name: Build
         run: pnpm build

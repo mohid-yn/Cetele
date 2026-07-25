@@ -13,7 +13,8 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "test:rls": "supabase test db",
-    "test:e2e": "playwright test"
+    "test:e2e": "node scripts/check-env.mjs && playwright test",
+    "check:env": "node scripts/check-env.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
