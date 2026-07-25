@@ -19,10 +19,16 @@ import { isoDaysAgo } from "./local-date";
 export type Garden = {
   /** 0..3 — Resting · Sprouting · Growing · Flourishing. */
   stage: number;
-  /** 0..1 — drives each plant's height/bloom. */
+  /** 0..1 — the DURABLE layer: how established the planting is. */
   vitality: number;
   /** 0..1 — today's share of the collective goal. */
   todayPct: number;
+  /** How many members have logged anything today. */
+  tendedToday: number;
+  /** How many members the circle has. */
+  memberCount: number;
+  /** The circle met its whole collective goal today. */
+  closedToday: boolean;
 };
 
 /**
@@ -30,12 +36,53 @@ export type Garden = {
  * nudge from today, so tapping toward the goal visibly moves the garden in the
  * session rather than only tomorrow. Low stages read calm/dormant — never dead,
  * never shaming (D8).
+ *
+ * **Why the short-term fields exist.** Vitality alone could not carry a day: a
+ * 30-day mean moves ~3 points per perfect day and today is capped at +18, so a
+ * whole circle's effort changed a plant's height by ~12px out of 84 — the
+ * garden was built to be slow, which is right for the durable layer and wrong
+ * as the *only* layer. There was nothing to come back and look at. So the day
+ * gets its own signals, each one a fact rather than a mood: who has tended
+ * today, how far along the collective goal is, and whether it closed. Growth
+ * still comes only from the durable side, so a quiet day never shrinks anything
+ * — the day can add, never subtract (D8).
  */
-export function gardenStage(consistency30: number, todayPct: number): Garden {
+export function gardenStage(
+  consistency30: number,
+  todayPct: number,
+  today: { tended: number; members: number } = { tended: 0, members: 0 },
+): Garden {
   const t = Math.max(0, Math.min(1, todayPct));
-  const blended = Math.min(100, consistency30 + t * 18);
+  // 22, not 18: at 18 a circle that closed EVERY ring today still sat under the
+  // "Resting" label — next to its own sun — because a brand-new circle's 30-day
+  // consistency is 0 and 18 fell just short of the 20 that means Sprouting. A
+  // fully-closed day should be worth at least the first stage on its own.
+  const blended = Math.min(100, consistency30 + t * 22);
   const stage = blended < 20 ? 0 : blended < 40 ? 1 : blended < 65 ? 2 : 3;
-  return { stage, vitality: blended / 100, todayPct: t };
+  return {
+    stage,
+    vitality: blended / 100,
+    todayPct: t,
+    tendedToday: Math.max(0, Math.min(today.tended, today.members)),
+    memberCount: Math.max(0, today.members),
+    closedToday: t >= 1,
+  };
+}
+
+/**
+ * How many drawn plants bloom, when the bed holds fewer plants than the circle
+ * holds members. Proportional, but a single contribution NEVER rounds away to
+ * zero blooms: someone's dhikr happened, and the picture must not say it didn't
+ * (the D43 instinct — never let the UI misreport worship).
+ */
+export function bloomCount(
+  tended: number,
+  members: number,
+  drawn: number,
+): number {
+  if (tended <= 0 || members <= 0 || drawn <= 0) return 0;
+  if (tended >= members) return drawn;
+  return Math.max(1, Math.round((tended / members) * drawn));
 }
 
 export const GARDEN_STAGE_LABEL = [

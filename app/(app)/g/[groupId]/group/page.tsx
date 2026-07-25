@@ -257,9 +257,16 @@ export default async function GroupPage({
   // visibly grows it in-session rather than only tomorrow.
   const todayTotal = taskTotals.reduce((s, t) => s + t.total, 0);
   const todayGoal = taskTotals.reduce((s, t) => s + t.goal, 0);
+  // `contributions` is already per-member today, so "who has tended" costs no
+  // extra query — the short-term layer is derived from data this page had all
+  // along, which is why the garden still stores nothing.
   const garden = gardenStage(
     groupConsistency30 ?? 0,
     todayGoal ? todayTotal / todayGoal : 0,
+    {
+      tended: contributions.filter((c) => c.today > 0).length,
+      members: memberList.length,
+    },
   );
 
   // CET-22 — the pair goal. Also stores nothing: the buddy is a deterministic

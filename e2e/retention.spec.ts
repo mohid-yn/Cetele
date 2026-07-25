@@ -118,6 +118,35 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
     "Resting",
   );
 
+  // The SHORT-TERM layer: B has logged today and A hasn't, so the garden must
+  // say "1 of 2" — the fact a 30-day average cannot show, and the reason to
+  // look again this evening. Vitality alone moved a plant ~12px for a whole
+  // day's effort, which is why the day needed its own signal.
+  await expect(
+    pageA.getByText(/1 of 2 has tended the garden today/),
+  ).toBeVisible();
+
+  // A tends it too → the circle is fully represented, stated without naming
+  // anyone (no scoreboard of absence).
+  await pageA.goto("/today");
+  await pageA.click('a:has-text("Continue Tasbih")');
+  await pageA.waitForURL("**/count/**");
+  // Await the WRITE, not the tap: counting is optimistic behind a debounced
+  // FIFO queue, so navigating straight after a click races the flush.
+  const counted = pageA.waitForResponse(
+    (res) =>
+      res.request().method() === "POST" &&
+      res.url().includes("/count/") &&
+      res.status() === 200,
+  );
+  await pageA.getByRole("button", { name: "Tap to count" }).click();
+  await counted;
+  await pageA.goto("/group");
+  await pageA.waitForURL(/\/g\/.*\/group/);
+  await expect(
+    pageA.getByText(/2 of 2 have tended the garden today/),
+  ).toBeVisible();
+
   await pageA.click('button:has-text("Standings")');
   // The pair goal leads the ranking: B is A's only possible buddy.
   await expect(pageA.getByText("Pair goal · this week")).toBeVisible();
