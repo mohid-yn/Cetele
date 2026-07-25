@@ -234,35 +234,81 @@ export function GroupClient({
                 number below the fold. Cropping was rejected earlier
                 (2026-07-24), so give it half the row instead: same aspect, half
                 the height. */}
-              <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+              {/* items-start so neither column force-stretches to the other's
+                  height. The collective card carries the per-task breakdown
+                  now, so it's tall enough to sit beside the garden without the
+                  desktop dead-space it had (a 112px ring + two text lines
+                  stretched to the garden's full 337px \u2014 empty right and below).
+                  The ring % IS the sum of those bars, so it's one story, one
+                  panel \u2014 not a summary card plus a separate section. */}
+              <div className="grid items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
                 <GroupGarden garden={garden} />
 
                 <section
                   className={cn(
                     cardVariants({ padding: "md" }),
-                    "flex items-center gap-5",
+                    "flex flex-col",
                   )}
                 >
-                  <StatRing
-                    value={collectivePct}
-                    max={100}
-                    size={112}
-                    stat={`${collectivePct}%`}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm text-muted-foreground">
-                      <span
-                        aria-hidden
-                        className="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-success align-middle"
-                      />
-                      The circle today
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground tabular-nums">
-                      {/* One expression, not text-around-expressions: JSX drops the
+                  <div className="flex items-center gap-5">
+                    <StatRing
+                      value={collectivePct}
+                      max={100}
+                      size={112}
+                      stat={`${collectivePct}%`}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm text-muted-foreground">
+                        <span
+                          aria-hidden
+                          className="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-success align-middle"
+                        />
+                        The circle today
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground tabular-nums">
+                        {/* One expression, not text-around-expressions: JSX drops the
                     space at a line break, which rendered "100toward". */}
-                      {`${collectiveTotal.toLocaleString()} of ${collectiveGoal.toLocaleString()} toward today\u2019s goal`}
-                    </p>
+                        {`${collectiveTotal.toLocaleString()} of ${collectiveGoal.toLocaleString()} toward today\u2019s goal`}
+                      </p>
+                    </div>
                   </div>
+
+                  {taskTotals.length === 0 ? (
+                    <p className="mt-5 rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+                      No tasks yet.
+                    </p>
+                  ) : (
+                    <ul className="mt-5 flex flex-col gap-3 border-t border-border pt-5">
+                      {taskTotals.map(({ taskId, label, total, goal }) => {
+                        const pct =
+                          goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
+                        const met = goal > 0 && total >= goal;
+                        return (
+                          <li key={taskId}>
+                            <div className="mb-1 flex items-baseline justify-between text-sm">
+                              <span className="flex items-center gap-1.5 font-medium text-foreground">
+                                {label}
+                                {met && (
+                                  <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
+                                    <CheckIcon className="size-3.5" />
+                                    met
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-muted-foreground tabular-nums">
+                                {total.toLocaleString()} /{" "}
+                                {goal.toLocaleString()}
+                              </span>
+                            </div>
+                            <ProgressBar
+                              value={pct}
+                              tone={met ? "success" : "primary"}
+                            />
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </section>
               </div>
 
@@ -283,45 +329,6 @@ export function GroupClient({
                   </span>
                 </div>
                 <ProgressBar value={groupConsistency90} className="mt-3" />
-              </section>
-
-              <section>
-                <SectionHeading>Collective progress</SectionHeading>
-                {taskTotals.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-                    No tasks yet.
-                  </p>
-                ) : (
-                  <ul className="flex flex-col gap-3">
-                    {taskTotals.map(({ taskId, label, total, goal }) => {
-                      const pct =
-                        goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
-                      const met = goal > 0 && total >= goal;
-                      return (
-                        <li key={taskId}>
-                          <div className="mb-1 flex items-baseline justify-between text-sm">
-                            <span className="flex items-center gap-1.5 font-medium text-foreground">
-                              {label}
-                              {met && (
-                                <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
-                                  <CheckIcon className="size-3.5" />
-                                  met
-                                </span>
-                              )}
-                            </span>
-                            <span className="text-muted-foreground tabular-nums">
-                              {total.toLocaleString()} / {goal.toLocaleString()}
-                            </span>
-                          </div>
-                          <ProgressBar
-                            value={pct}
-                            tone={met ? "success" : "primary"}
-                          />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
               </section>
             </Stack>
           </motion.div>
