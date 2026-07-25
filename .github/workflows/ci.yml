@@ -59,6 +59,14 @@ jobs:
   stack-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      # The Supabase CLI flushes PostHog telemetry on exit, and on a GitHub
+      # runner that flush can hang and then fail the STEP — 2026-07-26 the pgTAP
+      # step went red with "Timeout while shutting down PostHog" immediately
+      # after printing "Files=8, Tests=316 … Result: PASS". Nothing was wrong
+      # with the tests; the command's own exit code was. Opting out of telemetry
+      # removes the network call that can time out at all.
+      DO_NOT_TRACK: "1"
     steps:
       - uses: actions/checkout@v4
 
