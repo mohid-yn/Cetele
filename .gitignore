@@ -59,6 +59,15 @@ yarn-error.log*
 .claude/skills/
 supabase/snippets/
 
+# vendored agent skills + hooks installed by `npx impeccable install` — tooling,
+# not project code; the skill re-installs on demand. Scoped to the impeccable
+# paths so the tracked supabase skills (.agents/skills/supabase*) and CI
+# (.github/workflows/) are untouched.
+.agents/skills/impeccable/
+.codex/
+.github/hooks/
+.github/skills/
+
 # playwright artifacts
 test-results/
 playwright-report/
