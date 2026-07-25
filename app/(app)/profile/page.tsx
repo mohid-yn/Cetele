@@ -38,20 +38,30 @@ export default async function ProfilePage() {
 
   // Tasks across every circle I'm in, plus my reminder for each (RLS: reminders
   // are self-only, so this can only ever return mine).
-  const [{ data: tasks }, { data: reminders }] = await q(
-    "profile.reads (tasks+reminders)",
-    Promise.all([
-      supabase
-        .from("tasks")
-        .select("id, label, group_id")
-        .in("group_id", groupIds.length ? groupIds : [ZERO_UUID])
-        .order("sort_order"),
-      supabase
-        .from("reminders")
-        .select("task_id, time_of_day, enabled")
-        .eq("user_id", me),
-    ]),
-  );
+  //
+  // The device count is what lets the reminder rows tell the truth: a time with
+  // no subscribed device anywhere is a setting that cannot fire. `head: true` so
+  // this is a COUNT, not a fetch of every row — and RLS scopes it to me, so it
+  // can only ever count my own devices.
+  const [{ data: tasks }, { data: reminders }, { count: deviceCount }] =
+    await q(
+      "profile.reads (tasks+reminders+devices)",
+      Promise.all([
+        supabase
+          .from("tasks")
+          .select("id, label, group_id")
+          .in("group_id", groupIds.length ? groupIds : [ZERO_UUID])
+          .order("sort_order"),
+        supabase
+          .from("reminders")
+          .select("task_id, time_of_day, enabled")
+          .eq("user_id", me),
+        supabase
+          .from("push_subscriptions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", me),
+      ]),
+    );
 
   const byTask = new Map(
     (reminders ?? []).map((r) => [
@@ -88,6 +98,7 @@ export default async function ProfilePage() {
       groupName={primary ? (primary.groups?.name ?? null) : null}
       streak={streak?.current ?? 0}
       tasks={reminderTasks}
+      deviceCount={deviceCount ?? 0}
       vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""}
     />
   );

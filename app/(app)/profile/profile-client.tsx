@@ -57,6 +57,7 @@ export function ProfileClient({
   groupName,
   streak,
   tasks,
+  deviceCount,
   vapidPublicKey,
 }: {
   name: string;
@@ -64,9 +65,15 @@ export function ProfileClient({
   groupName: string | null;
   streak: number;
   tasks: ReminderTask[];
+  /** How many of THIS MEMBER's devices are subscribed to push, across all of them. */
+  deviceCount: number;
   vapidPublicKey: string;
 }) {
   const pushAct = useAction();
+
+  // Kept locally so enabling push unlocks the rows in the same interaction,
+  // reconciled from each action's own outcome rather than a refetch (D45).
+  const [devices, setDevices] = usePropState(deviceCount);
 
   // Whether THIS device is subscribed can only be answered by the browser — the
   // server knows the member's devices, not which one you're holding.
@@ -110,7 +117,13 @@ export function ProfileClient({
         return { error: null };
       }
       const res = await savePushSubscription(result.keys);
-      if (!res?.error) setSubscribed(true);
+      if (!res?.error) {
+        setSubscribed(true);
+        // Only count UP if this device wasn't already one of them — the RPC is an
+        // upsert on the endpoint, so re-subscribing the same browser is not a new
+        // device and must not inflate the count.
+        if (!subscribed) setDevices((n) => n + 1);
+      }
       return res;
     });
   }
@@ -123,10 +136,22 @@ export function ProfileClient({
         return { error: null };
       }
       const res = await removePushSubscription(endpoint);
-      if (!res?.error) setSubscribed(false);
+      if (!res?.error) {
+        setSubscribed(false);
+        setDevices((n) => Math.max(0, n - 1));
+      }
       return res;
     });
   }
+
+  // Can a reminder time set here ever fire? Yes if any device is already
+  // subscribed (set times on a laptop, receive on your phone — D42), and yes if
+  // THIS device is push-capable, because then it is one tap away from being that
+  // device. Otherwise no: an iPhone browser tab with no installed app can save a
+  // time that nothing will ever deliver, and offering that is the contradiction
+  // the install card was already warning about.
+  const canReceiveHere = env === "ready";
+  const remindersReachable = devices > 0 || canReceiveHere;
 
   return (
     <Screen>
@@ -231,22 +256,36 @@ export function ProfileClient({
           </p>
         ) : (
           <>
-            {/* The times stay editable even where this device can't receive, and
-                that is deliberate: a reminder time is stored on your ACCOUNT and
-                dispatched to whichever devices are subscribed (D42), so setting
-                them on a laptop to arrive on your phone is a real, working flow.
-                Disabling them here would break it. What was missing is saying
-                so, instead of letting the times look live on a device that will
-                never ring. */}
-            {env !== null && env !== "ready" && (
+            {/* Gated on REACHABILITY, not on this device: a time is stored on
+                your account and dispatched to whichever devices are subscribed
+                (D42), so a laptop tab may legitimately set times for a phone
+                that is already installed. What must not happen is offering to
+                turn a reminder on when NOTHING can deliver it — which is the
+                contradiction of showing live switches under an install card. */}
+            {!remindersReachable ? (
               <p className="mt-2 text-xs text-muted-foreground">
-                These times are saved to your account, not to this browser —
-                they&apos;ll arrive on any device where reminders are turned on.
+                No device can receive reminders yet, so these are switched off
+                until one can. Finish the steps above, open Cetele from your
+                Home Screen, and turn reminders on there — your times are kept.
               </p>
+            ) : (
+              env !== null &&
+              !canReceiveHere && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  These times are saved to your account, not to this browser —
+                  they&apos;ll arrive on the{" "}
+                  {devices === 1 ? "device" : `${devices} devices`} where
+                  you&apos;ve turned reminders on.
+                </p>
+              )
             )}
             <ul className="mt-2 flex flex-col gap-1.5">
               {tasks.map((t) => (
-                <ReminderRow key={t.taskId} task={t} />
+                <ReminderRow
+                  key={t.taskId}
+                  task={t}
+                  disabled={!remindersReachable}
+                />
               ))}
             </ul>
           </>
@@ -325,8 +364,21 @@ function TestPushCard() {
   );
 }
 
-/** One task's reminder: a clock time the member picks, plus on/off (D30). */
-function ReminderRow({ task }: { task: ReminderTask }) {
+/**
+ * One task's reminder: a clock time the member picks, plus on/off (D30).
+ *
+ * `disabled` is for the case where no device of the member's can receive a push
+ * at all — the control is inert rather than hidden, because the task and its
+ * time are still information worth seeing, and hiding them would make the whole
+ * section vanish on an iPhone that hasn't installed the app yet.
+ */
+function ReminderRow({
+  task,
+  disabled = false,
+}: {
+  task: ReminderTask;
+  disabled?: boolean;
+}) {
   const act = useAction();
   // Prop-seeded (not a one-shot useState): useAction's post-save router.refresh
   // delivers the server's truth back through the prop, and re-seeding from it is
@@ -362,13 +414,25 @@ function ReminderRow({ task }: { task: ReminderTask }) {
   }
 
   return (
-    <li className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2.5">
+    <li
+      className={cn(
+        "flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2.5",
+        // Dimmed, not hidden — and the label stays at full strength so the task
+        // is still readable while its controls are inert.
+        disabled && "opacity-60",
+      )}
+    >
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-foreground">
           {task.label}
         </p>
         <p className="truncate text-xs text-muted-foreground">
-          {task.groupName} · {enabled ? to12h(time) : "off"}
+          {task.groupName} ·{" "}
+          {disabled
+            ? "needs a device that can receive"
+            : enabled
+              ? to12h(time)
+              : "off"}
         </p>
         {act.error && (
           <p role="alert" className="mt-0.5 text-xs text-danger">
@@ -380,19 +444,22 @@ function ReminderRow({ task }: { task: ReminderTask }) {
         <input
           type="time"
           value={time}
+          disabled={disabled}
           aria-label={`Reminder time for ${task.label}`}
           onChange={(e) => save(e.target.value, enabled)}
-          className="h-9 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground tabular-nums"
+          className="h-9 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground tabular-nums disabled:cursor-not-allowed"
         />
         <button
           type="button"
           role="switch"
           aria-checked={enabled}
           aria-label={`Reminder for ${task.label}`}
+          disabled={disabled}
           onClick={() => save(time, !enabled)}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-            enabled ? "bg-primary" : "bg-muted"
-          }`}
+          className={cn(
+            "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed",
+            enabled ? "bg-primary" : "bg-muted",
+          )}
         >
           <span
             className={`absolute top-0.5 size-5 rounded-full bg-card shadow-sm transition-[left] ${

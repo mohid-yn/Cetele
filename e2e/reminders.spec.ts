@@ -105,18 +105,28 @@ test("iOS in a browser tab is coached to install, not shown a dead push toggle",
   await expect(page.getByRole("button", { name: /^Turn on$/ })).toHaveCount(0);
   await expect(page.getByText("Reminders on this device")).toHaveCount(0);
 
-  // Times stay editable — they live on the ACCOUNT and fire to whichever device
-  // is subscribed (D42), so a phone tab must still be able to set them.
-  await expect(page.getByLabel("Reminder time for Salawat")).toBeVisible();
+  // The rows stay VISIBLE (the task and its time are still information) but are
+  // inert, because this member has no subscribed device anywhere — a switch that
+  // saves a time nothing can deliver is the contradiction the install card is
+  // already warning about.
+  await expect(page.getByLabel("Reminder time for Salawat")).toBeDisabled();
   await expect(
-    page.getByText("saved to your account, not to this browser"),
+    page.getByRole("switch", { name: "Reminder for Salawat" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("No device can receive reminders yet"),
   ).toBeVisible();
 
   await context.close();
 });
 
-/** The control still appears where push genuinely works (default Chromium). */
-test("a push-capable browser still gets the reminder toggle", async ({
+/**
+ * And the other half of the gate: where push genuinely works the toggle appears
+ * AND the rows stay live, even before anything is subscribed — this device is one
+ * tap from being the device that receives, so disabling them here would be the
+ * opposite mistake (gating something that does work).
+ */
+test("a push-capable browser still gets the reminder toggle and live rows", async ({
   page,
 }) => {
   await signIn(page, USER);
@@ -125,4 +135,8 @@ test("a push-capable browser still gets the reminder toggle", async ({
   await expect(
     page.getByText("Add Cetele to your Home Screen first"),
   ).toHaveCount(0);
+  await expect(page.getByLabel("Reminder time for Salawat")).toBeEnabled();
+  await expect(
+    page.getByRole("switch", { name: "Reminder for Salawat" }),
+  ).toBeEnabled();
 });
