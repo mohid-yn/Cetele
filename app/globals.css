@@ -374,22 +374,50 @@
   fill: var(--color-primary-800);
 }
 
-/* Sky gradient stops. One scale step only — the sky is a BACKDROP, and the
-   moment it out-contrasts the plants it starts competing with the layer that
-   actually carries meaning. Deeper at the top, lightest at the horizon; the
-   gradient is userSpaceOnUse and stops at the ground line, so a card that
-   stretches simply pads more of the top tone instead of rescaling the ramp. */
-.garden-sky-top {
-  stop-color: var(--color-primary-100);
+/* Garden colour tokens.
+   These are TOKENS, not class rules, and the SVG references them inline. That is
+   deliberate hardening: a fill or gradient stop whose colour lives only in a
+   stylesheet RULE renders BLACK the moment that rule fails to reach the page,
+   and this codebase has now been bitten three times by a rule silently not
+   landing (`glow-*`, `bg-progress-track`, and this very gradient during the
+   2026-07-26 session). Every reference carries a `var(x, var(y))` fallback, so
+   the worst case is "light-theme colours in dark mode", never a black panel.
+
+   Sky: one scale step only — it is a BACKDROP, and the moment it out-contrasts
+   the plants it competes with the layer that actually carries meaning. */
+:root {
+  --garden-sky-top: var(--color-primary-100);
+  --garden-sky-horizon: var(--color-primary-50);
+
+  /* Plants, held at >=3:1 against the backdrop each one is actually drawn over
+     (WCAG 2.2 §1.4.11) — a TALL plant sits against sky/hills, a SHORT one
+     against hills/ground/soil, which is a much darker field and the case the
+     old values failed hardest. Measured worst-case ratios in the comments.
+     Resting is quieter by SATURATION, not by lightness: the same lesson as
+     --progress-track (a paler emerald just disappears, a desaturated sage
+     still reads as a plant while clearly saying "dormant"). */
+  --garden-stem: #047857; /* 4.79:1 over sky/hill */
+  --garden-leaf: #059669; /* 3.29:1 — lighter than the stem, keeps depth */
+  /* Held just OVER the 3:1 bar rather than comfortably past it, and that is the
+     point: at 4.17:1 the resting plant rendered as a near-silhouette, which
+     reads as withered rather than dormant — a quiet day dressed up as a
+     reproach, which D8 forbids. This is the lightest pair that still passes,
+     and the worst case is the soil band that only a short plant's base touches. */
+  --garden-stem-resting: #527f6b; /* 3.38:1 over hill/ground/soil */
+  --garden-leaf-resting: #5e8574; /* 3.06:1 */
 }
-.garden-sky-horizon {
-  stop-color: var(--color-primary-50);
-}
-:root.dark .garden-sky-top {
-  stop-color: var(--color-primary-950);
-}
-:root.dark .garden-sky-horizon {
-  stop-color: var(--color-primary-900);
+:root.dark {
+  --garden-sky-top: var(--color-primary-950);
+  --garden-sky-horizon: var(--color-primary-900);
+
+  /* Dark inverted the failure: the old plants used ONE emerald for both themes,
+     so a THRIVING plant (primary-600) sat at 2.58:1 on the night sky while a
+     resting one sat at 6.38:1 — the better the circle did, the less you could
+     see it. These lighten as the plant thrives, which is also the right story. */
+  --garden-stem: #34d399; /* 4.28:1 over night sky/hill */
+  --garden-leaf: #6ee7b7; /* 5.40:1 */
+  --garden-stem-resting: #5fbf95; /* 3.43:1, desaturated */
+  --garden-leaf-resting: #7fc8a6; /* 3.92:1 */
 }
 
 /* Distant hills. Atmospheric perspective: the further a band is, the closer it

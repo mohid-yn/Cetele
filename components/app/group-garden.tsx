@@ -61,8 +61,16 @@ function Plant({
   const topY = ground - height;
   const midY = ground - height * 0.55;
   const dormant = v < 0.22;
-  const stemClass = dormant ? "stroke-primary-300" : "stroke-primary-600";
-  const leafClass = dormant ? "fill-primary-200" : "fill-primary-500";
+  // Referenced as tokens INLINE rather than through utility classes: see the
+  // garden block in globals.css for why (a colour that lives only in a
+  // stylesheet rule renders black if the rule ever goes missing). The nested
+  // fallback keeps the failure mode at "light-theme colour", never black.
+  const stem = dormant
+    ? "var(--garden-stem-resting, var(--color-primary-700))"
+    : "var(--garden-stem, var(--color-primary-700))";
+  const leaf = dormant
+    ? "var(--garden-leaf-resting, var(--color-primary-600))"
+    : "var(--garden-leaf, var(--color-primary-600))";
 
   // Outer group grows up from the soil on mount (staggered); inner group adds a
   // gentle perpetual sway. Both rotate/scale from the plant's base.
@@ -89,7 +97,8 @@ function Plant({
         {/* stem */}
         <path
           d={`M${x} ${ground} Q ${x - 3} ${midY} ${x} ${topY}`}
-          className={cn("fill-none", stemClass)}
+          className="fill-none"
+          stroke={stem}
           strokeWidth={2.5}
           strokeLinecap="round"
         />
@@ -99,7 +108,7 @@ function Plant({
           cy={midY}
           rx={6}
           ry={3}
-          className={leafClass}
+          fill={leaf}
           transform={`rotate(-25 ${x - 6} ${midY})`}
         />
         <ellipse
@@ -107,7 +116,7 @@ function Plant({
           cy={midY - 8}
           rx={6}
           ry={3}
-          className={leafClass}
+          fill={leaf}
           transform={`rotate(25 ${x + 6} ${midY - 8})`}
         />
         {/* crown: flower when blooming, bud when growing, sprout when dormant. */}
@@ -136,18 +145,12 @@ function Plant({
             <circle cx={x} cy={topY - 1} r={3} className="fill-accent-600" />
           </g>
         ) : dormant ? (
-          <circle cx={x} cy={topY} r={3} className="fill-primary-300" />
+          <circle cx={x} cy={topY} r={3} fill={leaf} />
         ) : (
           // A closed bud, not a lesser thing: this is a plant whose member
           // hasn't logged YET today. Nothing here says "missed" — the day is
           // still open, and D8 forbids dressing an absence up as a failure.
-          <ellipse
-            cx={x}
-            cy={topY - 1}
-            rx={5}
-            ry={7}
-            className="fill-primary-500"
-          />
+          <ellipse cx={x} cy={topY - 1} rx={5} ry={7} fill={leaf} />
         )}
       </g>
     </g>
@@ -301,8 +304,14 @@ export function GroupGarden({
             x2={0}
             y2={118}
           >
-            <stop offset="0%" className="garden-sky-top" />
-            <stop offset="100%" className="garden-sky-horizon" />
+            <stop
+              offset="0%"
+              stopColor="var(--garden-sky-top, var(--color-primary-100))"
+            />
+            <stop
+              offset="100%"
+              stopColor="var(--garden-sky-horizon, var(--color-primary-50))"
+            />
           </linearGradient>
         </defs>
 
