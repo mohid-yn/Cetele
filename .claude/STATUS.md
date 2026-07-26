@@ -37,10 +37,10 @@ review_ — is **met**.
 | Backend plan | M0–M9 **all shipped** ([`docs/BACKEND_BUILD_PLAN.md`](../docs/BACKEND_BUILD_PLAN.md))                                                                                                                                         |
 | Linear       | CET-1…CET-31 all **Done** except CET-10 (deferred) · **out of sync**: nothing from 2026-07-25/26 has an issue — the Linear MCP was not authenticated in that session, so those branches were named by topic, not `cet-N-slug` |
 | Perf         | CWV baseline measured 2026-07-26 — all thresholds pass except the count screen's FIRST tap; numbers + two open questions in §2                                                                                                |
-| Working tree | branch **`garden-card-height`** pushed, gates + e2e green, **awaiting the merge confirm** (see "Last work")                                                                                                                   |
+| Working tree | clean; `main` = `origin/main`; no feature branches outstanding                                                                                                                                                                |
 
 **Last work (2026-07-26, latest) — the garden card matches its neighbour, the sky became a place, and every plant now
-passes contrast (`garden-card-height`, no migration; pushed, NOT yet merged).** Owner: _"the garden [is] not the same
+passes contrast (`garden-card-height`, no migration; ff-merged + deleted, shipped to prod).** Owner: _"the garden [is] not the same
 size as the circle breakdown for today which ruins the symmetry"_, then _"it looks pretty empty… still maintain the cool
 and nice vibe… not cluttered."_ **(A) Heights.** The row was `items-start`, so each card sized to its own content — and
 the breakdown's height is set by however many TASKS the circle has, so the two could never agree. Cards now stretch to
