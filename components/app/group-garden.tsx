@@ -154,6 +154,77 @@ function Plant({
   );
 }
 
+/**
+ * Ambient sky scenery. Everything below is CONSTANT — identical whoever logged,
+ * whatever the stage — and that is the whole licence for it existing: in this
+ * illustration a mark normally makes a claim (a bloom means a named member
+ * tended today, D49), so decoration that varied would be the picture telling a
+ * story about people that the data does not support. Scenery that never changes
+ * can be read as weather, and weather is nobody's fault.
+ *
+ * Entries above the viewBox (negative y) are deliberate: the card stretches to
+ * match the task breakdown beside it, and `meet` spends the difference on sky,
+ * so the taller it gets the more of these come into view. A bigger sky then
+ * gains sky, instead of gaining emptiness.
+ */
+const CLOUDS = [
+  { x: 62, y: 30, s: 1, dur: 82, delay: 0 },
+  { x: 190, y: 17, s: 0.75, dur: 104, delay: -30 },
+  { x: 236, y: 52, s: 0.6, dur: 94, delay: -60 },
+  { x: 120, y: -28, s: 0.9, dur: 118, delay: -12 },
+  { x: 250, y: -62, s: 0.7, dur: 96, delay: -45 },
+];
+
+const STARS = [
+  { x: 44, y: 26, r: 1.1 },
+  { x: 96, y: 14, r: 0.8 },
+  { x: 150, y: 34, r: 0.95 },
+  { x: 206, y: 20, r: 1 },
+  { x: 243, y: 46, r: 0.7 },
+  { x: 72, y: 54, r: 0.7 },
+  { x: 172, y: 62, r: 0.6 },
+  { x: 110, y: -22, r: 1 },
+  { x: 200, y: -40, r: 0.8 },
+  { x: 58, y: -54, r: 0.9 },
+  { x: 256, y: -18, r: 0.7 },
+];
+
+/** Four overlapping ellipses — a soft mass, not an outlined cartoon cloud. */
+function Cloud({
+  x,
+  y,
+  s,
+  dur,
+  delay,
+}: {
+  x: number;
+  y: number;
+  s: number;
+  dur: number;
+  delay: number;
+}) {
+  return (
+    // Position lives on the inner <g> as an attribute and the drift on the
+    // outer as CSS: a CSS transform REPLACES the transform attribute outright,
+    // so keeping them on one element would fling the cloud to the origin.
+    <g
+      style={{
+        animation: `garden-drift ${dur}s ease-in-out ${delay}s infinite alternate`,
+      }}
+    >
+      <g
+        className="garden-clouds"
+        transform={`translate(${x} ${y}) scale(${s})`}
+      >
+        <ellipse cx={0} cy={0} rx={13} ry={5.5} />
+        <ellipse cx={-8} cy={1.5} rx={8.5} ry={4} />
+        <ellipse cx={8.5} cy={1.5} rx={9.5} ry={4.5} />
+        <ellipse cx={1.5} cy={-4} rx={7.5} ry={5} />
+      </g>
+    </g>
+  );
+}
+
 export function GroupGarden({
   garden,
   className,
@@ -163,6 +234,11 @@ export function GroupGarden({
 }) {
   const { stage, vitality, todayPct, tendedToday, memberCount, closedToday } =
     garden;
+
+  // Gradient ids are document-global, so two gardens on one page would have the
+  // second silently repaint the first. useId is per-instance; the strip keeps it
+  // a legal url(#…) fragment.
+  const skyId = `garden-sky-${React.useId().replace(/[^a-zA-Z0-9]/g, "")}`;
 
   // EXACTLY one plant per member, up to 12 — that is what makes a bloom mean
   // something specific ("a member tended today") rather than being decoration.
@@ -195,25 +271,66 @@ export function GroupGarden({
   }, [drawn, vitality, blooms]);
 
   return (
-    <Card className={cn("overflow-hidden p-0", className)}>
-      {/* Hold the illustration's own aspect ratio (matching the viewBox) so it
-          scales proportionally with the card. A fixed height + `w-full` made a
-          wide desktop card ~5:1 against a 2.46:1 scene, so `slice` zoomed ~2.3x
-          and center-cropped the ground and plant bases into an empty sky. */}
+    <Card className={cn("flex flex-col overflow-hidden p-0", className)}>
+      {/* The illustration holds its aspect ratio (matching the viewBox) as its
+          NATURAL size — a fixed height + `w-full` once made a wide desktop card
+          ~5:1 against a 2.46:1 scene, cropping the ground and plant bases away.
+          On desktop this card sits beside the task breakdown, whose height is
+          set by however many tasks the circle has, so it also has to be able to
+          GROW: `grow` lets the scene take the row's spare height, and
+          `xMidYMax meet` spends it on SKY (scale stays width-driven, the ground
+          stays pinned to the bottom edge) instead of scaling up and cropping
+          the bed. Nothing is ever cut off, at any card height. */}
       <svg
         viewBox="0 0 320 130"
-        className="block aspect-[320/130] w-full"
+        className="block aspect-[320/130] w-full grow"
         role="img"
         aria-label={`Group garden — ${GARDEN_STAGE_LABEL[stage]}`}
-        preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio="xMidYMax meet"
       >
-        <rect
-          x={0}
-          y={0}
-          width={320}
-          height={130}
-          className="garden-sky fill-primary-50"
-        />
+        <defs>
+          {/* userSpaceOnUse, ending at the ground line: the ramp is pinned to
+              the SCENE, not to the element box, so a stretched card pads the
+              top tone (spreadMethod default) instead of stretching the ramp and
+              washing the horizon out. Stops are themed in globals.css. */}
+          <linearGradient
+            id={skyId}
+            gradientUnits="userSpaceOnUse"
+            x1={0}
+            y1={0}
+            x2={0}
+            y2={118}
+          >
+            <stop offset="0%" className="garden-sky-top" />
+            <stop offset="100%" className="garden-sky-horizon" />
+          </linearGradient>
+        </defs>
+
+        {/* Extends far ABOVE the viewBox on purpose: with `meet` the letterboxed
+            band is still inside the viewport, so it paints rather than showing
+            the card behind it — the sky simply gets taller. (An SVG clips to its
+            viewport, not to its viewBox.) */}
+        <rect x={0} y={-400} width={320} height={530} fill={`url(#${skyId})`} />
+
+        {/* Day/night backdrop. Both are rendered and the THEME picks one, so
+            there is no flash of the wrong sky and no client theme probe. */}
+        {CLOUDS.map((c) => (
+          <Cloud key={`${c.x}-${c.y}`} {...c} />
+        ))}
+        <g className="garden-stars">
+          {STARS.map((s, i) => (
+            <circle
+              key={`${s.x}-${s.y}`}
+              cx={s.x}
+              cy={s.y}
+              r={s.r}
+              style={{
+                // Coprime-ish periods so the field never pulses in unison.
+                animation: `garden-twinkle ${7 + (i % 4) * 2.5}s ease-in-out ${i * 0.8}s infinite`,
+              }}
+            />
+          ))}
+        </g>
         {/* The sun marks TODAY being closed, not the durable stage it used to
             follow. A stage only turns over after weeks, so as a reward it was
             invisible; "the circle finished today" is earned, is visible the
@@ -232,6 +349,18 @@ export function GroupGarden({
             }}
           />
         )}
+        {/* Two hill bands behind the bed. They crest ABOVE the ground path's own
+            high point (y=96 at centre) or they would simply be swallowed by it,
+            and they are what turns a flat colour field into a place with a
+            distance — depth the sky alone cannot give without getting loud. */}
+        <path
+          d="M0 94 Q 68 78 136 90 Q 206 102 258 86 Q 296 76 320 84 V130 H0 Z"
+          className="garden-hill-far"
+        />
+        <path
+          d="M0 100 Q 84 88 150 98 Q 214 108 272 94 Q 302 88 320 92 V130 H0 Z"
+          className="garden-hill-near"
+        />
         <path
           d="M0 110 Q 160 96 320 110 V130 H0 Z"
           className="garden-ground fill-primary-200/60"

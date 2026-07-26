@@ -241,7 +241,11 @@ export function GroupClient({
                   stretched to the garden's full 337px \u2014 empty right and below).
                   The ring % IS the sum of those bars, so it's one story, one
                   panel \u2014 not a summary card plus a separate section. */}
-              <div className="grid items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
+              {/* Cards STRETCH to the row height (no `items-start`): side by
+                  side, two panels of the same story ending at different heights
+                  read as a mistake. The garden absorbs the difference as sky
+                  (see group-garden.tsx); the breakdown's list keeps its top. */}
+              <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
                 <GroupGarden garden={garden} />
 
                 <section

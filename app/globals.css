@@ -367,14 +367,67 @@
    toggle), so re-tint the garden here with deep-emerald scale tokens: a calm,
    dark sky that still reads as a lit garden. Plants stay emerald/gold (legible
    on both). Specificity (:root.dark .x) beats the single utility class. */
-:root.dark .garden-sky {
-  fill: var(--color-primary-950);
-}
 :root.dark .garden-ground {
   fill: var(--color-primary-900);
 }
 :root.dark .garden-soil {
   fill: var(--color-primary-800);
+}
+
+/* Sky gradient stops. One scale step only — the sky is a BACKDROP, and the
+   moment it out-contrasts the plants it starts competing with the layer that
+   actually carries meaning. Deeper at the top, lightest at the horizon; the
+   gradient is userSpaceOnUse and stops at the ground line, so a card that
+   stretches simply pads more of the top tone instead of rescaling the ramp. */
+.garden-sky-top {
+  stop-color: var(--color-primary-100);
+}
+.garden-sky-horizon {
+  stop-color: var(--color-primary-50);
+}
+:root.dark .garden-sky-top {
+  stop-color: var(--color-primary-950);
+}
+:root.dark .garden-sky-horizon {
+  stop-color: var(--color-primary-900);
+}
+
+/* Distant hills. Atmospheric perspective: the further a band is, the closer it
+   sits to the sky's own tone, so depth comes from LOW contrast, not from more
+   colour. These are pure scenery — constant in every state — which is what
+   makes them safe next to plants/blooms, where each mark is a claim (D49). */
+.garden-hill-far {
+  fill: var(--color-primary-200);
+  opacity: 0.26;
+}
+.garden-hill-near {
+  fill: var(--color-primary-200);
+  opacity: 0.42;
+}
+:root.dark .garden-hill-far {
+  fill: var(--color-primary-800);
+  opacity: 0.45;
+}
+:root.dark .garden-hill-near {
+  fill: var(--color-primary-800);
+  opacity: 0.7;
+}
+
+/* Clouds by day, stars by night — swapped on the theme CLASS, not a media
+   query, because the app themes off `.dark` (the toggle), not the OS. */
+.garden-clouds {
+  fill: var(--card);
+  opacity: 0.55;
+}
+.garden-stars {
+  display: none;
+  fill: var(--color-primary-200);
+}
+:root.dark .garden-clouds {
+  display: none;
+}
+:root.dark .garden-stars {
+  display: block;
 }
 
 * {
@@ -464,6 +517,30 @@ body {
   }
   50% {
     transform: rotate(1.6deg);
+  }
+}
+
+/* Garden: clouds drift. Deliberately a slow ALTERNATE nudge in user units, not
+   a wrapping pan — a loop that resets has a seam, and at this speed the eye
+   reads "the air is moving", never "something is animating at me". */
+@keyframes garden-drift {
+  from {
+    transform: translateX(-7px);
+  }
+  to {
+    transform: translateX(7px);
+  }
+}
+
+/* Garden: stars breathe rather than blink. The low end stays visible, so this
+   is a shift in weight, not an on/off flicker. */
+@keyframes garden-twinkle {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.62;
   }
 }
 
