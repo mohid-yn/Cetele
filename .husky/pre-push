@@ -1,0 +1,65 @@
+#!/usr/bin/env sh
+# Guard the production branch.
+#
+# `main` auto-deploys to production, so a push to it IS a deploy. This hook makes
+# that a deliberate act instead of a reflex: it refuses a direct push to `main`
+# unless the commit has already soaked on `staging` AND the override is set.
+#
+#   ALLOW_MAIN_PUSH=1 git push origin main
+#
+# The override is not a formality — typing it is the confirmation. See STATUS.md §3.
+
+PROTECTED="main"
+ZERO="0000000000000000000000000000000000000000"
+
+# git feeds pre-push one line per ref: <local ref> <local sha> <remote ref> <remote sha>
+while read -r local_ref local_sha remote_ref remote_sha; do
+	case "$remote_ref" in
+	"refs/heads/$PROTECTED") ;;
+	*) continue ;;
+	esac
+
+	# Deleting the production branch is never something we do from a script.
+	if [ "$local_sha" = "$ZERO" ]; then
+		echo "✋ Refusing to DELETE origin/$PROTECTED. Do that in the GitHub UI if you truly mean it."
+		exit 1
+	fi
+
+	# A non-fast-forward rewrites production history. No override for this one.
+	if [ "$remote_sha" != "$ZERO" ] && ! git merge-base --is-ancestor "$remote_sha" "$local_sha"; then
+		echo "✋ Refusing a NON-FAST-FORWARD push to $PROTECTED — this would rewrite production history."
+		echo "   If you really need it, push from a shell without this hook and know why."
+		exit 1
+	fi
+
+	# Everything reaching production must have gone through staging first.
+	if git rev-parse --verify --quiet refs/remotes/origin/staging >/dev/null; then
+		if ! git merge-base --is-ancestor "$local_sha" refs/remotes/origin/staging; then
+			echo "✋ Refusing: $(git rev-parse --short "$local_sha") is NOT contained in origin/staging."
+			echo ""
+			echo "   Production only ever fast-forwards from what staging already soaked."
+			echo "   Merge into staging, push it, verify on the staging URL, then promote."
+			echo ""
+			echo "   (If origin/staging is just stale here, run: git fetch origin staging)"
+			exit 1
+		fi
+	else
+		echo "⚠  origin/staging not found locally — cannot verify this soaked on staging."
+		echo "   Run 'git fetch origin' and try again."
+		exit 1
+	fi
+
+	if [ "$ALLOW_MAIN_PUSH" != "1" ]; then
+		echo "✋ Direct push to $PROTECTED blocked — pushing to $PROTECTED DEPLOYS TO PRODUCTION."
+		echo ""
+		echo "   Promotion path:  feature branch → staging → (verify) → main"
+		echo ""
+		echo "   This commit is on staging, so if you have verified it there, promote with:"
+		echo "     ALLOW_MAIN_PUSH=1 git push origin $PROTECTED"
+		exit 1
+	fi
+
+	echo "→ Promoting $(git rev-parse --short "$local_sha") to $PROTECTED (production). Override was set."
+done
+
+exit 0
