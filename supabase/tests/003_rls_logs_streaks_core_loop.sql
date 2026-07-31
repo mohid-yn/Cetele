@@ -416,5 +416,53 @@ select is(
     where user_id = 'd0000000-0000-0000-0000-000000000005'),
   4, 'an isolated old completion does not change the live streak');
 
+
+-- ----------------------------------------------------------------------------
+-- 0020: a day is judged by the obligations you HAD that day
+-- ----------------------------------------------------------------------------
+-- Measured against the pre-0020 function, (a) rebuilt to a streak of 2.
+
+-- (a) Ten days kept in circle A; joined circle B only yesterday, kept it too.
+insert into auth.users (id, email, raw_user_meta_data, aud, role) values
+  ('d0000000-0000-0000-0000-00000000ab01', 'obl@core.test', '{"name":"Obl"}', 'authenticated', 'authenticated');
+insert into public.groups (id, name, created_by) values
+  ('d0000000-0000-0000-0000-00000000ab02', 'Obl A', 'd0000000-0000-0000-0000-00000000ab01'),
+  ('d0000000-0000-0000-0000-00000000ab03', 'Obl B', 'd0000000-0000-0000-0000-00000000ab01');
+insert into public.memberships (user_id, group_id, role, created_at) values
+  ('d0000000-0000-0000-0000-00000000ab01', 'd0000000-0000-0000-0000-00000000ab02', 'owner',  now() - interval '10 days'),
+  ('d0000000-0000-0000-0000-00000000ab01', 'd0000000-0000-0000-0000-00000000ab03', 'member', now() - interval '1 day');
+insert into public.tasks (id, group_id, label, target_count) values
+  ('d0000000-0000-0000-0000-00000000ab04', 'd0000000-0000-0000-0000-00000000ab02', 'OA', 1),
+  ('d0000000-0000-0000-0000-00000000ab05', 'd0000000-0000-0000-0000-00000000ab03', 'OB', 1);
+insert into public.logs (user_id, task_id, date, count)
+  select 'd0000000-0000-0000-0000-00000000ab01', 'd0000000-0000-0000-0000-00000000ab04', current_date - i, 1
+    from generate_series(0, 9) i;
+insert into public.logs (user_id, task_id, date, count)
+  select 'd0000000-0000-0000-0000-00000000ab01', 'd0000000-0000-0000-0000-00000000ab05', current_date - i, 1
+    from generate_series(0, 1) i;
+
+select ok(private.is_day_complete('d0000000-0000-0000-0000-00000000ab01', current_date - 5),
+  'a day BEFORE joining the second circle is judged only by the circle I was in');
+select private.refresh_streak('d0000000-0000-0000-0000-00000000ab01', current_date);
+select is((select current from public.streaks where user_id = 'd0000000-0000-0000-0000-00000000ab01'),
+  10, 'joining a second circle does not truncate the rebuilt chain (was 2 before 0020)');
+
+-- (b) The escape hatch D48 depends on: logging in a circle on a day BEFORE you
+-- joined claims that day — and claims the whole circle's list for it, so a
+-- partial back-fill cannot buy a complete day.
+insert into public.logs (user_id, task_id, date, count) values
+  ('d0000000-0000-0000-0000-00000000ab01', 'd0000000-0000-0000-0000-00000000ab05', current_date - 3, 1);
+select ok(private.is_day_complete('d0000000-0000-0000-0000-00000000ab01', current_date - 3),
+  'back-filling a pre-join day in the second circle still counts it (D48)');
+insert into public.tasks (id, group_id, label, target_count) values
+  ('d0000000-0000-0000-0000-00000000ab06', 'd0000000-0000-0000-0000-00000000ab03', 'OB2', 5);
+select ok(not private.is_day_complete('d0000000-0000-0000-0000-00000000ab01', current_date - 3),
+  '...and claiming a pre-join day claims the whole circle, so a partial back-fill is not a full day');
+
+-- (c) The non-empty guard: a day on which nothing was owed is not a day kept,
+-- or the walk would hand out a fortnight of streak for one completed day.
+select ok(not private.is_day_complete('d0000000-0000-0000-0000-00000000ab01', current_date - 40),
+  'a day before any membership, with nothing logged, is NOT complete');
+
 select * from finish();
 rollback;
