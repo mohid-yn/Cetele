@@ -543,6 +543,18 @@ export default function DesignSystemPage() {
                 </ProgressRing>
                 <span className="text-xs text-muted-foreground">Complete</span>
               </div>
+              {/* `mark` — a threshold INSIDE the ring's own arc. Used for a
+                  personal stretch goal (D51): max is the member's bar, the
+                  notch is the circle's share. Its colour is a per-theme token
+                  (`--progress-mark`) because it is drawn on the fill, the
+                  success green AND the track, and one colour cannot clear 3:1
+                  on all three in both themes. */}
+              <div className="flex flex-col items-center gap-2">
+                <ProgressRing value={67} max={100} mark={33} />
+                <span className="text-xs text-muted-foreground">
+                  With a mark
+                </span>
+              </div>
             </div>
           </div>
         </Section>

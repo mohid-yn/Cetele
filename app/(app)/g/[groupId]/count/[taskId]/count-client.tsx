@@ -12,7 +12,9 @@ import { ArrowLeftIcon, MinusIcon } from "@/components/app/icons";
 import { playComplete, playTen } from "@/lib/sound";
 import { groupHref } from "@/lib/group-href";
 import { useLocalToday } from "@/lib/use-local-today";
-import { incrementCount } from "../../today/actions";
+import { usePropState } from "@/lib/use-prop-state";
+import { goalCap } from "@/lib/goals";
+import { incrementCount, setTaskGoal } from "../../today/actions";
 import { setCount } from "../../group/actions";
 
 /**
@@ -67,7 +69,17 @@ export function CountClient({
   groupId: string;
   /** The viewer — set_count's target, so a correction is always a self-edit. */
   userId: string;
-  task: { id: string; label: string; subtitle: string | null; target: number };
+  /** `target` = the circle's share (what "done" means, and all the streak and
+   *  rollup logic ever sees). `goal` = what I am aiming at — equal to `target`
+   *  unless I raised it (D51). The ring runs to `goal`; the count cap, which is
+   *  a server rule, stays on `target`. */
+  task: {
+    id: string;
+    label: string;
+    subtitle: string | null;
+    target: number;
+    goal: number;
+  };
   /** The member's day boundary (profiles.timezone, D34). */
   timeZone: string;
   todayISO: string;
@@ -82,13 +94,26 @@ export function CountClient({
   const [error, setError] = React.useState<string | null>(null);
   const [editOpen, setEditOpen] = React.useState(false);
   const [draft, setDraft] = React.useState("");
+  const [goalOpen, setGoalOpen] = React.useState(false);
+  const [goalDraft, setGoalDraft] = React.useState("");
+  const [savingGoal, setSavingGoal] = React.useState(false);
+  // My bar for this task. Local so a raise applies at once (the ring is the
+  // whole point of the control), re-seeded from the server when a refresh
+  // brings a new value. Never below the circle's share — the RPC enforces that
+  // and hands back the effective target, which is what we store.
+  const [goal, setGoal] = usePropState(task.goal);
+  const stretched = goal > task.target;
   // "This day's ring was ALREADY closed before the current tap" — the guard
   // that keeps the celebration rare. It must be seeded from the day's real
   // count, not from `false`: a ref that starts unclosed on every mount means
   // returning to a finished ring and tapping it re-fires the congratulations,
   // which is exactly how a reward stops meaning anything. Re-seeded whenever
   // the day being counted changes.
-  const justCompleted = React.useRef(
+  const justCompleted = React.useRef((initialCounts[initialDate] ?? 0) >= goal);
+  // The same guard for the circle's SHARE, which is a separate transition once
+  // the two numbers differ: reaching it is the moment that feeds the day and
+  // the streak, so it cannot go unmarked just because the ring keeps going.
+  const shareMarked = React.useRef(
     (initialCounts[initialDate] ?? 0) >= task.target,
   );
 
@@ -98,6 +123,10 @@ export function CountClient({
   // Always kept equal to replay(confirmed, pending ops); see `recompute`.
   const countsRef = React.useRef(initialCounts);
   const ringClosed = React.useCallback(
+    (d: string) => (countsRef.current[d] ?? 0) >= goal,
+    [goal],
+  );
+  const shareDone = React.useCallback(
     (d: string) => (countsRef.current[d] ?? 0) >= task.target,
     [task.target],
   );
@@ -117,6 +146,7 @@ export function CountClient({
     setDate((d) => {
       const now = d === prev ? next : d;
       justCompleted.current = ringClosed(now);
+      shareMarked.current = shareDone(now);
       return now;
     });
     router.refresh();
@@ -124,7 +154,7 @@ export function CountClient({
   const isToday = date === todayISO;
 
   const count = counts[date] ?? 0;
-  const remaining = Math.max(0, task.target - count);
+  const remaining = Math.max(0, goal - count);
 
   // -- the serialized op queue ------------------------------------------------
   // The last server-CONFIRMED count per date (as of the most recently resolved
@@ -237,6 +267,43 @@ export function CountClient({
     [date, recompute, dispatch],
   );
 
+  // The day's two thresholds, in one place so the tap path and the correction
+  // path can never disagree about what has been crossed.
+  //
+  // With no personal goal there is ONE moment and it behaves exactly as it
+  // always has. Once a member raises their bar (D51) there are two, and both
+  // are real transitions, not states — the invariant only forbids celebrating
+  // a state:
+  //
+  //   the circle's SHARE — the number that actually feeds the day, the streak
+  //     and the rollup. Marked quietly (confetti, no card): it must not go
+  //     unmarked simply because this member is carrying on past it.
+  //   my GOAL — the ring closing. The full celebration, where it has always
+  //     been. Reaching it implies the share, so a single jump past both fires
+  //     the loud one only.
+  const syncMilestones = React.useCallback(
+    (next: number) => {
+      const closing = next >= goal && !justCompleted.current;
+      if (next < task.target) shareMarked.current = false;
+      else if (!shareMarked.current) {
+        shareMarked.current = true;
+        // Suppressed when the goal is closing in the same breath, and when
+        // there is no stretch at all (the two thresholds are the same number).
+        if (stretched && !closing) {
+          if (sound) playComplete();
+          celebrate({ confettiOnly: true });
+        }
+      }
+      if (next < goal) justCompleted.current = false;
+      else if (closing) {
+        justCompleted.current = true;
+        if (sound) playComplete();
+        celebrate({ title: "Ring closed!" });
+      }
+    },
+    [goal, task.target, stretched, sound, celebrate],
+  );
+
   // Set the day to an exact number (undo a stray tap, or fix it outright).
   // Optimistic like a tap: the number changes at once and the set rides the same
   // FIFO queue behind any taps ahead of it — so it can neither clobber nor be
@@ -254,19 +321,13 @@ export function CountClient({
         { kind: "set", date: d, value, dispatched: false },
       ];
       recompute(d);
-      // Dropping back below the target re-arms the celebration, so closing the
-      // ring again still feels like closing it — and a correction that lands ON
-      // the target closes it just as truly as a tap did.
-      if (value < task.target) {
-        justCompleted.current = false;
-      } else if (!justCompleted.current) {
-        justCompleted.current = true;
-        if (sound) playComplete();
-        celebrate({ title: "Ring closed!" });
-      }
+      // A correction that lands ON a threshold crosses it just as truly as a
+      // tap did, and dropping back below one re-arms it — so closing the ring
+      // again still feels like closing it.
+      syncMilestones(value);
       void dispatch();
     },
-    [date, recompute, dispatch, task.target, sound, celebrate],
+    [date, recompute, dispatch, syncMilestones],
   );
 
   // best-effort dispatch when the screen unmounts mid-debounce
@@ -279,26 +340,52 @@ export function CountClient({
 
   // ---------------------------------------------------------------------------
 
-  const celebrateIfClosed = (next: number) => {
-    if (next >= task.target && !justCompleted.current) {
-      justCompleted.current = true;
-      if (sound) playComplete();
-      celebrate({ title: "Ring closed!" });
-    }
-  };
-
-  // Manual taps count one at a time, uncapped (you may go past the target).
+  // Manual taps count one at a time, uncapped (you may go past the goal).
   const handleTap = () => {
     enqueueInc(1);
-    celebrateIfClosed(countsRef.current[date] ?? 0);
+    syncMilestones(countsRef.current[date] ?? 0);
   };
 
-  // The convenience buttons snap *to* the target — never past it.
+  // The convenience buttons snap *to* the goal — never past it.
   const addCapped = (n: number) => {
     const step = Math.min(n, remaining);
     if (step <= 0) return;
     enqueueInc(step);
-    celebrateIfClosed(countsRef.current[date] ?? 0);
+    syncMilestones(countsRef.current[date] ?? 0);
+  };
+
+  // Raising the bar re-opens a ring that was closed at the old number, so the
+  // guards must follow it — otherwise closing the NEW ring would pass unmarked
+  // (the ref would still say "already celebrated"). Reconciled from the RPC's
+  // own return (D45), which is the effective target: the group's own number
+  // when the member drops back to the circle's share.
+  //
+  // AWAITED, unlike everything else on this screen. The tap loop is optimistic
+  // because a tap is one of hundreds and a round-trip you can feel would ruin
+  // it; a goal is a deliberate once-in-a-while decision, and firing it off
+  // un-awaited loses a real race — leave for Today the instant the dialog
+  // closes and the read can arrive BEFORE the write, so the rings come back
+  // rendered against the old number with nothing on the way to correct them.
+  // Holding the dialog for one round-trip is the honest version, and it is
+  // also the only way a refusal can be shown where it can be read.
+  const commitGoal = async (next: number | null): Promise<boolean> => {
+    setError(null);
+    setSavingGoal(true);
+    try {
+      const res = await setTaskGoal(groupId, task.id, next);
+      if (!res) return false; // the action redirected (stale session)
+      if (res.error || res.goal == null) {
+        setError(res.error ?? "Couldn't save your goal — try again");
+        return false;
+      }
+      setGoal(res.goal);
+      const current = countsRef.current[date] ?? 0;
+      justCompleted.current = current >= res.goal;
+      shareMarked.current = current >= task.target;
+      return true;
+    } finally {
+      setSavingGoal(false);
+    }
   };
 
   return (
@@ -345,11 +432,12 @@ export function CountClient({
         value={date}
         days={14}
         today={todayISO}
-        isDone={(d) => (counts[d] ?? 0) >= task.target}
+        isDone={(d) => (counts[d] ?? 0) >= goal}
         onChange={(d) => {
           // switching to a day that's already finished must not re-arm the
           // celebration for it
           justCompleted.current = ringClosed(d);
+          shareMarked.current = shareDone(d);
           setDate(d);
         }}
       />
@@ -366,10 +454,26 @@ export function CountClient({
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 py-2">
         <TapPad
           value={count}
-          max={task.target}
+          max={goal}
+          // The circle's share, notched on the arc, but only when it is a
+          // different number from the goal. A raised bar otherwise HIDES the
+          // one threshold that feeds the streak: at 100 of 300 the ring looks
+          // a third done while the day is, in fact, complete.
+          mark={stretched ? task.target : undefined}
           sound={sound}
           onTap={handleTap}
         />
+        {stretched && (
+          <p className="-mt-2 text-center text-xs text-muted-foreground">
+            Your goal. The circle asks{" "}
+            <span className="font-medium text-foreground tabular-nums">
+              {task.target.toLocaleString()}
+            </span>
+            {count >= task.target && (
+              <span className="text-success"> — done, the rest is yours</span>
+            )}
+          </p>
+        )}
 
         {/* Corrections read as ONE recessive tray, not two floating buttons:
             a soft pill on the muted tint, hairline-divided, muted label. Gold
@@ -402,6 +506,23 @@ export function CountClient({
             }}
           >
             Edit count
+          </Button>
+          <span aria-hidden className="h-6 w-px bg-border" />
+          {/* Third segment of the same recessive tray, not a fourth control
+              floating somewhere else: raising your bar is a correction to the
+              screen's premise, and it belongs in the same language as fixing
+              the number. Still muted — the ring and the gold action below own
+              the screen. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-11 rounded-none px-5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => {
+              setGoalDraft(String(goal));
+              setGoalOpen(true);
+            }}
+          >
+            {stretched ? "My goal" : "Set my goal"}
           </Button>
         </div>
       </div>
@@ -483,7 +604,11 @@ export function CountClient({
                 // optimistic, so there is no round-trip to catch it after the
                 // dialog closes. In-range: commit and close at once.
                 const v = Math.max(0, Math.round(value));
-                const cap = Math.max(task.target * 10, task.target + 1000);
+                // The COUNT cap is a server rule keyed to the GROUP target
+                // (D36a) — a personal goal doesn't move it, so this must not
+                // read `goal` or the dialog would accept what set_count then
+                // refuses, after the optimistic write is already on screen.
+                const cap = goalCap(task.target);
                 if (v > cap) {
                   setError(
                     `Enter a number between 0 and ${cap.toLocaleString()}.`,
@@ -509,11 +634,93 @@ export function CountClient({
           aria-label={`Count for ${task.label}`}
         />
         <p className="mt-2 text-xs text-muted-foreground">
-          Target {task.target.toLocaleString()}. Setting a lower number never
-          shortens a streak you already earned.
+          Target {goal.toLocaleString()}. Setting a lower number never shortens
+          a streak you already earned.
         </p>
         {/* A refusal (out of range, outside the 14-day window) has to be read
             here — the page-level alert is behind the backdrop. */}
+        {error && (
+          <p role="alert" className="mt-2 text-xs text-danger">
+            {error}
+          </p>
+        )}
+      </Dialog>
+
+      {/* My own bar (D51). Deliberately framed as aiming HIGHER, never as
+          changing what the circle asked: the floor is the group's target, and
+          the way back down is a button rather than a number you have to guess. */}
+      <Dialog
+        open={goalOpen}
+        onClose={() => setGoalOpen(false)}
+        title="My goal"
+        description={`${task.label} · every day`}
+        footer={
+          <>
+            {stretched && (
+              <Button
+                variant="ghost"
+                disabled={savingGoal}
+                onClick={() => {
+                  void commitGoal(null).then((ok) => ok && setGoalOpen(false));
+                }}
+              >
+                Back to the circle&rsquo;s
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              disabled={savingGoal}
+              onClick={() => setGoalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={goalDraft.trim() === "" || savingGoal}
+              onClick={() => {
+                const value = Number(goalDraft);
+                if (!Number.isFinite(value)) return;
+                const v = Math.max(0, Math.round(value));
+                // Mirrors set_task_goal's cap so an impossible number is
+                // refused here, before the dialog closes on it.
+                if (v > goalCap(task.target)) {
+                  setError(
+                    `Choose a goal between ${task.target.toLocaleString()} and ${goalCap(
+                      task.target,
+                    ).toLocaleString()}.`,
+                  );
+                  return;
+                }
+                // Closed only once the write has landed — see commitGoal.
+                void commitGoal(v).then((ok) => ok && setGoalOpen(false));
+              }}
+            >
+              {savingGoal ? "Saving…" : "Save"}
+            </Button>
+          </>
+        }
+      >
+        <Input
+          type="number"
+          inputMode="numeric"
+          min={task.target}
+          autoFocus
+          value={goalDraft}
+          onChange={(e) => setGoalDraft(e.target.value)}
+          aria-label={`My daily goal for ${task.label}`}
+        />
+        <p className="mt-2 text-xs text-muted-foreground">
+          Your circle&rsquo;s share is{" "}
+          <span className="font-medium text-foreground tabular-nums">
+            {task.target.toLocaleString()}
+          </span>
+          . You can aim higher — anything lower just puts you back on the
+          circle&rsquo;s number.
+        </p>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Your streak, your consistency and the circle&rsquo;s total all still
+          count from {task.target.toLocaleString()}. Aiming higher can only ever
+          add to them.
+        </p>
         {error && (
           <p role="alert" className="mt-2 text-xs text-danger">
             {error}

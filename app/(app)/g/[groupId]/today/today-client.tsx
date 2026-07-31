@@ -43,7 +43,11 @@ export type TodayTask = {
   id: string;
   label: string;
   subtitle: string | null;
+  /** The circle's share — what "done" means for the day, the streak and every
+   *  rollup. Never replaced by the personal goal. */
   target: number;
+  /** What I am aiming at (D51). Equal to `target` unless I raised it. */
+  goal: number;
 };
 
 export type CircleMember = {
@@ -103,30 +107,50 @@ export function TodayClient({
   const isToday = date === todayISO;
 
   const countOn = (taskId: string, d: string) => counts[d]?.[taskId] ?? 0;
+  // The day-strip's done-marks mirror a SERVER fact — the day the streak and
+  // the rollup counted — so they key on the circle's share, never on a
+  // personal goal (D51). A member aiming higher must not see yesterday go
+  // unmarked while their streak says they kept it.
   const dayFull = (d: string) =>
     tasks.length > 0 && tasks.every((t) => countOn(t.id, d) >= t.target);
 
   const rings = tasks.map((t) => {
     const count = countOn(t.id, date);
-    return { task: t, count, done: count >= t.target };
+    // `done` = my ring is closed (my goal). `shareDone` = I have done what the
+    // circle asked, which is the threshold everything shared is measured at.
+    // With no personal goal the two are the same number and nothing changes.
+    return {
+      task: t,
+      count,
+      done: count >= t.goal,
+      shareDone: count >= t.target,
+      stretched: t.goal > t.target,
+    };
   });
   const closed = rings.filter((r) => r.done).length;
   const left = rings.length - closed;
+  const sharesLeft = rings.filter((r) => !r.shareDone).length;
 
   // Abstraction (GLANCE): one human headline that leads with the unfinished.
+  // The middle case exists because the two thresholds can disagree: a member
+  // who has done the circle's share but is still climbing their own goal must
+  // be told they are done in the way that counts BEFORE being told what's
+  // left, or a raised goal reads as a day they failed to finish.
   const glance =
     rings.length === 0
       ? "No tasks yet"
       : left === 0
         ? `All rings closed${isToday ? " today" : ""} — mashaAllah 🎉`
-        : closed === 0
-          ? "A fresh page — start with one ring"
-          : `${left} ring${left === 1 ? "" : "s"} to close — you're almost there`;
+        : sharesLeft === 0
+          ? `Your circle's share is done — ${left} ring${left === 1 ? "" : "s"} left on your own goal`
+          : closed === 0
+            ? "A fresh page — start with one ring"
+            : `${left} ring${left === 1 ? "" : "s"} to close — you're almost there`;
 
   // One primary action (goal-gradient): continue the ring closest to done.
   const next = rings
     .filter((r) => !r.done)
-    .sort((a, b) => b.count / b.task.target - a.count / a.task.target)[0];
+    .sort((a, b) => b.count / b.task.goal - a.count / a.task.goal)[0];
 
   // Where a banner's "Begin today" sends you: the nearest-to-done ring, else the
   // first task. Null when the circle has no tasks yet (nothing to begin).
@@ -218,8 +242,12 @@ export function TodayClient({
           className={buttonVariants({ variant: "accent", className: "w-full" })}
         >
           Continue {next.task.label} ·{" "}
+          {/* The ring this points at is measured against MY goal, so the CTA
+              must be too — otherwise the one unfinished ring is advertised as
+              "100/100", which reads as already done and makes the gold action
+              look like a mistake. */}
           <span className="tabular-nums">
-            {next.count}/{next.task.target}
+            {next.count}/{next.task.goal}
           </span>
         </Link>
       )}
@@ -230,7 +258,7 @@ export function TodayClient({
           {isToday ? "Your rings today" : "Your rings"}
         </SectionHeading>
         <Grid as="ul" cols="cards" gap="md">
-          {rings.map(({ task: t, count, done }) => {
+          {rings.map(({ task: t, count, done, shareDone, stretched }) => {
             // The one to continue gets an emerald rim, so the eye lands on the
             // same ring the gold "Continue" CTA above points at.
             //
@@ -254,15 +282,25 @@ export function TodayClient({
                 >
                   <ProgressRing
                     value={count}
-                    max={t.target}
+                    max={t.goal}
+                    mark={stretched ? t.target : undefined}
                     size={72}
                     thickness={8}
                   >
                     {done ? (
                       <CheckIcon className="size-6 text-success" />
                     ) : (
-                      <span className="text-sm font-bold text-foreground tabular-nums">
-                        {Math.round((count / t.target) * 100)}%
+                      // Success-toned once the circle's share is in: the
+                      // number is still short of MY goal, but the part that
+                      // the circle and the streak are counting is finished,
+                      // and a plain foreground percent would read as neither.
+                      <span
+                        className={cn(
+                          "text-sm font-bold tabular-nums",
+                          shareDone ? "text-success" : "text-foreground",
+                        )}
+                      >
+                        {Math.round((count / t.goal) * 100)}%
                       </span>
                     )}
                   </ProgressRing>
@@ -287,12 +325,17 @@ export function TodayClient({
                     )}
                     <ProgressBar
                       value={count}
-                      max={t.target}
-                      tone={done ? "success" : "primary"}
+                      max={t.goal}
+                      tone={done || shareDone ? "success" : "primary"}
                       className="mt-2 h-1.5"
                     />
                     <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                      {count.toLocaleString()} / {t.target.toLocaleString()}
+                      {count.toLocaleString()} / {t.goal.toLocaleString()}
+                      {stretched && (
+                        <span className="ms-1.5 tabular-nums">
+                          · circle&rsquo;s share {t.target.toLocaleString()}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />

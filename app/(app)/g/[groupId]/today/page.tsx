@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveGroup } from "@/lib/active-group";
 import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import { effectiveGoal } from "@/lib/goals";
 import { q } from "@/lib/db-log";
 import {
   REACTIONS,
@@ -90,8 +91,13 @@ export default async function TodayPage({
   const todayISO = localDateISO(tz);
   const taskIds = (tasks ?? []).map((t) => t.id);
 
-  const [{ data: myLogs }, { data: todayLogs }, { data: reactions }] = await q(
-    "today.logs (my 14d + circle today + reactions)",
+  const [
+    { data: myLogs },
+    { data: todayLogs },
+    { data: reactions },
+    { data: myGoals },
+  ] = await q(
+    "today.logs (my 14d + circle today + reactions + my goals)",
     Promise.all([
       // my last fortnight (rings for the selected day + DayStrip done-marks)
       supabase
@@ -119,7 +125,23 @@ export default async function TodayPage({
         .select("from_user_id, to_user_id, kind")
         .eq("group_id", active.groupId)
         .eq("date", todayISO),
+      // My own raised bars for this circle's tasks (D51). RLS is own-row, so
+      // this can only ever return mine — a peer's goal is not readable here,
+      // which is also what keeps it out of the collective figures below.
+      supabase
+        .from("member_task_goals")
+        .select("task_id, target_count")
+        .eq("user_id", me)
+        .in(
+          "task_id",
+          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+        ),
     ]),
+  );
+
+  // taskId → my raised bar, where I have one (D51)
+  const goalByTask = new Map(
+    (myGoals ?? []).map((g) => [g.task_id, g.target_count]),
   );
 
   // date → taskId → count (mine)
@@ -236,7 +258,12 @@ export default async function TodayPage({
           id: t.id,
           label: t.label,
           subtitle: t.subtitle,
+          // Two numbers, deliberately kept apart (D51): `target` is the
+          // circle's share — the only one the streak, the rollup, the circle
+          // list and the collective above ever read — and `goal` is what this
+          // member is aiming at.
           target: t.target_count,
+          goal: effectiveGoal(t.target_count, goalByTask.get(t.id)),
         }))}
         counts={counts}
         circle={circle}

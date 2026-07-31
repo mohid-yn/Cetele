@@ -69,6 +69,7 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **Auth** — Google OAuth + email magic link (Supabase Auth)
 - **Groups** — create, join via invite link/code, admins manage members
 - **Admin-set dhikr list** — admin defines items + daily target counts per group (e.g. _Allahu Akbar ×100_, _Astaghfirullah ×1000_)
+- **Personal stretch goals** — a member may raise their **own** daily bar above the circle's target, per task (D51). Raise-only: the circle's number is the floor, so nobody can quietly owe the group less, and an admin raising the group target above someone's goal simply wins. It changes only what that member **aims** at — the ring, the celebration and their reminder. Everything shared or judged (day-completion, streak, consistency, steadfastness, the garden, the circle's collective goal) still counts from the **circle's** target, so aiming higher can only ever add
 - **Tap counter** — tasbih-style: tap to count, haptics + subtle sound, number animation
 - **Progress rings** — Apple-Watch-style ring per item, fills toward target, closes on completion
 - **Live collective counter** — real-time group total ("41,300 / 100,000 today") via Supabase Realtime
@@ -131,6 +132,7 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **memberships** — user_id, group_id, role (`owner` | `admin` | `member`); exactly one `owner` row per group
 - **invites** — id, group*id, email (optional — locks the invite to a verified sign-in email, enforced without sending anything), role (`admin` | `member`), code (DB-generated) — **shareable link/code invites** (`/join/<code>`; admin shares the link themselves; accept → a membership). **Open invites (no email) are reusable until revoked** — one link serves a whole halaqah; **email-locked invites are single-use** (deleted on accept) (D35). Email \_delivery* of invites = later nice-to-have (needs Resend + a domain)
 - **tasks** — id, group_id, label, subtitle, target_count, order
+- **member_task_goals** — user_id, task_id, target_count — a member's optional **raised** bar for one task (D51). Private to its owner (own-row RLS: not peers, not admins), written only through `set_task_goal`, and applied everywhere as `greatest(tasks.target_count, override)` so it can never lower the circle's number. Read by the member's own rings and by the reminder dispatcher; deliberately **not** by day-completion, the rollup, or any collective figure
 - **logs** — id, user_id, task_id, count, date, `logged_by` (nullable — the admin who logged it on the member's behalf; null = self; D29)
 - **reminders** — user_id, task_id, time (`HH:MM`), enabled — personal per-task custom reminder times (D30)
 - **streaks** — user_id, current, longest, freezes_left, last_active

@@ -25,6 +25,14 @@ export interface ProgressRingProps extends React.HTMLAttributes<HTMLDivElement> 
    * silently got `size` px anyway. See the note on the wrapper below.
    */
   fluid?: boolean;
+  /**
+   * Draw a hairline notch across the stroke at this value — "the point on this
+   * ring that means something else". Used for a personal stretch goal (D51),
+   * where `max` is the member's own bar and the notch is the circle's share:
+   * without it a raised goal would hide the only threshold that actually feeds
+   * the streak. Omit (the default) and the ring is unchanged.
+   */
+  mark?: number;
   /** Render content in the center (e.g. count, percent, icon). */
   children?: React.ReactNode;
 }
@@ -41,6 +49,7 @@ export function ProgressRing({
   trackColor = "var(--progress-track)",
   progressColor = "var(--primary)",
   fluid = false,
+  mark,
   className,
   children,
   ...props
@@ -50,6 +59,20 @@ export function ProgressRing({
   const circumference = 2 * Math.PI * radius;
   const dashoffset = circumference * (1 - pct);
   const complete = pct >= 1;
+
+  // The notch: a radial hairline cutting the full stroke width. Positioned in
+  // the svg's own coordinates (0 = 3 o'clock), which the wrapper's -rotate-90
+  // then carries to 12 o'clock like the arc. Drawn in `--foreground` rather
+  // than as a gap in the ring, because it has to read against BOTH the emerald
+  // fill and the sand track wherever the ring sits — a gap would have to know
+  // the page behind it, and this ring sits on the card on Today and on the
+  // page background on the count screen. Suppressed at the ends, where it
+  // would only blunt the arc's own start/finish.
+  const markPct = mark != null && max > 0 ? mark / max : null;
+  const markAngle =
+    markPct != null && markPct > 0 && markPct < 1
+      ? 2 * Math.PI * markPct
+      : null;
 
   return (
     <div
@@ -101,6 +124,25 @@ export function ProgressRing({
               "stroke-dashoffset var(--duration-slow) var(--ease-brand), stroke var(--duration-base)",
           }}
         />
+        {markAngle != null && (
+          <line
+            aria-hidden
+            x1={size / 2 + (radius - thickness / 2) * Math.cos(markAngle)}
+            y1={size / 2 + (radius - thickness / 2) * Math.sin(markAngle)}
+            x2={size / 2 + (radius + thickness / 2) * Math.cos(markAngle)}
+            y2={size / 2 + (radius + thickness / 2) * Math.sin(markAngle)}
+            // A token referenced INLINE, with a fallback — a colour that must
+            // always render never rides on a stylesheet rule reaching the page,
+            // and SVG's initial stroke is black. (§4, the garden's black sky.)
+            // `--progress-mark` is per-theme and INVERTS between them: it was
+            // `--foreground` until that measured 2.10:1 on the dark fill. The
+            // fallback is a token, then `currentColor` — a hex here is an
+            // ESLint error under the token contract.
+            stroke="var(--progress-mark, var(--foreground, currentColor))"
+            strokeWidth={Math.max(1.5, size / 90)}
+            strokeLinecap="butt"
+          />
+        )}
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">
         {children}

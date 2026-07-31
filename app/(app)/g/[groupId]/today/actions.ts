@@ -93,3 +93,35 @@ export async function dismissBanner(
 // setTimezone moved to app/(app)/groups/actions.ts (D44): the timezone belongs
 // to the PERSON, not a circle, and it must be settable from /groups — before
 // the member reaches any screen that renders a date.
+
+/**
+ * Raise (or clear) my own bar for one task — the personal stretch goal, D51.
+ *
+ * Every rule lives in the set_task_goal RPC: membership, the sanity cap, and
+ * the raise-only floor that turns any value at or below the circle's share into
+ * a CLEAR rather than a stored number. Returns the EFFECTIVE target so the
+ * client reconciles from the write (D45) instead of a refetch — including in
+ * the clear case, where what comes back is the group's own target.
+ */
+export async function setTaskGoal(
+  groupId: string,
+  taskId: string,
+  target: number | null,
+): Promise<{ goal: number | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data, error } = await q(
+    `rpc.set_task_goal (${target ?? "clear"})`,
+    // `p_target` is nullable in SQL (NULL clears), but the generated types
+    // render every RPC arg as non-null, so the null case needs the cast. The
+    // behaviour is pinned in pgTAP 009, not assumed here.
+    supabase.rpc("set_task_goal", {
+      p_task: taskId,
+      p_target: target as number,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { goal: null, error: error.message };
+
+  for (const sub of GROUP_WRITE_PATHS) revalidatePath(groupHref(groupId, sub));
+  return { goal: data, error: null };
+}

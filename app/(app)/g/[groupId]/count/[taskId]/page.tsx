@@ -3,6 +3,7 @@ import { buttonVariants } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { localDateISO, isoDaysAgo } from "@/lib/local-date";
 import { groupHref } from "@/lib/group-href";
+import { effectiveGoal } from "@/lib/goals";
 import { CountClient } from "./count-client";
 
 /**
@@ -61,12 +62,23 @@ export default async function CountPage({
 
   const timeZone = profile?.timezone ?? "UTC";
   const todayISO = localDateISO(timeZone);
-  const { data: logs } = await supabase
-    .from("logs")
-    .select("date, count")
-    .eq("user_id", me)
-    .eq("task_id", task.id)
-    .gte("date", isoDaysAgo(todayISO, 13));
+  const [{ data: logs }, { data: myGoal }] = await Promise.all([
+    supabase
+      .from("logs")
+      .select("date, count")
+      .eq("user_id", me)
+      .eq("task_id", task.id)
+      .gte("date", isoDaysAgo(todayISO, 13)),
+    // My own raised bar for this task, if I have set one (D51). RLS scopes
+    // member_task_goals to own-rows, so the user filter is precision, not
+    // safety — and no peer's goal can be read here even by mistake.
+    supabase
+      .from("member_task_goals")
+      .select("target_count")
+      .eq("user_id", me)
+      .eq("task_id", task.id)
+      .maybeSingle(),
+  ]);
 
   const counts: Record<string, number> = {};
   for (const l of logs ?? []) counts[l.date] = l.count;
@@ -86,7 +98,11 @@ export default async function CountPage({
         id: task.id,
         label: task.label,
         subtitle: task.subtitle,
+        // `target` is the circle's share — what "done" means, and the only
+        // number the streak and the rollup ever see. `goal` is what THIS
+        // member is aiming at. They are equal unless the member raised it.
         target: task.target_count,
+        goal: effectiveGoal(task.target_count, myGoal?.target_count),
       }}
       todayISO={todayISO}
       initialDate={initialDate}

@@ -340,6 +340,42 @@ export type Database = {
           },
         ];
       };
+      member_task_goals: {
+        Row: {
+          target_count: number;
+          task_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          target_count: number;
+          task_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          target_count?: number;
+          task_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "member_task_goals_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "member_task_goals_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       memberships: {
         Row: {
           created_at: string;
@@ -776,6 +812,10 @@ export type Database = {
       set_reminder: {
         Args: { p_enabled: boolean; p_task: string; p_time: string };
         Returns: undefined;
+      };
+      set_task_goal: {
+        Args: { p_target: number; p_task: string };
+        Returns: number;
       };
       sync_badges: { Args: { p_group: string }; Returns: undefined };
       toggle_reaction: {

@@ -201,6 +201,13 @@
      LUMINANCE gap is only ~1.7:1, so the emerald arc is carried by the big HUE
      gap instead. Go grey here and the ring turns into one flat dark donut. */
   --progress-track: #978d77; /* 3.29:1 on card, 3.04:1 on cream — clears 1.4.11 */
+  /* The notch a ring draws at a threshold inside its own arc — the circle's
+     share, when a member is aiming past it (D51). It is judged against what it
+     is actually DRAWN ON, which is never the page: the emerald fill, the
+     success green once the ring closes, and the sand track. Light can use the
+     foreground near-black (measured 3.22 / 4.68 / 5.37); dark CANNOT, and that
+     is the whole reason this is a token — see the dark block. */
+  --progress-mark: #1c1814;
   --input: #e7e0d0;
   --ring: #047857; /* emerald focus ring — calm & on-brand */
 
@@ -310,6 +317,13 @@
   /* Same story on dark, same measurement: --muted as a stroke was 1.10:1 on the
      card. Lifted well past --border, which only has to separate two surfaces. */
   --progress-track: #736858; /* 3.08:1 on card, 3.35:1 on the page */
+  /* INVERTED from light, and measured rather than assumed. Reusing the light
+     recipe (--foreground) here gives a cream notch on a light emerald fill:
+     measured 2.10:1 on --primary and 1.59:1 on --success — the mark all but
+     vanishes at exactly the moment the ring is doing well, which is the same
+     failure the garden's plants had. So dark goes DARKER than everything it
+     sits on. The binding surface is the sand track, not the fill. */
+  --progress-mark: #14100b; /* 3.47:1 track · 7.39:1 primary · 9.6:1 success */
   --input: #3d3122;
   --ring: #34d399; /* bright emerald focus — high-visibility on dark */
 

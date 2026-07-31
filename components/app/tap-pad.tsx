@@ -11,6 +11,10 @@ import { cn } from "@/lib/utils";
 interface TapPadProps {
   value: number;
   max: number;
+  /** Notch the arc at the circle's share when the member is aiming past it
+   *  (D51) — `max` is then their own goal, and this is the threshold that
+   *  still feeds the day and the streak. */
+  mark?: number;
   /** Whether sound is on. */
   sound: boolean;
   /** Held while an exact-set correction is in flight, so a tap can't be
@@ -26,6 +30,7 @@ interface TapPadProps {
 export function TapPad({
   value,
   max,
+  mark,
   sound,
   disabled = false,
   onTap,
@@ -113,6 +118,7 @@ export function TapPad({
         <ProgressRing
           value={value}
           max={max}
+          mark={mark}
           size={260}
           thickness={18}
           // `fluid`, not `h-full w-full`: `size` is an inline style the class
