@@ -45,6 +45,20 @@ import { setCount } from "../../group/actions";
 
 const FLUSH_MS = 600;
 
+/**
+ * The largest delta `increment_count` will accept in one call (D36a). Ops are
+ * SPLIT to respect it rather than the UI refusing to offer the action:
+ * "Mark done" adds however much is left, and once a member can raise their own
+ * goal (D51) that remainder routinely exceeds 500 — a 100-target task allows a
+ * goal of 1,100, so one press sent 1,100 and came back `delta out of range
+ * (1..500)`, a raw server error on screen with the count snapping back to 0.
+ * (Reachable before this feature too, but only if an admin set a target above
+ * 500; now any member can reach it on any task.) The queue is serialized, so
+ * 1,100 becomes 500 → 500 → 100 in order and the derived display still shows
+ * the whole jump at once.
+ */
+const MAX_DELTA = 500;
+
 /** One queued write. `inc` is a batched positive delta; `set` an absolute value.
  *  `dispatched` guards tap-coalescing: once an op is handed to the runner, later
  *  taps start a fresh op instead of mutating one already in flight. */
@@ -242,24 +256,31 @@ export function CountClient({
   const enqueueInc = React.useCallback(
     (delta: number) => {
       setError(null);
-      const tail = queue.current[queue.current.length - 1];
+      let rest = delta;
+      const next = [...queue.current];
+      const tail = next[next.length - 1];
+      // Coalesce into the still-open tail — rebuilt, not mutated in place — but
+      // only up to MAX_DELTA. Without that ceiling, enough +10s inside one
+      // debounce window merge into an illegal op just as surely as one big
+      // "Mark done" does.
       if (
         tail &&
         tail.kind === "inc" &&
         tail.date === date &&
-        !tail.dispatched
+        !tail.dispatched &&
+        tail.delta < MAX_DELTA
       ) {
-        // coalesce into the still-open tail — rebuilt, not mutated in place
-        queue.current = [
-          ...queue.current.slice(0, -1),
-          { ...tail, delta: tail.delta + delta },
-        ];
-      } else {
-        queue.current = [
-          ...queue.current,
-          { kind: "inc", date, delta, dispatched: false },
-        ];
+        const take = Math.min(MAX_DELTA - tail.delta, rest);
+        next[next.length - 1] = { ...tail, delta: tail.delta + take };
+        rest -= take;
       }
+      // Whatever is left spills into fresh ops, none over the limit.
+      while (rest > 0) {
+        const take = Math.min(MAX_DELTA, rest);
+        next.push({ kind: "inc", date, delta: take, dispatched: false });
+        rest -= take;
+      }
+      queue.current = next;
       recompute(date);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => void dispatch(), FLUSH_MS);
@@ -432,7 +453,15 @@ export function CountClient({
         value={date}
         days={14}
         today={todayISO}
-        isDone={(d) => (counts[d] ?? 0) >= goal}
+        // The circle's SHARE, not my goal — this strip is a record of days
+        // KEPT, and a day I already kept is not something a number I chose
+        // later can take back. Keying it on `goal` silently un-ticked every
+        // past day the moment a member raised their bar, which reads as
+        // history being erased and is the same revocation the streak refuses
+        // to do. It also put this strip out of step with the one on Today,
+        // which has always keyed on the share. The RING still fills toward my
+        // goal — an aim is live, a record is not.
+        isDone={(d) => (counts[d] ?? 0) >= task.target}
         onChange={(d) => {
           // switching to a day that's already finished must not re-arm the
           // celebration for it

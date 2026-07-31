@@ -68,6 +68,17 @@ test("raise my own bar → ring re-opens, streak and circle untouched", async ({
   // Re-opened, so the primary action is back — and it fills to MY goal, not 3.
   await expect(page.getByRole("button", { name: "Mark done" })).toBeVisible();
 
+  // The day-strip must STILL tick today. This strip is a record of days kept,
+  // and raising a bar cannot un-keep a day already kept — keying it on the
+  // goal silently un-ticked every past day the moment a goal went up, which
+  // reads as history being erased.
+  //
+  // Selected via aria-pressed, not by name: the cell READS "TODAY" only because
+  // of a CSS text-transform, and Playwright computes the accessible name from
+  // the DOM text ("Today 31"), so a /TODAY/ pattern silently matches nothing.
+  // The header's Back-to-Today button would also collide on the name.
+  await expect(page.locator('button[aria-pressed="true"] svg')).toHaveCount(1);
+
   // ---- THE POINT: nothing already earned moved ------------------------------
   await page.goto("/today");
   await expect(
@@ -132,4 +143,36 @@ test("a goal below the circle's share is refused, not stored", async ({
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByText("of 3")).toBeVisible();
   await expect(page.getByText(/The circle asks/)).toBeHidden();
+});
+
+test("a goal above 500 can still be closed in one press", async ({ page }) => {
+  await signIn(page, USER);
+  await page.goto("/today");
+  await page
+    .getByRole("link", { name: /Salawat/ })
+    .first()
+    .click();
+  await page.waitForURL("**/count/**");
+
+  // `increment_count` refuses any single delta over 500 (D36a), and a personal
+  // goal legitimately clears that bar — a target-3 task allows a goal of 1,003.
+  // "Mark done" used to send the whole remainder as ONE op, so it came back
+  // `delta out of range (1..500)` with the count snapping back. The queue now
+  // splits it; this proves the split lands as one total, not a partial write.
+  await page.click('button:has-text("Set my goal")');
+  await page.getByLabel("My daily goal for Salawat").fill("600");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page.getByText("of 600")).toBeVisible();
+
+  await page.getByRole("button", { name: "Mark done" }).click();
+  await expect(page.getByText("Ring closed!")).toBeVisible();
+  await page.getByRole("dialog").click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page.getByText("delta out of range")).toBeHidden();
+
+  // The whole 600 survives a round-trip — so every chunk landed, in order.
+  await page.reload();
+  await expect(page.getByText("600", { exact: true })).toBeVisible();
+  await expect(page.getByText("of 600")).toBeVisible();
 });
