@@ -200,5 +200,40 @@ update public.reminders set last_sent_on = null, enabled = false;
 select is((select count(*) from public.claim_due_reminders()), 0::bigint,
   'a disabled reminder is never claimed');
 
+-- ----------------------------------------------------------------------------
+-- Leaving the circle silences the reminder — without destroying it (0019)
+-- ----------------------------------------------------------------------------
+-- `reminders` outlives a membership (nothing cascades between them), and until
+-- 0019 the dispatcher never asked whether the member was still in the circle —
+-- so someone who left kept being pushed about its tasks indefinitely, with no
+-- control anywhere in the app to stop it (/profile builds its rows from tasks
+-- in circles you are CURRENTLY in, so the row is invisible there).
+update public.reminders set last_sent_on = null, enabled = true;
+select is((select count(*) from public.claim_due_reminders()), 1::bigint,
+  'baseline: a member of the circle IS claimed');
+
+update public.reminders set last_sent_on = null;
+delete from public.memberships
+ where user_id  = 'c8000000-0000-0000-0000-00000000000a'
+   and group_id = 'c8000000-0000-0000-0000-00000000d001';
+-- The cron tick is asserted FIRST, on an un-stamped reminder. Run after the
+-- claim it would pass for the wrong reason — the claim stamps last_sent_on,
+-- which makes the predicate false whether or not the guard exists. (Checked:
+-- with the guard removed, in that order this assertion still passed.)
+select ok(not exists (select 1 from private.due_reminders()),
+  'the cron tick sees nothing due for someone who left');
+select is((select count(*) from public.claim_due_reminders()), 0::bigint,
+  '...and after LEAVING, the reminder is never claimed again');
+
+-- The setting itself SURVIVES: a member who rejoins gets their time back
+-- rather than silently losing it (the reason 0019 guards instead of deleting).
+select is((select count(*) from public.reminders
+            where user_id = 'c8000000-0000-0000-0000-00000000000a'), 1::bigint,
+  'the reminder row is kept, not destroyed');
+insert into public.memberships (user_id, group_id, role) values
+  ('c8000000-0000-0000-0000-00000000000a', 'c8000000-0000-0000-0000-00000000d001', 'member');
+select is((select count(*) from public.claim_due_reminders()), 1::bigint,
+  '...and rejoining brings it straight back');
+
 select * from finish();
 rollback;
