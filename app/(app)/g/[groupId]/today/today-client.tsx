@@ -314,7 +314,7 @@ export function TodayClient({
         )}
       </div>
 
-      {/* Primary action — one gold CTA, the nearest-to-done ring */}
+      {/* Primary action — one accent CTA, the nearest-to-done ring */}
       {next && (
         <Link
           href={`${groupHref(groupId, `/count/${next.task.id}`)}${isToday ? "" : `?date=${date}`}`}
@@ -323,7 +323,7 @@ export function TodayClient({
           Continue {next.task.label} ·{" "}
           {/* The ring this points at is measured against MY goal, so the CTA
               must be too — otherwise the one unfinished ring is advertised as
-              "100/100", which reads as already done and makes the gold action
+              "100/100", which reads as already done and makes the accent action
               look like a mistake. */}
           <span className="tabular-nums">
             {next.count}/{next.goal}
@@ -337,8 +337,8 @@ export function TodayClient({
             governs, rather than in the count screen's correction tray where it
             shipped first: raising your bar is an aspiration, not a fix, and a
             muted control two screens deep was one the owner could not find
-            while actively looking for it. `outline` and not `accent` — the gold
-            CTA above is the one primary action per view — but a real bordered
+            while actively looking for it. `outline` and not `accent` — the
+            accent CTA above is the one primary action per view — but a real bordered
             button, because "findable" is the whole point of moving it.
             Hidden with no tasks: there is nothing to aim at yet. */}
         <SectionHeading
@@ -372,7 +372,7 @@ export function TodayClient({
               shareDone,
               stretched,
             }) => {
-              // NO card is singled out. One used to carry an emerald glow — the
+              // NO card is singled out. One used to carry a primary glow — the
               // ring nearest done — on a goal-gradient argument. Removed on the
               // owner's call, and the reason is the product, not the styling:
               // **the tasks in a cetele have no order.** Dressing one up as the
@@ -393,7 +393,13 @@ export function TodayClient({
                     className={cn(
                       cardVariants({ padding: "compact" }),
                       "flex items-center gap-4 transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-md motion-reduce:transform-none",
-                      !due && "border-dashed bg-muted/40 shadow-none",
+                      // The BORDER does the work, not the fill. v1 used
+                      // `bg-muted/40`, which composited to 1.01:1 against the
+                      // page with a 1.23:1 edge — the card vanished. A recessed
+                      // surface should be quiet; what makes it legible as a
+                      // *thing* is a boundary at the 3:1 non-text floor.
+                      !due &&
+                        "border-dashed border-outline bg-muted shadow-none",
                     )}
                   >
                     <ProgressRing

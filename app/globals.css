@@ -1,15 +1,20 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   CETELE DESIGN TOKENS  —  Emerald + Gold on white (light-first)
-   Primary = emerald (#047857): brand, calm/spiritual surface, AND the
-   "complete / streak-alive / growth" signal — for a dhikr audience green is the
-   culturally-expected hue and the retention-correct completion colour at once.
-   Accent  = gold/amber (#F59E0B): earned action + celebration only (one CTA per
-   view, confetti, "tap to count"). Background is pure white; cards separate by
-   border + soft shadow. Single source of truth — Tailwind 4 reads @theme and
-   generates utilities (--color-primary-500 → bg-primary-500 / text- / border-).
-   Semantic, theme-aware tokens resolve to the CSS vars under :root / .dark.
+   CETELE DESIGN TOKENS v3  —  sage + rose on warm paper (light-first)
+   See docs/DESIGN_SYSTEM.md. Structure is Material 3: every key colour is a
+   TONAL PALETTE (the step number tracks CIE L*), roles come in fill/`on-` PAIRS,
+   and interaction states are M3 state layers (hover 8%, focus/pressed 12%)
+   PRECOMPUTED to solid hex — this codebase has been bitten repeatedly by alpha
+   over an unknown surface, so no state is a runtime composite.
+
+   Primary = sage  (#346d3f light / #a3d6a9 dark): brand, calm, growth, AND the
+   completion signal — green stays the culturally-expected hue for a dhikr
+   audience and the retention-correct "done" colour at once.
+   Accent  = rose  (#ed6b86): the ONE earned action + celebration per view.
+   Neutral = tan, Outline = plum: one warm family, no cool grey anywhere.
+
+   Every value below was generated and measured, not picked by eye.
    ============================================================================ */
 
 @theme {
@@ -45,67 +50,86 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* ---- Primary · emerald (brand + completion/growth) ---- */
-  --color-primary-50: #ecfdf5;
-  --color-primary-100: #d1fae5;
-  --color-primary-200: #a7f3d0;
-  --color-primary-300: #6ee7b7;
-  --color-primary-400: #34d399;
-  --color-primary-500: #10b981;
-  --color-primary-600: #059669;
-  --color-primary-700: #047857; /* ← brand emerald */
-  --color-primary-800: #065f46;
-  --color-primary-900: #064e3b;
-  --color-primary-950: #022c22;
+  /* ---- Primary · sage, hue 148° (brand + completion/growth) ----
+     Step numbers are kept from v1 so ~600 existing call sites keep working;
+     each now resolves to a tone of the sage palette (50→t98 … 950→t10). */
+  --color-primary-50: #effff0;
+  --color-primary-100: #d4ead6;
+  --color-primary-200: #a3d6a9;
+  --color-primary-300: #82bd8a; /* ← the owner's sage swatch #7fb285 */
+  --color-primary-400: #62a26c;
+  --color-primary-500: #488753;
+  --color-primary-600: #387343;
+  --color-primary-700: #2d6237;
+  --color-primary-800: #23522c;
+  --color-primary-900: #1f3723;
+  --color-primary-950: #112013;
 
-  /* ---- Accent · gold/amber (earned action + celebration only) ---- */
-  --color-accent-50: #fffbeb;
-  --color-accent-100: #fef3c7;
-  --color-accent-200: #fde68a;
-  --color-accent-300: #fcd34d;
-  --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b; /* ← brand gold */
-  --color-accent-600: #d97706;
-  --color-accent-700: #b45309;
-  --color-accent-800: #92400e;
-  --color-accent-900: #78350f;
-  --color-accent-950: #451a03;
+  /* ---- Accent · rose, hue 9° (earned action + celebration only) ---- */
+  --color-accent-50: #fff6f7;
+  --color-accent-100: #ffd4db;
+  --color-accent-200: #ffa9b8; /* ← the owner's salmon swatch #fab3a9 */
+  --color-accent-300: #fc7e97;
+  --color-accent-400: #e25d7b;
+  --color-accent-500: #c44162;
+  --color-accent-600: #a93051;
+  --color-accent-700: #932443;
+  --color-accent-800: #7d1c37;
+  --color-accent-900: #501d28;
+  --color-accent-950: #2f1017;
 
-  /* ---- Neutral · slate (pairs cleanly with emerald) ---- */
+  /* ---- Neutral · tan, hue 67° (paper). Replaces the v1 SLATE ramp entirely:
+     warm surfaces meeting a cool grey scale was a 170° hue jump, which is what
+     made `subtle`'s hover shift colour and greyed the whole light theme. ---- */
   --color-neutral-0: #ffffff;
-  --color-neutral-50: #f8fafc;
-  --color-neutral-100: #f1f5f9;
-  --color-neutral-200: #e2e8f0;
-  --color-neutral-300: #cbd5e1;
-  --color-neutral-400: #94a3b8;
-  --color-neutral-500: #64748b;
-  --color-neutral-600: #475569;
-  --color-neutral-700: #334155;
-  --color-neutral-800: #1e293b;
-  --color-neutral-900: #0f172a;
-  --color-neutral-950: #020617;
+  --color-neutral-50: #fff8ee;
+  --color-neutral-100: #eee0d3;
+  --color-neutral-200: #d5c3b2;
+  --color-neutral-300: #bca894; /* ← the owner's tan swatch #c6ad94 */
+  --color-neutral-400: #a28c77;
+  --color-neutral-500: #87735e;
+  --color-neutral-600: #72604d;
+  --color-neutral-700: #625140;
+  --color-neutral-800: #524435;
+  --color-neutral-900: #372f27;
+  --color-neutral-950: #1f1b16;
 
-  /* ---- Status hues ---- (success = emerald, slightly brighter than the
-     brand primary so a closed "done" state pops; warning shifts to true orange
-     so it never reads as the gold accent) ---- */
-  /* The -100/-800 steps exist so a tinted status chip can use the same
-     accessible pairing the brand chips already use (bg-*-100 / text-*-800).
-     The old `bg-*-500/15 + text-*-600` pairing measured 3.28:1 on the
-     "1 freeze left" chip — under the 4.5:1 AA floor for its 12px text. */
-  --color-success-100: #d1fae5;
-  --color-success-500: #10b981;
-  --color-success-600: #059669;
-  --color-success-800: #065f46;
-  --color-warning-100: #ffedd5;
-  --color-warning-500: #ea580c;
-  --color-warning-600: #c2410c;
-  --color-warning-800: #9a3412;
-  --color-danger-100: #fee2e2;
-  --color-danger-500: #dc2626;
-  --color-danger-600: #b91c1c;
-  --color-danger-800: #991b1b;
-  --color-info-500: #2563eb;
-  --color-info-600: #1d4ed8;
+  /* ---- Outline · plum, hue 356° — boundaries + secondary text.
+     From the owner's #463239. Separate from the neutral ramp so a boundary can
+     be tuned to the 3:1 non-text floor without moving every surface. ---- */
+  --color-outline-100: #e9e0e3;
+  --color-outline-200: #d4c1c7;
+  --color-outline-300: #bba5ac;
+  --color-outline-400: #a08a91;
+  --color-outline-500: #867077;
+  --color-outline-600: #6c595f;
+  --color-outline-700: #514247;
+  --color-outline-800: #372e31; /* ← the owner's plum swatch #463239 */
+  --color-outline-900: #1f1a1c;
+
+  /* ---- Status hues ---- Sited to maximise the MINIMUM hue gap between
+     neighbours, which this palette makes hard: the accent (rose, 9°) sits where
+     danger conventionally lives. Danger at 40° is the best available compromise
+     — 31° from the accent, 32° from warning. It is a grave rust-red rather than
+     an alarm red, which suits D8 (red is never urgency here). Because the gap is
+     narrow, the never-colour-alone rule is LOAD-BEARING: every destructive
+     control carries a word or glyph. See DESIGN_SYSTEM.md §3.1.
+     Success deliberately shares the primary's family (4° apart) — green is the
+     completion colour, and a second "done" hue would say it twice. */
+  --color-success-100: #d0ebd6;
+  --color-success-500: #358a53;
+  --color-success-600: #257543;
+  --color-success-800: #12542c;
+  --color-warning-100: #f4e0c1;
+  --color-warning-500: #9e6c00;
+  --color-warning-600: #855a00;
+  --color-warning-800: #603f00;
+  --color-danger-100: #fed9cd;
+  --color-danger-500: #b65734;
+  --color-danger-600: #9d4626;
+  --color-danger-800: #742e14;
+  --color-info-500: #577a9e;
+  --color-info-600: #476788;
 
   /* ---- Radii (friendly, youthful) ---- */
   --radius-sm: 0.375rem;
@@ -115,18 +139,22 @@
   --radius-2xl: 1.5rem;
   --radius-3xl: 2rem;
 
-  /* ---- Elevation (soft, neutral slate — two-layer for real depth on white) ---- */
-  --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+  /* ---- Elevation — two-layer, tinted WARM (the neutral's own ink, hue 67°).
+     v1 cast slate rgb(15 23 42) at hue 266° over a warm page at hue 89°: a cool
+     shadow on warm paper reads as grey film, and it is a large part of why the
+     light theme looked dull. On DARK, shadows are not the elevation signal at
+     all — a raised surface is a lighter one (see the surface ladder below). ---- */
+  --shadow-xs: 0 1px 2px 0 rgb(31 27 22 / 0.06);
   --shadow-sm:
-    0 1px 2px 0 rgb(15 23 42 / 0.06), 0 4px 10px -2px rgb(15 23 42 / 0.08);
+    0 1px 2px 0 rgb(31 27 22 / 0.06), 0 4px 10px -2px rgb(31 27 22 / 0.08);
   --shadow-md:
-    0 2px 4px -1px rgb(15 23 42 / 0.07), 0 8px 20px -4px rgb(15 23 42 / 0.1);
+    0 2px 4px -1px rgb(31 27 22 / 0.07), 0 8px 20px -4px rgb(31 27 22 / 0.1);
   --shadow-lg:
-    0 4px 8px -2px rgb(15 23 42 / 0.08), 0 16px 32px -8px rgb(15 23 42 / 0.14);
+    0 4px 8px -2px rgb(31 27 22 / 0.08), 0 16px 32px -8px rgb(31 27 22 / 0.14);
   --shadow-xl:
-    0 8px 16px -4px rgb(15 23 42 / 0.1), 0 28px 56px -12px rgb(15 23 42 / 0.2);
+    0 8px 16px -4px rgb(31 27 22 / 0.1), 0 28px 56px -12px rgb(31 27 22 / 0.2);
   /* Upward lift for the sticky bottom nav (separates it from scrolling content). */
-  --shadow-up: 0 -2px 12px -4px rgb(15 23 42 / 0.1);
+  --shadow-up: 0 -2px 12px -4px rgb(31 27 22 / 0.1);
 
   /* ---- Motion ---- (150–300ms micro-interactions, ≤500ms transitions).
      Two ease-outs, both smooth — real objects decelerate, they don't bounce.
@@ -146,23 +174,48 @@
    light/dark and future re-themes are a single edit.
    ---------------------------------------------------------------------------- */
 @theme inline {
+  /* ---- Surface ladder. Two rules, both true in BOTH themes:
+     a CARD always lifts off the page, and CHROME always recedes from it.
+     Light: chrome .932 < muted .947 < page .982 < card .993
+     Dark:  chrome .166 < page .189 < card .225 < muted .240 < elevated .282
+     Chrome exists because v1 gave the nav `--card` (#ffffff, 1.08:1 on the
+     page): chrome and content shared one token, so chrome could never look
+     different. That is the "the whole nav bar is just white" bug. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-chrome: var(--chrome);
+  --color-chrome-foreground: var(--chrome-foreground);
+  --color-elevated: var(--elevated);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+
+  /* ---- Boundaries, two tokens for two jobs. v1 had ONE at 1.31:1 doing both,
+     so every outline Button and every Input boundary failed WCAG 1.4.11.
+     --border is decorative (cards, dividers); --outline is any INTERACTIVE
+     component's boundary and is held at >=3:1 on every surface. */
   --color-border: var(--border);
+  --color-outline: var(--outline);
   --color-input: var(--input);
   --color-ring: var(--ring);
   /* The unfilled part of any progress indicator — ring stroke or bar track.
      Shared so a ring and a bar on the same screen can never disagree. */
   --color-progress-track: var(--progress-track);
 
+  /* ---- Role pairs. A fill is never referenced without its `on-` colour. ---- */
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-container: var(--accent-container);
+  --color-on-accent-container: var(--on-accent-container);
+  /* Rose as TEXT or a thin stroke on a light surface. The accent fill itself
+     measures 2.83:1 on the page — under the non-text floor — so a bright accent
+     can be a fill behind a dark label, but never a hairline or a caption. */
+  --color-accent-ink: var(--accent-ink);
 
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
@@ -172,6 +225,25 @@
   --color-danger-foreground: var(--danger-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+
+  /* ---- M3 state layers, precomputed. hover = on-colour at 8%, focus/pressed
+     at 12%, composited into a solid value. Contrast DROPS toward the label on
+     every filled control, so a new filled variant must be checked at PRESSED,
+     not at rest. --surface-* are the layers for transparent variants. */
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-active: var(--danger-active);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+
+  /* Disabled is a token PAIR, never opacity: v1's `disabled:opacity-50` on a
+     coloured fill produced a white label at 2.16:1 — illegible on every
+     disabled primary and destructive button in the app. */
+  --color-disabled-fill: var(--disabled-fill);
+  --color-disabled-foreground: var(--disabled-foreground);
 
   /* legacy alias kept so existing `brand` utilities keep working */
   --color-brand: var(--primary);
@@ -183,48 +255,83 @@
      UA canvas, scrollbars and form controls in step with the chosen theme, and
      stops the brief pre-CSS canvas rendering dark under a system-dark device. */
   color-scheme: light;
-  /* Warm cream surface — softer and calmer than stark white for a worship app.
-     Cards stay pure white so they lift off the cream by tone + border + shadow;
-     muted fills/borders are warmed to match so nothing reads cool-grey. */
-  --background: #faf6ec; /* cream page */
-  --foreground: #1c1814; /* warm near-black — high contrast on cream */
-  --card: #ffffff; /* white cards lift off the cream */
-  --card-foreground: #1c1814;
-  --muted: #f0eadd; /* warm fill — chips, hover, recessed states */
-  --muted-foreground: #6f675a; /* warm grey ≈ 5.6:1 on cream/white — passes AA */
-  --border: #e7e0d0; /* warm hairline */
+  /* ---- Surfaces. Warm paper throughout, one hue family (tan, 67°).
+     CHROME recedes below the page, CARD lifts above it — the frame sits behind
+     the content, in both themes. */
+  --chrome: #f3e6da; /* nav, sidebar, sticky headers — the frame */
+  --chrome-foreground: #1f1b16; /* 15.0:1 */
+  --background: #fff8ee; /* the page */
+  --muted: #f7ebe0; /* inset wells, chips, hover fills */
+  --card: #fffdf4; /* content cards lift off the page */
+  --elevated: #fffdf4; /* menus/dialogs — in LIGHT the lift is the shadow */
+  --foreground: #1f1b16; /* ink — 16.4:1 on the page */
+  --card-foreground: #1f1b16;
+  --muted-foreground: #514247; /* plum — 8.1:1 on card, 4.5+ everywhere */
+
+  /* Decorative hairline (cards, dividers) vs the >=3:1 INTERACTIVE boundary. */
+  --border: #d4c1c7;
+  --outline: #867077; /* 4.3:1 page · 4.5:1 card · 3.3:1 chrome */
+  --input: #867077; /* inputs take the interactive boundary, not the hairline */
+  --ring: #346d3f; /* sage focus ring — 5.9:1 on the page */
+
   /* The unfilled arc of a progress ring / bar. NOT --muted: that is a large-AREA
      fill token, and a fill that reads fine behind a chip disappears as an 8–18px
-     stroke — measured 1.20:1 on a white card and 1.11:1 on cream, i.e. invisible.
-     Held at ≥3:1 on BOTH surfaces (WCAG 2.2 §1.4.11, non-text contrast), which is
-     also why it is sand rather than grey: at that luminance the fill/track
-     LUMINANCE gap is only ~1.7:1, so the emerald arc is carried by the big HUE
-     gap instead. Go grey here and the ring turns into one flat dark donut. */
-  --progress-track: #978d77; /* 3.29:1 on card, 3.04:1 on cream — clears 1.4.11 */
+     stroke — measured 1.20:1 on a white card in v1, i.e. invisible. Held at
+     >=3:1 on every surface (WCAG 2.2 §1.4.11). It is warm, not grey: at this
+     luminance the fill/track LUMINANCE gap is small, so the sage arc is carried
+     by the HUE gap. Go grey here and the ring turns into one flat dark donut.
+
+     3:1 is a FLOOR, not a target, and the first v3 pass missed that: it landed
+     the track at 4.48:1, which made an EMPTY bar read as a full one (a 0%
+     consistency band rendered as a solid slab directly under the label "0%").
+     Overshooting also collapsed the number that actually matters for a bar —
+     fill-vs-track fell to 1.35:1, so the filled part stopped being tellable
+     from the empty part. Re-derived at the pale end of the permitted band, in
+     the neutral ramp's own hue: card 3.18:1, page 3.08:1, and fill-vs-track
+     back up to 1.90:1 (v1 managed 1.67:1). Recessive AND legible, not loud. */
+  --progress-track: #a18b77;
   /* The notch a ring draws at a threshold inside its own arc — the circle's
-     share, when a member is aiming past it (D51). It is judged against what it
-     is actually DRAWN ON, which is never the page: the emerald fill, the
-     success green once the ring closes, and the sand track. Light can use the
-     foreground near-black (measured 3.22 / 4.68 / 5.37); dark CANNOT, and that
-     is the whole reason this is a token — see the dark block. */
-  --progress-mark: #1c1814;
-  --input: #e7e0d0;
-  --ring: #047857; /* emerald focus ring — calm & on-brand */
+     share, when a member is aiming past it (D51). Judged against what it is
+     actually DRAWN ON, which is never the page: the sage fill, the success green
+     once the ring closes, and the track. Light can use the ink; dark CANNOT, and
+     that is the whole reason this is a token — see the dark block. */
+  --progress-mark: #1f1b16;
 
-  --primary: #047857; /* emerald: brand, calm/spiritual, completion/growth */
-  --primary-foreground: #ffffff; /* white on emerald-700 ≈ 6.5:1 — passes AA */
-  --accent: #f59e0b; /* gold: earned action + celebration only */
-  /* Dark text on gold ≈ 8:1 (passes AA); white-on-gold ~1.9:1 (fails). */
-  --accent-foreground: #422006;
+  /* ---- Role pairs ---- */
+  --primary: #346d3f; /* sage: brand, calm, completion/growth */
+  --primary-foreground: #f7fff8; /* 6.05:1 */
+  --primary-container: #d4ead6;
+  --on-primary-container: #112013; /* 13.3:1 */
+  /* The owner's rose, EXACTLY. It carries a dark label rather than white:
+     white-on-rose is 2.98:1 (fails), the tone-10 label is 5.84:1 and still
+     clears 4.5 at pressed (4.81) — which is the tightest margin in the system,
+     so the accent fill cannot be made any lighter without a darker label. */
+  --accent: #ed6b86;
+  --accent-foreground: #2f1017;
+  --accent-container: #ffd4db;
+  --on-accent-container: #2f1017;
+  --accent-ink: #b33657; /* rose as TEXT/thin stroke on light — 5.6:1 */
 
-  --success: #059669; /* emerald-600 "done" — pops vs the brand emerald-700 */
-  --success-foreground: #ffffff;
-  --warning: #ea580c;
-  --warning-foreground: #ffffff;
-  --danger: #dc2626;
-  --danger-foreground: #ffffff;
-  --info: #2563eb;
-  --info-foreground: #ffffff;
+  --success: #21703e; /* deeper sage — same family as the brand, by design */
+  --success-foreground: #f6fff9;
+  --warning: #7f5500;
+  --warning-foreground: #fffde8;
+  --danger: #964222; /* grave rust-red, never an alarm red (D8) */
+  --danger-foreground: #fffdfa;
+  --info: #426181; /* the one cool hue in the system */
+  --info-foreground: #f8ffff;
+
+  /* ---- M3 state layers, precomputed to solid hex ---- */
+  --primary-hover: #44794e;
+  --primary-active: #4b7f55;
+  --accent-hover: #de647d;
+  --accent-active: #d66079;
+  --danger-hover: #9e5133;
+  --danger-active: #a3583c;
+  --surface-hover: #f7ebe0;
+  --surface-active: #f3e6da;
+  --disabled-fill: #f7ebe0;
+  --disabled-foreground: #867077; /* 3.2:1 — readable, though 1.4.3 exempts it */
 
   /* ---- Depth (hero surfaces, glows, raised fills) ----
      One emphasis surface per screen sits on --gradient-hero; the sheen is a
@@ -232,7 +339,7 @@
      Contrast: white on primary-700 ≈ 5.5:1 and darkens to ≈10:1 at primary-900,
      so body text passes AA across the whole ramp. Use --gradient-hero-foreground
      (NOT --primary-foreground) for text on it — on dark, --primary-foreground is
-     near-black (dark's --primary is the *light* emerald), which would vanish
+     near-black (dark's --primary is the *light* sage), which would vanish
      against these deep stops. Reference as bg-[image:var(--gradient-hero)],
      shadow-[var(--glow-accent)], bg-[var(--surface-raised)]. */
   --gradient-hero: linear-gradient(
@@ -246,12 +353,26 @@
     rgb(255 255 255 / 0.12),
     transparent 60%
   );
-  --gradient-hero-foreground: #ffffff;
+  --gradient-hero-foreground: #f7fff8; /* 7.07:1 on the lightest stop bare,
+     5.26:1 where the 12% sheen lightens it — the real worst case. */
+  /* An ACCENT glyph on the hero (the streak flame) cannot be plain --accent.
+     The medallion tile is --gradient-hero-foreground at 12%, i.e. a LIGHTENED
+     sage — so the backdrop is nothing like the page, and --accent measured
+     1.80:1 there in light and 2.81:1 in dark, failing the 3:1 non-text floor in
+     BOTH. (Pre-existing: v1's gold on v1's emerald hero was the same bug at
+     2.55:1 — the re-palette inherited it, it did not cause it.) A pale tone of
+     the SAME rose keeps the celebration hue while clearing the floor even when
+     the sheen fully lights the tile: 3.12:1 light, 3.31:1 dark worst-case,
+     ~4:1 in practice since the medallion is top-LEFT and the sheen originates
+     top-RIGHT. It stays a HUE difference from the hero text, not a lightness
+     one (1.31:1 against it) — which is the point: it reads as the accent, not
+     as brighter text. */
+  --gradient-hero-accent: var(--color-accent-100);
   --glow-primary:
     0 0 0 1px var(--color-primary-600), 0 8px 24px -8px var(--color-primary-700);
   --glow-accent:
-    0 0 0 1px var(--color-accent-500), 0 8px 24px -8px var(--color-accent-600);
-  /* faint emerald-tinted card for secondary heroes / earned surfaces */
+    0 0 0 1px var(--color-accent-400), 0 8px 24px -8px var(--color-accent-500);
+  /* faint sage-tinted card for secondary heroes / earned surfaces */
   --surface-raised: color-mix(in oklab, var(--card) 92%, var(--primary) 8%);
 
   /* ---- Layout & layering (use via z-[var(--z-modal)], max-w-[var(--container-page)]) ----
@@ -300,56 +421,85 @@
    so they sit calmly on dark rather than vibrating.
    ---------------------------------------------------------------------------- */
 :root.dark {
-  /* Tuned per UI_PRACTICES §2: never pure black, off-white text, calm hues, and
-     — because shadows barely register on dark — a real *elevation ladder* where
-     each raised surface is lighter than the one below it (background < card <
-     muted), with a visible border so cards still separate. Warm brown-tinted
-     neutrals give an earthy night surface (emerald + gold pop warmly on it).
-     Surfaces sit above pure black so they never glare. */
+  /* Never pure black, off-white text, calm hues. Because shadows barely register
+     on dark, elevation here is TONE: each raised surface is lighter than the one
+     below. The ladder keeps the same two rules as light — a CARD lifts off the
+     page, CHROME recedes below it — so a component's treatment does not have to
+     branch on theme. v1's theme toggle broke exactly here: its thumb was --card
+     on a --muted track, which is lighter-on-darker in light and DARKER-on-lighter
+     in dark, so at night the selected option read as pressed into the control. */
   color-scheme: dark;
-  --background: #1a140f; /* deep warm brown — calm, not pure black */
-  --foreground: #f0e9dd; /* warm off-white, not pure #fff */
-  --card: #241c14; /* raised: clearly lighter/warmer than the page */
-  --card-foreground: #f0e9dd;
-  --muted: #2e2419; /* chips / fills / hover — lighter again so states read */
-  --muted-foreground: #b3a691; /* warm ≈7:1 on card — passes AA */
-  --border: #3d3122; /* visible warm separator (shadows are weak on dark) */
+  --chrome: #110e0b; /* the frame — deepest, still not pure black */
+  --chrome-foreground: #eee0d3; /* 15.7:1 */
+  --background: #16130f; /* the page */
+  --card: #1f1b16; /* content cards lift off the page */
+  --muted: #241e19; /* fills INSIDE a card go lighter on dark */
+  --elevated: #2f2821; /* menus, dialogs, segmented thumbs */
+  --foreground: #eee0d3; /* warm off-white, not pure #fff */
+  --card-foreground: #eee0d3;
+  --muted-foreground: #d4c1c7; /* 9.6:1 on card */
+
+  --border: #514247; /* visible warm separator (shadows are weak on dark) */
+  --outline: #a08a91; /* 5.8:1 page · 4.9:1 card — clears 1.4.11 */
+  --input: #a08a91;
+  --ring: #a3d6a9; /* light sage focus — 11.2:1 on the page */
+
   /* Same story on dark, same measurement: --muted as a stroke was 1.10:1 on the
-     card. Lifted well past --border, which only has to separate two surfaces. */
-  --progress-track: #736858; /* 3.08:1 on card, 3.35:1 on the page */
+     card in v1. Lifted past --border, which only separates two surfaces — but
+     only just past the floor, for the reason above: the first v3 pass put a
+     LIGHT plum track (#a08a91, 5.33:1) on a dark card, which is the same
+     "empty bar looks full" failure and dropped fill-vs-track to 1.95:1. Taken
+     to the deep end of the permitted band instead: card 3.06:1, page 3.31:1,
+     fill-vs-track 3.40:1 — the best of the three versions on every axis. */
+  --progress-track: #756556;
   /* INVERTED from light, and measured rather than assumed. Reusing the light
-     recipe (--foreground) here gives a cream notch on a light emerald fill:
-     measured 2.10:1 on --primary and 1.59:1 on --success — the mark all but
-     vanishes at exactly the moment the ring is doing well, which is the same
-     failure the garden's plants had. So dark goes DARKER than everything it
-     sits on. The binding surface is the sand track, not the fill. */
-  --progress-mark: #14100b; /* 3.47:1 track · 7.39:1 primary · 9.6:1 success */
-  --input: #3d3122;
-  --ring: #34d399; /* bright emerald focus — high-visibility on dark */
+     recipe (the ink) here gives a cream notch on a LIGHT sage fill — in v1 that
+     measured 2.10:1 on --primary and 1.59:1 on --success, so the mark all but
+     vanished at exactly the moment the ring was doing well. Dark therefore goes
+     DARKER than everything it sits on. The binding surface is the track. */
+  --progress-mark: #110e0b;
 
-  --primary: #10b981; /* lighter emerald so fills + rings read on dark */
-  --primary-foreground: #04130d; /* dark text on the brighter emerald (AA) */
-  --accent: #fbbf24; /* lightened gold so it won't vibrate on dark */
-  --accent-foreground: #422006;
+  /* ---- Role pairs ---- */
+  --primary: #a3d6a9; /* light sage so fills + rings read on dark */
+  --primary-foreground: #1f3723; /* 7.8:1 */
+  --primary-container: #23522c;
+  --on-primary-container: #d4ead6; /* 7.2:1 */
+  --accent: #fc7e97; /* lightened rose so it won't vibrate on dark */
+  --accent-foreground: #501d28; /* 5.5:1, holds 4.6 at pressed */
+  --accent-container: #7d1c37;
+  --on-accent-container: #ffd4db;
+  --accent-ink: #fc7e97; /* on dark the accent IS legible as a mark — 7.6:1 */
 
-  --success: #34d399; /* brighter "done" green, distinct from the brand fill */
-  --success-foreground: #04130d;
-  --warning: #fb923c; /* softened orange — caution without glare */
-  --warning-foreground: #2a1402;
-  --danger: #f87171; /* desaturated red so errors don't alarm-vibrate */
-  --danger-foreground: #2a0a0a;
-  --info: #60a5fa;
-  --info-foreground: #061122;
+  --success: #99d9a9;
+  --success-foreground: #193823;
+  --warning: #eebe72;
+  --warning-foreground: #422c01;
+  --danger: #ffaf93; /* softened so errors don't alarm-vibrate */
+  --danger-foreground: #4a2517;
+  --info: #adcae9;
+  --info-foreground: #243240;
+
+  /* ---- M3 state layers, precomputed to solid hex ---- */
+  --primary-hover: #98c99e;
+  --primary-active: #93c399;
+  --accent-hover: #ee768e;
+  --accent-active: #e7728a;
+  --danger-hover: #f1a489;
+  --danger-active: #e99e84;
+  --surface-hover: #241e19;
+  --surface-active: #110e0b;
+  --disabled-fill: #241e19;
+  --disabled-foreground: #a08a91;
 
   /* ---- Depth · dark mirror ----
-     The hero keeps deep emerald stops (they read as a lit surface against the
+     The hero keeps deep sage stops (they read as a lit surface against the
      brown page) but drops a step so it stays *above* the background rather than
-     punching a hole in it. Text on it is the warm off-white (≈8:1 on
+     punching a hole in it. Text on it is the warm off-white (7.02:1 on
      primary-800), never --primary-foreground, which is near-black on dark.
      The sheen halves — a 12% white wash glares on a dark field. Glows lose their
      coloured drop (shadows barely register here) and keep the 1px rim, which is
      what actually separates a surface on dark; --surface-raised leans harder on
-     the emerald tint for the same reason. */
+     the sage tint for the same reason. */
   --gradient-hero: linear-gradient(
     135deg,
     var(--color-primary-800) 0%,
@@ -361,11 +511,15 @@
     rgb(255 255 255 / 0.06),
     transparent 60%
   );
-  --gradient-hero-foreground: #f0e9dd;
+  --gradient-hero-foreground: #eee0d3;
+  /* One step MORE saturated than light's: the dark hero's stops are deeper, so
+     accent-200 still clears the floor (3.31:1 on a fully-lit tile) and holds
+     more of the rose than accent-100 would. */
+  --gradient-hero-accent: var(--color-accent-200);
   --glow-primary:
-    0 0 0 1px var(--color-primary-700), 0 8px 24px -10px rgb(0 0 0 / 0.8);
+    0 0 0 1px var(--color-primary-600), 0 8px 24px -10px rgb(0 0 0 / 0.8);
   --glow-accent:
-    0 0 0 1px var(--color-accent-600), 0 8px 24px -10px rgb(0 0 0 / 0.8);
+    0 0 0 1px var(--color-accent-500), 0 8px 24px -10px rgb(0 0 0 / 0.8);
   --surface-raised: color-mix(in oklab, var(--card) 85%, var(--primary) 15%);
   /* NB: elevation on dark comes from the surface ladder above (lighter = raised)
      + the visible --border, not shadows — the soft slate shadow tokens are
@@ -374,13 +528,14 @@
 }
 
 /* Group garden (components/app/group-garden.tsx): its sky/ground are fixed
-   emerald *scale* tints (so the light look the owner approved is untouched), but
-   those don't flip with the theme — leaving a bright mint glare panel at night,
+   primary-*scale* tints (so the light look the owner approved is untouched), but
+   those don't flip with the theme — leaving a bright pale glare panel at night,
    exactly what UI_PRACTICES §2 says to avoid. The app themes via the `.dark`
    class + semantic vars (not Tailwind `dark:`, which tracks the OS not the
-   toggle), so re-tint the garden here with deep-emerald scale tokens: a calm,
-   dark sky that still reads as a lit garden. Plants stay emerald/gold (legible
-   on both). Specificity (:root.dark .x) beats the single utility class. */
+   toggle), so re-tint the garden here with deep-sage scale tokens: a calm,
+   dark sky that still reads as a lit garden. Plants carry their own per-theme
+   --garden-* tokens (below), because one set could not pass on both.
+   Specificity (:root.dark .x) beats the single utility class. */
 :root.dark .garden-ground {
   fill: var(--color-primary-900);
 }
@@ -408,30 +563,32 @@
      against hills/ground/soil, which is a much darker field and the case the
      old values failed hardest. Measured worst-case ratios in the comments.
      Resting is quieter by SATURATION, not by lightness: the same lesson as
-     --progress-track (a paler emerald just disappears, a desaturated sage
+     --progress-track (a paler sage just disappears, a desaturated one
      still reads as a plant while clearly saying "dormant"). */
-  --garden-stem: #047857; /* 4.79:1 over sky/hill */
-  --garden-leaf: #059669; /* 3.29:1 — lighter than the stem, keeps depth */
+  --garden-stem: #296335; /* 4.20:1 over the worst light backdrop */
+  --garden-leaf: #3c7345; /* 3.30:1 — lighter than the stem, keeps depth */
   /* Held just OVER the 3:1 bar rather than comfortably past it, and that is the
-     point: at 4.17:1 the resting plant rendered as a near-silhouette, which
+     point: pushed further, the resting plant renders as a near-silhouette, which
      reads as withered rather than dormant — a quiet day dressed up as a
-     reproach, which D8 forbids. This is the lightest pair that still passes,
-     and the worst case is the soil band that only a short plant's base touches. */
-  --garden-stem-resting: #527f6b; /* 3.38:1 over hill/ground/soil */
-  --garden-leaf-resting: #5e8574; /* 3.06:1 */
+     reproach, which D8 forbids. Resting is quieter by SATURATION, not lightness
+     (the --progress-track lesson); the chroma floor is deliberate too, because a
+     fully grey plant reads as dead. Worst case is the soil band that only a
+     short plant's base touches. */
+  --garden-stem-resting: #586b5a; /* 3.36:1, C=0.036 */
+  --garden-leaf-resting: #5c725e; /* 3.06:1, C=0.040 */
 }
 :root.dark {
   --garden-sky-top: var(--color-primary-950);
   --garden-sky-horizon: var(--color-primary-900);
 
-  /* Dark inverted the failure: the old plants used ONE emerald for both themes,
+  /* Dark inverted the failure: v1's plants used ONE green for both themes,
      so a THRIVING plant (primary-600) sat at 2.58:1 on the night sky while a
      resting one sat at 6.38:1 — the better the circle did, the less you could
      see it. These lighten as the plant thrives, which is also the right story. */
-  --garden-stem: #34d399; /* 4.28:1 over night sky/hill */
-  --garden-leaf: #6ee7b7; /* 5.40:1 */
-  --garden-stem-resting: #5fbf95; /* 3.43:1, desaturated */
-  --garden-leaf-resting: #7fc8a6; /* 3.92:1 */
+  --garden-stem: #7ec287; /* 4.30:1 over night sky/hill */
+  --garden-leaf: #a2d4a8; /* 5.41:1 */
+  --garden-stem-resting: #8ea691; /* 3.46:1, desaturated */
+  --garden-leaf-resting: #9cb19e; /* 3.97:1 */
 }
 
 /* Distant hills. Atmospheric perspective: the further a band is, the closer it

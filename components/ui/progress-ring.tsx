@@ -11,7 +11,7 @@ export interface ProgressRingProps extends React.HTMLAttributes<HTMLDivElement> 
   /** Stroke width in px. */
   thickness?: number;
   /** Track + progress colors (any CSS color). Defaults: the sand track token,
-   *  emerald fill. Override only for a genuinely different surface — a track
+   *  sage fill. Override only for a genuinely different surface — a track
    *  thinned with alpha reads as no track at all. */
   trackColor?: string;
   progressColor?: string;
@@ -62,9 +62,10 @@ export function ProgressRing({
 
   // The notch: a radial hairline cutting the full stroke width. Positioned in
   // the svg's own coordinates (0 = 3 o'clock), which the wrapper's -rotate-90
-  // then carries to 12 o'clock like the arc. Drawn in `--foreground` rather
-  // than as a gap in the ring, because it has to read against BOTH the emerald
-  // fill and the sand track wherever the ring sits — a gap would have to know
+  // then carries to 12 o'clock like the arc. Drawn as a stroke (see
+  // `--progress-mark` below) rather than as a gap in the ring, because it has
+  // to read against BOTH the sage fill and the sand track wherever the ring
+  // sits — a gap would have to know
   // the page behind it, and this ring sits on the card on Today and on the
   // page background on the count screen. Suppressed at the ends, where it
   // would only blunt the arc's own start/finish.

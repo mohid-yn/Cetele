@@ -40,9 +40,59 @@ review_ — is **met**.
 | Backend plan | M0–M9 **all shipped** ([`docs/BACKEND_BUILD_PLAN.md`](../docs/BACKEND_BUILD_PLAN.md))                                                                                                                                                                                                                                                                                                                                      |
 | Linear       | CET-1…CET-31 all **Done** except CET-10 (deferred) · **out of sync**: nothing from 2026-07-25/26 has an issue — the Linear MCP was not authenticated in that session, so those branches were named by topic, not `cet-N-slug`                                                                                                                                                                                              |
 | Perf         | CWV baseline measured 2026-07-26 — all thresholds pass except the count screen's FIRST tap; numbers + two open questions in §2                                                                                                                                                                                                                                                                                             |
-| Working tree | clean; `main` = `origin/main`; no feature branches outstanding                                                                                                                                                                                                                                                                                                                                                             |
+| Working tree | on `mohidkhanzada/design-system-v3` — the v3 re-palette, committed but **not yet merged to `staging`** and not yet seen on a preview URL                                                                                                                                                                                                                                                                                   |
 
-**Last work (2026-08-01, latest) — "My goals" moved to Today, and became a circle-level dialog
+**Last work (2026-08-01, latest) — the design system is now v3: sage + rose on warm paper
+(`mohidkhanzada/design-system-v3`, no migration; NOT yet merged to `staging`).** The whole palette was
+re-derived from the owner's five swatches (`#FAB3A9 · #C6AD94 · #7FB285 · #463239 · #ED6B86`) as
+**Material 3 tonal palettes** — the tone number IS CIE L\*, roles come in fill/`on-` pairs, and state
+layers (hover 8%, focus/pressed 12%) are **precomputed to solid hex** because this repo has been bitten
+too often by alpha over an unknown surface. Emerald → sage, gold → **rose**, and the cool slate ramp is
+gone entirely: v1 met a warm page with a grey scale at a **170° hue jump**, which is what greyed the
+light theme and made `subtle`'s hover shift colour. Shadows are now cast in the neutral's own warm ink
+(`rgb(31 27 22)`), not slate at H=266°. Spec + migration map + the numbers: [`docs/DESIGN_SYSTEM.md`](../docs/DESIGN_SYSTEM.md)
+(§13 items **1–8 done**; item 9 — collapsing `card`/`muted` into five surface tiers everywhere — is
+partial). **The owner's call on the one open question (§14 q1): recolour everything, brand mark
+included.** They were offered a middle option that kept gold in the logo alone, for the Islamic
+resonance D20/D25 justified it on, and chose full sage + rose. `public/logo.svg` was recoloured by
+**matching each gradient stop's L\* to the nearest tone** of the new palettes — so the mark's internal
+lightness structure (the facet still sits just above the arrow it creases) is carried over unchanged,
+which matters more than matching hue because the drop shadow and the 0.85/0.6 opacity layers were all
+judged against those relationships. 4 PWA icons + 36 iOS launch images regenerated; **installed PWAs
+cache the old manifest, so existing users must remove and re-add the home-screen icon.**
+
+**Two real defects found by MEASURING rather than eyeballing, both fixed:**
+**(1) A 0% progress bar rendered as a FULL one.** The first v3 pass put `--progress-track` on
+`--outline` — 4.48:1 light, 5.33:1 dark — and the consistency band drew a solid slab directly beneath
+the label "0%". **3:1 is a floor, not a target**, and overshooting it also collapsed the ratio that
+actually matters for a bar: **fill-vs-track fell to 1.35:1**, so the filled part stopped being tellable
+from the empty part. Re-derived on the neutral (tan) ramp near the floor — card **3.18** / page
+**3.08** light and **3.06** / **3.31** dark, with fill-vs-track back to **1.90** and **3.40**, which
+beats v1 (1.67 / 2.84) as well as the first v3 pass. Verified from real composited pixels on a
+production build in both themes, not from the token values.
+**(2) The streak flame failed the 3:1 non-text floor in BOTH themes — and this one is PRE-EXISTING.**
+`text-accent` on the hero medallion measured **1.80:1** light and **2.81:1** dark, because the tile is
+`--gradient-hero-foreground` at 12% — a LIGHTENED sage, nothing like the page, which is why judging the
+token against the page never caught it. v1's gold on v1's emerald hero was the same bug at 2.55:1, so
+the re-palette inherited it rather than causing it. New **`--gradient-hero-accent`** (a pale tone of
+the same rose, so it still reads as the accent by HUE rather than as brighter text): measured in the
+browser at **5.78:1 light / 5.52:1 dark**.
+_Also corrected:_ the hero's recorded "≥5.48:1 against every stop" was v1's number and never re-measured
+— it is **5.26:1** worst-case, and the worst case is **under the sheen**, not on the bare stop (7.02:1).
+_Stale copy swept:_ `/designsystem` is the living reference and still described the app as "emerald +
+gold on warm cream" in its metadata, H1, colour-roles card, scale labels and footer; its HeroCard demo
+also used an **emoji** 🔥 medallion, which takes its colour from the OS font rather than a token and is
+the exact thing the owner called tacky on the count screen's speaker. Now `FlameIcon` on the new token.
+Gates: build + lint + tsc + format:check green, e2e **29/29** on a fresh DB.
+_Trap re-learned, third time:_ `pkill -f "next start"` **matches the shell running the command itself**,
+so it self-kills — and `next start`'s actual child is `next-server`, which does NOT match the pattern
+and survives, keeping port 3000 bound and serving the OLD build. That is §7's row wearing a new hat;
+the served CSS still had the old token values and the build looked like it had silently done nothing.
+Use `fuser -k 3000/tcp`, and verify by grepping the token out of the **served** stylesheet, not the
+built one. _Also:_ one full e2e run failed 3/29 on 30s locator timeouts with every test taking ~2× as
+long — machine load, green on re-run; don't chase it as a regression without checking the timings.
+
+**Before that (2026-08-01) — "My goals" moved to Today, and became a circle-level dialog
 (`today-goals-dialog`, no migration).** Owner, after migrations `0018`–`0020` landed in prod: _"im confused how do i
 raise my goal"_ — then, once shown: _"the set my goals should be a tab on the today page that clicked would yield a
 popup to adjust goals within that group."_ **The bug was discoverability, and the evidence is as strong as it gets:**

@@ -54,7 +54,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // Brand emerald tints the browser chrome in light; in dark it takes the warm
+  // Brand sage tints the browser chrome in light; in dark it takes the warm
   // surface so the status-bar area blends instead of glaring. (Driven by the
   // system scheme — the only signal a static meta tag has.)
   themeColor: [

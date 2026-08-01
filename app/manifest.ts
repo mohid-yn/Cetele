@@ -16,7 +16,7 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     orientation: "portrait",
     // The splash canvas (Android/desktop) = the page surface, so the splash →
-    // first-paint hand-off doesn't jump colour. Brand emerald stays the chrome
+    // first-paint hand-off doesn't jump colour. Brand sage stays the chrome
     // `theme_color`, not the background.
     background_color: BRAND_SURFACE_COLOR,
     theme_color: BRAND_THEME_COLOR,

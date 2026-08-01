@@ -1,196 +1,607 @@
-# Cetele Design System
+# Cetele Design System — v3
 
-Themed **emerald `#047857` + gold `#F59E0B` on warm cream `#FAF6EC`** (light-first; see §Colour + D25). Emerald is
-brand, calm/spiritual, _and_ the completion/growth signal; gold is reserved for
-earned action and celebration only.
-Live reference: **`/designsystem`** · Tokens: **`app/globals.css`** · Components: **`components/ui/`**.
+> **Status: APPLIED.** `app/globals.css` runs v3 and §13 items **1–8 are done**, including item 7 in
+> full: the `lib/brand.ts` platform literals, the brand mark (`public/logo.svg`, recoloured by L\*
+> match — see §14 q1), the 4 PWA icons and the 36 iOS launch images, all regenerated. Every value
+> below is generated and measured. **Still outstanding:** §13 item 9 — collapsing `card`/`muted` into
+> the five surface tiers _everywhere_ — is partially done, not finished.
 
----
-
-## 0. The token contract (golden rule) — read first
-
-> **Every UI value comes from a design token. No exceptions in components.**
-
-All colour, typography, spacing, radius, shadow, motion, and layering values are
-defined **once** as CSS variables in `app/globals.css` (`@theme` + `:root`). UI
-code must reference them — it must **never** hardcode a raw value. This is what
-makes the whole app re-themeable from one file and keeps it modular.
-
-**How to reference a token (in priority order):**
-
-1. **Token-backed Tailwind utility** — the default. `bg-primary`, `text-foreground`, `p-4`, `rounded-lg`, `text-sm`, `shadow-md`, `gap-3`. These all resolve to the CSS variables under the hood.
-2. **`var(--token)`** — when a utility doesn't fit (inline `style`, SVG strokes, dynamic values). `style={{ stroke: "var(--accent)" }}`, `className="z-[var(--z-modal)]"`.
-
-**Forbidden in components:**
-
-- Raw colours: `#1d3a5f`, `rgb(...)`, `hsl(...)`, `text-[#fff]` → **ESLint error** (`no-restricted-syntax`, see `eslint.config.mjs`). `pnpm lint` fails the build.
-- Magic numbers for spacing/size: prefer the scale (`p-4`, `h-11`) over `p-[13px]`. Arbitrary values are allowed only for genuinely relative/one-off cases (`size-[1.1em]`).
-
-**The one sanctioned literal:** `lib/brand.ts` exports `BRAND_THEME_COLOR` — the
-PWA manifest and `<meta name="theme-color">` are platform APIs that require a
-literal colour and can't read CSS vars. That file is the _only_ place a raw
-brand colour lives; keep it in sync with `--primary`.
-
-**Adding a value?** If something you need isn't a token yet, **add it to
-`app/globals.css`** (and document it here) — don't inline it.
+Palette source: the owner's five swatches — `#FAB3A9 · #C6AD94 · #7FB285 · #463239 · #ED6B86`.
+Structure: **Material Design 3** tonal palettes, colour roles and state layers, adapted to this
+codebase's constraints. Live reference: **`/designsystem`** · Tokens: **`app/globals.css`**
 
 ---
 
-## 1. Principles
+## 1. Direction
 
-1. **Tokens over hard-codes.** Never write a raw hex or px color in a component. Use a token (`bg-primary`, `text-muted-foreground`, `border-border`). One re-theme = one edit.
-2. **Semantic before scale.** Prefer `bg-primary` / `text-foreground` over `bg-primary-700`. Reach for a scale step (`bg-accent-100`) only for tints/states the semantic layer doesn't cover.
-3. **Accent is precious.** Gold = the single most important action or live progress on a screen. Emerald is the workhorse. If everything is accent, nothing is.
-4. **Mobile-first.** Design for the phone, enhance up. Tap targets ≥ 44px (our `md`/`icon` buttons are 44px).
-5. **Accessible by default.** Visible focus ring, labelled controls, **AA contrast (≥ 4.5:1)**, `aria-*` on stateful components.
-6. **Never colour alone.** ~6–8% of men can't separate green/amber/orange/red. Every status colour ships with a **glyph or text label** (✓ ✗ ⚠ / "Complete" / "At risk"); never green-vs-red as the only differentiator.
-7. **Motion serves, never decorates.** 150–300ms micro-interactions, ≤500ms transitions, `--ease-spring` only for earned celebration; everything no-ops under `prefers-reduced-motion`.
-8. **Composition over configuration.** Small primitives that compose (Card + Stat + Button) beat one mega-component with 20 props.
+**A tally sheet, kept together.** Muted botanical warmth — sage, clay, rose — on warm paper. Nothing
+in the palette is loud except one colour, and that colour is spent only on what a member earned.
 
----
+The five swatches are not a system; they are a mood. Measured, all five sit between **L\* 34 and 79**,
+and **four of the five cannot carry white text** (sage 2.44:1, tan 2.14:1, salmon 1.74:1, rose 2.98:1).
+They are _container_ tones — soft fills that take dark text — which is exactly what Material 3's
+container roles are for. That is why the M3 model is the right structure here rather than a fashion:
+the palette you chose is already shaped like it.
 
-## 2. Design tokens
+Each swatch becomes the hue anchor of a full tonal palette, and each keeps a real job:
 
-All tokens live in `app/globals.css`. Tailwind 4 generates utilities from them.
+| Swatch           |     | Role                                                       | Where it survives                   |
+| ---------------- | --- | ---------------------------------------------------------- | ----------------------------------- |
+| `#ED6B86` rose   | ▮   | **Accent** — the one earned action, celebration            | **Exactly, as `--accent` in light** |
+| `#7FB285` sage   | ▮   | **Primary** — brand, calm, growth, completion              | primary tone 70                     |
+| `#C6AD94` tan    | ▮   | **Neutral** — paper, every surface and border              | neutral tone 70                     |
+| `#463239` plum   | ▮   | **Neutral-variant** — ink, outlines, secondary text        | neutral-variant tone 20             |
+| `#FAB3A9` salmon | ▮   | **Accent container** — soft rose fills, celebration washes | accent tone 80                      |
 
-### Color
+**Green stays the brand.** Sage replaces emerald, but the locked meaning — green is calm, growth, and
+the completion signal, and is culturally expected for a dhikr audience — is preserved. **Gold is
+gone**, and that is the one meaning this palette does not carry forward; see §14.
 
-| Layer                      | Tokens                                                                                                                                                                                                   | Use                               |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| **Scales**                 | `primary-{50–950}`, `accent-{50–950}`, `neutral-{0–950}`, `success/warning/danger/info-{500,600}`                                                                                                        | tints, borders, state backgrounds |
-| **Semantic** (theme-aware) | `background`, `foreground`, `card`, `card-foreground`, `muted`, `muted-foreground`, `border`, `input`, `ring`, `primary(-foreground)`, `accent(-foreground)`, `success/warning/danger/info(-foreground)` | everything in components          |
-
-- Generates `bg-*`, `text-*`, `border-*`, `ring-*`, `fill-*`, etc.
-- `--ring` is **emerald** — focus is high-visibility, calm, and on-brand.
-- Dark mode = a **persisted Light/Dark toggle** (a `.dark` class on `<html>` set before paint; default light — the System/OS-follow option was dropped 2026-06-29); only semantic tokens flip. Light is still the priority, but dark is now **tuned** per `docs/UI_PRACTICES.md §2`: elevation comes from a surface ladder (`background` < `card` < `muted`, lighter = raised) + a visible `--border` (shadows barely register on dark), with calmed accent/status hues.
-
-#### Colour psychology & meaning (why these colours)
-
-Research-backed (habit-app + Islamic-app + white-UI research, 2026-06): **green
-calms and signals growth/spirituality/completion; a single warm accent arouses;
-red alarms.** For a dhikr audience green is both culturally expected and the
-retention-correct "done" colour. Map meaning once and never reassign it:
-
-| Colour                | Role                                                                                           | Why                                                                                                                     |
-| --------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Emerald** `primary` | Brand, calm/spiritual surface, **completion & growth** — chrome, buttons, closed rings, "done" | Green lowers anxiety, reads as harmony/renewal for a dhikr audience, and is the natural "this is complete/alive" hue    |
-| **Gold** `accent`     | The **one** primary action per view + live progress + celebration                              | Warm = arousal/energy "without red's alarm"; gold carries Islamic resonance; spend it at moments so it stays meaningful |
-| **Emerald** `success` | Complete / on track                                                                            | Same family as brand, a touch brighter so "done" pops — always paired with a ✓ glyph                                    |
-| **Orange** `warning`  | At risk / needs attention                                                                      | True orange (distinct from gold accent) — caution without alarm, paired with text                                       |
-| **Red** `danger`      | Errors & destructive actions **only**                                                          | Red = "this is wrong/destructive", never urgency or FOMO marketing                                                      |
-
-- **Warm surface:** `--background` is a **cream `#FAF6EC`** (light) / **deep warm brown `#1A140F`** (dark) — softer and calmer than stark white/black for a worship app. Cards stay **white** (light) / a lighter brown (dark) so they **lift off** the page by tone + border + shadow; muted fills/borders are warmed to match.
-- **Contrast is non-negotiable (WCAG AA ≥ 4.5:1).** That's why `accent-foreground` is **dark, not white** — white-on-gold is only ~1.9:1 (fails); dark-on-gold is ~8:1.
-- **One accent per view, ≤ ~3 hues per view.** If everything is coloured, nothing stands out and retention drops.
-
-### Typography
-
-- Families: `--font-sans` → **Geist** (body, UI); `--font-display` → **Quicksand** (headings, numbers, brand); `--font-mono`.
-- Sizes (token + paired line-height): `--text-xs … --text-5xl` → utilities `text-xs … text-5xl`.
-- Weights: `--font-weight-normal|medium|semibold|bold` → `font-normal … font-bold`.
-- Headings & big numbers use `font-display`. Use `tabular-nums` for counts/streaks so digits don't jitter.
-
-### Spacing
-
-4px base (`--spacing`, Tailwind scale). **Rhythm comes from the layout primitives, not from hand-picked utilities** — the previous "stick to `1 2 3 4 6 8 12 16`" rule was advisory and the codebase drifted to **58 distinct steps**, because nothing owned the decision.
-
-| Primitive  | Use                                                                                                                                              | Gap steps                                       |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| `<Screen>` | The page wrapper for every in-app screen — one column, one rhythm, one set of edge paddings (`px-5 pt-6 pb-8`). Never re-write this by hand.     | default `2xl`                                   |
-| `<Stack>`  | Vertical rhythm inside a screen or card.                                                                                                         | `none xs sm md lg xl 2xl` → `gap-0/1/2/3/4/5/6` |
-| `<Row>`    | Horizontal cluster — icon + label, header actions, a chip group. Takes `wrap` so it degrades on narrow viewports.                                | same scale                                      |
-| `<Grid>`   | A grid whose columns key off its **own slot**, not the window. `cols="cards"` (1 → 2) or `cols="tiles"` (3 → 6); `as="ul"` keeps list semantics. | same scale                                      |
-
-- **Card padding is a named ladder**, not a free choice: `<Card padding="compact|md|lg">` → `p-4` (dense row) / `p-6` (default content card) / `p-8` (emphasis). For a card that must be a link or a `<section>`, use `cardVariants({ padding })` — the same arrangement `buttonVariants` has.
-- Off-scale one-offs (`gap-2.5`, `mt-0.5` …) are legacy. Don't add more; convert when you touch a file.
-
-### Flex, and the footgun that cost us a release
-
-A flex child defaults to `min-height: auto` — it **refuses to shrink below its content**, so a too-tall child overflows its parent instead of adapting, and with `justify-center` it overflows _both_ ends. That is what put the count screen's correction tray on top of its action row.
-
-- Any flex child that must shrink needs **`min-h-0`** (`<Stack scrollable>` sets it, with the overflow it implies).
-- Size to the viewport with `min()` / `clamp()` and `dvh`, not fixed px + breakpoints: the ring is `min(16rem, 28dvh)`, so tall screens keep the full size and short ones shrink instead of pushing the primary action off-screen.
-- The app shell owns one scroll region (`lib/app-scroll`). The bottom nav is a **sibling** of it, never over it, so no screen has to reserve space for the nav.
-
-### Container queries — respond to the slot, not the window
-
-A repeating component (a ring card, a badge tile) should lay out from the width of **the box it sits in**, not the browser window — so the same component compacts in a narrow card and fills in a wide slot, with no window breakpoint deciding it from afar. Prefer `<Grid>` over a hand-rolled `grid grid-cols-… lg:grid-cols-…`; the primitive owns the column scale so screens can't re-invent it.
-
-- **An element can't container-query its own size.** `<Grid>` therefore wraps the grid in a `@container` context and puts the `@`-variants on the grid inside. If you must hand-roll (e.g. the grid _is_ a styled surface), mark an ancestor `@container` and use `@sm:`/`@lg:` on the grid — never `sm:`/`lg:`, which key off the window.
-- Container breakpoints are Tailwind v4 defaults (`@sm` 24rem, `@lg` 32rem …) and need **no plugin**. They read the nearest ancestor `@container`.
-
-### Radii
-
-`--radius-sm`(6) `md`(8) `lg`(12) `xl`(16) `2xl`(24) `3xl`(32) → `rounded-*` (+ `rounded-full`). Buttons `lg`, cards `2xl`, pills/badges/avatars `full`.
-
-### Elevation
-
-`--shadow-xs sm md lg xl` → `shadow-*` — soft, neutral-tinted for a clean lift on white. Cards `sm`; menus/popovers `md`–`lg`; modals `xl`.
-
-### Depth
-
-Emphasis surfaces beyond the shadow ladder. **One hero per screen** — depth is hierarchy, not decoration.
-
-| Token                        | Use                                                                                |
-| ---------------------------- | ---------------------------------------------------------------------------------- |
-| `--gradient-hero`            | The screen's single emphasis surface. `bg-[image:var(--gradient-hero)]`.           |
-| `--gradient-hero-sheen`      | Optional light wash, overlaid as its own absolutely-positioned layer.              |
-| `--gradient-hero-foreground` | **Text on the hero.** See the trap below.                                          |
-| `--glow-primary`             | Emerald rim + drop — promotes the one thing to continue. Use `glow-primary`.       |
-| `--glow-accent`              | Gold rim — **earned only** (an earned badge), never decoration. Use `glow-accent`. |
-| `--surface-raised`           | Faint emerald-tinted card for secondary heroes. `bg-[var(--surface-raised)]`.      |
-
-> **Trap:** the glows are `@utility` classes (`glow-primary` / `glow-accent`), **not** `shadow-[var(--glow-primary)]`. A bare `var()` in an arbitrary shadow is ambiguous, so Tailwind treats it as a shadow _colour_: the class emits nothing, the underlying `shadow-sm` survives, and you get no error — it just silently doesn't render.
-
-> **Trap:** use `--gradient-hero-foreground`, never `text-primary-foreground`, for text on the hero. On dark, `--primary` is the _light_ emerald, so `--primary-foreground` is near-black — invisible against these deep stops. The dedicated token measures **5.48:1** (light, lightest stop) and **6.37:1** (dark), so body text passes AA across the whole ramp.
-
-On dark, all six drop a step and the glows lose their coloured drop: depth on dark comes from lighter surfaces + a visible rim, not shadow.
-
-### Motion
-
-`--duration-fast|base|slow` (150/220/360ms), `--ease-brand` (entrances), `--ease-spring` (celebration only). Respect `prefers-reduced-motion`.
-
-### Layout & layering
-
-`--container-page` (page max-width) and the z-index ladder `--z-base|dropdown|sticky|overlay|modal|toast`. Use via `var()`: `className="z-[var(--z-modal)]"`. Never invent ad-hoc z-index numbers.
+**The signature is the notched ring.** `ProgressRing` with a `mark` at the circle's share while the
+arc runs to your own goal (D51) is a form that exists nowhere else and states the product in one
+shape: what the group asked of you, and what you took on yourself. It gets the most careful detailing
+in the system (§8.9). Everything else stays quiet so it can carry.
 
 ---
 
-## 3. Components (`components/ui/`)
+## 2. How the colour system works
 
-Import from the barrel: `import { Button, Card, ProgressRing } from "@/components/ui";`
+Adopted from Material 3, with the parts that are verifiable taken from the reference implementation
+rather than the docs:
 
-| Component                                              | Key props                                                                                                                          | Notes                                     |
-| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `Button`                                               | `variant` (primary·accent·outline·subtle·ghost·link·destructive), `size` (sm·md·lg·icon), `loading`, `leadingIcon`, `trailingIcon` | One accent per view                       |
-| `Card` + `CardHeader/Title/Description/Content/Footer` | —                                                                                                                                  | Default surface                           |
-| `Badge`                                                | `variant`, `size`                                                                                                                  | Roles, status, counts                     |
-| `Input`, `Label`, `Field`                              | `Field`: `label`, `htmlFor`, `hint`, `error`, `required`                                                                           | Always wrap inputs in `Field`             |
-| `Avatar`                                               | `name` (required, for initials+alt), `src`, `size`                                                                                 | Falls back to initials on error           |
-| `ProgressRing`                                         | `value`, `max`, `size`, `thickness`, `progressColor`                                                                               | Signature dhikr ring; turns green at 100% |
-| `Stat`                                                 | `label`, `value`, `icon`, `hint`                                                                                                   | Streaks, totals, ranks                    |
-| `Spinner`                                              | —                                                                                                                                  | Inherits `currentColor`                   |
+1. **Tonal palettes.** Each key hue expands to tones **0–100**, where the tone number _is_ CIE L\*.
+   Tone 40 on tone 100 is always ≈4.5:1+ — contrast becomes a property of the system, not a per-pair
+   accident.
+2. **Colour roles come in pairs.** Never a fill without its `on-` colour. `--primary` / `--on-primary`,
+   `--accent-container` / `--on-accent-container`. **You cannot reference a fill without inheriting its
+   text colour**, which is the single biggest defence against this codebase's recurring contrast bugs.
+3. **Surface containers.** Five neutral tiers replace the ad-hoc `card` / `muted` pair — and give the
+   navigation its own surface, which v1 never had.
+4. **State layers.** Interaction states are the `on-` colour composited over the fill at a fixed
+   opacity: **hover 8%, focus 12%, pressed 12%, dragged 16%** (from `material-web`'s
+   `md-sys-state` tokens; note M3's own prose contradicts itself on pressed, quoting 12% and 16% in
+   different places — another reason to bake them).
+
+**Deviation, deliberate: state layers are precomputed to solid hex.** M3 applies them as a live alpha
+overlay. This codebase has been bitten repeatedly by alpha over an unknown surface (a `bg-muted/40`
+resting card measured **1.01:1** against the page), so every state is a real token with a measured
+value. Same model, no runtime uncertainty.
+
+**Deviation, deliberate: the accent is a light fill with a dark label.** M3 would make the accent tone
+40 (`#a22c4c`, a deep wine) so it can carry white text. That throws away the rose you picked. Instead
+`--accent` is **`#ED6B86` exactly**, with a tone-10 label at **5.84:1** — and it holds through hover
+(5.16) and pressed (4.81). This also matches what the app already did with gold.
 
 ---
 
-## 4. Authoring a new component
+## 3. Tonal palettes
 
-Follow the house pattern so everything stays consistent:
+| Tone   | primary · sage        | accent · rose         | neutral · tan         | neutral-var · plum |
+| ------ | --------------------- | --------------------- | --------------------- | ------------------ |
+| 10     | `#112013`             | `#2f1017`             | `#1f1b16`             | `#1f1a1c`          |
+| 20     | `#1f3723`             | `#501d28`             | `#372f27`             | `#372e31`          |
+| 30     | `#23522c`             | `#7d1c37`             | `#524435`             | `#514247`          |
+| 40     | `#346d3f`             | `#a22c4c`             | `#6d5b49`             | `#6c595f`          |
+| 45     | —                     | `#b33657`             | —                     | —                  |
+| 50     | `#488753`             | `#c44162`             | `#87735e`             | `#867077`          |
+| 60     | `#62a26c`             | `#e25d7b`             | `#a28c77`             | `#a08a91`          |
+| **62** | —                     | **`#ED6B86`** ← yours | —                     | —                  |
+| 70     | **`#82bd8a`** ≈ yours | `#fc7e97`             | **`#bca894`** ≈ yours | `#bba5ac`          |
+| 80     | `#a3d6a9`             | **`#ffa9b8`** ≈ yours | `#d5c3b2`             | `#d4c1c7`          |
+| 90     | `#d4ead6`             | `#ffd4db`             | `#eee0d3`             | `#e9e0e3`          |
+| 95     | `#e4f7e6`             | `#ffe9ec`             | `#faefe3`             | `#f6eef1`          |
+| 98     | `#effff0`             | `#fff6f7`             | `#fff8ee`             | `#fef8fa`          |
+
+**Status hues.** Sited to maximise the minimum gap between neighbours, which this palette makes hard —
+see §3.1.
+
+| Tone | success · H152 | warning · H78 | danger · H40 | info · H250 |
+| ---- | -------------- | ------------- | ------------ | ----------- |
+| 10   | `#0e2013`      | `#261903`     | `#2b150d`    | `#141c25`   |
+| 20   | `#193823`      | `#422c01`     | `#4a2517`    | `#243240`   |
+| 30   | `#12542c`      | `#603f00`     | `#742e14`    | `#2f4963`   |
+| 40   | `#21703e`      | `#7f5500`     | `#964222`    | `#426181`   |
+| 70   | `#74c089`      | `#d7a143`     | `#ed906f`    | `#8eafd3`   |
+| 80   | `#99d9a9`      | `#eebe72`     | `#ffaf93`    | `#adcae9`   |
+| 90   | `#d0ebd6`      | `#f4e0c1`     | `#fed9cd`    | `#d7e4f2`   |
+
+### 3.1 The palette's one real constraint — read before changing a status colour
+
+**This palette is entirely warm, and its accent sits where danger conventionally lives.** Rose is
+H=9°; a conventional danger red is H≈25°. There is no hue in this palette that is both recognisably
+"error" and safely far from the accent — every candidate lands within 11° of rose or 8° of salmon.
+
+Measured, the best available compromise is **danger at H=40°**, which maximises the minimum gap:
+**31° from the accent, 32° from warning**. Consequences you must design around:
+
+- **Danger is a grave rust-red (`#964222`), not a vivid alarm red.** This is a fit, not a defect: D8
+  already forbids red as urgency or FOMO, so a serious, low-arousal red is the correct register.
+- **`--accent` and `--danger` are 31° apart and similar in lightness in dark mode.** The
+  **never-colour-alone rule (§7.3) is therefore load-bearing, not a nicety.** Every destructive
+  control carries a word or a glyph. This is the one place where dropping that rule breaks the app for
+  colour-blind users.
+- **Success shares the primary's hue family (4° apart), by design.** Green is the completion colour;
+  a separate "success" hue would say completion twice in two languages.
+
+---
+
+## 4. Colour roles
+
+### 4.1 Light
+
+| Token                 | Value     |     | Token                      | Value     |
+| --------------------- | --------- | --- | -------------------------- | --------- |
+| `--primary`           | `#346d3f` | ▮   | `--on-primary`             | `#f7fff8` |
+| `--primary-container` | `#d4ead6` | ▮   | `--on-primary-container`   | `#112013` |
+| `--accent`            | `#ED6B86` | ▮   | `--on-accent`              | `#2f1017` |
+| `--accent-container`  | `#ffd4db` | ▮   | `--on-accent-container`    | `#2f1017` |
+| `--accent-ink`        | `#b33657` | ▮   | _accent as text/thin mark_ | 5.56:1    |
+| `--surface`           | `#fff8ee` | ▮   | `--on-surface`             | `#1f1b16` |
+| `--surface-lowest`    | `#fffdf4` | ▮   | `--on-surface-variant`     | `#514247` |
+| `--surface-low`       | `#fdf2e7` | ▮   | `--outline`                | `#867077` |
+| `--surface-default`   | `#f7ebe0` | ▮   | `--outline-variant`        | `#d4c1c7` |
+| `--surface-high`      | `#f3e6da` | ▮   | `--success`                | `#21703e` |
+| `--surface-highest`   | `#eee0d3` | ▮   | `--warning`                | `#7f5500` |
+| `--danger`            | `#964222` | ▮   | `--info`                   | `#426181` |
+| `--success-container` | `#d0ebd6` | ▮   | `--on-success-container`   | `#0e2013` |
+| `--warning-container` | `#f4e0c1` | ▮   | `--on-warning-container`   | `#261903` |
+| `--danger-container`  | `#fed9cd` | ▮   | `--on-danger-container`    | `#2b150d` |
+| `--info-container`    | `#d7e4f2` | ▮   | `--on-info-container`      | `#141c25` |
+
+### 4.2 Dark
+
+| Token                 | Value     |     | Token                      | Value     |
+| --------------------- | --------- | --- | -------------------------- | --------- |
+| `--primary`           | `#a3d6a9` | ▮   | `--on-primary`             | `#1f3723` |
+| `--primary-container` | `#23522c` | ▮   | `--on-primary-container`   | `#d4ead6` |
+| `--accent`            | `#fc7e97` | ▮   | `--on-accent`              | `#501d28` |
+| `--accent-container`  | `#7d1c37` | ▮   | `--on-accent-container`    | `#ffd4db` |
+| `--accent-ink`        | `#fc7e97` | ▮   | _accent as text/thin mark_ | 7.56:1    |
+| `--surface`           | `#16130f` | ▮   | `--on-surface`             | `#eee0d3` |
+| `--surface-lowest`    | `#110e0b` | ▮   | `--on-surface-variant`     | `#d4c1c7` |
+| `--surface-low`       | `#1f1b16` | ▮   | `--outline`                | `#a08a91` |
+| `--surface-default`   | `#241e19` | ▮   | `--outline-variant`        | `#514247` |
+| `--surface-high`      | `#2f2821` | ▮   | `--success`                | `#99d9a9` |
+| `--surface-highest`   | `#3e3227` | ▮   | `--warning`                | `#eebe72` |
+| `--danger`            | `#ffaf93` | ▮   | `--info`                   | `#adcae9` |
+| `--success-container` | `#12542c` | ▮   | `--on-success-container`   | `#d0ebd6` |
+| `--warning-container` | `#603f00` | ▮   | `--on-warning-container`   | `#f4e0c1` |
+| `--danger-container`  | `#742e14` | ▮   | `--on-danger-container`    | `#fed9cd` |
+| `--info-container`    | `#2f4963` | ▮   | `--on-info-container`      | `#d7e4f2` |
+
+**The pairing rule:** a fill token is never referenced without its `on-` partner. `bg-primary` implies
+`text-on-primary`. If you find yourself picking a text colour for a fill, the pair is missing — add it,
+don't improvise.
+
+---
+
+## 5. Surfaces and elevation
+
+### 5.1 The five tiers
+
+| Tier              | Light     | Dark      | What sits here                                       |
+| ----------------- | --------- | --------- | ---------------------------------------------------- |
+| `surface-lowest`  | `#fffdf4` | `#110e0b` | Cards on a busy page; the "paper" of a content block |
+| `surface`         | `#fff8ee` | `#16130f` | **The page**                                         |
+| `surface-low`     | `#fdf2e7` | `#1f1b16` | Resting/dormant surfaces (§8.10)                     |
+| `surface-default` | `#f7ebe0` | `#241e19` | Inset wells, muted fills, input backgrounds          |
+| `surface-high`    | `#f3e6da` | `#2f2821` | **Chrome** — bottom nav, sidebar, sticky headers     |
+| `surface-highest` | `#eee0d3` | `#3e3227` | Menus, popovers, dialogs, segmented thumbs           |
+
+**This is the fix for "the whole nav bar is just white."** v1's nav used `--card` (`#ffffff`) and
+measured **1.08:1** against the page — chrome and content shared one token, so chrome could never look
+different. It now has `surface-high`, a real tier, in both themes.
+
+### 5.2 Elevation is expressed differently per theme
+
+- **Light:** shadow. `--shadow-xs … --shadow-xl`, tinted **warm** (`rgb(31 27 22)`, the neutral's own
+  ink) — v1 cast slate `rgb(15 23 42)` at H=266° on a warm page, which is what greyed the light theme.
+- **Dark:** tone. Shadows barely register; a raised surface is a **lighter** one. Every dark elevation
+  step moves _up_ the surface ladder.
+
+> **The rule v1 broke:** a component that must look raised takes the next tier up, in **both** themes.
+> The theme toggle's thumb was `--card` on a `--muted` track — lighter-on-darker in light and
+> **darker-on-lighter in dark**, so at night the selected option read as pressed _into_ the control.
+
+---
+
+## 6. State layers
+
+Every interactive surface has five states. The layer is the `on-` colour composited over the fill.
+
+| State         | Opacity | Extra                                           |
+| ------------- | ------- | ----------------------------------------------- |
+| Rest          | —       | —                                               |
+| Hover         | **8%**  | pointer only; never on touch                    |
+| Focus-visible | **12%** | **+ 2px `--primary` outline, 2px offset**       |
+| Pressed       | **12%** | + `translateY(1px)`                             |
+| Dragged       | **16%** | + elevation step                                |
+| Disabled      | —       | dedicated token pair (§7.4) — **never opacity** |
+
+**Precomputed values** (these are the tokens; do not compute at runtime):
+
+|                               | Rest      | Hover     | Focus / Pressed |
+| ----------------------------- | --------- | --------- | --------------- |
+| **light** `primary`           | `#346d3f` | `#44794e` | `#4b7f55`       |
+| **light** `accent`            | `#ED6B86` | `#de647d` | `#d66079`       |
+| **light** `danger`            | `#964222` | `#9e5133` | `#a3583c`       |
+| **light** `success`           | `#21703e` | `#327b4d` | `#3b8154`       |
+| **light** `primary-container` | `#d4ead6` | `#c4dac6` | `#bdd2bf`       |
+| **light** `accent-container`  | `#ffd4db` | `#eec4cb` | `#e6bcc3`       |
+| **dark** `primary`            | `#a3d6a9` | `#98c99e` | `#93c399`       |
+| **dark** `accent`             | `#fc7e97` | `#ee768e` | `#e7728a`       |
+| **dark** `danger`             | `#ffaf93` | `#f1a489` | `#e99e84`       |
+| **dark** `primary-container`  | `#23522c` | `#315e3a` | `#386440`       |
+| **dark** `accent-container`   | `#7d1c37` | `#872b44` | `#8d324b`       |
+
+For transparent variants (`ghost`, `outline`, list rows, nav items) the layer composites over the
+surface beneath: hover `surface-default`, pressed `surface-high`.
+
+---
+
+## 7. The contrast contract
+
+Every number in this document was computed, not judged. **114/114 pairings pass.**
+
+| Class                       | Floor              | Applies to                                                             |
+| --------------------------- | ------------------ | ---------------------------------------------------------------------- |
+| Body text                   | **4.5:1**          | Text under 18.66px bold / 24px regular                                 |
+| Large text                  | **3:1**            | Headings above that                                                    |
+| Non-text (WCAG 2.2 §1.4.11) | **3:1**            | Component boundaries, focus rings, progress tracks, icons, chart marks |
+| Disabled                    | **3:1** (practice) | Exempt from 1.4.3; still must be readable                              |
+| Decorative                  | none               | Large, saturated, hue-distinct **shapes** only                         |
+
+**Judge against the surface the element is actually drawn on, per theme** — not `--surface` by default.
+A plant sits on soil; a ring's notch sits on the arc; a nav icon sits on `surface-high`.
+
+**The accent cannot carry a thin mark on light.** `#ED6B86` on the page measures **2.83:1** — under the
+non-text floor. Use `--accent-ink` (`#b33657`, 5.56:1) for accent text, icons and thin strokes on light
+surfaces. The bright rose is for **fills**, where its dark label does the work. (v1 had this exact
+defect with gold at 2.15:1 and handled it case by case.)
+
+---
+
+## 8. Components
+
+### 8.1 Buttons — variants
+
+| Variant       | Use                                                       | Budget           |
+| ------------- | --------------------------------------------------------- | ---------------- |
+| `primary`     | The main action of a card or dialog                       | one per card     |
+| `accent`      | **The** action of the whole view; earned/celebratory      | **one per view** |
+| `tonal`       | Between primary and outline — uses `primary-container`    | —                |
+| `outline`     | Equal-weight alternative beside a primary                 | —                |
+| `ghost`       | Tertiary; icon buttons; toolbar actions                   | —                |
+| `link`        | Inline navigation inside prose                            | —                |
+| `destructive` | Delete, remove, leave. **Never** the default in a confirm | one per dialog   |
+
+### 8.2 Buttons — the full matrix
+
+**Light**
+
+| Variant       | Rest                         | Hover     | Pressed   | Label          | Measured (rest/hover/press)    |
+| ------------- | ---------------------------- | --------- | --------- | -------------- | ------------------------------ |
+| `primary`     | `#346d3f`                    | `#44794e` | `#4b7f55` | `#f7fff8`      | **6.05 / 5.04 / 4.62**         |
+| `accent`      | `#ED6B86`                    | `#de647d` | `#d66079` | `#2f1017`      | **5.84 / 5.16 / 4.81**         |
+| `tonal`       | `#d4ead6`                    | `#c4dac6` | `#bdd2bf` | `#112013`      | **13.34 / 11.45 / 10.8**       |
+| `destructive` | `#964222`                    | `#9e5133` | `#a3583c` | `#fffdfa`      | **6.71 / 5.67 / 5.19**         |
+| `outline`     | transparent, 1px `--outline` | `#f7ebe0` | `#f3e6da` | `--on-surface` | 14.6 label · **4.33** boundary |
+| `ghost`       | transparent                  | `#f7ebe0` | `#f3e6da` | `--on-surface` | 14.6 label                     |
+| `link`        | —                            | underline | —         | `--primary`    | **5.85**                       |
+
+**Dark**
+
+| Variant       | Rest                         | Hover     | Pressed   | Label          | Measured (rest/hover/press)    |
+| ------------- | ---------------------------- | --------- | --------- | -------------- | ------------------------------ |
+| `primary`     | `#a3d6a9`                    | `#98c99e` | `#93c399` | `#1f3723`      | **7.83 / 6.87 / 6.45**         |
+| `accent`      | `#fc7e97`                    | `#ee768e` | `#e7728a` | `#501d28`      | **5.54 / 4.92 / 4.63**         |
+| `tonal`       | `#23522c`                    | `#315e3a` | `#386440` | `#d4ead6`      | **7.15 / 5.92 / 5.5**          |
+| `destructive` | `#ffaf93`                    | `#f1a489` | `#e99e84` | `#4a2517`      | **7.49 / 6.60 / 6.18**         |
+| `outline`     | transparent, 1px `--outline` | `#241e19` | `#2f2821` | `--on-surface` | 12.7 label · **5.77** boundary |
+| `ghost`       | transparent                  | `#241e19` | `#2f2821` | `--on-surface` | 12.7 label                     |
+| `link`        | —                            | underline | —         | `--primary`    | **11.24**                      |
+
+**Focus-visible**, identical for every variant: `outline: 2px solid var(--primary); outline-offset: 2px`.
+Measured **5.85 light / 11.24 dark** on the page, **4.77 / 7.54** on the highest surface. Never removed;
+never replaced by a colour change alone.
+
+### 8.3 Why hover reduces contrast, and why that is fine
+
+The state layer moves the fill **toward** its label, so contrast drops on every filled button —
+`primary` goes 6.05 → 5.04 → 4.62. That is M3's model working as designed, and it is safe **only
+because the rest state starts with headroom.** Any new filled variant must therefore be checked at
+**pressed**, not at rest. The accent is the tight one: it starts at 5.84 and lands at 4.81, which is
+why the accent fill cannot be made any lighter than `#ED6B86` without a darker label.
+
+### 8.4 Disabled — a token pair, never `opacity`
+
+v1 used `disabled:opacity-50`, which on a coloured fill produced a white label at **2.16:1** — every
+disabled primary and destructive button in the app was illegible.
+
+|       | Fill                          | Label                 | Border              |
+| ----- | ----------------------------- | --------------------- | ------------------- |
+| Light | `--surface-default` `#f7ebe0` | `--outline` `#867077` | `--outline-variant` |
+| Dark  | `--surface-default` `#241e19` | `--outline` `#a08a91` | `--outline-variant` |
+
+Plus `cursor: not-allowed`, `aria-disabled="true"`, and — where the reason isn't obvious — text saying
+what is missing. A dead control explains nothing.
+
+**Loading** keeps the live colours (it is working, not unavailable): spinner replaces the leading icon,
+label stays, **width does not change**, `aria-busy="true"`, pointer events off.
+
+### 8.5 Buttons — sizes
+
+| Size   | Painted | Tap target                 | Use                                    |
+| ------ | ------- | -------------------------- | -------------------------------------- |
+| `sm`   | 36px    | **44px** via `tap-area-44` | Dense rows, inline actions             |
+| `md`   | 44px    | 44px                       | Default                                |
+| `lg`   | 52px    | 52px                       | The primary action on a focused screen |
+| `icon` | 44×44   | 44px                       | Icon-only — **requires `aria-label`**  |
+
+44px is the Apple HIG floor; Material asks 48dp. `tap-area-44` expands **vertically only** — horizontal
+expansion would overlap the 8px gap between side-by-side controls and steal a neighbour's taps.
+
+### 8.6 Buttons — anti-patterns
+
+| Don't                                             | Because                                                |
+| ------------------------------------------------- | ------------------------------------------------------ |
+| Two `accent` buttons in one view                  | The budget is one; the second cancels the first        |
+| `destructive` as the default focus in a confirm   | The safe path is the default                           |
+| Icon-only with no `aria-label`                    | Unnameable to a screen reader, untestable by role+name |
+| A changing name **and** `aria-pressed`            | "Sound off, not pressed" — a double negative. Pick one |
+| `opacity` to quieten any variant                  | Use the variant that is already quieter                |
+| A destructive action distinguished only by colour | Accent and danger are 31° apart (§3.1)                 |
+
+### 8.7 Inputs and fields
+
+| Part               | Token                                              | Floor                                                      |
+| ------------------ | -------------------------------------------------- | ---------------------------------------------------------- |
+| Boundary           | `--outline`                                        | **≥3:1** — v1 used a 1.31:1 hairline and **failed 1.4.11** |
+| Fill               | `--surface-default`                                | —                                                          |
+| Label              | `--on-surface`                                     | 4.5:1                                                      |
+| Placeholder / hint | `--on-surface-variant`                             | 4.5:1                                                      |
+| Focus              | 2px `--primary` border + `--primary` ring          | 3:1                                                        |
+| Invalid            | `--danger` border + **text in `aria-describedby`** | never colour alone                                         |
+
+Every input is wrapped in `<Field>` (label, hint, error). **A placeholder is not a label.** An error
+belongs in `aria-describedby` — v1's goals dialog announced the floor and never the refusal.
+
+### 8.8 Chips, badges and status
+
+Always a `container` / `on-container` pair — never a fill at reduced alpha with a mid-tone label
+(v1's "1 freeze left" chip measured **3.28:1** at 12px).
+
+| Status   | Light                            | Dark                            | Glyph |
+| -------- | -------------------------------- | ------------------------------- | ----- |
+| Complete | `#d0ebd6` / `#0e2013` — **13.4** | `#12542c` / `#d0ebd6` — **7.1** | ✓     |
+| At risk  | `#f4e0c1` / `#261903` — **13.3** | `#603f00` / `#f4e0c1` — **7.4** | ⚠     |
+| Error    | `#fed9cd` / `#2b150d` — **13.2** | `#742e14` / `#fed9cd` — **7.5** | ✗     |
+| Info     | `#d7e4f2` / `#141c25` — **13.5** | `#2f4963` / `#d7e4f2` — **7.4** | i     |
+
+`rounded-full`, `shrink-0` so a long neighbouring name cannot squash it.
+
+### 8.9 Progress — the signature
+
+| Part                      | Token                             | Floor                                          |
+| ------------------------- | --------------------------------- | ---------------------------------------------- |
+| Track                     | `--progress-track`                | **≥3:1 on card _and_ page — and stay near it** |
+| Fill                      | `--primary` → `--success` at 100% | 3:1                                            |
+| Mark (the circle's share) | `--progress-mark`                 | ≥3:1 **on the arc, not the page**              |
+
+- **The track is warm, never grey.** At 3:1 the fill/track _luminance_ gap is small, so the arc is
+  carried by the **hue** gap. A grey track at 3:1 turns the ring into one flat donut.
+- **3:1 is a floor, not a target — overshoot it and an EMPTY bar reads as a full one.** The first v3
+  pass put the track on `--outline` (4.48:1 light, 5.33:1 dark) and the 0% consistency band rendered
+  as a solid slab directly beneath the label "0%". Overshooting also collapses the ratio that
+  actually matters for a bar, fill-vs-track, to 1.35:1 — the filled part stops being tellable from
+  the empty part. `--progress-track` is now its own token on the neutral (tan) ramp, held near the
+  floor: 3.18/3.08 light and 3.06/3.31 dark, with fill-vs-track back to 1.90 and 3.40.
+- **Never thin the track with alpha.** Both hero rings independently "receded" it to 60% in v1, so the
+  ring you stare at for a whole session had the faintest track in the app.
+- **`--progress-mark` inverts between themes** — it is judged against the arc it is drawn on, not the
+  page. Reusing the light recipe on dark measured 2.10:1 on primary and 1.59:1 on success: the mark
+  vanished exactly when the ring was doing well.
+- `ProgressRing`'s `size` is an **inline** width/height — no `className` overrides it. To scale to a
+  parent pass **`fluid`**, never `h-full w-full`.
+
+### 8.10 The resting / inactive pattern
+
+A task not due today, a circle you're not in. **Quiet is not absent** — v1's resting card measured
+**1.01:1 against the page** and disappeared.
+
+| Part   | Light                     | Dark                   | Measured                          |
+| ------ | ------------------------- | ---------------------- | --------------------------------- |
+| Fill   | `--surface-low` `#fdf2e7` | `#1f1b16`              | recessed, still a surface         |
+| Border | `--outline`, **dashed**   | `--outline`, dashed    | **4.33 / 5.77** (was 1.23 / 1.04) |
+| Text   | `--on-surface-variant`    | `--on-surface-variant` | **8.07 / 9.61**                   |
+| Shadow | none                      | none                   | flat = not raised                 |
+
+**The border does the work, not the fill.** A recessed surface should be quiet; what makes it legible
+as a _thing_ is a boundary at the 3:1 floor. v1 had a near-invisible fill _and_ a near-invisible border.
+
+- **Show, never hide.** A resting task keeps its card and stays tappable.
+- **No empty progress bar** — a 0% bar on something nobody asked you to do reads as "you are behind."
+  Show the fact instead: "2d", "Due in 2 days · every 3 days".
+- **Dashed, not faded.** Dashes say "not active now"; opacity says "broken".
+- Never apply it to a day _before_ a task existed — those are offered normally.
+
+### 8.11 Navigation
+
+| Part            | Token                                         |
+| --------------- | --------------------------------------------- |
+| Surface         | `--surface-high`                              |
+| Border          | `--outline-variant` (hairline)                |
+| Active item     | `--primary` label + 2px `--primary` indicator |
+| Inactive item   | `--on-surface-variant`                        |
+| Hover / pressed | `--surface-highest`                           |
+
+Active state is **never colour alone** — the indicator bar and the heavier icon stroke carry it too.
+`aria-current="page"` on the active link.
+
+### 8.12 Segmented controls and toggles
+
+> **The thumb is always exactly one tier above its track, in both themes.**
+
+|       | Track                         | Thumb                                      |
+| ----- | ----------------------------- | ------------------------------------------ |
+| Light | `--surface-default` `#f7ebe0` | `--surface-lowest` `#fffdf4` + `shadow-sm` |
+| Dark  | `--surface-default` `#241e19` | `--surface-highest` `#3e3227`              |
+
+- Track carries `--outline-variant`; thumb carries `--outline`.
+- `role="radiogroup"` + `role="radio"` + `aria-checked`. Segments ≥44px tall.
+- The thumb slides, it does not fade — `--duration-base` / `--ease-brand`, suppressed on first paint so
+  a dark reload doesn't animate across.
+- **A binary control does not need to spell out both options at full width.** Constrain it to its
+  content; a two-segment pill filling a sidebar is a control shouting a small fact.
+
+### 8.13 Cards, dialogs, menus
+
+|                | Surface               | Border              | Elevation                          |
+| -------------- | --------------------- | ------------------- | ---------------------------------- |
+| Card           | `--surface-lowest`    | `--outline-variant` | light `shadow-sm` · dark tone only |
+| Dialog         | `--surface-highest`   | `--outline-variant` | light `shadow-xl` · dark tone only |
+| Menu / popover | `--surface-highest`   | `--outline-variant` | light `shadow-md` · dark tone only |
+| Scrim          | `rgb(31 27 22 / 0.4)` | —                   | —                                  |
+
+**A modal never exceeds the viewport and is never un-closable:** capped at `calc(100dvh - 2rem)`, flex
+column, title and actions pinned, only the body scrolls (`min-h-0` on the scroll child, or the cap
+silently does nothing). Any async work that disables the dialog's controls goes in `try/finally`, and
+`onClose` stays live throughout.
+
+---
+
+## 9. Typography
+
+| Role                              | Face                  | Sizes                 | Treatment                                      |
+| --------------------------------- | --------------------- | --------------------- | ---------------------------------------------- |
+| Display — headings, counts, brand | `--font-display`      | `text-2xl`–`text-5xl` | `font-semibold`, tight leading, `tabular-nums` |
+| Body / UI                         | `--font-sans` (Geist) | `text-sm`–`text-lg`   | `font-normal` / `medium`                       |
+| Data                              | `--font-sans`         | `text-xs`–`text-sm`   | `tabular-nums` always                          |
+
+- **`tabular-nums` on anything that changes in place** — counts, streaks, percentages. Without it,
+  digits jitter on every tap, which on the count screen is the whole experience.
+- **Sentence case everywhere.** An eyebrow may use uppercase via `tracking-wide` + `text-transform`,
+  and its **DOM text stays sentence case** — Playwright computes accessible names from DOM text, so a
+  cell reading "TODAY" via CSS matches `/Today/`, never `/TODAY/`.
+- **One display face per view.** Body never borrows it.
+- Prose line length caps at ~72ch.
+
+---
+
+## 10. Spacing, radius, motion
+
+4px base. **Rhythm comes from the layout primitives** — v1's advisory scale drifted to **58 distinct
+steps** because nothing owned the decision.
+
+| Primitive           | Job                                                     |
+| ------------------- | ------------------------------------------------------- |
+| `<Screen>`          | Page wrapper — one column, one rhythm, `px-5 pt-6 pb-8` |
+| `<Stack>` / `<Row>` | Vertical / horizontal rhythm, `gap-0/1/2/3/4/5/6`       |
+| `<Grid>`            | Columns keyed to its **own slot** via container queries |
+
+- Card padding ladder: `compact|md|lg` → `p-4 / p-6 / p-8`.
+- **Radii:** `sm`6 `md`8 `lg`12 `xl`16 `2xl`24 `3xl`32. Buttons `lg`, cards `2xl`, pills `full`.
+- **A fixed px column is a floor, not a size** — `minmax(floor, 1fr)` + `min-w-max`, never a fixed
+  track, or the layout keeps the phone's size on a 4K monitor. A cell that may widen can't be
+  `aspect-square`.
+- **Any flex child that must shrink needs `min-h-0`.**
+- Page width ladder `--container-page`: 64 → 82 → 98 → 118rem at 1400/1700/2100px.
+
+**Motion:** `--duration-fast|base|slow` = 150/220/360ms. `--ease-brand`
+`cubic-bezier(0.22,1,0.36,1)` for routine; `--ease-emphasized` `cubic-bezier(0.16,1,0.3,1)` for earned
+moments.
+
+- **No bounce or elastic, anywhere** — not in eases, not in keyframes. Springs stay near-critically
+  damped (ζ≈0.98).
+- **A celebration marks a transition, never a state.** Fire on the tap that closes the ring; never on
+  arriving at one already closed.
+- **No stagger-on-load.** Motion on motion.
+- Everything no-ops under `prefers-reduced-motion`.
+- **Vibration patterns must not lead with `0`**, and haptics are **Android-only** — WebKit has never
+  implemented `navigator.vibrate`.
+
+---
+
+## 11. The token contract
+
+> **Every UI value comes from a design token.**
+
+1. **Token-backed utility** — `bg-primary`, `text-on-surface`, `p-4`, `rounded-lg`.
+2. **`var(--token)`** — inline `style`, SVG `fill`/`stroke`/`stopColor`, arbitrary properties.
+
+**Forbidden:** raw colour in `.ts`/`.tsx` — an ESLint error. Magic spacing (`p-[13px]`).
+
+**Sanctioned literals:** `lib/brand.ts` only — platform APIs that cannot read CSS variables.
+
+**Four rules, each a bug already paid for:**
+
+- **Never reference a fill without its `on-` pair.**
+- **Never thin a token with alpha to make it quieter.** Pick the token that is already that value.
+- **A colour that must always render lives in a token referenced inline, never in a stylesheet rule**,
+  with a `var(x, var(y))` fallback. SVG's initial `fill` is **black** — this repo has lost that bet
+  three times.
+- **Judge a colour against the surface it is actually drawn on, per theme.**
+
+---
+
+## 12. Enforcement
+
+| Rule                                                      | Catches                         |
+| --------------------------------------------------------- | ------------------------------- |
+| Ban raw hex/`rgb()`/`hsl()` in `.ts`/`.tsx`               | _(already active)_              |
+| Ban `neutral-*` / `slate-*` utilities                     | The cool ramp is gone           |
+| Ban `opacity-\d+` on anything carrying a background token | The alpha family                |
+| Ban `bg-card` in `bottom-nav.tsx` / `sidebar.tsx`         | Chrome borrowing the card token |
+| Require an `on-*` class wherever a fill class appears     | Unpaired fills                  |
+| Contrast test over §7's pairs, reading `globals.css`      | **Every regression above**      |
+
+The last one matters most: **the token pairs are testable, and this document's numbers are the
+fixtures.** A script that parses `globals.css` and asserts §7 turns this spec into a gate rather than a
+memo. That is the point of §14's "enforce it later".
+
+---
+
+## 13. Migration map
+
+| #   | v1                                        | v3                                       | Touches                                       |
+| --- | ----------------------------------------- | ---------------------------------------- | --------------------------------------------- |
+| 1   | Nav/sidebar `bg-card` (white)             | `--surface-high`                         | `bottom-nav.tsx`, `sidebar.tsx`               |
+| 2   | Resting card `bg-muted/40`                | `--surface-low` + dashed `--outline`     | `today-client.tsx`                            |
+| 3   | Toggle thumb `bg-card` on `bg-muted`      | Thumb one tier above track               | `theme-toggle.tsx`, `segmented.tsx`           |
+| 4   | `--color-neutral-*` (slate)               | neutral + neutral-variant tonal palettes | `globals.css`, `button.tsx`                   |
+| 5   | `--border`/`--input` on interactive parts | `--outline` (≥3:1)                       | `button.tsx`, `input.tsx`                     |
+| 6   | `disabled:opacity-50`                     | Disabled token pair                      | `button.tsx`                                  |
+| 7   | Emerald + gold                            | Sage + rose tonal palettes               | `globals.css`, `brand.ts`, **icons + splash** |
+| 8   | Slate shadows                             | Warm ink shadows                         | `globals.css`                                 |
+| 9   | `card` / `muted`                          | Five surface tiers                       | everywhere                                    |
+
+**The brand-asset cost of #7, stated plainly:** `--primary` moves from `#047857` to `#346d3f` and the
+page from `#faf6ec` to `#fff8ee`. Those three values are platform literals in `lib/brand.ts`, wired to
+the PWA manifest, `<meta name="theme-color">` and **36 generated iOS launch images**. Changing them
+requires `node scripts/gen-icons.mjs` **and** `node scripts/gen-splash.mjs`, and installed PWAs cache
+the old manifest — existing users must remove and re-add the home-screen icon to see it.
+
+---
+
+## 14. Open questions
+
+| #   | Question                                                                                                                                                                                                                                                                                                                   | Why it's yours                                                                                                                                                         |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Gold is gone — ANSWERED 2026-08-01: recolour everything, mark included.** D20/D25 justified gold partly on Islamic resonance; rose carries warmth and celebration but not that. The owner was offered a middle option (sage mark, gold arrow kept, so gold survived in the brand asset only) and chose full sage + rose. | The one meaning this palette doesn't carry forward. Reopening it means a sixth hue for celebration only — not a return of gold to the accent role, which is rose's now |
+| 2   | **Rose is the accent, and accent sits where danger lives** (§3.1).                                                                                                                                                                                                                                                         | Mitigated by depth + the mandatory glyph, but it is a real constraint of the palette you chose                                                                         |
+| 3   | **Sage is lighter than emerald.** Primary tone 40 `#346d3f` is a softer, greyer green — calmer, less assertive.                                                                                                                                                                                                            | It changes how "brand" feels, not just how it looks                                                                                                                    |
+| 4   | **Quicksand** as the display face — the most generic choice in the stack, and it doesn't carry this direction.                                                                                                                                                                                                             | Consequential; deliberately **not** specced here                                                                                                                       |
+| 5   | **Apply order.** §13 items 1–3 are what you reported; 4–9 are systemic. Item 7 is the one with asset cost.                                                                                                                                                                                                                 | Worth doing 1–6 first and 7 as its own change                                                                                                                          |
+
+---
+
+## 15. Authoring a component
 
 ```tsx
-import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "@/lib/utils";
-
-const thingVariants = cva("base classes here", {
-  variants: { variant: { default: "…" } },
+const thingVariants = cva("base classes", {
+  variants: { variant: { default: "bg-primary text-on-primary" } },
   defaultVariants: { variant: "default" },
 });
-
-export interface ThingProps
-  extends
-    React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof thingVariants> {}
 
 export function Thing({ className, variant, ...props }: ThingProps) {
   return (
@@ -199,35 +610,9 @@ export function Thing({ className, variant, ...props }: ThingProps) {
 }
 ```
 
-Rules:
-
-- **Always** accept and spread `className` (merged last via `cn`) and `...props`. Callers must be able to override.
-- Use `cva` for anything with ≥ 2 visual variants; plain `cn` otherwise.
-- `forwardRef` for focusable/controllable elements (inputs, buttons).
-- Add `"use client"` **only** when the component uses state/effects/handlers. Keep primitives server-compatible where possible.
-- Export the component + its `*Variants` + its `*Props` type; add it to `components/ui/index.ts`.
-- Tokens only — no raw colors/px. No `style={{}}` except for genuinely dynamic values (e.g. ring geometry).
-
----
-
-## 5. Do / Don't
-
-| ✅ Do                                            | ❌ Don't                               |
-| ------------------------------------------------ | -------------------------------------- |
-| `className="bg-primary text-primary-foreground"` | `className="bg-[#047857] text-white"`  |
-| One `accent` button per view                     | Accent on every button                 |
-| Wrap inputs in `<Field>`                         | Bare `<input>` with no label           |
-| `font-display` + `tabular-nums` for counts       | Body font for big jittery numbers      |
-| Extend a primitive via `className`               | Fork/duplicate a component to tweak it |
-| `prefers-reduced-motion` guard on confetti       | Unconditional heavy animation          |
-| Pair status colour with ✓/✗/label                | Green-vs-red border as the only signal |
-| Red only for errors/destructive                  | Red for "streak about to die!" FOMO    |
-| Dark text on gold (AA)                           | White text on gold (fails contrast)    |
-
----
-
-## 6. Maintenance
-
-- Changing the brand = edit the scales/semantic tokens in `app/globals.css`. Nothing else.
-- PWA icons follow the brand: regenerate with `node scripts/gen-icons.mjs` after a color change.
-- When you add/alter a component, update `/designsystem` so the living reference stays truthful.
+- **Always** accept and spread `className` (merged last via `cn`) and `...props`.
+- `cva` for ≥2 visual variants; `forwardRef` for focusable elements.
+- `"use client"` only when state/effects/handlers are used.
+- Export the component + `*Variants` + `*Props`; add to `components/ui/index.ts`.
+- **Every fill class ships with its `on-` class.** Tokens only.
+- Update `/designsystem` so the living reference stays truthful.

@@ -26,7 +26,8 @@ export function Sidebar({
   const items = hasGroups ? NAV_ITEMS : NO_GROUP_NAV_ITEMS;
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-card p-4 lg:flex">
+    // `bg-chrome` — same reason as the bottom nav: the sidebar is the frame.
+    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-chrome p-4 lg:flex">
       {/* Wordmark */}
       <Link
         href={groupId ? groupHref(groupId, "/today") : "/groups"}

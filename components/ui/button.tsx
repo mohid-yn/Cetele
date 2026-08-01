@@ -5,26 +5,43 @@ import { Spinner } from "./spinner";
 
 const buttonVariants = cva(
   // base — shared by every variant
+  // Disabled is a TOKEN PAIR, never opacity: `opacity-50` over a coloured fill
+  // put a white label on a washed-out primary at 2.16:1 — illegible on every
+  // disabled primary and destructive button. Filled variants add the fill; the
+  // label and the killed shadow are shared here so ghost/link degrade correctly.
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium " +
     "transition-[background-color,box-shadow,transform] duration-[var(--duration-fast)] " +
     "ease-[var(--ease-brand)] active:translate-y-px " +
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring " +
-    "disabled:pointer-events-none disabled:opacity-50 " +
+    "disabled:pointer-events-none disabled:text-disabled-foreground disabled:shadow-none " +
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:size-[1.1em]",
   {
     variants: {
+      // hover/active are the precomputed M3 state layers (8% / 12% of the `on-`
+      // colour). Contrast falls toward the label on every filled variant, so a
+      // new one must be checked at ACTIVE, not at rest.
       variant: {
         primary:
-          "bg-primary text-primary-foreground shadow-sm hover:bg-primary-800",
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover " +
+          "active:bg-primary-active disabled:bg-disabled-fill",
         accent:
-          "bg-accent text-accent-foreground shadow-sm hover:bg-accent-600",
+          "bg-accent text-accent-foreground shadow-sm hover:bg-accent-hover " +
+          "active:bg-accent-active disabled:bg-disabled-fill",
+        // Transparent, not `bg-background`: a cream fill on a card reads as a
+        // stray box. The boundary is --outline (>=3:1), not the decorative
+        // hairline — v1's `border-border` measured 1.31:1 and failed 1.4.11.
         outline:
-          "border border-border bg-background text-foreground hover:bg-muted",
-        ghost: "text-foreground hover:bg-muted",
-        subtle: "bg-muted text-foreground hover:bg-neutral-200",
+          "border border-outline bg-transparent text-foreground " +
+          "hover:bg-surface-hover active:bg-surface-active disabled:border-border",
+        ghost:
+          "text-foreground hover:bg-surface-hover active:bg-surface-active",
+        subtle:
+          "bg-muted text-foreground hover:bg-surface-active " +
+          "active:bg-chrome disabled:bg-disabled-fill",
         link: "text-primary underline-offset-4 hover:underline",
         destructive:
-          "bg-danger text-danger-foreground shadow-sm hover:bg-danger-600",
+          "bg-danger text-danger-foreground shadow-sm hover:bg-danger-hover " +
+          "active:bg-danger-active disabled:bg-disabled-fill",
       },
       size: {
         // 36px painted, 44px tappable — see `tap-area-44` in globals.css.

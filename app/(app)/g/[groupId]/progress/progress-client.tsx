@@ -85,12 +85,19 @@ export function ProgressClient({
 
       {/* Streak hero — the motivational anchor, and this screen's ONE hero.
           The flat bg-primary card becomes the gradient + sheen surface; the
-          flame keeps its gold (a celebration hue, and the only gold here).
+          flame keeps the accent (a celebration hue, and the only accent here),
+          but in the hero's own accent token — plain --accent measured 1.80:1
+          on the medallion tile. See globals.css --gradient-hero-accent.
           `longest` moves into the trailing slot as a HeroChip — NOT a Badge:
           Badge sets text-foreground, which is near-black on this gradient in
           light theme (~1.7:1). See components/ui/hero-card.tsx. */}
       <HeroCard
-        medallion={<FlameIcon className="size-8 text-accent" />}
+        medallion={
+          <FlameIcon
+            className="size-8"
+            style={{ color: "var(--gradient-hero-accent)" }}
+          />
+        }
         label="Current streak"
         stat={current.toLocaleString()}
         caption={`day${current === 1 ? "" : "s"} in a row`}

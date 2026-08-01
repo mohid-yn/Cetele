@@ -22,11 +22,12 @@ import {
 } from "@/components/ui";
 import { RingDemo } from "./ring-demo";
 import { AppIconLogo, WebAppLogo } from "@/components/ui/logo";
+import { FlameIcon } from "@/components/app/icons";
 
 export const metadata: Metadata = {
   title: "Design System · Cetele",
   description:
-    "Living style guide — tokens and components, themed emerald + gold on warm cream.",
+    "Living style guide — tokens and components, themed sage + rose on warm paper.",
 };
 
 /* ---------- small presentational helpers (page-local) ---------- */
@@ -170,8 +171,8 @@ export default function DesignSystemPage() {
           Design System
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Tokens and reusable components for Cetele, themed emerald + gold on
-          warm cream. Everything below is driven by the design tokens in{" "}
+          Tokens and reusable components for Cetele, themed sage + rose on warm
+          paper. Everything below is driven by the design tokens in{" "}
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
             app/globals.css
           </code>
@@ -199,7 +200,7 @@ export default function DesignSystemPage() {
         <Section
           id="brand"
           title="Brand marks"
-          description="The Cetele logo — a green mark with a gold arrow, from public/logo.svg (a fixed-colour brand asset, not theme-token-driven). AppIconLogo is the square hero mark on a light tile (login, splash); WebAppLogo is the horizontal icon + wordmark for headers and the app sidebar. Import from @/components/ui/logo."
+          description="The Cetele logo — a sage mark with a rose arrow, from public/logo.svg (a fixed-colour brand asset, not theme-token-driven: it does not flip with the theme). Recoloured for v3 by matching each gradient stop's L* to the nearest tone of the new palettes, so the mark's internal lightness structure is unchanged. AppIconLogo is the square hero mark on a light tile (login, splash); WebAppLogo is the horizontal icon + wordmark for headers and the app sidebar. Import from @/components/ui/logo."
         >
           <Card>
             <CardContent className="flex flex-wrap items-center gap-8 pt-6">
@@ -223,39 +224,39 @@ export default function DesignSystemPage() {
         <Section
           id="colors"
           title="Colors"
-          description="Emerald (primary) is calm, spiritual, and the colour of completion/growth — it owns the surface, chrome, and 'done' states. Gold (accent) arouses — reserved for the single most important action and live progress, so its energy is earned, not background noise. Red is errors only, never urgency/FOMO."
+          description="Sage (primary) is calm and the colour of completion/growth — it owns the surface, chrome, and 'done' states. Rose (accent) arouses — reserved for the single most important action and live progress, so its energy is earned, not background noise. Rust (danger) is errors only, never urgency/FOMO; it sits only 31° from the accent, so the glyph beside it is load-bearing."
         >
           <Card>
             <CardContent className="grid gap-3 pt-6 text-sm sm:grid-cols-2">
               {[
                 [
-                  "Emerald — primary",
-                  "Brand, calm/spiritual, completion & growth. Buttons, chrome, headings, closed rings.",
+                  "Sage — primary",
+                  "Brand, calm, completion & growth. Buttons, chrome, headings, closed rings.",
                   "bg-primary",
                 ],
                 [
-                  "Gold — accent",
-                  "Energy. The one CTA per view + progress + celebration. (Dark text for AA contrast.)",
+                  "Rose — accent",
+                  "The one earned action per view + celebration. (Dark label: white-on-rose is 2.98:1 and fails.)",
                   "bg-accent",
                 ],
                 [
-                  "Green — success",
-                  "Complete / on track. Always paired with a ✓ glyph.",
+                  "Sage, deeper — success",
+                  "Complete / on track. Same family as the brand, by design. Always paired with a ✓ glyph.",
                   "bg-success",
                 ],
                 [
-                  "Amber — warning",
+                  "Ochre — warning",
                   "At risk / attention. Paired with text.",
                   "bg-warning",
                 ],
                 [
-                  "Red — danger",
-                  "Errors & destructive actions ONLY. Never FOMO.",
+                  "Rust — danger",
+                  "Errors & destructive actions ONLY. 31° from the accent, so the glyph is load-bearing.",
                   "bg-danger",
                 ],
                 [
-                  "Slate — neutral",
-                  "Text, borders, muted surfaces.",
+                  "Tan — neutral",
+                  "Paper: text, borders, muted surfaces. One warm family, no cool grey.",
                   "bg-neutral-400",
                 ],
               ].map(([name, role, dot]) => (
@@ -286,9 +287,9 @@ export default function DesignSystemPage() {
             <Swatch name="Card" varName="--card" />
           </div>
           <div className="space-y-5">
-            <Scale label="Primary · emerald" prefix="primary" />
-            <Scale label="Accent · gold" prefix="accent" />
-            <Scale label="Neutral · slate" prefix="neutral" />
+            <Scale label="Primary · sage" prefix="primary" />
+            <Scale label="Accent · rose" prefix="accent" />
+            <Scale label="Neutral · tan" prefix="neutral" />
           </div>
         </Section>
 
@@ -360,7 +361,7 @@ export default function DesignSystemPage() {
         <Section
           id="elevation"
           title="Elevation"
-          description="Soft, neutral shadows for a clean lift off the cream page. Cards use sm; popovers/menus use md–lg; modals use xl."
+          description="Soft, warm-tinted shadows for a clean lift off the paper page — a neutral-grey shadow over a warm surface reads as dirt, so these carry the neutral ramp's own hue. Cards use sm; popovers/menus use md–lg; modals use xl."
         >
           <div className="flex flex-wrap gap-6">
             {SHADOWS.map((s) => (
@@ -568,8 +569,17 @@ export default function DesignSystemPage() {
           <div className="space-y-8">
             <div className="space-y-3">
               <Eyebrow>HeroCard — one emphasis surface per screen</Eyebrow>
+              {/* The house icon on --gradient-hero-accent, matching the real
+                  Progress hero. Was an emoji, which took its colour from the OS
+                  font instead of a token — and the owner's call on the count
+                  screen's speaker was that emoji "look tacky". */}
               <HeroCard
-                medallion={<span className="text-2xl">🔥</span>}
+                medallion={
+                  <FlameIcon
+                    className="size-8"
+                    style={{ color: "var(--gradient-hero-accent)" }}
+                  />
+                }
                 label="Current streak"
                 stat="12 days"
                 caption="Your longest run yet — keep it alive."
@@ -639,7 +649,7 @@ export default function DesignSystemPage() {
       </div>
 
       <footer className="mt-20 border-t border-border pt-6 text-xs text-muted-foreground">
-        Cetele design system · emerald + gold on warm cream · tokens in{" "}
+        Cetele design system · sage + rose on warm paper · tokens in{" "}
         <code className="font-mono">app/globals.css</code>, components in{" "}
         <code className="font-mono">components/ui/</code>.
       </footer>

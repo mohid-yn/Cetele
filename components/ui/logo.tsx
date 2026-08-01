@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Brand marks. The mark itself lives in `public/logo.svg` (a fixed green + gold
+ * Brand marks. The mark itself lives in `public/logo.svg` (a fixed sage + rose
  * logo) and is referenced here rather than inlined — it carries its own colours
  * (so it isn't theme-token-driven), and keeping it a static asset avoids raw hex
  * in TSX (the token-contract ESLint rule) and gradient-id collisions when the

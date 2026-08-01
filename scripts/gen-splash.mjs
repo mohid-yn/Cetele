@@ -25,7 +25,7 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const svg = fs.readFileSync(path.join(root, "public/logo.svg"), "utf8");
 const uri = "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64");
 
-const CREAM = "#faf6ec"; // matches BRAND_SURFACE_COLOR / --background (light)
+const CREAM = "#fff8ee"; // matches BRAND_SURFACE_COLOR / --background (light)
 const outDir = path.join(root, "public/splash");
 fs.mkdirSync(outDir, { recursive: true });
 

@@ -480,8 +480,8 @@ export function CountClient({
         )}
 
         {/* Corrections read as ONE recessive tray, not two floating buttons:
-            a soft pill on the muted tint, hairline-divided, muted label. Gold
-            is spent on the primary action below and the ring owns the screen —
+            a soft pill on the muted tint, hairline-divided, muted label. The
+            accent is spent on the primary action below and the ring owns the screen —
             an undo must be findable without competing with either. Segments are
             44px so they stay thumb-sized on a phone at any viewport. Undo is
             optimistic like a tap now — no hold, the number just drops. */}

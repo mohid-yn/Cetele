@@ -32,7 +32,11 @@ export function ThemeToggle({ className }: { className?: string }) {
       role="radiogroup"
       aria-label="Theme"
       className={cn(
-        "relative grid grid-cols-2 rounded-full bg-muted p-1",
+        // Track is the recessed tier; the thumb below is one step ABOVE it in
+        // BOTH themes. v1 used `bg-card` on `bg-muted`, which is lighter-on-
+        // darker in light but DARKER-on-lighter in dark — so at night the
+        // selected option read as pressed into the control rather than raised.
+        "relative grid grid-cols-2 rounded-full border border-border bg-muted p-1",
         className,
       )}
     >
@@ -40,7 +44,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-card shadow-sm ring-1 ring-border",
+          "pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-elevated shadow-sm ring-1 ring-outline/40",
           animate &&
             "transition-transform duration-[var(--duration-base)] ease-[var(--ease-brand)]",
           isDark && "translate-x-full",

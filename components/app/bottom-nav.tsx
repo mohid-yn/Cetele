@@ -28,7 +28,10 @@ export function BottomNav({
   return (
     <nav
       aria-label="Primary"
-      className="shrink-0 border-t border-border bg-card/95 shadow-up backdrop-blur lg:hidden"
+      // `bg-chrome`, not `bg-card`: the nav is the FRAME, not content. Sharing
+      // --card made it pure white at 1.08:1 against the page, which is why it
+      // read as a blank slab. Chrome recedes below the page in both themes.
+      className="shrink-0 border-t border-border bg-chrome shadow-up lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul

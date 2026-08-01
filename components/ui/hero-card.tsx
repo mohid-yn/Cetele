@@ -3,16 +3,18 @@ import { cn } from "@/lib/utils";
 
 /**
  * The one emphasis surface per screen (Progress' streak block, the Today
- * banners). Deep emerald gradient + a sheen layer, so the screen has a single
+ * banners). Deep sage gradient + a sheen layer, so the screen has a single
  * clear focal point rather than a row of equal-weight cards.
  *
  * Text colour is `--gradient-hero-foreground`, NOT `text-primary-foreground`:
- * on dark, `--primary` is the light emerald, so `--primary-foreground` is
+ * on dark, `--primary` is the light sage, so `--primary-foreground` is
  * near-black and would vanish against these deep stops. The dedicated token is
- * ≥5.48:1 against every stop in both themes. See DESIGN_SYSTEM.md §Depth.
+ * ≥5.26:1 against every stop in both themes — measured under the sheen, not on
+ * the bare stop, because the sheen is what text at the top-right actually sits
+ * on (bare, the worst case is 7.02:1). See DESIGN_SYSTEM.md §Depth.
  *
- * The gradient carries the emphasis on its own — this is not a gold surface.
- * Gold stays scarce (D25): if a hero needs an action, that action can be the
+ * The gradient carries the emphasis on its own — this is not an accent surface.
+ * Rose stays scarce (D25): if a hero needs an action, that action can be the
  * screen's one accent, but the hero itself never is.
  */
 export interface HeroCardProps extends React.HTMLAttributes<HTMLDivElement> {
