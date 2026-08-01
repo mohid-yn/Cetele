@@ -69,7 +69,7 @@ export default async function ManageGroupPage({
       .order("sort_order"),
     supabase
       .from("invites")
-      .select("id, email, role, code, created_at")
+      .select("id, email, code, created_at")
       .eq("group_id", active.groupId)
       .order("created_at"),
     // M7 (D27): a co-admin can claim the group if the owner is absent.
@@ -77,6 +77,17 @@ export default async function ManageGroupPage({
   ]);
 
   if (!group) redirect("/groups");
+
+  // 0022: the row with NO email is the circle's one open link — exactly one
+  // exists, guaranteed by a partial unique index, so this `find` cannot be
+  // ambiguous. Everything else is a one-off, email-locked, single-use invite.
+  // `defaultCode` is null only for a circle whose backfill has not run, which
+  // the Regenerate action repairs rather than reporting.
+  const defaultCode =
+    (invites ?? []).find((i) => i.email === null)?.code ?? null;
+  const lockedInvites = (invites ?? [])
+    .filter((i) => i.email !== null)
+    .map(({ id, email, code }) => ({ id, email, code }));
 
   const roleRank: Record<string, number> = { owner: 0, admin: 1, member: 2 };
   const memberRows = (members ?? [])
@@ -99,12 +110,8 @@ export default async function ManageGroupPage({
       myRole={active.role}
       members={memberRows}
       tasks={tasks ?? []}
-      invites={(invites ?? []).map(({ id, email, role, code }) => ({
-        id,
-        email,
-        role: role as "admin" | "member",
-        code,
-      }))}
+      defaultCode={defaultCode}
+      invites={lockedInvites}
       canClaim={canClaim ?? false}
     />
   );

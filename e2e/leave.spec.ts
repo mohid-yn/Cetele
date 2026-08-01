@@ -32,8 +32,8 @@ test("owner creates a circle and an open invite", async ({ page }) => {
   // Creating a circle lands you straight in its Manage screen (CET-30).
   await page.waitForURL("**/group/manage");
 
-  await page.click('button:has-text("Create invite")');
-  await expect(page.getByText("Open link — anyone can join")).toBeVisible();
+  // 0022: the circle's open link comes WITH the circle — nothing to click.
+  await expect(page.getByText("Add people")).toBeVisible();
   const joinLink = await page
     .locator("code", { hasText: "/join/" })
     .first()

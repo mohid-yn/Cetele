@@ -117,13 +117,17 @@ reset role;
 -- ----------------------------------------------------------------------------
 -- invites — admin-only surface
 -- ----------------------------------------------------------------------------
+-- 0022: the hand-created invite is the EMAIL-LOCKED one. The open link is no
+-- longer something an admin makes — every circle owns exactly one by default
+-- and regenerates it (see suite 011).
 select pg_temp.impersonate('e0000000-0000-0000-0000-000000000002'); -- a
 select lives_ok(
-  $$insert into public.invites (group_id, role)
-    values ('e0000000-0000-0000-0000-0000000000b1', 'member')$$,
-  'co-admin can create an open invite (re-share, D26)');
+  $$insert into public.invites (group_id, email)
+    values ('e0000000-0000-0000-0000-0000000000b1', 'first@m2.test')$$,
+  'co-admin can create a locked invite (re-share, D26)');
 select matches(
-  (select code from public.invites where group_id = 'e0000000-0000-0000-0000-0000000000b1' limit 1),
+  (select code from public.invites
+    where group_id = 'e0000000-0000-0000-0000-0000000000b1' limit 1),
   '^[0-9A-F]{8}$', 'invite code is DB-minted, 8 hex chars');
 reset role;
 
@@ -131,16 +135,20 @@ select pg_temp.impersonate('e0000000-0000-0000-0000-000000000003'); -- m
 select is(
   (select count(*) from public.invites), 0::bigint, 'plain member sees no invites');
 select throws_ok(
-  $$insert into public.invites (group_id, role)
-    values ('e0000000-0000-0000-0000-0000000000b1', 'member')$$,
+  $$insert into public.invites (group_id, email)
+    values ('e0000000-0000-0000-0000-0000000000b1', 'nope@m2.test')$$,
   '42501', null,
   'plain member cannot create an invite');
 reset role;
 
--- fixture invites for the join-flow tests (as postgres; codes fixed)
+-- fixture invites for the join-flow tests (as postgres; codes fixed). LOCKEDY1
+-- is member-role now — 0022 banned admin invites outright, so the old "an
+-- admin-role invite must not promote" case is replaced below by its mirror:
+-- accepting must not DEMOTE someone who is already an admin.
+delete from public.invites where group_id = 'e0000000-0000-0000-0000-0000000000b1';
 insert into public.invites (group_id, email, role, code) values
   ('e0000000-0000-0000-0000-0000000000b1', null,        'member', 'OPENCODE'),
-  ('e0000000-0000-0000-0000-0000000000b1', 'y@m2.test', 'admin',  'LOCKEDY1');
+  ('e0000000-0000-0000-0000-0000000000b1', 'y@m2.test', 'member', 'LOCKEDY1');
 
 -- ----------------------------------------------------------------------------
 -- lookup_invite
@@ -190,22 +198,30 @@ select is(
   (select count(*) from public.invites where code = 'OPENCODE'),
   1::bigint, 'open invite survives an accept (reusable until revoked)');
 
--- idempotent for an existing member, and never a sideways promotion
+-- idempotent for an existing member, and never a sideways role change
 select pg_temp.impersonate('e0000000-0000-0000-0000-000000000003'); -- m
 select lives_ok(
   $$select public.accept_invite('LOCKEDY1')$$,
   'accept is a no-op for an existing member');
 reset role;
--- (m is not y@m2.test — but m is already a member, so the lock never bites;
---  the role must be untouched even though the invite says admin)
-select is(
-  (select role from public.memberships
-    where group_id = 'e0000000-0000-0000-0000-0000000000b1'
-      and user_id = 'e0000000-0000-0000-0000-000000000003'),
-  'member', 'an admin-role invite never promotes an existing member');
+-- (m is not y@m2.test — but m is already a member, so the lock never bites)
 select is(
   (select count(*) from public.invites where code = 'LOCKEDY1'),
   1::bigint, 'a no-op accept does not consume a locked invite');
+
+-- 0022's mirror of the old "an admin invite must not promote" case: with admin
+-- invites gone, the remaining risk runs the other way — a co-admin who opens
+-- the circle's own open link must not be reset to member by it.
+select pg_temp.impersonate('e0000000-0000-0000-0000-000000000002'); -- a (co-admin)
+select lives_ok(
+  $$select public.accept_invite('OPENCODE')$$,
+  'accept is a no-op for an existing co-admin');
+reset role;
+select is(
+  (select role from public.memberships
+    where group_id = 'e0000000-0000-0000-0000-0000000000b1'
+      and user_id = 'e0000000-0000-0000-0000-000000000002'),
+  'admin', 'a member-role invite never DEMOTES an existing co-admin');
 
 -- ----------------------------------------------------------------------------
 -- accept_invite — locked accept + single-use consumption (D35)
@@ -219,22 +235,25 @@ select is(
   (select role from public.memberships
     where group_id = 'e0000000-0000-0000-0000-0000000000b1'
       and user_id = 'e0000000-0000-0000-0000-000000000005'),
-  'admin', 'locked invite carried its co-admin role');
+  'member', 'a locked invite joins at member (0022 — no admin invites)');
 select is(
   (select count(*) from public.invites where code = 'LOCKEDY1'),
   0::bigint, 'locked invite is consumed on accept (single-use)');
 
 -- ----------------------------------------------------------------------------
--- revoke: admin deletes an invite → the code dies
+-- revoke: a LOCKED invite can be deleted → the code dies. (0022 protects the
+-- default open link from the same delete; that is pinned in suite 011.)
 -- ----------------------------------------------------------------------------
+insert into public.invites (group_id, email, role, code) values
+  ('e0000000-0000-0000-0000-0000000000b1', 'z@m2.test', 'member', 'LOCKEDZ1');
 select pg_temp.impersonate('e0000000-0000-0000-0000-000000000001'); -- o
 select lives_ok(
-  $$delete from public.invites where code = 'OPENCODE'$$,
-  'owner can revoke an open invite');
+  $$delete from public.invites where code = 'LOCKEDZ1'$$,
+  'owner can revoke a locked invite');
 reset role;
-select pg_temp.impersonate('e0000000-0000-0000-0000-000000000005'); -- y (now a co-admin, but code is dead)
+select pg_temp.impersonate('e0000000-0000-0000-0000-000000000004'); -- x
 select throws_matching(
-  $$select public.accept_invite('OPENCODE')$$,
+  $$select public.accept_invite('LOCKEDZ1')$$,
   'invite not found',
   'a revoked code no longer joins anyone');
 reset role;

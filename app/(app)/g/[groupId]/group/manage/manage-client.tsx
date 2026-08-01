@@ -87,10 +87,16 @@ export type ManageTask = {
   target_count: number;
   sort_order: number;
 };
+/**
+ * A ONE-OFF invite, locked to an email and consumed on accept. The circle's
+ * open link is not one of these — it is a single code passed as `defaultCode`,
+ * because there is exactly one and it is regenerated rather than listed (0022).
+ * No `role`: an invite always joins at member, so a badge saying so would be
+ * chrome that never changes.
+ */
 export type ManageInvite = {
   id: string;
   email: string | null;
-  role: "admin" | "member";
   code: string;
 };
 
@@ -271,6 +277,7 @@ export function ManageClient({
   members: propMembers,
   tasks: propTasks,
   invites: propInvites,
+  defaultCode: propDefaultCode,
   canClaim,
 }: {
   group: ManageGroup;
@@ -279,6 +286,7 @@ export function ManageClient({
   members: ManageMember[];
   tasks: ManageTask[];
   invites: ManageInvite[];
+  defaultCode: string | null;
   canClaim: boolean;
 }) {
   // The three lists render from local state (CET-30): a mutation shows the
@@ -286,12 +294,18 @@ export function ManageClient({
   const [members, setMembers] = usePropState(propMembers);
   const [tasks, setTasks] = usePropState(propTasks);
   const [invites, setInvites] = usePropState(propInvites);
+  const [defaultCode, setDefaultCode] = usePropState(propDefaultCode);
 
   const isOwner = myRole === "owner";
   const owner = members.find((m) => m.role === "owner");
 
   const membersAct = useAction();
   const inviteAct = useAction();
+  // Regenerate gets its OWN action state, not inviteAct's: the two live in the
+  // same card, and sharing one would let a failed "add locked invite" print its
+  // error under the link the admin just successfully regenerated.
+  const regenAct = useAction();
+  const [regenOpen, setRegenOpen] = React.useState(false);
   const taskAct = useAction();
   const settingsAct = useAction();
   const ownershipAct = useAction();
@@ -303,9 +317,6 @@ export function ManageClient({
   const [newTarget, setNewTarget] = React.useState("100");
   const [newFrequency, setNewFrequency] = React.useState("1");
   const [inviteEmail, setInviteEmail] = React.useState("");
-  const [inviteRole, setInviteRole] = React.useState<"admin" | "member">(
-    "member",
-  );
   const [name, setName] = React.useState(group.name);
   const [transferId, setTransferId] = React.useState("");
 
@@ -476,72 +487,94 @@ export function ManageClient({
         </ul>
         <ErrorNote error={membersAct.error} />
 
-        {/* Share / invites (D34: links are shared by you — nothing is emailed) */}
+        {/* Share / invites (D34: links are shared by you — nothing is emailed)
+            0022: the circle's link is a PROPERTY of the circle, not a thing you
+            manage a list of. It always exists and it is regenerated, never
+            revoked-and-recreated — so the common case ("let me send someone the
+            link") is a copy button and nothing else. */}
         <Card className="mt-3 flex flex-col gap-4 p-4">
           <div>
             <p className="text-sm font-semibold text-foreground">Add people</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Create an invite link and share it yourself (WhatsApp, in person).
-              Locking an invite to an email makes it single-use for that person;
-              an open link works for anyone until you revoke it.
+              Share this link yourself (WhatsApp, in person) — nothing is
+              emailed. Anyone who opens it joins as a member; co-admins are made
+              in the members list above, never by a link.
             </p>
           </div>
 
-          <Field
-            label="Lock to an email (optional)"
-            htmlFor="invite-email"
-            hint="They must sign in with this email to join."
-          >
-            <div className="flex flex-wrap gap-2">
-              <Input
-                id="invite-email"
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="min-w-[12rem] flex-1"
-              />
-              <RoleToggle
-                value={inviteRole}
-                onChange={(r) => {
-                  if (r === "admin" || r === "member") setInviteRole(r);
-                }}
-              />
+          <div className="flex flex-col gap-2">
+            <CopyField
+              label="Invite link"
+              value={defaultCode ? joinUrl(defaultCode) : "—"}
+            />
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Regenerating makes a new link and stops the old one working.
+              </p>
               <Button
-                variant="primary"
-                disabled={inviteAct.pending}
-                onClick={() =>
-                  inviteAct.run(
-                    () => act.createInvite(group.id, inviteRole, inviteEmail),
-                    (res) => {
-                      if (res.invite) setInvites((iv) => [...iv, res.invite!]);
-                      setInviteEmail("");
-                      setInviteRole("member");
-                    },
-                  )
-                }
+                size="sm"
+                variant="outline"
+                disabled={regenAct.pending}
+                onClick={() => setRegenOpen(true)}
               >
-                {inviteAct.pending ? "Creating…" : "Create invite"}
+                {regenAct.pending ? "Regenerating…" : "Regenerate"}
               </Button>
             </div>
-          </Field>
-          <ErrorNote error={inviteAct.error} />
+            <ErrorNote error={regenAct.error} />
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-border pt-3">
+            <div>
+              <Eyebrow>Invite one person</Eyebrow>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                A single-use link locked to one email — it stops working the
+                moment they join.
+              </p>
+            </div>
+            <Field
+              label="Lock to an email"
+              htmlFor="invite-email"
+              hint="They must sign in with this email to join."
+            >
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  id="invite-email"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="min-w-[12rem] flex-1"
+                />
+                <Button
+                  variant="primary"
+                  disabled={inviteAct.pending}
+                  onClick={() =>
+                    inviteAct.run(
+                      () => act.createInvite(group.id, inviteEmail),
+                      (res) => {
+                        if (res.invite)
+                          setInvites((iv) => [...iv, res.invite!]);
+                        setInviteEmail("");
+                      },
+                    )
+                  }
+                >
+                  {inviteAct.pending ? "Creating…" : "Create invite"}
+                </Button>
+              </div>
+            </Field>
+            <ErrorNote error={inviteAct.error} />
+          </div>
 
           {invites.length > 0 && (
             <div className="flex flex-col gap-3 border-t border-border pt-3">
-              <Eyebrow>Active invites ({invites.length})</Eyebrow>
+              <Eyebrow>Waiting to be used ({invites.length})</Eyebrow>
               {invites.map((i) => (
                 <div key={i.id} className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="min-w-0 flex-1 truncate text-foreground">
-                      {i.email ?? "Open link — anyone can join"}
+                      {i.email}
                     </span>
-                    <Badge
-                      variant={i.role === "admin" ? "primary" : "neutral"}
-                      size="sm"
-                    >
-                      {i.role === "admin" ? "co-admin" : "member"}
-                    </Badge>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -742,6 +775,24 @@ export function ManageClient({
       </section>
 
       {/* Confirms -------------------------------------------------------- */}
+      {/* Regenerate is confirmed because it is irreversible and its blast
+          radius is invisible from here: every copy of the old link already
+          shared — group chats, a pinned message — dies at once. */}
+      <ConfirmDialog
+        open={regenOpen}
+        onClose={() => setRegenOpen(false)}
+        onConfirm={() =>
+          regenAct.run(
+            () => act.regenerateInvite(group.id),
+            (res) => {
+              if (res.code) setDefaultCode(res.code);
+            },
+          )
+        }
+        title="Make a new invite link?"
+        description="The current link stops working immediately — anyone you already sent it to will need the new one. People who have already joined are unaffected."
+        confirmLabel="Regenerate link"
+      />
       <ConfirmDialog
         open={claimOpen}
         onClose={() => setClaimOpen(false)}

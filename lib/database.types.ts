@@ -796,6 +796,7 @@ export type Database = {
         Args: { p_group: string; p_new_owner: string };
         Returns: undefined;
       };
+      regenerate_invite: { Args: { p_group_id: string }; Returns: string };
       resolve_report: {
         Args: { p_note?: string; p_report: string; p_status: string };
         Returns: undefined;

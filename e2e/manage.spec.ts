@@ -60,14 +60,18 @@ test("owner: create group → manage → tasks → open invite", async ({ page }
     page.getByRole("main").getByText("M2 Circle Renamed").first(),
   ).toBeVisible();
 
-  // create an OPEN invite (reusable, D35) and capture its /join link
-  await page.click('button:has-text("Create invite")');
-  await expect(page.getByText("Open link — anyone can join")).toBeVisible();
+  // 0022: the circle's open link is NOT created here — it exists from the
+  // moment create_group ran. Nothing is clicked; it is simply on the page.
   const joinLink = await page
     .locator("code", { hasText: "/join/" })
     .first()
     .innerText();
   expect(joinLink).toMatch(/\/join\/[0-9A-F]{8}$/);
+
+  // Regenerate replaces it, and the OLD code must stop working (asserted in
+  // the dedicated invite spec). Here we only pin that a fresh circle already
+  // has a link, since the joiner test below depends on it.
+  await expect(page.getByRole("button", { name: "Regenerate" })).toBeVisible();
 
   // stash it for the joiner test
   process.env.E2E_JOIN_LINK = joinLink;

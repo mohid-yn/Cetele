@@ -265,27 +265,37 @@ export async function removeMember(
 type NewInvite = {
   id: string;
   email: string | null;
-  role: "admin" | "member";
   code: string;
 };
 
+/**
+ * Mint a ONE-OFF invite locked to an email (single-use — accept_invite consumes
+ * it). The circle's open link is not created here: every circle owns exactly
+ * one from birth and it is regenerated, not re-created (0022).
+ *
+ * The email is REQUIRED now. Passing none used to mean "open link", and that
+ * door is closed at the database too — a second `email is null` row for the
+ * group violates `invites_one_default_per_group`. Refusing it here turns what
+ * would surface as a raw unique-violation into a sentence.
+ */
 export async function createInvite(
   groupId: string,
-  role: "admin" | "member",
   email: string,
 ): Promise<Result & { invite?: NewInvite }> {
-  if (role !== "admin" && role !== "member") return fail("Invalid role");
   const locked = email.trim().toLowerCase();
-  if (locked && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(locked))
+  if (!locked) return fail("Enter an email to lock this invite to");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(locked))
     return fail("That doesn't look like an email address");
 
   const supabase = await createClient();
-  // Code is DB-minted (0007 column default; clients can't write it). Return the
-  // inserted row so the client can append it optimistically (CET-30).
+  // Code is DB-minted (0007 column default; clients can't write it). Role is a
+  // DB default of 'member' and CHECKed to it — an invite is never a promotion
+  // path (0022), so there is nothing to send. Return the inserted row so the
+  // client can append it optimistically (CET-30).
   const { data: invite, error } = await supabase
     .from("invites")
-    .insert({ group_id: groupId, role, email: locked || null })
-    .select("id, email, role, code")
+    .insert({ group_id: groupId, email: locked })
+    .select("id, email, code")
     .single();
   if (error) return fail(error.message);
 
@@ -293,6 +303,11 @@ export async function createInvite(
   return { error: null, invite: invite as NewInvite };
 }
 
+/**
+ * Revoke a one-off locked invite. The circle's open link is deliberately NOT
+ * revocable — RLS filters it out of this delete, so a caller who aims at it
+ * gets a silent no-op rather than an unjoinable circle. Regenerate instead.
+ */
 export async function revokeInvite(
   groupId: string,
   inviteId: string,
@@ -303,4 +318,25 @@ export async function revokeInvite(
 
   revalidateManage(groupId);
   return ok;
+}
+
+/**
+ * Mint a fresh code for the circle's one open link, which kills every copy
+ * already shared. This replaces revoke-and-re-create: the circle is never left
+ * without a way in, and there is never a list of links to reason about.
+ *
+ * An RPC because `authenticated` holds no UPDATE grant on `invites` (002) —
+ * the code only ever moves inside SECURITY DEFINER.
+ */
+export async function regenerateInvite(
+  groupId: string,
+): Promise<Result & { code?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("regenerate_invite", {
+    p_group_id: groupId,
+  });
+  if (error) return fail(error.message);
+
+  revalidateManage(groupId);
+  return { error: null, code: data as string };
 }
