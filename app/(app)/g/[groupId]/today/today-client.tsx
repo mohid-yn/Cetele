@@ -305,17 +305,13 @@ export function TodayClient({
         </SectionHeading>
         <Grid as="ul" cols="cards" gap="md">
           {rings.map(({ task: t, count, goal, done, shareDone, stretched }) => {
-            // The one to continue gets an emerald rim, so the eye lands on the
-            // same ring the gold "Continue" CTA above points at.
-            //
-            // Only when it is genuinely PART-DONE. `next` sorts the unfinished
-            // rings by count/target, so when they are all still on zero every
-            // ratio ties and the sort just returns the first one — the rim then
-            // landed on an arbitrary untouched ring and read as a stuck
-            // selection state rather than "carry on with this". The
-            // goal-gradient it exists to exploit needs progress to point at;
-            // with none, the gold CTA alone says where to start.
-            const promoted = !done && count > 0 && next?.task.id === t.id;
+            // NO card is singled out. One used to carry an emerald glow — the
+            // ring nearest done — on a goal-gradient argument. Removed on the
+            // owner's call, and the reason is the product, not the styling:
+            // **the tasks in a cetele have no order.** Dressing one up as the
+            // next one implies a sequence that does not exist, and the member
+            // decides what to reach for. Every ring is offered equally; the
+            // rings themselves already show where the progress is.
             return (
               <li key={t.id}>
                 <Link
@@ -323,7 +319,6 @@ export function TodayClient({
                   className={cn(
                     cardVariants({ padding: "compact" }),
                     "flex items-center gap-4 transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-md motion-reduce:transform-none",
-                    promoted && "glow-primary",
                   )}
                 >
                   <ProgressRing

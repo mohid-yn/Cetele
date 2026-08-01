@@ -8,7 +8,12 @@ import { useCelebration } from "@/components/app/celebration";
 import { TapPad } from "@/components/app/tap-pad";
 import { InlineAlert } from "@/components/app/inline-alert";
 import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
-import { ArrowLeftIcon, MinusIcon } from "@/components/app/icons";
+import {
+  ArrowLeftIcon,
+  MinusIcon,
+  SpeakerOffIcon,
+  SpeakerOnIcon,
+} from "@/components/app/icons";
 import { playComplete, playTen } from "@/lib/sound";
 import { groupHref } from "@/lib/group-href";
 import { useLocalToday } from "@/lib/use-local-today";
@@ -395,8 +400,14 @@ export function CountClient({
           size="sm"
           onClick={() => setSound((s) => !s)}
           className="hidden lg:inline-flex"
+          // Deliberately NO aria-pressed: the LABEL carries the state
+          // ("Sound on" / "Sound off"). With both, a screen reader announces
+          // "Sound off, not pressed" — a double negative. A toggle uses a
+          // static name plus aria-pressed, or a changing name alone. This is
+          // the latter.
+          leadingIcon={sound ? <SpeakerOnIcon /> : <SpeakerOffIcon />}
         >
-          {sound ? "🔊 Sound on" : "🔇 Sound off"}
+          {sound ? "Sound on" : "Sound off"}
         </Button>
       </div>
 

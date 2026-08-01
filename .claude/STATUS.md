@@ -73,6 +73,24 @@ vanished and every downstream assertion ran against a count of 0. In-app navigat
 `core-loop.spec` already documented this ("heading back waits for the debounced flush") and the new spec now does the
 same. Not an app bug: client-side nav is the real user's path.
 
+**Then two owner-reported UI calls (same day).** _"i dont like the green halo effect on the current task it looks
+unprofessional and tacky"_ → then, when offered a quieter version of the same emphasis: _"nah i dont want the look here
+job because theres no order for the tasks to be done."_ **The emphasis is gone entirely, not softened, and the reason is
+the product rather than the styling:** the tasks in a cetele have **no order**, so dressing one card up as "the next
+one" asserts a sequence that does not exist. Every ring is now offered equally (`promoted` + `glow-primary` deleted from
+the Today card); the rings themselves already show where the progress is. _Still open and NOT acted on:_ the gold
+"Continue X" CTA above the grid picks a task by the same goal-gradient logic, so the owner's reason applies to it too —
+flagged, awaiting their call, because removing it is a bigger change (it is the screen's one primary action and several
+e2e specs navigate through it). `glow-primary` itself is untouched as a token, and still used by the count screen's tap
+pad (which fades in with progress on a single ring, not to rank one task above another).
+_And:_ the count screen's sound toggle was **🔊/🔇 emoji** — owner: _"emojis look tacky."_ Now `SpeakerOnIcon` /
+`SpeakerOffIcon` in the house icon set: the standard speaker-plus-waves / speaker-plus-cross shapes, drawn in the set's
+own stroke language on `currentColor`, so the icon takes its colour from a token instead of the OS's own emoji font.
+_Caught by the suite, worth keeping:_ adding `aria-pressed` to that button broke `stretch-goal.spec`'s day-strip
+assertion (`button[aria-pressed="true"] svg` went 1 → 2, because the sound button now had both). The fix was to **remove
+`aria-pressed`**, not loosen the selector — the button's NAME already changes, and with both a screen reader announces
+"Sound off, not pressed", a double negative. A toggle takes a static name plus `aria-pressed`, or a changing name alone.
+
 **Then an audit pass over the above, which found a PRE-EXISTING bug in `Dialog` that the new screen was the first to
 expose — fixed at the primitive.** `Dialog` had **no max-height and no scroll**, and its container is
 `fixed inset-0 grid place-items-center`, which centres an oversized card and overflows it in BOTH directions with

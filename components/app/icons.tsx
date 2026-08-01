@@ -96,6 +96,26 @@ export const GridIcon = (p: IconProps) => (
   </svg>
 );
 
+/* Volume on/off. The standard speaker-plus-waves and speaker-plus-cross
+   shapes every platform uses, drawn in this set's stroke language so they sit
+   with the rest — an emoji renders in the OS's own colour and style, which is
+   the one thing a token-driven UI cannot control. */
+export const SpeakerOnIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M11 5 6 9H2v6h4l5 4V5Z" />
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+  </svg>
+);
+
+export const SpeakerOffIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M11 5 6 9H2v6h4l5 4V5Z" />
+    <path d="m22 9-6 6" />
+    <path d="m16 9 6 6" />
+  </svg>
+);
+
 /** Concentric rings — the app's own vocabulary for "what I'm aiming at". */
 export const TargetIcon = (p: IconProps) => (
   <svg {...base(p)}>
