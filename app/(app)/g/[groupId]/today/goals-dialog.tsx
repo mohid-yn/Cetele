@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { Button, Dialog, Input } from "@/components/ui";
-import { goalCap } from "@/lib/goals";
-import { setTaskGoal } from "./actions";
+import { goalCap, frequencyLabel, MAX_FREQUENCY_DAYS } from "@/lib/goals";
+import { setTaskGoal, setTaskFrequency } from "./actions";
 
 /**
  * Every goal I aim at in ONE circle, edited together (D51).
@@ -28,6 +28,10 @@ export type GoalRow = {
   target: number;
   /** What I currently aim at: `target` unless I have raised it. */
   goal: number;
+  /** The circle's cycle in days (0021). */
+  frequencyDays: number;
+  /** My own denser cycle, if I set one. */
+  myFrequencyDays: number | null;
 };
 
 export function GoalsDialog({
@@ -37,6 +41,7 @@ export function GoalsDialog({
   groupName,
   tasks,
   onSaved,
+  onFrequencySaved,
 }: {
   open: boolean;
   onClose: () => void;
@@ -45,8 +50,11 @@ export function GoalsDialog({
   tasks: GoalRow[];
   /** Effective goals as the SERVER returned them, per task (D45). */
   onSaved: (goals: Record<string, number>) => void;
+  /** Effective frequencies as the SERVER returned them, per task (D45). */
+  onFrequencySaved: (freqs: Record<string, number>) => void;
 }) {
   const [draft, setDraft] = React.useState<Record<string, string>>({});
+  const [freqDraft, setFreqDraft] = React.useState<Record<string, string>>({});
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -65,6 +73,11 @@ export function GoalsDialog({
   if (open && !seeded) {
     setSeeded(true);
     setDraft(Object.fromEntries(tasks.map((t) => [t.id, String(t.goal)])));
+    setFreqDraft(
+      Object.fromEntries(
+        tasks.map((t) => [t.id, String(t.myFrequencyDays ?? t.frequencyDays)]),
+      ),
+    );
     setErrors({});
     setFormError(null);
   } else if (!open && seeded) {
@@ -112,17 +125,30 @@ export function GoalsDialog({
       if (value !== t.goal) changes.push({ task: t, value });
     }
 
+    // Frequency is a SELECT over a closed 1..14 range, so it cannot be
+    // malformed — no validation, only a diff.
+    const freqChanges: { task: GoalRow; days: number }[] = [];
+    for (const t of tasks) {
+      const days = Number(freqDraft[t.id] ?? t.frequencyDays);
+      if (
+        Number.isFinite(days) &&
+        days !== (t.myFrequencyDays ?? t.frequencyDays)
+      )
+        freqChanges.push({ task: t, days });
+    }
+
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
     }
-    if (changes.length === 0) {
+    if (changes.length === 0 && freqChanges.length === 0) {
       onClose();
       return;
     }
 
     setSaving(true);
     const applied: Record<string, number> = {};
+    const appliedFreq: Record<string, number> = {};
     const failed: string[] = [];
     // try/finally, not a bare await: `saving` disables every control in here,
     // so if a write throws — the action redirects on a stale session and
@@ -144,11 +170,27 @@ export function GoalsDialog({
         if (!res || res.error || res.goal == null) failed.push(c.task.label);
         else applied[c.task.id] = res.goal;
       }
+      for (const c of freqChanges) {
+        // At or above the circle's interval CLEARS: a member may only come
+        // round more often, never less (D51 on the frequency axis).
+        const res = await setTaskFrequency(
+          groupId,
+          c.task.id,
+          c.days >= c.task.frequencyDays ? null : c.days,
+        );
+        if (!res || res.error || res.frequency == null) {
+          if (!failed.includes(c.task.label)) failed.push(c.task.label);
+        } else appliedFreq[c.task.id] = res.frequency;
+      }
     } catch {
       // Nothing landed for the rows we never reached; report the ones we know
       // about rather than pretending the whole save succeeded.
-      for (const c of changes) {
-        if (applied[c.task.id] === undefined && !failed.includes(c.task.label))
+      for (const c of [...changes, ...freqChanges]) {
+        if (
+          applied[c.task.id] === undefined &&
+          appliedFreq[c.task.id] === undefined &&
+          !failed.includes(c.task.label)
+        )
           failed.push(c.task.label);
       }
     } finally {
@@ -158,6 +200,7 @@ export function GoalsDialog({
     // Hand back what LANDED, including on a partial failure — the rows that
     // saved are real and the screen must not keep showing the old numbers.
     if (Object.keys(applied).length > 0) onSaved(applied);
+    if (Object.keys(appliedFreq).length > 0) onFrequencySaved(appliedFreq);
 
     if (failed.length > 0) {
       setDraft((d) => ({
@@ -240,6 +283,46 @@ export function GoalsDialog({
                       </button>
                     )}
                   </div>
+                  {/* The member's own cycle, alongside their own number — the
+                      same raise-only shape on the time axis. Only offered when
+                      the circle is not already daily: there is nothing denser
+                      than every day, so the control would be inert. */}
+                  {t.frequencyDays > 1 && (
+                    <div className="mt-2 flex items-center gap-3">
+                      <label
+                        htmlFor={`${inputId}-freq`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        How often
+                      </label>
+                      <select
+                        id={`${inputId}-freq`}
+                        disabled={saving}
+                        className="h-11 rounded-lg border border-input bg-background px-3 text-base text-foreground md:text-sm"
+                        value={freqDraft[t.id] ?? String(t.frequencyDays)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setFreqDraft((f) => ({ ...f, [t.id]: v }));
+                          setFormError(null);
+                        }}
+                      >
+                        {Array.from(
+                          { length: MAX_FREQUENCY_DAYS },
+                          (_, k) => k + 1,
+                        )
+                          // Denser than the circle, or the circle's own — a
+                          // looser interval is not offered rather than offered
+                          // and refused.
+                          .filter((d) => d <= t.frequencyDays)
+                          .map((d) => (
+                            <option key={d} value={String(d)}>
+                              {frequencyLabel(d)}
+                              {d === t.frequencyDays ? " (the circle's)" : ""}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="mt-2 flex items-center gap-3">
                     <Input
                       id={inputId}

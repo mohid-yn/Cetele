@@ -175,6 +175,15 @@ create or replace function private.obligations(p_user uuid, p_day date)
                where l2.user_id = p_user
                  and l2.date    = p_day
                  and t2.group_id = t.group_id
+                 -- AT TARGET, not merely present (0021). A claim requires
+                 -- COMPLETION: a single tap on a pre-join day would otherwise
+                 -- pull the circle's whole list into that day unmet, turning a
+                 -- quiet day into a MISSED occasion and truncating the walk —
+                 -- i.e. starting something early would break your streak (D8).
+                 -- Requiring the target means a claim can only ever add an
+                 -- obligation that is already satisfied, so a day can still
+                 -- only become MORE complete, never less.
+                 and l2.count >= t2.target_count
              )
         )
     -- Due that day by the CIRCLE's cycle (NULL override — the member's own is
@@ -205,6 +214,10 @@ create or replace function private.obligations(p_user uuid, p_day date)
                where l3.user_id = p_user
                  and l3.task_id = t.id
                  and l3.date    = p_day
+                 -- Completed, not merely started — same reason as above. A
+                 -- member who taps a task the day BEFORE it comes round must
+                 -- not thereby owe it that day and miss it.
+                 and l3.count >= t.target_count
              )
         );
 $$;

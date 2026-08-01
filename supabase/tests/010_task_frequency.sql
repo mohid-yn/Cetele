@@ -135,13 +135,42 @@ select is((select target from private.obligations(
   'and the target judged is the CIRCLE''s, never the member''s own goal');
 
 -- ----------------------------------------------------------------------------
+-- 5b. Starting a task EARLY must not break the streak
+-- ----------------------------------------------------------------------------
+-- A claim requires COMPLETION. A single tap on an off-cycle day would otherwise
+-- make that day an owed occasion the member has not met — so tapping ahead of
+-- the cycle would truncate the walk and cost them the streak (D8). Day -1 is
+-- quiet; a partial log there must leave it quiet.
+
+insert into public.logs (user_id, task_id, date, count) values
+  ('f1000000-0000-0000-0000-00000000000a', 'f1000000-0000-0000-0000-00000000e001',
+   current_date - 1, 0);
+select ok(not private.owes_on('f1000000-0000-0000-0000-00000000000a', current_date - 1),
+  'a PARTIAL log on an off-cycle day does not make that day an obligation');
+select private.refresh_streak('f1000000-0000-0000-0000-00000000000a', current_date);
+select is((select current from public.streaks
+            where user_id = 'f1000000-0000-0000-0000-00000000000a'), 5,
+  '...so starting a task early cannot cost you the streak');
+
+-- Completing it early DOES claim the day — that is D48's back-fill, and it can
+-- only ever add an obligation that is already satisfied.
+update public.logs set count = 1
+ where user_id = 'f1000000-0000-0000-0000-00000000000a'
+   and task_id = 'f1000000-0000-0000-0000-00000000e001'
+   and date = current_date - 1;
+select ok(private.is_day_complete('f1000000-0000-0000-0000-00000000000a', current_date - 1),
+  'completing it early claims the day instead');
+
+-- ----------------------------------------------------------------------------
 -- 6. The rollup writes no row for a day that owed nothing
 -- ----------------------------------------------------------------------------
 
 select private.run_daily_rollup();
+-- Day -2, not -1: 5b above deliberately COMPLETED -1, which claims it. -2 is
+-- off-cycle (28 % 3 = 1) and untouched, so it is genuinely quiet.
 select is((select count(*) from public.daily_completion
             where user_id = 'f1000000-0000-0000-0000-00000000000a'
-              and date = current_date - 1), 0::bigint,
+              and date = current_date - 2), 0::bigint,
   'no rollup row for an off-cycle day — a quiet day cannot drag consistency down');
 select is((select completion_pct from public.daily_completion
             where user_id = 'f1000000-0000-0000-0000-00000000000a'

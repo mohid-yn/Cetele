@@ -45,7 +45,7 @@ async function createGroupWithTask(
   await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill(task);
   await page.getByPlaceholder("Daily target").last().fill(String(target));
   await page.click('button:has-text("Add task")');
-  await expect(page.getByText(`target ${target} / day`)).toBeVisible();
+  await expect(page.getByText(`target ${target} · daily`)).toBeVisible();
 }
 
 test("reflection surfaces read real logs; admin proxy-edit persists", async ({
@@ -66,7 +66,7 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
   await pageA.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Tasbih");
   await pageA.getByPlaceholder("Daily target").last().fill("10");
   await pageA.click('button:has-text("Add task")');
-  await expect(pageA.getByText("target 10 / day")).toBeVisible();
+  await expect(pageA.getByText("target 10 · daily")).toBeVisible();
   await pageA.click('button:has-text("Create invite")');
   const joinLink = await pageA
     .locator("code", { hasText: "/join/" })

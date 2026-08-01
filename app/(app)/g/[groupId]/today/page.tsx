@@ -64,7 +64,7 @@ export default async function TodayPage({
         .maybeSingle(),
       supabase
         .from("tasks")
-        .select("id, label, subtitle, target_count")
+        .select("id, label, subtitle, target_count, frequency_days, created_at")
         .eq("group_id", active.groupId)
         .order("sort_order"),
       // last_active drives the CET-19 comeback landmark.
@@ -130,7 +130,7 @@ export default async function TodayPage({
       // which is also what keeps it out of the collective figures below.
       supabase
         .from("member_task_goals")
-        .select("task_id, target_count")
+        .select("task_id, target_count, frequency_days")
         .eq("user_id", me)
         .in(
           "task_id",
@@ -142,6 +142,10 @@ export default async function TodayPage({
   // taskId → my raised bar, where I have one (D51)
   const goalByTask = new Map(
     (myGoals ?? []).map((g) => [g.task_id, g.target_count]),
+  );
+  // taskId → my own denser cycle, where I have one (0021)
+  const freqByTask = new Map(
+    (myGoals ?? []).map((g) => [g.task_id, g.frequency_days]),
   );
 
   // date → taskId → count (mine)
@@ -264,6 +268,12 @@ export default async function TodayPage({
           // member is aiming at.
           target: t.target_count,
           goal: effectiveGoal(t.target_count, goalByTask.get(t.id)),
+          // The schedule (0021). The client resolves "due today?" and "how many
+          // days until it comes round" from these, so the answer follows the
+          // member's OWN midnight (D34) rather than the server's.
+          frequencyDays: t.frequency_days,
+          myFrequencyDays: freqByTask.get(t.id) ?? null,
+          createdOn: t.created_at.slice(0, 10),
         }))}
         counts={counts}
         circle={circle}

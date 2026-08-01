@@ -61,7 +61,7 @@ test("raise my own bar → ring re-opens, streak and circle untouched", async ({
   await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Salawat");
   await page.getByPlaceholder("Daily target").last().fill("3");
   await page.click('button:has-text("Add task")');
-  await expect(page.getByText("target 3 / day")).toBeVisible();
+  await expect(page.getByText("target 3 · daily")).toBeVisible();
 
   // ---- close the ring at the circle's share, the ordinary way ---------------
   await page.goto("/today");

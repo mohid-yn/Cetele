@@ -44,7 +44,7 @@ test("tap → count persists → ring closes → streak advances", async ({
   await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Salawat");
   await page.getByPlaceholder("Daily target").last().fill("3");
   await page.click('button:has-text("Add task")');
-  await expect(page.getByText("target 3 / day")).toBeVisible();
+  await expect(page.getByText("target 3 · daily")).toBeVisible();
 
   // /today now renders the ring from the DB, with the gold Continue CTA
   await page.goto("/today");
@@ -295,7 +295,7 @@ test("undo mid-flush can't dip the count under a slow network", async ({
   await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Tasbih");
   await page.getByPlaceholder("Daily target").last().fill("10");
   await page.click('button:has-text("Add task")');
-  await expect(page.getByText("target 10 / day")).toBeVisible();
+  await expect(page.getByText("target 10 · daily")).toBeVisible();
 
   await page.goto(`/g/${groupId}/today`);
   await page

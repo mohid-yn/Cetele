@@ -41,7 +41,7 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   await pageA.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Tasbih");
   await pageA.getByPlaceholder("Daily target").last().fill("3");
   await pageA.click('button:has-text("Add task")');
-  await expect(pageA.getByText("target 3 / day")).toBeVisible();
+  await expect(pageA.getByText("target 3 · daily")).toBeVisible();
   await pageA.click('button:has-text("Create invite")');
   const joinLink = await pageA
     .locator("code", { hasText: "/join/" })

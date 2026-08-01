@@ -64,7 +64,7 @@ export default async function ManageGroupPage({
       .eq("group_id", active.groupId),
     supabase
       .from("tasks")
-      .select("id, label, subtitle, target_count, sort_order")
+      .select("id, label, subtitle, target_count, frequency_days, sort_order")
       .eq("group_id", active.groupId)
       .order("sort_order"),
     supabase

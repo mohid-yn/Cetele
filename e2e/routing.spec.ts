@@ -40,7 +40,7 @@ async function createCircle(
   await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill(task);
   await page.getByPlaceholder("Daily target").last().fill("10");
   await page.click('button:has-text("Add task")');
-  await expect(page.getByText("target 10 / day")).toBeVisible();
+  await expect(page.getByText("target 10 · daily")).toBeVisible();
 
   const groupId = page.url().match(/\/g\/([^/]+)\//)?.[1];
   expect(groupId).toBeTruthy();

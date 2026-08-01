@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { MAX_FREQUENCY_DAYS } from "@/lib/goals";
 import { ACTIVE_GROUP_COOKIE } from "@/lib/active-group";
 import { groupHref } from "@/lib/group-href";
 
@@ -96,14 +97,30 @@ export async function claimOwnership(groupId: string): Promise<Result> {
 // Tasks (CET-5 — the admin task-list editor)
 // ---------------------------------------------------------------------------
 
-function parseTask(input: { label: string; subtitle: string; target: string }) {
+function parseTask(input: {
+  label: string;
+  subtitle: string;
+  target: string;
+  frequency?: string;
+}) {
   const label = input.label.trim();
   const subtitle = input.subtitle.trim() || null;
   const target = parseInt(input.target, 10);
   if (!label) return { error: "A label is required" } as const;
   if (!Number.isFinite(target) || target < 1)
-    return { error: "The daily target must be at least 1" } as const;
-  return { error: null, label, subtitle, target } as const;
+    return { error: "The target must be at least 1" } as const;
+  // Frequency (0021). Capped at MAX_FREQUENCY_DAYS because raw logs are pruned
+  // at 14 days (D31a) — a longer cycle could never be seen by the streak walk.
+  const frequency = parseInt(input.frequency ?? "1", 10);
+  if (
+    !Number.isFinite(frequency) ||
+    frequency < 1 ||
+    frequency > MAX_FREQUENCY_DAYS
+  )
+    return {
+      error: `How often must be between 1 and ${MAX_FREQUENCY_DAYS} days`,
+    } as const;
+  return { error: null, label, subtitle, target, frequency } as const;
 }
 
 /** The task row shape the manage list renders (mirrors ManageTask). */
@@ -112,12 +129,18 @@ type NewTask = {
   label: string;
   subtitle: string | null;
   target_count: number;
+  frequency_days: number;
   sort_order: number;
 };
 
 export async function addTask(
   groupId: string,
-  input: { label: string; subtitle: string; target: string },
+  input: {
+    label: string;
+    subtitle: string;
+    target: string;
+    frequency?: string;
+  },
 ): Promise<Result & { task?: NewTask }> {
   const parsed = parseTask(input);
   if (parsed.error) return fail(parsed.error);
@@ -141,9 +164,12 @@ export async function addTask(
       label: parsed.label,
       subtitle: parsed.subtitle,
       target_count: parsed.target,
+      frequency_days: parsed.frequency,
       sort_order: (last?.sort_order ?? -1) + 1,
     })
-    .select("id, label, subtitle, target_count, sort_order")
+    .select(
+      "id, label, subtitle, target_count, frequency_days, created_at, sort_order",
+    )
     .single();
   if (error) return fail(error.message);
 
@@ -154,7 +180,12 @@ export async function addTask(
 export async function updateTask(
   groupId: string,
   taskId: string,
-  input: { label: string; subtitle: string; target: string },
+  input: {
+    label: string;
+    subtitle: string;
+    target: string;
+    frequency?: string;
+  },
 ): Promise<Result> {
   const parsed = parseTask(input);
   if (parsed.error) return fail(parsed.error);
@@ -166,6 +197,7 @@ export async function updateTask(
       label: parsed.label,
       subtitle: parsed.subtitle,
       target_count: parsed.target,
+      frequency_days: parsed.frequency,
     })
     .eq("id", taskId);
   if (error) return fail(error.message);

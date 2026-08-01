@@ -38,15 +38,17 @@ test("owner: create group → manage → tasks → open invite", async ({ page }
   await page.getByPlaceholder("Subtitle (optional)").fill("اللهم صل على محمد");
   await page.getByPlaceholder("Daily target").last().fill("100");
   await page.click('button:has-text("Add task")');
-  await expect(page.getByText("target 100 / day")).toBeVisible();
+  await expect(page.getByText("target 100 · daily")).toBeVisible();
 
   // task CRUD: edit the target — scope to the edit row (Settings has its own
   // always-visible Save button, so a bare "Save" is ambiguous)
   await page.click('button:has-text("Edit")');
-  const editRow = page.locator('li:has(input[placeholder="Daily target"])');
-  await editRow.getByPlaceholder("Daily target").fill("33");
+  // The edit row's target placeholder is "Target each time" since 0021 —
+  // "Daily target" became a lie the moment a task could be on a cycle.
+  const editRow = page.locator('li:has(input[placeholder="Target each time"])');
+  await editRow.getByPlaceholder("Target each time").fill("33");
   await editRow.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("target 33 / day")).toBeVisible();
+  await expect(page.getByText("target 33 · daily")).toBeVisible();
 
   // rename the group (the header echoes the new name after revalidation)
   await page.fill("#group-name", "M2 Circle Renamed");

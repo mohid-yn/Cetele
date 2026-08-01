@@ -58,3 +58,70 @@ export function isStretched(t: GoalTask): boolean {
 export function goalCap(groupTarget: number): number {
   return Math.max(groupTarget * 10, groupTarget + 1000);
 }
+
+/* ---------------------------------------------------------------------------
+ * Frequency (0021) — the same shape as the count goal, on the time axis.
+ * ------------------------------------------------------------------------- */
+
+/** Days between occasions, and the day the cycle is anchored at. */
+export type Schedule = {
+  /** The circle's cycle. 1 = daily. */
+  frequencyDays: number;
+  /** My own denser cycle, if I set one. Never looser than the circle's. */
+  myFrequencyDays?: number | null;
+  /** `tasks.created_at` as an ISO date — the anchor the cycle counts from. */
+  createdOn: string;
+};
+
+/** The largest interval a task may be set to — bounded by the 14-day log window. */
+export const MAX_FREQUENCY_DAYS = 14;
+
+function daysBetween(fromISO: string, toISO: string): number {
+  // Parsed as UTC midnights on both sides, so DST cannot shift the difference.
+  const a = Date.parse(`${fromISO}T00:00:00Z`);
+  const b = Date.parse(`${toISO}T00:00:00Z`);
+  return Math.round((b - a) / 86_400_000);
+}
+
+/**
+ * Is this task due on this day, for this member?
+ *
+ * Mirrors `private.task_due_on` exactly, including the UNION: the member's own
+ * cycle ADDS occasions and never removes one. `least(circle, mine)` would be
+ * wrong — a circle on every-3 owes days 0,3,6 and a member on every-2 owes
+ * 0,2,4, so day 3 is an occasion the circle asks for that the member's cycle
+ * skips. The union makes the superset property true for any pair of numbers.
+ */
+export function isDueOn(s: Schedule, dayISO: string): boolean {
+  const n = daysBetween(s.createdOn, dayISO);
+  if (n < 0) return false; // never due before the task existed
+  return (
+    n % s.frequencyDays === 0 ||
+    (s.myFrequencyDays != null && n % s.myFrequencyDays === 0)
+  );
+}
+
+/**
+ * Days until this task next comes round, counting from `dayISO`. 0 = today.
+ * Bounded by MAX_FREQUENCY_DAYS + 1 probes, so it always terminates.
+ */
+export function daysUntilDue(s: Schedule, dayISO: string): number {
+  const start = Date.parse(`${dayISO}T00:00:00Z`);
+  for (let i = 0; i <= MAX_FREQUENCY_DAYS; i++) {
+    const d = new Date(start + i * 86_400_000).toISOString().slice(0, 10);
+    if (isDueOn(s, d)) return i;
+  }
+  return MAX_FREQUENCY_DAYS;
+}
+
+/** "Daily" / "Every 3 days" — the one place this phrasing is written. */
+export function frequencyLabel(days: number): string {
+  return days === 1 ? "Daily" : `Every ${days} days`;
+}
+
+/** "Due today" / "Due tomorrow" / "Due in 3 days". */
+export function dueLabel(daysAway: number): string {
+  if (daysAway <= 0) return "Due today";
+  if (daysAway === 1) return "Due tomorrow";
+  return `Due in ${daysAway} days`;
+}

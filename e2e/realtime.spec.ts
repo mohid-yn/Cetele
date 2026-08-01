@@ -41,7 +41,7 @@ test("collective counter climbs live when a peer taps", async ({ browser }) => {
   await pageA.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Tasbih");
   await pageA.getByPlaceholder("Daily target").last().fill("10");
   await pageA.click('button:has-text("Add task")');
-  await expect(pageA.getByText("target 10 / day")).toBeVisible();
+  await expect(pageA.getByText("target 10 · daily")).toBeVisible();
   await pageA.click('button:has-text("Create invite")');
   const joinLink = await pageA
     .locator("code", { hasText: "/join/" })

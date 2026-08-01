@@ -103,6 +103,34 @@ export async function dismissBanner(
  * client reconciles from the write (D45) instead of a refetch — including in
  * the clear case, where what comes back is the group's own target.
  */
+/**
+ * Come round MORE often than my circle asks, or drop back to its cycle (0021).
+ *
+ * Same shape as setTaskGoal: every rule lives in the RPC (membership, the
+ * more-often-only floor that turns any value at or above the circle's interval
+ * into a CLEAR), and it returns the EFFECTIVE frequency so the client
+ * reconciles from the write rather than a refetch (D45).
+ */
+export async function setTaskFrequency(
+  groupId: string,
+  taskId: string,
+  days: number | null,
+): Promise<{ frequency: number | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data, error } = await q(
+    `rpc.set_task_frequency (${days ?? "clear"})`,
+    supabase.rpc("set_task_frequency", {
+      p_task: taskId,
+      p_days: days as number,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { frequency: null, error: error.message };
+
+  for (const sub of GROUP_WRITE_PATHS) revalidatePath(groupHref(groupId, sub));
+  return { frequency: data, error: null };
+}
+
 export async function setTaskGoal(
   groupId: string,
   taskId: string,

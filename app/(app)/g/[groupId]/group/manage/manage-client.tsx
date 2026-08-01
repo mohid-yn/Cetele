@@ -16,7 +16,48 @@ import { ArrowLeftIcon, PlusIcon, CheckIcon } from "@/components/app/icons";
 import { RoleToggle, selectCls } from "@/components/app/role-toggle";
 import { useAction } from "@/lib/use-action";
 import { usePropState } from "@/lib/use-prop-state";
+import { MAX_FREQUENCY_DAYS, frequencyLabel } from "@/lib/goals";
 import * as act from "./actions";
+
+/**
+ * How often a task comes round (0021). A SELECT, not a number box: the range is
+ * 1–14 and closed, every option is nameable ("Daily", "Every 3 days"), and a
+ * free-text field would invite 30 and then have to refuse it. Reuses the role
+ * toggle's select styling so it sits with the rest of the admin controls.
+ */
+function FrequencyField({
+  id,
+  value,
+  onChange,
+  label = "How often",
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  label?: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <label htmlFor={id} className="text-sm text-muted-foreground">
+        {label}
+      </label>
+      <select
+        id={id}
+        className={selectCls}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {Array.from({ length: MAX_FREQUENCY_DAYS }, (_, i) => i + 1).map(
+          (d) => (
+            <option key={d} value={String(d)}>
+              {frequencyLabel(d)}
+            </option>
+          ),
+        )}
+      </select>
+    </div>
+  );
+}
 
 /**
  * Client leaf for the server-first manage screen (M2). All data arrives as
@@ -38,6 +79,8 @@ export type ManageMember = {
   avatarUrl: string | null;
 };
 export type ManageTask = {
+  /** How often this task comes round, in days (0021). 1 = daily. */
+  frequency_days: number;
   id: string;
   label: string;
   subtitle: string | null;
@@ -108,10 +151,17 @@ function TaskRow({
   const [label, setLabel] = React.useState(task.label);
   const [subtitle, setSubtitle] = React.useState(task.subtitle ?? "");
   const [target, setTarget] = React.useState(String(task.target_count));
+  const [frequency, setFrequency] = React.useState(String(task.frequency_days));
 
   const save = () =>
     run(
-      () => act.updateTask(groupId, task.id, { label, subtitle, target }),
+      () =>
+        act.updateTask(groupId, task.id, {
+          label,
+          subtitle,
+          target,
+          frequency,
+        }),
       () => {
         // Optimistic: hand the edited row up so the list re-renders now (CET-30),
         // mirroring the trim/parse the action applies server-side.
@@ -120,6 +170,7 @@ function TaskRow({
           label: label.trim(),
           subtitle: subtitle.trim() || null,
           target_count: parseInt(target, 10),
+          frequency_days: parseInt(frequency, 10),
         });
         setEditing(false);
       },
@@ -149,8 +200,13 @@ function TaskRow({
             value={target}
             inputMode="numeric"
             onChange={(e) => setTarget(e.target.value.replace(/\D/g, ""))}
-            placeholder="Daily target"
-            aria-label="Daily target"
+            placeholder="Target each time"
+            aria-label="Target each time"
+          />
+          <FrequencyField
+            id={`freq-${task.id}`}
+            value={frequency}
+            onChange={setFrequency}
           />
           <div className="flex gap-2">
             <Button
@@ -185,8 +241,12 @@ function TaskRow({
             {task.subtitle}
           </p>
         )}
-        <p className="text-xs text-muted-foreground tabular-nums">
-          target {task.target_count.toLocaleString()} / day
+        <p className="text-xs text-muted-foreground">
+          <span className="tabular-nums">
+            target {task.target_count.toLocaleString()}
+          </span>
+          {" · "}
+          {frequencyLabel(task.frequency_days).toLowerCase()}
         </p>
       </div>
       <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
@@ -241,6 +301,7 @@ export function ManageClient({
   const [newLabel, setNewLabel] = React.useState("");
   const [newSubtitle, setNewSubtitle] = React.useState("");
   const [newTarget, setNewTarget] = React.useState("100");
+  const [newFrequency, setNewFrequency] = React.useState("1");
   const [inviteEmail, setInviteEmail] = React.useState("");
   const [inviteRole, setInviteRole] = React.useState<"admin" | "member">(
     "member",
@@ -280,12 +341,14 @@ export function ManageClient({
           label: newLabel,
           subtitle: newSubtitle,
           target: newTarget,
+          frequency: newFrequency,
         }),
       (res) => {
         if (res.task) setTasks((ts) => [...ts, res.task!]);
         setNewLabel("");
         setNewSubtitle("");
         setNewTarget("100");
+        setNewFrequency("1");
       },
     );
 
@@ -553,6 +616,12 @@ export function ManageClient({
               onChange={(e) => setNewTarget(e.target.value.replace(/\D/g, ""))}
               placeholder="Daily target"
               aria-label="New task daily target"
+            />
+            <FrequencyField
+              id="new-task-frequency"
+              label="How often"
+              value={newFrequency}
+              onChange={setNewFrequency}
             />
             <Button
               variant="accent"
