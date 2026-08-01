@@ -10,6 +10,13 @@ import { signIn } from "./helpers";
  * streak that was already earned is still 1, the day is still marked kept, and
  * the circle still reads 100%. A regression that quietly re-pointed any of
  * those at the personal goal would pass a build and fail here.
+ *
+ * The control is driven from TODAY — "My goals" on the rings heading, one
+ * dialog for the whole circle. It moved there from the count screen's
+ * correction tray because the owner, who asked for the feature and knew it had
+ * shipped, could not find it while looking for it. These specs therefore also
+ * pin the entry point itself: `openGoals` failing is the discoverability
+ * regression, not an incidental selector change.
  */
 const STAMP = Date.now();
 const USER = `e2e-goal-${STAMP}@example.com`;
@@ -19,6 +26,24 @@ test.describe.configure({ mode: "serial" });
 async function closeCelebration(page: Page) {
   await expect(page.getByText("Ring closed!")).toBeVisible();
   await page.getByRole("dialog").click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+}
+
+/** Open the circle-wide goals dialog from Today. */
+async function openGoals(page: Page) {
+  await page.getByRole("button", { name: "My goals" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+}
+
+/**
+ * Set one task's goal and commit. The dialog closes only once every write has
+ * LANDED, so this doubles as the wait: saving optimistically and navigating let
+ * Today's read overtake the write under a loaded machine, and the rings came
+ * back on the old number with nothing on the way to correct them.
+ */
+async function setGoal(page: Page, task: string, value: string) {
+  await page.getByLabel(task, { exact: true }).fill(value);
+  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 }
 
@@ -49,38 +74,24 @@ test("raise my own bar → ring re-opens, streak and circle untouched", async ({
   await expect(page.getByText("Completed — tap to keep going")).toBeVisible();
   await closeCelebration(page);
 
-  // ---- now raise the bar to 6 ----------------------------------------------
-  await page.click('button:has-text("Set my goal")');
-  const goalInput = page.getByLabel("My daily goal for Salawat");
-  await expect(goalInput).toBeVisible();
-  await goalInput.fill("6");
-  await page.getByRole("button", { name: "Save" }).click();
-  // The dialog closes only once the write has LANDED, so this doubles as the
-  // wait: navigating on the optimistic value alone let /today's read overtake
-  // the write under a loaded machine, and the rings came back on the old
-  // number with nothing on the way to correct them.
-  await expect(page.getByRole("dialog")).toBeHidden();
+  // Head back IN-APP, never `page.goto`: the tap queue flushes on a 600ms
+  // debounce with a best-effort dispatch on unmount, and a hard navigation
+  // tears the JS context down before either can land — the three taps are then
+  // silently lost and every assertion below fails against a count of 0.
+  // Client-side nav runs the unmount flush, which is also the real user's path.
+  await page.click('button:has-text("Back to today")');
+  await page.waitForURL("**/today");
+  await expect(page.getByText(/All rings closed today/)).toBeVisible();
+  await expect(page.getByText("1 day streak")).toBeVisible();
 
-  // The ring re-opens against MY number, and says whose number the other one is.
-  await expect(page.getByText("of 6")).toBeVisible();
+  // ---- now raise the bar to 6, from Today -----------------------------------
+  await openGoals(page);
+  // The dialog names the floor rather than making the member guess it, and
+  // states the rule the whole feature turns on.
   await expect(page.getByText(/The circle asks/)).toBeVisible();
-  await expect(page.getByText(/done, the rest is yours/)).toBeVisible();
-  // Re-opened, so the primary action is back — and it fills to MY goal, not 3.
-  await expect(page.getByRole("button", { name: "Mark done" })).toBeVisible();
-
-  // The day-strip must STILL tick today. This strip is a record of days kept,
-  // and raising a bar cannot un-keep a day already kept — keying it on the
-  // goal silently un-ticked every past day the moment a goal went up, which
-  // reads as history being erased.
-  //
-  // Selected via aria-pressed, not by name: the cell READS "TODAY" only because
-  // of a CSS text-transform, and Playwright computes the accessible name from
-  // the DOM text ("Today 31"), so a /TODAY/ pattern silently matches nothing.
-  // The header's Back-to-Today button would also collide on the name.
-  await expect(page.locator('button[aria-pressed="true"] svg')).toHaveCount(1);
+  await setGoal(page, "Salawat", "6");
 
   // ---- THE POINT: nothing already earned moved ------------------------------
-  await page.goto("/today");
   await expect(
     page.getByText(
       /Your circle's share is done — 1 ring left on your own goal/,
@@ -95,30 +106,59 @@ test("raise my own bar → ring re-opens, streak and circle untouched", async ({
   // one in the pattern silently never matches.
   await expect(page.getByText(/circle.s share 3/)).toBeVisible();
 
-  // A reload proves it is the server's view, not optimistic client state.
+  // A reload proves it is the server's view, not optimistic client state — and
+  // that the write landed before the dialog closed.
   await page.reload();
   await expect(page.getByText("1 day streak")).toBeVisible();
   await expect(page.getByText("3 / 6")).toBeVisible();
 
-  // ---- closing the raised ring celebrates, once ----------------------------
+  // ---- the count screen honours the goal it no longer sets -------------------
   await page.click('a:has-text("Continue Salawat")');
   await page.waitForURL("**/count/**");
+  // The ring re-opens against MY number, and says whose number the other one is.
+  await expect(page.getByText("of 6")).toBeVisible();
+  await expect(page.getByText(/The circle asks/)).toBeVisible();
+  await expect(page.getByText(/done, the rest is yours/)).toBeVisible();
+  // Re-opened, so the primary action is back — and it fills to MY goal, not 3.
+  await expect(page.getByRole("button", { name: "Mark done" })).toBeVisible();
+  // The goal is no longer EDITABLE here: one entry point, on Today.
+  await expect(page.getByRole("button", { name: /my goal/i })).toBeHidden();
+
+  // The day-strip must STILL tick today. This strip is a record of days kept,
+  // and raising a bar cannot un-keep a day already kept — keying it on the
+  // goal silently un-ticked every past day the moment a goal went up, which
+  // reads as history being erased.
+  //
+  // Selected via aria-pressed, not by name: the cell READS "TODAY" only because
+  // of a CSS text-transform, and Playwright computes the accessible name from
+  // the DOM text ("Today 31"), so a /TODAY/ pattern silently matches nothing.
+  // The header's Back-to-Today button would also collide on the name.
+  await expect(page.locator('button[aria-pressed="true"] svg')).toHaveCount(1);
+
+  // ---- closing the raised ring celebrates, once ----------------------------
   await pad.click();
   await pad.click();
   await pad.click();
   await expect(page.getByText("Completed — tap to keep going")).toBeVisible();
   await closeCelebration(page);
 
-  // ---- and dropping back to the circle's share clears it -------------------
-  await page.click('button:has-text("My goal")');
+  // ---- and the per-row reset drops back to the circle's share ---------------
+  await page.click('button:has-text("Back to today")');
+  await page.waitForURL("**/today");
+  await openGoals(page);
   await page.getByRole("button", { name: /Back to the circle/ }).click();
+  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
-  await expect(page.getByText("of 3")).toBeVisible();
-  await expect(page.getByText(/The circle asks/)).toBeHidden();
 
-  await page.goto("/today");
   await expect(page.getByText(/All rings closed today/)).toBeVisible();
   await expect(page.getByText("1 day streak")).toBeVisible();
+  await page
+    .getByRole("link", { name: /Salawat/ })
+    .first()
+    .click();
+  await page.waitForURL("**/count/**");
+  await expect(page.getByText("of 3")).toBeVisible();
+  await expect(page.getByText(/The circle asks/)).toBeHidden();
 });
 
 test("a goal below the circle's share is refused, not stored", async ({
@@ -126,23 +166,44 @@ test("a goal below the circle's share is refused, not stored", async ({
 }) => {
   await signIn(page, USER);
   await page.goto("/today");
-  // The ring card, not the "Continue" CTA: the previous test left this ring
-  // closed, and the gold CTA only exists while something is unfinished.
+
+  // The whole raise-only rule in one gesture: ask for less than the circle
+  // asked, and the app puts you back on the circle's number rather than
+  // letting you owe it less. It must be VISIBLE that it did so — silently
+  // ignoring the number is what makes the control read as broken.
+  await openGoals(page);
+  await setGoal(page, "Salawat", "1");
+
   await page
     .getByRole("link", { name: /Salawat/ })
     .first()
     .click();
   await page.waitForURL("**/count/**");
-
-  // The whole raise-only rule in one gesture: ask for less than the circle
-  // asked, and the app puts you back on the circle's number rather than
-  // letting you owe it less.
-  await page.click('button:has-text("Set my goal")');
-  await page.getByLabel("My daily goal for Salawat").fill("1");
-  await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByText("of 3")).toBeVisible();
   await expect(page.getByText(/The circle asks/)).toBeHidden();
+});
+
+test("a goal above the cap is refused in the dialog, not by the server", async ({
+  page,
+}) => {
+  await signIn(page, USER);
+  await page.goto("/today");
+  await openGoals(page);
+
+  // set_task_goal caps a goal at greatest(target×10, target+1000) — 1,003 on a
+  // target-3 task. Past it the dialog must refuse and STAY OPEN with the
+  // problem named against the row it belongs to; closing on a value the server
+  // will reject is the failure mode this pins.
+  await page.getByLabel("Salawat", { exact: true }).fill("99999");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByText(/Up to 1,003 on this one/)).toBeVisible();
+
+  // Correcting the row clears its error rather than leaving it stuck.
+  await page.getByLabel("Salawat", { exact: true }).fill("600");
+  await expect(page.getByText(/Up to 1,003 on this one/)).toBeHidden();
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
 });
 
 test("a goal above 500 can still be closed in one press", async ({ page }) => {
@@ -153,18 +214,13 @@ test("a goal above 500 can still be closed in one press", async ({ page }) => {
     .first()
     .click();
   await page.waitForURL("**/count/**");
+  await expect(page.getByText("of 600")).toBeVisible();
 
   // `increment_count` refuses any single delta over 500 (D36a), and a personal
   // goal legitimately clears that bar — a target-3 task allows a goal of 1,003.
   // "Mark done" used to send the whole remainder as ONE op, so it came back
   // `delta out of range (1..500)` with the count snapping back. The queue now
   // splits it; this proves the split lands as one total, not a partial write.
-  await page.click('button:has-text("Set my goal")');
-  await page.getByLabel("My daily goal for Salawat").fill("600");
-  await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden();
-  await expect(page.getByText("of 600")).toBeVisible();
-
   await page.getByRole("button", { name: "Mark done" }).click();
   await expect(page.getByText("Ring closed!")).toBeVisible();
   await page.getByRole("dialog").click();

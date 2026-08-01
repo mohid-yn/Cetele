@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { DURATION, easeBrand } from "@/lib/motion";
 import {
   Avatar,
+  Button,
   Eyebrow,
   Grid,
   ProgressBar,
@@ -20,9 +21,15 @@ import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { StreakChip } from "@/components/app/streak-chip";
 import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
-import { CheckIcon, ChevronRightIcon } from "@/components/app/icons";
+import {
+  CheckIcon,
+  ChevronRightIcon,
+  TargetIcon,
+} from "@/components/app/icons";
 import { groupHref } from "@/lib/group-href";
 import { useLocalToday } from "@/lib/use-local-today";
+import { usePropState } from "@/lib/use-prop-state";
+import { GoalsDialog } from "./goals-dialog";
 import type { Landmark } from "@/lib/retention";
 import {
   PeerReactions,
@@ -106,6 +113,19 @@ export function TodayClient({
   });
   const isToday = date === todayISO;
 
+  // My own bar per task (D51), held locally so a save from the goals dialog
+  // re-renders the rings from the WRITE's own return rather than a refetch
+  // (D45). Re-seeds whenever the server sends new tasks — usePropState compares
+  // identity, and the memo gives a fresh object exactly when `tasks` changes.
+  const [goalsOpen, setGoalsOpen] = React.useState(false);
+  const goalSeed = React.useMemo(
+    () => Object.fromEntries(tasks.map((t) => [t.id, t.goal])),
+    [tasks],
+  );
+  const [goalById, setGoalById] =
+    usePropState<Record<string, number>>(goalSeed);
+  const goalOf = (t: TodayTask) => goalById[t.id] ?? t.goal;
+
   const countOn = (taskId: string, d: string) => counts[d]?.[taskId] ?? 0;
   // The day-strip's done-marks mirror a SERVER fact — the day the streak and
   // the rollup counted — so they key on the circle's share, never on a
@@ -119,12 +139,14 @@ export function TodayClient({
     // `done` = my ring is closed (my goal). `shareDone` = I have done what the
     // circle asked, which is the threshold everything shared is measured at.
     // With no personal goal the two are the same number and nothing changes.
+    const goal = goalOf(t);
     return {
       task: t,
       count,
-      done: count >= t.goal,
+      goal,
+      done: count >= goal,
       shareDone: count >= t.target,
-      stretched: t.goal > t.target,
+      stretched: goal > t.target,
     };
   });
   const closed = rings.filter((r) => r.done).length;
@@ -150,7 +172,7 @@ export function TodayClient({
   // One primary action (goal-gradient): continue the ring closest to done.
   const next = rings
     .filter((r) => !r.done)
-    .sort((a, b) => b.count / b.task.goal - a.count / a.task.goal)[0];
+    .sort((a, b) => b.count / b.goal - a.count / a.goal)[0];
 
   // Where a banner's "Begin today" sends you: the nearest-to-done ring, else the
   // first task. Null when the circle has no tasks yet (nothing to begin).
@@ -247,18 +269,39 @@ export function TodayClient({
               "100/100", which reads as already done and makes the gold action
               look like a mistake. */}
           <span className="tabular-nums">
-            {next.count}/{next.task.goal}
+            {next.count}/{next.goal}
           </span>
         </Link>
       )}
 
       {/* Rings */}
       <section>
-        <SectionHeading action="tap to count">
+        {/* The goals entry point lives HERE, on the heading of the rings it
+            governs, rather than in the count screen's correction tray where it
+            shipped first: raising your bar is an aspiration, not a fix, and a
+            muted control two screens deep was one the owner could not find
+            while actively looking for it. `outline` and not `accent` — the gold
+            CTA above is the one primary action per view — but a real bordered
+            button, because "findable" is the whole point of moving it.
+            Hidden with no tasks: there is nothing to aim at yet. */}
+        <SectionHeading
+          action={
+            tasks.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                leadingIcon={<TargetIcon />}
+                onClick={() => setGoalsOpen(true)}
+              >
+                My goals
+              </Button>
+            )
+          }
+        >
           {isToday ? "Your rings today" : "Your rings"}
         </SectionHeading>
         <Grid as="ul" cols="cards" gap="md">
-          {rings.map(({ task: t, count, done, shareDone, stretched }) => {
+          {rings.map(({ task: t, count, goal, done, shareDone, stretched }) => {
             // The one to continue gets an emerald rim, so the eye lands on the
             // same ring the gold "Continue" CTA above points at.
             //
@@ -282,7 +325,7 @@ export function TodayClient({
                 >
                   <ProgressRing
                     value={count}
-                    max={t.goal}
+                    max={goal}
                     mark={stretched ? t.target : undefined}
                     size={72}
                     thickness={8}
@@ -300,7 +343,7 @@ export function TodayClient({
                           shareDone ? "text-success" : "text-foreground",
                         )}
                       >
-                        {Math.round((count / t.goal) * 100)}%
+                        {Math.round((count / goal) * 100)}%
                       </span>
                     )}
                   </ProgressRing>
@@ -325,12 +368,12 @@ export function TodayClient({
                     )}
                     <ProgressBar
                       value={count}
-                      max={t.goal}
+                      max={goal}
                       tone={done || shareDone ? "success" : "primary"}
                       className="mt-2 h-1.5"
                     />
                     <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                      {count.toLocaleString()} / {t.goal.toLocaleString()}
+                      {count.toLocaleString()} / {goal.toLocaleString()}
                       {stretched && (
                         <span className="ms-1.5 tabular-nums">
                           · circle&rsquo;s share {t.target.toLocaleString()}
@@ -437,6 +480,25 @@ export function TodayClient({
           </ul>
         </section>
       )}
+
+      {/* Every goal in THIS circle, edited together (D51). Reconciles from each
+          write's own return — the effective target after the raise-only rule
+          has been applied server-side — so a value at or below the circle's
+          share visibly snaps back to the circle's number instead of silently
+          doing nothing. */}
+      <GoalsDialog
+        open={goalsOpen}
+        onClose={() => setGoalsOpen(false)}
+        groupId={groupId}
+        groupName={groupName}
+        tasks={tasks.map((t) => ({
+          id: t.id,
+          label: t.label,
+          target: t.target,
+          goal: goalOf(t),
+        }))}
+        onSaved={(saved) => setGoalById((g) => ({ ...g, ...saved }))}
+      />
     </Screen>
   );
 }

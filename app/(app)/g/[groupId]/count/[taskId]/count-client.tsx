@@ -12,9 +12,8 @@ import { ArrowLeftIcon, MinusIcon } from "@/components/app/icons";
 import { playComplete, playTen } from "@/lib/sound";
 import { groupHref } from "@/lib/group-href";
 import { useLocalToday } from "@/lib/use-local-today";
-import { usePropState } from "@/lib/use-prop-state";
 import { goalCap } from "@/lib/goals";
-import { incrementCount, setTaskGoal } from "../../today/actions";
+import { incrementCount } from "../../today/actions";
 import { setCount } from "../../group/actions";
 
 /**
@@ -108,14 +107,13 @@ export function CountClient({
   const [error, setError] = React.useState<string | null>(null);
   const [editOpen, setEditOpen] = React.useState(false);
   const [draft, setDraft] = React.useState("");
-  const [goalOpen, setGoalOpen] = React.useState(false);
-  const [goalDraft, setGoalDraft] = React.useState("");
-  const [savingGoal, setSavingGoal] = React.useState(false);
-  // My bar for this task. Local so a raise applies at once (the ring is the
-  // whole point of the control), re-seeded from the server when a refresh
-  // brings a new value. Never below the circle's share — the RPC enforces that
-  // and hands back the effective target, which is what we store.
-  const [goal, setGoal] = usePropState(task.goal);
+  // My bar for this task, as the server resolved it (D51). It is SET on Today —
+  // "My goals" on the rings heading edits the whole circle at once — and only
+  // displayed here: a goal is a circle-level decision made once in a while, and
+  // burying the control in this screen's correction tray made it unfindable.
+  // This screen still honours it completely: the ring runs to it, the arc is
+  // notched at the circle's share, and the caption names both numbers.
+  const goal = task.goal;
   const stretched = goal > task.target;
   // "This day's ring was ALREADY closed before the current tap" — the guard
   // that keeps the celebration rare. It must be seeded from the day's real
@@ -375,40 +373,6 @@ export function CountClient({
     syncMilestones(countsRef.current[date] ?? 0);
   };
 
-  // Raising the bar re-opens a ring that was closed at the old number, so the
-  // guards must follow it — otherwise closing the NEW ring would pass unmarked
-  // (the ref would still say "already celebrated"). Reconciled from the RPC's
-  // own return (D45), which is the effective target: the group's own number
-  // when the member drops back to the circle's share.
-  //
-  // AWAITED, unlike everything else on this screen. The tap loop is optimistic
-  // because a tap is one of hundreds and a round-trip you can feel would ruin
-  // it; a goal is a deliberate once-in-a-while decision, and firing it off
-  // un-awaited loses a real race — leave for Today the instant the dialog
-  // closes and the read can arrive BEFORE the write, so the rings come back
-  // rendered against the old number with nothing on the way to correct them.
-  // Holding the dialog for one round-trip is the honest version, and it is
-  // also the only way a refusal can be shown where it can be read.
-  const commitGoal = async (next: number | null): Promise<boolean> => {
-    setError(null);
-    setSavingGoal(true);
-    try {
-      const res = await setTaskGoal(groupId, task.id, next);
-      if (!res) return false; // the action redirected (stale session)
-      if (res.error || res.goal == null) {
-        setError(res.error ?? "Couldn't save your goal — try again");
-        return false;
-      }
-      setGoal(res.goal);
-      const current = countsRef.current[date] ?? 0;
-      justCompleted.current = current >= res.goal;
-      shareMarked.current = current >= task.target;
-      return true;
-    } finally {
-      setSavingGoal(false);
-    }
-  };
-
   return (
     <div className="flex flex-1 flex-col px-5 pt-5 pb-8">
       <div className="flex items-center justify-between">
@@ -536,23 +500,6 @@ export function CountClient({
           >
             Edit count
           </Button>
-          <span aria-hidden className="h-6 w-px bg-border" />
-          {/* Third segment of the same recessive tray, not a fourth control
-              floating somewhere else: raising your bar is a correction to the
-              screen's premise, and it belongs in the same language as fixing
-              the number. Still muted — the ring and the gold action below own
-              the screen. */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-11 rounded-none px-5 text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={() => {
-              setGoalDraft(String(goal));
-              setGoalOpen(true);
-            }}
-          >
-            {stretched ? "My goal" : "Set my goal"}
-          </Button>
         </div>
       </div>
 
@@ -668,88 +615,6 @@ export function CountClient({
         </p>
         {/* A refusal (out of range, outside the 14-day window) has to be read
             here — the page-level alert is behind the backdrop. */}
-        {error && (
-          <p role="alert" className="mt-2 text-xs text-danger">
-            {error}
-          </p>
-        )}
-      </Dialog>
-
-      {/* My own bar (D51). Deliberately framed as aiming HIGHER, never as
-          changing what the circle asked: the floor is the group's target, and
-          the way back down is a button rather than a number you have to guess. */}
-      <Dialog
-        open={goalOpen}
-        onClose={() => setGoalOpen(false)}
-        title="My goal"
-        description={`${task.label} · every day`}
-        footer={
-          <>
-            {stretched && (
-              <Button
-                variant="ghost"
-                disabled={savingGoal}
-                onClick={() => {
-                  void commitGoal(null).then((ok) => ok && setGoalOpen(false));
-                }}
-              >
-                Back to the circle&rsquo;s
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              disabled={savingGoal}
-              onClick={() => setGoalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={goalDraft.trim() === "" || savingGoal}
-              onClick={() => {
-                const value = Number(goalDraft);
-                if (!Number.isFinite(value)) return;
-                const v = Math.max(0, Math.round(value));
-                // Mirrors set_task_goal's cap so an impossible number is
-                // refused here, before the dialog closes on it.
-                if (v > goalCap(task.target)) {
-                  setError(
-                    `Choose a goal between ${task.target.toLocaleString()} and ${goalCap(
-                      task.target,
-                    ).toLocaleString()}.`,
-                  );
-                  return;
-                }
-                // Closed only once the write has landed — see commitGoal.
-                void commitGoal(v).then((ok) => ok && setGoalOpen(false));
-              }}
-            >
-              {savingGoal ? "Saving…" : "Save"}
-            </Button>
-          </>
-        }
-      >
-        <Input
-          type="number"
-          inputMode="numeric"
-          min={task.target}
-          autoFocus
-          value={goalDraft}
-          onChange={(e) => setGoalDraft(e.target.value)}
-          aria-label={`My daily goal for ${task.label}`}
-        />
-        <p className="mt-2 text-xs text-muted-foreground">
-          Your circle&rsquo;s share is{" "}
-          <span className="font-medium text-foreground tabular-nums">
-            {task.target.toLocaleString()}
-          </span>
-          . You can aim higher — anything lower just puts you back on the
-          circle&rsquo;s number.
-        </p>
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          Your streak, your consistency and the circle&rsquo;s total all still
-          count from {task.target.toLocaleString()}. Aiming higher can only ever
-          add to them.
-        </p>
         {error && (
           <p role="alert" className="mt-2 text-xs text-danger">
             {error}

@@ -96,6 +96,14 @@ export const GridIcon = (p: IconProps) => (
   </svg>
 );
 
+/** Concentric rings — the app's own vocabulary for "what I'm aiming at". */
+export const TargetIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="4.5" />
+  </svg>
+);
+
 export const ChevronRightIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="m9 6 6 6-6 6" />
