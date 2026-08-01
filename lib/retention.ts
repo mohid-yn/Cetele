@@ -104,26 +104,44 @@ export const GARDEN_STAGE_COPY = [
 // ---------------------------------------------------------------------------
 
 /**
- * A deterministic accountability buddy — MUTUAL by construction: everyone is
+ * A deterministic accountability duo — MUTUAL by construction: everyone is
  * paired adjacently over the same rotated, sorted id list (`i ^ 1`), so my
- * buddy's buddy is always me — "you won the week together" is then true for
- * both people, not just the viewer (the old hash-of-my-id pick was one-way).
+ * duo's duo is always me. "You won the week together" is therefore true for
+ * both people, not just the viewer (the original hash-of-my-id pick was
+ * one-way, which meant two members could each name a different partner).
  *
- * Stable within a week (derived from ids + the ISO week key, never from array
- * order, which the DB does not guarantee), and rotated BY week: pairs refresh
- * weekly ("Pair goal · this week"), and in an odd-sized circle the person left
- * without a partner (→ null, the card simply doesn't render) is someone
- * different each week instead of the same member forever.
+ * Rotated by PERIOD, and the period is now a MONTH rather than a week. The
+ * owner's complaint was that they could not tell how duos were established,
+ * and a pairing that silently reshuffled every Monday is a large part of why:
+ * a partner you hold for seven days never becomes accountability, and the name
+ * on the card changed with nothing on screen accounting for it. A month is long
+ * enough to notice who you are carrying and be carried by, and the UI now says
+ * the rule out loud instead of leaving it to be inferred.
+ *
+ * Two honest limits of keeping this STATELESS (no table, nobody asked):
+ *
+ *   1. It is recomputed from CURRENT membership, so someone joining or leaving
+ *      mid-month can repair the circle. Storing pairs is the only real fix, and
+ *      that was weighed and declined — the trade is no consent flow, no rows to
+ *      reconcile when a member leaves, and no stale pair pointing at an
+ *      ex-member.
+ *   2. Nobody is asked or notified. Both halves see the same card, which is
+ *      what makes it fair, but it is an assignment rather than an agreement.
+ *
+ * In an odd-sized circle exactly one person has no partner. That used to render
+ * NOTHING, which is the worst version — the card a member's neighbour is
+ * discussing simply does not exist for them, with no reason given. The caller
+ * now renders an explicit "no duo this month" state instead (see `PairGoal`).
  */
 export function pickBuddy(
   meId: string,
   memberIds: string[],
-  weekKey: string,
+  periodKey: string,
 ): string | null {
   const ids = [...new Set(memberIds)].sort();
   if (ids.length < 2) return null;
   const h =
-    Array.from(weekKey).reduce(
+    Array.from(periodKey).reduce(
       (a, c) => (a * 31 + c.charCodeAt(0)) >>> 0,
       7,
     ) >>> 0;
@@ -132,10 +150,19 @@ export function pickBuddy(
   const i = rotated.indexOf(meId);
   if (i === -1) return null;
   const j = i ^ 1; // adjacent pairing: (0,1), (2,3), … — symmetric
-  return j < rotated.length ? rotated[j] : null; // odd one out this week
+  return j < rotated.length ? rotated[j] : null; // odd one out this month
 }
 
-/** Combined active-days this week that a pair must reach to win together. */
+/**
+ * `YYYY-MM` in the member's own day — the rotation seed for `pickBuddy`.
+ * Derived from the already-localised ISO date, so a duo turns over on the
+ * member's own 1st of the month, not UTC's (D34's per-user day rule).
+ */
+export function monthKey(iso: string): string {
+  return iso.slice(0, 7);
+}
+
+/** Combined active-days this week that a duo must reach to win together. */
 export const PAIR_TARGET = 10;
 
 // ---------------------------------------------------------------------------

@@ -6,12 +6,7 @@ import { q } from "@/lib/db-log";
 import type { BreakdownMember } from "@/components/app/member-breakdown";
 import type { GridRow } from "@/components/app/task-grid";
 import type { Pair } from "@/components/app/pair-goal";
-import {
-  gardenStage,
-  pickBuddy,
-  isoWeekKey,
-  PAIR_TARGET,
-} from "@/lib/retention";
+import { gardenStage, pickBuddy, monthKey, PAIR_TARGET } from "@/lib/retention";
 import { GroupLive } from "./group-live";
 import {
   GroupClient,
@@ -269,22 +264,36 @@ export default async function GroupPage({
     },
   );
 
-  // CET-22 — the pair goal. Also stores nothing: the buddy is a deterministic
-  // MUTUAL pick (adjacent pairing, rotated weekly — my buddy's buddy is me), and
-  // "days active this week" is the figure Standings already computed. Null in an
-  // odd-sized circle for whoever sits out this week — the card just isn't shown.
-  const buddyId = pickBuddy(me, memberIds, isoWeekKey(todayISO));
+  // CET-22 — the duo goal. Stores nothing: the partner is a deterministic
+  // MUTUAL pick (adjacent pairing over a sorted id list — my duo's duo is me),
+  // and "days active this week" is the figure Standings already computed.
+  //
+  // Rotated MONTHLY, not weekly. A partner who changed every Monday could never
+  // become accountability, and nothing on screen accounted for the new name —
+  // which is exactly why the owner could not tell how duos were established.
+  // The goal window stays weekly; only the pairing is monthly.
+  //
+  // `pairless` distinguishes the two reasons there is no partner, because they
+  // deserve different answers: an odd-sized circle leaves one person out and we
+  // must SAY so (rendering nothing was the old behaviour and the confusing
+  // one), whereas a circle of one has no duo concept to explain yet.
+  const buddyId = pickBuddy(me, memberIds, monthKey(todayISO));
   const daysActive = (u: string) =>
     standings.find((s) => s.userId === u)?.daysActive ?? 0;
+  const myDays = daysActive(me);
+  const buddyDays = buddyId ? daysActive(buddyId) : 0;
   const pair: Pair | null = buddyId
     ? {
         myName: names[me] ?? "You",
         buddyName: names[buddyId] ?? "Member",
-        combined: daysActive(me) + daysActive(buddyId),
+        myDays,
+        buddyDays,
+        combined: myDays + buddyDays,
         target: PAIR_TARGET,
-        met: daysActive(me) + daysActive(buddyId) >= PAIR_TARGET,
+        met: myDays + buddyDays >= PAIR_TARGET,
       }
     : null;
+  const pairless = !buddyId && memberIds.length >= 2;
 
   // M6 — the admin-only steadfastness board (D31): each member's recent
   // consistency RATE = avg(completion_pct) over their last-90 rollup rows
@@ -353,6 +362,7 @@ export default async function GroupPage({
         viewerId={me}
         garden={garden}
         pair={pair}
+        pairless={pairless}
       />
     </>
   );

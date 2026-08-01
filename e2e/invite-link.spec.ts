@@ -138,5 +138,9 @@ test("the OLD code no longer joins anyone; the new one does", async ({
   await page.goto(secondLink);
   await page.getByRole("button", { name: /Accept|Join/i }).click();
   await page.waitForURL("**/today**");
-  await expect(page.getByText("Invite Circle")).toBeVisible();
+  // Scoped to the welcome banner, not a bare text match: the circle's name is
+  // ALSO the group-switcher's label, so `getByText("Invite Circle")` is a
+  // strict-mode violation the moment the banner finishes rendering — which
+  // made this pass or fail purely on how fast the machine was.
+  await expect(page.getByText(/Welcome to Invite Circle/)).toBeVisible();
 });

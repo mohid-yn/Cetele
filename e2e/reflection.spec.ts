@@ -67,7 +67,7 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
   await pageA.getByPlaceholder("Daily target").last().fill("10");
   await pageA.click('button:has-text("Add task")');
   await expect(pageA.getByText("target 10 · daily")).toBeVisible();
-  await pageA.click('button:has-text("Create invite")');
+  // 0022: the circle's open link comes with the circle — nothing to click.
   const joinLink = await pageA
     .locator("code", { hasText: "/join/" })
     .first()

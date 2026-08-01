@@ -42,7 +42,10 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   await pageA.getByPlaceholder("Daily target").last().fill("3");
   await pageA.click('button:has-text("Add task")');
   await expect(pageA.getByText("target 3 · daily")).toBeVisible();
-  await pageA.click('button:has-text("Create invite")');
+  // 0022: the circle's open link exists already — nothing to click. (Clicking
+  // "Create invite" with an empty email now RAISES, and this spec used to do
+  // exactly that and pass anyway by reading the default link out of the error
+  // state.)
   const joinLink = await pageA
     .locator("code", { hasText: "/join/" })
     .first()
@@ -148,9 +151,21 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   ).toBeVisible();
 
   await pageA.click('button:has-text("Standings")');
-  // The pair goal leads the ranking: B is A's only possible buddy.
-  await expect(pageA.getByText("Pair goal · this week")).toBeVisible();
-  await expect(pageA.getByText(/more active days? between you/)).toBeVisible();
+  // The duo goal leads the ranking: B is A's only possible partner.
+  await expect(pageA.getByText("Your duo · this month")).toBeVisible();
+  // Both contributions are shown, not just the combined figure — being able to
+  // see who is carrying whom is most of what makes a duo mean anything.
+  // (`.+` for the name, not `\w+`: e2e profile names are email local-parts,
+  // full of dots and hyphens.)
+  await expect(pageA.getByText(/^You \d+ · .+ \d+$/)).toBeVisible();
+  // ...and the shortfall never points at a person. The old copy ("N more
+  // active days BETWEEN YOU") had an obvious subject whenever the partner was
+  // the reason for it, which is the framing D8 forbids everywhere else.
+  await expect(
+    pageA.getByText(/days? to go — either of you can bring it home/),
+  ).toBeVisible();
+  // The rule is stated, so a changed name next month is explainable.
+  await expect(pageA.getByText(/pairs everyone up each month/)).toBeVisible();
 
   // ---- CET-20 badges ---------------------------------------------------------
   await pageA.goto("/progress");

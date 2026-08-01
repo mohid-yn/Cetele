@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { GroupGarden } from "@/components/app/group-garden";
-import { PairGoal, type Pair } from "@/components/app/pair-goal";
+import { PairGoal, NoPairGoal, type Pair } from "@/components/app/pair-goal";
 import type { Garden } from "@/lib/retention";
 import { MemberRow } from "@/components/app/member-row";
 import { InlineAlert } from "@/components/app/inline-alert";
@@ -104,6 +104,7 @@ export function GroupClient({
   viewerId,
   garden,
   pair,
+  pairless,
 }: {
   groupId: string;
   groupName: string;
@@ -125,9 +126,13 @@ export function GroupClient({
   viewerId: string;
   /** The collective living artefact (CET-17) — derived, stores nothing. */
   garden: Garden;
-  /** This week's winnable pair goal (CET-22); null in a circle of one, or for
-   *  the member sitting out this week in an odd-sized circle. */
+  /** This week's winnable duo goal (CET-22). Null when there is no partner:
+   *  either a circle of one, or the member sitting out an odd-sized circle. */
   pair: Pair | null;
+  /** True only for the SECOND case above — an odd-sized circle left this member
+   *  without a partner. It gets its own card saying so, because rendering
+   *  nothing is what made the feature unexplainable in the first place. */
+  pairless: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = React.useState<Tab>("overview");
@@ -346,6 +351,7 @@ export function GroupClient({
               group leaderboard disheartens the bottom half, so the first thing
               you meet here is a goal you WIN TOGETHER rather than a rank. */}
               {pair && <PairGoal pair={pair} />}
+              {pairless && <NoPairGoal />}
 
               <p className="text-xs text-muted-foreground">
                 The weekly ranking is for fun — showing up matters more than the
