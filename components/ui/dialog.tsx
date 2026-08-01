@@ -87,8 +87,20 @@ export function Dialog({
             aria-modal="true"
             aria-label={title}
             tabIndex={-1}
+            // A dialog can never grow past the viewport. Capped at the screen
+            // minus the container's own p-4, laid out as a column so the title
+            // and the ACTION ROW are always on screen and only the body
+            // scrolls. `dvh`, not `vh`, because mobile browser chrome moves.
+            //
+            // This is a floor for every dialog, not a tweak for one: the grid
+            // container is `fixed inset-0` and centres its child, so an
+            // oversized card overflows in BOTH directions with nothing able to
+            // scroll it — the footer simply leaves the screen and becomes
+            // unclickable. Measured before this existed: the goals dialog on a
+            // 6-task circle was 901px on a 844px phone, with Save at y=852-896
+            // and `elementFromPoint` at its centre returning nothing.
             className={cn(
-              "relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-xl outline-none",
+              "relative flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col rounded-2xl border border-border bg-card p-5 shadow-xl outline-none",
               className,
             )}
             initial={{ opacity: 0, scale: 0.94, y: 8 }}
@@ -97,18 +109,27 @@ export function Dialog({
             transition={{ duration: DURATION.base, ease: EASE_BRAND }}
           >
             {title && (
-              <h2 className="font-display text-lg font-bold text-foreground">
+              <h2 className="shrink-0 font-display text-lg font-bold text-foreground">
                 {title}
               </h2>
             )}
             {description && (
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 shrink-0 text-sm text-muted-foreground">
                 {description}
               </p>
             )}
-            {children && <div className="mt-4">{children}</div>}
+            {/* `min-h-0` is load-bearing: a flex child's default `min-height:
+                auto` refuses to shrink below its content, so the scroll
+                container would never engage and the cap would do nothing. */}
+            {children && (
+              <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                {children}
+              </div>
+            )}
             {footer && (
-              <div className="mt-5 flex justify-end gap-2">{footer}</div>
+              <div className="mt-5 flex shrink-0 justify-end gap-2">
+                {footer}
+              </div>
             )}
           </motion.div>
         </div>

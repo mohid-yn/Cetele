@@ -286,7 +286,10 @@ export function TodayClient({
             Hidden with no tasks: there is nothing to aim at yet. */}
         <SectionHeading
           action={
-            tasks.length > 0 && (
+            // `undefined`, not `&&`: SectionHeading renders its slot whenever
+            // `action != null`, and `false` passes that test — a no-task circle
+            // would get an empty action div.
+            tasks.length > 0 ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -295,7 +298,7 @@ export function TodayClient({
               >
                 My goals
               </Button>
-            )
+            ) : undefined
           }
         >
           {isToday ? "Your rings today" : "Your rings"}

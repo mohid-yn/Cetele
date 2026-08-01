@@ -206,6 +206,60 @@ test("a goal above the cap is refused in the dialog, not by the server", async (
   await expect(page.getByRole("dialog")).toBeHidden();
 });
 
+test("on a phone, a circle with many tasks can still reach Save", async ({
+  page,
+}) => {
+  // The reported-by-measurement bug: `Dialog` had no max-height and its
+  // container is `fixed inset-0` centring its child, so an oversized card
+  // overflowed in BOTH directions with nothing able to scroll it. Measured on
+  // a 6-task circle at 390x844: the card was 901px tall, Save sat at y=852-896
+  // — off-screen — and `elementFromPoint` at its centre returned null. A member
+  // in an ordinary six-dhikr cetele could not save their goals AT ALL.
+  //
+  // The assertion is deliberately the HIT TEST, not visibility: a button can be
+  // "visible" to Playwright and still have nothing on top of it to click.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page, USER);
+
+  // Six tasks is an ordinary cetele, not a stress case.
+  await page.goto("/groups");
+  await page.click('a:has-text("Manage")');
+  await page.waitForURL("**/group/manage");
+  for (const label of ["Tahlil", "Tasbih", "Tahmid", "Takbir", "Hawqala"]) {
+    await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill(label);
+    await page.getByPlaceholder("Daily target").last().fill("33");
+    await page.click('button:has-text("Add task")');
+    await expect(page.getByText(label, { exact: true })).toBeVisible();
+  }
+
+  await page.goto("/today");
+  await openGoals(page);
+
+  const save = page.getByRole("button", { name: "Save" });
+  const box = (await save.boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(844);
+
+  // Nothing is covering it, and it is the element the tap actually lands on.
+  const landsOnSave = await page.evaluate(
+    ([x, y]) =>
+      document
+        .elementFromPoint(x as number, y as number)
+        ?.closest("button")
+        ?.textContent?.trim() ?? null,
+    [box.x + box.width / 2, box.y + box.height / 2],
+  );
+  expect(landsOnSave).toBe("Save");
+
+  // The list scrolls inside the card, so the LAST row is reachable too — a cap
+  // that simply clipped the overflow would pass the assertions above.
+  const lastInput = page.getByLabel("Hawqala", { exact: true });
+  await lastInput.scrollIntoViewIfNeeded();
+  await lastInput.fill("99");
+  await save.click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page.getByText("0 / 99")).toBeVisible();
+});
+
 test("a goal above 500 can still be closed in one press", async ({ page }) => {
   await signIn(page, USER);
   await page.goto("/today");

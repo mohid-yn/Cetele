@@ -124,18 +124,36 @@ export function GoalsDialog({
     setSaving(true);
     const applied: Record<string, number> = {};
     const failed: string[] = [];
-    // Serialized on purpose: these are a handful of writes against one member's
-    // own rows, and a failure needs to name the task it belongs to.
-    for (const c of changes) {
-      const res = await setTaskGoal(
-        groupId,
-        c.task.id,
-        c.value <= c.task.target ? null : c.value,
-      );
-      if (res.error || res.goal == null) failed.push(c.task.label);
-      else applied[c.task.id] = res.goal;
+    // try/finally, not a bare await: `saving` disables every control in here,
+    // so if a write throws — the action redirects on a stale session and
+    // resolves to nothing, and `res.error` on undefined is a TypeError — the
+    // dialog would sit on "Saving…" forever with no way out. A modal you
+    // cannot leave is the worst failure this component has.
+    try {
+      // Serialized on purpose: these are a handful of writes against one
+      // member's own rows, and a failure needs to name the task it belongs to.
+      for (const c of changes) {
+        const res = await setTaskGoal(
+          groupId,
+          c.task.id,
+          c.value <= c.task.target ? null : c.value,
+        );
+        // `res` is typed non-null but the action redirects on a stale session
+        // (lib/stale-session.ts), which resolves the call to nothing — the
+        // same guard the count screen has always carried.
+        if (!res || res.error || res.goal == null) failed.push(c.task.label);
+        else applied[c.task.id] = res.goal;
+      }
+    } catch {
+      // Nothing landed for the rows we never reached; report the ones we know
+      // about rather than pretending the whole save succeeded.
+      for (const c of changes) {
+        if (applied[c.task.id] === undefined && !failed.includes(c.task.label))
+          failed.push(c.task.label);
+      }
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
 
     // Hand back what LANDED, including on a partial failure — the rows that
     // saved are real and the screen must not keep showing the old numbers.
@@ -159,7 +177,13 @@ export function GoalsDialog({
   return (
     <Dialog
       open={open}
-      onClose={saving ? () => {} : onClose}
+      // Closable even mid-save. The buttons stay disabled so a save cannot be
+      // fired twice, but Escape and the backdrop keep working: the writes are
+      // already in flight and land regardless, closing does not navigate, and
+      // Today reconciles from each write's own return rather than a refetch —
+      // so there is nothing to protect by trapping the member behind a slow
+      // network.
+      onClose={onClose}
       title="My goals"
       description={`${groupName} · only you can see these`}
       footer={
@@ -225,7 +249,14 @@ export function GoalsDialog({
                       max={goalCap(t.target)}
                       disabled={saving}
                       aria-invalid={err ? true : undefined}
-                      aria-describedby={`${inputId}-hint`}
+                      // The error first, then the floor. Without the error id
+                      // here a screen reader announces "The circle asks 33"
+                      // and nothing about why the save was refused.
+                      aria-describedby={
+                        err
+                          ? `${inputId}-err ${inputId}-hint`
+                          : `${inputId}-hint`
+                      }
                       className="w-28 tabular-nums"
                       value={draft[t.id] ?? ""}
                       onChange={(e) => setRow(t.id, e.target.value)}
@@ -240,7 +271,14 @@ export function GoalsDialog({
                       </span>
                     </p>
                   </div>
-                  {err && <p className="mt-1.5 text-xs text-danger">{err}</p>}
+                  {err && (
+                    <p
+                      id={`${inputId}-err`}
+                      className="mt-1.5 text-xs text-danger"
+                    >
+                      {err}
+                    </p>
+                  )}
                 </li>
               );
             })}
