@@ -35,9 +35,10 @@ insert into public.memberships (user_id, group_id, role) values
   ('d1000000-0000-0000-0000-00000000000a', 'd1000000-0000-0000-0000-00000000d001', 'member'),
   ('d1000000-0000-0000-0000-00000000000b', 'd1000000-0000-0000-0000-00000000d001', 'owner');
 
-insert into public.tasks (id, group_id, label, target_count) values
-  ('d1000000-0000-0000-0000-00000000e001', 'd1000000-0000-0000-0000-00000000d001', 'Salawat', 100),
-  ('d1000000-0000-0000-0000-00000000e002', 'd1000000-0000-0000-0000-00000000d001', 'Istighfar', 10);
+-- created_at explicit (0021) — see 003/004.
+insert into public.tasks (id, group_id, label, target_count, created_at) values
+  ('d1000000-0000-0000-0000-00000000e001', 'd1000000-0000-0000-0000-00000000d001', 'Salawat', 100, current_date - 40),
+  ('d1000000-0000-0000-0000-00000000e002', 'd1000000-0000-0000-0000-00000000d001', 'Istighfar', 10, current_date - 40);
 
 create function pg_temp.impersonate(u uuid) returns void language plpgsql as $$
 begin

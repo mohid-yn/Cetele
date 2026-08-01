@@ -342,19 +342,22 @@ export type Database = {
       };
       member_task_goals: {
         Row: {
-          target_count: number;
+          frequency_days: number | null;
+          target_count: number | null;
           task_id: string;
           updated_at: string;
           user_id: string;
         };
         Insert: {
-          target_count: number;
+          frequency_days?: number | null;
+          target_count?: number | null;
           task_id: string;
           updated_at?: string;
           user_id: string;
         };
         Update: {
-          target_count?: number;
+          frequency_days?: number | null;
+          target_count?: number | null;
           task_id?: string;
           updated_at?: string;
           user_id?: string;
@@ -679,6 +682,8 @@ export type Database = {
       };
       tasks: {
         Row: {
+          created_at: string;
+          frequency_days: number;
           group_id: string;
           id: string;
           label: string;
@@ -687,6 +692,8 @@ export type Database = {
           target_count: number;
         };
         Insert: {
+          created_at?: string;
+          frequency_days?: number;
           group_id: string;
           id?: string;
           label: string;
@@ -695,6 +702,8 @@ export type Database = {
           target_count: number;
         };
         Update: {
+          created_at?: string;
+          frequency_days?: number;
           group_id?: string;
           id?: string;
           label?: string;
@@ -812,6 +821,10 @@ export type Database = {
       set_reminder: {
         Args: { p_enabled: boolean; p_task: string; p_time: string };
         Returns: undefined;
+      };
+      set_task_frequency: {
+        Args: { p_days: number; p_task: string };
+        Returns: number;
       };
       set_task_goal: {
         Args: { p_target: number; p_task: string };

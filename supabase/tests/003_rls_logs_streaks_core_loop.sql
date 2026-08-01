@@ -33,14 +33,20 @@ insert into public.groups (id, name, created_by) values
   ('d0000000-0000-0000-0000-0000000000b1', 'M3 Circle',
    'd0000000-0000-0000-0000-000000000001');
 
-insert into public.memberships (user_id, group_id, role) values
-  ('d0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-0000000000b1', 'owner'),
-  ('d0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-0000000000b1', 'admin'),
-  ('d0000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-0000000000b1', 'member'),
-  ('d0000000-0000-0000-0000-000000000005', 'd0000000-0000-0000-0000-0000000000b1', 'member');
+-- created_at backdated (0021): the rollover job now resolves a missed day
+-- through the member's own occasion list, which is bounded by the membership
+-- (0020) — a membership defaulting to "joined today" owes nothing yesterday, so
+-- the freeze/reset cases below would have nothing to judge.
+insert into public.memberships (user_id, group_id, role, created_at) values
+  ('d0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-0000000000b1', 'owner',  now() - interval '40 days'),
+  ('d0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-0000000000b1', 'admin',  now() - interval '40 days'),
+  ('d0000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-0000000000b1', 'member', now() - interval '40 days'),
+  ('d0000000-0000-0000-0000-000000000005', 'd0000000-0000-0000-0000-0000000000b1', 'member', now() - interval '40 days');
 
-insert into public.tasks (id, group_id, label, target_count) values
-  ('d0000000-0000-0000-0000-0000000000c1', 'd0000000-0000-0000-0000-0000000000b1', 'Salawat', 10);
+-- created_at explicit (0021): an obligation starts when the TASK started, so a
+-- task defaulting to "created today" owes nothing on the back-filled days below.
+insert into public.tasks (id, group_id, label, target_count, created_at) values
+  ('d0000000-0000-0000-0000-0000000000c1', 'd0000000-0000-0000-0000-0000000000b1', 'Salawat', 10, current_date - 40);
 
 create function pg_temp.impersonate(u uuid) returns void language plpgsql as $$
 begin
@@ -284,8 +290,8 @@ insert into public.groups (id, name, created_by) values
 insert into public.memberships (user_id, group_id, role) values
   ('d0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-0000000000b2', 'owner'),
   ('d0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-0000000000b2', 'member');
-insert into public.tasks (id, group_id, label, target_count) values
-  ('d0000000-0000-0000-0000-0000000000c2', 'd0000000-0000-0000-0000-0000000000b2', 'Istighfar', 5);
+insert into public.tasks (id, group_id, label, target_count, created_at) values
+  ('d0000000-0000-0000-0000-0000000000c2', 'd0000000-0000-0000-0000-0000000000b2', 'Istighfar', 5, current_date - 40);
 
 select pg_temp.impersonate('d0000000-0000-0000-0000-000000000002'); -- a (in both groups)
 select lives_ok(
@@ -431,9 +437,12 @@ insert into public.groups (id, name, created_by) values
 insert into public.memberships (user_id, group_id, role, created_at) values
   ('d0000000-0000-0000-0000-00000000ab01', 'd0000000-0000-0000-0000-00000000ab02', 'owner',  now() - interval '10 days'),
   ('d0000000-0000-0000-0000-00000000ab01', 'd0000000-0000-0000-0000-00000000ab03', 'member', now() - interval '1 day');
-insert into public.tasks (id, group_id, label, target_count) values
-  ('d0000000-0000-0000-0000-00000000ab04', 'd0000000-0000-0000-0000-00000000ab02', 'OA', 1),
-  ('d0000000-0000-0000-0000-00000000ab05', 'd0000000-0000-0000-0000-00000000ab03', 'OB', 1);
+-- Both circles' tasks predate the member's arrival — a circle that existed
+-- before you joined had its tasks already. Without this the task-age bound
+-- (0021) removes the very obligations this block is about.
+insert into public.tasks (id, group_id, label, target_count, created_at) values
+  ('d0000000-0000-0000-0000-00000000ab04', 'd0000000-0000-0000-0000-00000000ab02', 'OA', 1, now() - interval '20 days'),
+  ('d0000000-0000-0000-0000-00000000ab05', 'd0000000-0000-0000-0000-00000000ab03', 'OB', 1, now() - interval '20 days');
 insert into public.logs (user_id, task_id, date, count)
   select 'd0000000-0000-0000-0000-00000000ab01', 'd0000000-0000-0000-0000-00000000ab04', current_date - i, 1
     from generate_series(0, 9) i;
@@ -454,10 +463,29 @@ insert into public.logs (user_id, task_id, date, count) values
   ('d0000000-0000-0000-0000-00000000ab01', 'd0000000-0000-0000-0000-00000000ab05', current_date - 3, 1);
 select ok(private.is_day_complete('d0000000-0000-0000-0000-00000000ab01', current_date - 3),
   'back-filling a pre-join day in the second circle still counts it (D48)');
-insert into public.tasks (id, group_id, label, target_count) values
-  ('d0000000-0000-0000-0000-00000000ab06', 'd0000000-0000-0000-0000-00000000ab03', 'OB2', 5);
+-- The task must have EXISTED on the day being judged (0021). Backdated, the
+-- original intent still holds: claiming a pre-join day claims the circle's
+-- whole list for it, so one task out of two is not a kept day.
+insert into public.tasks (id, group_id, label, target_count, created_at) values
+  ('d0000000-0000-0000-0000-00000000ab06', 'd0000000-0000-0000-0000-00000000ab03', 'OB2', 5,
+   now() - interval '20 days');
 select ok(not private.is_day_complete('d0000000-0000-0000-0000-00000000ab01', current_date - 3),
   '...and claiming a pre-join day claims the whole circle, so a partial back-fill is not a full day');
+
+-- 0021, the other half of the retroactivity family: a task added TODAY is not
+-- owed on a day before it existed. Written the old way — with created_at
+-- defaulting to now() — this assertion fails, because adding one task
+-- retroactively un-kept every past day for every member at once (measured at
+-- 10 → 1 before this migration).
+insert into public.tasks (id, group_id, label, target_count) values
+  ('d0000000-0000-0000-0000-00000000ab07', 'd0000000-0000-0000-0000-00000000ab02', 'OA2', 5);
+-- Day -5, not -3: the assertion above deliberately left -3 incomplete via ab06.
+-- On -5 the member owed only circle A (they joined B a day ago), and kept it.
+select ok(private.is_day_complete('d0000000-0000-0000-0000-00000000ab01', current_date - 5),
+  'a task created TODAY does not retroactively break a day already kept');
+select private.refresh_streak('d0000000-0000-0000-0000-00000000ab01', current_date);
+select is((select current from public.streaks where user_id = 'd0000000-0000-0000-0000-00000000ab01'),
+  10, '...and the rebuilt chain survives an admin adding a task (was 10 → 1)');
 
 -- (c) The non-empty guard: a day on which nothing was owed is not a day kept,
 -- or the walk would hand out a fortnight of streak for one completed day.

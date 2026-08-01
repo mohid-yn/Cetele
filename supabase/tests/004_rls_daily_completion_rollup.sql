@@ -40,9 +40,12 @@ insert into public.memberships (user_id, group_id, role, created_at) values
   ('e6000000-0000-0000-0000-000000000003', 'e6000000-0000-0000-0000-0000000000b1', 'member', current_date - 40),
   ('e6000000-0000-0000-0000-000000000004', 'e6000000-0000-0000-0000-0000000000b1', 'member', current_date - 3);
 
-insert into public.tasks (id, group_id, label, target_count) values
-  ('e6000000-0000-0000-0000-0000000000c1', 'e6000000-0000-0000-0000-0000000000b1', 'Salawat',   10),
-  ('e6000000-0000-0000-0000-0000000000c2', 'e6000000-0000-0000-0000-0000000000b1', 'Istighfar', 5);
+-- created_at is explicit and backdated to the enrolment span (0021): an
+-- obligation now starts when the TASK started, so a task defaulting to "created
+-- today" owes nothing on any of the backdated days this suite measures.
+insert into public.tasks (id, group_id, label, target_count, created_at) values
+  ('e6000000-0000-0000-0000-0000000000c1', 'e6000000-0000-0000-0000-0000000000b1', 'Salawat',   10, current_date - 40),
+  ('e6000000-0000-0000-0000-0000000000c2', 'e6000000-0000-0000-0000-0000000000b1', 'Istighfar', 5,  current_date - 40);
 
 -- Raw logs (inserted directly as the test superuser; the app path is RPC-only).
 -- m: cd-1 FULL (both rings) · cd-2 PARTIAL (t1 only → 50%) · cd-3 nothing (missed
