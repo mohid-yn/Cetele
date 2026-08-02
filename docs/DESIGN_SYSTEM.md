@@ -265,15 +265,31 @@ defect with gold at 2.15:1 and handled it case by case.)
 
 ### 8.1 Buttons — variants
 
-| Variant       | Use                                                       | Budget           |
-| ------------- | --------------------------------------------------------- | ---------------- |
-| `primary`     | The main action of a card or dialog                       | one per card     |
-| `accent`      | **The** action of the whole view; earned/celebratory      | **one per view** |
-| `tonal`       | Between primary and outline — uses `primary-container`    | —                |
-| `outline`     | Equal-weight alternative beside a primary                 | —                |
-| `ghost`       | Tertiary; icon buttons; toolbar actions                   | —                |
-| `link`        | Inline navigation inside prose                            | —                |
-| `destructive` | Delete, remove, leave. **Never** the default in a confirm | one per dialog   |
+**There are no hand-rolled buttons.** Every control comes from `components/ui/button.tsx`; a bare
+`<button>` with utility classes is a bug, because it silently opts out of the edge, focus ring, tap
+target, disabled pair and pressed state that the primitive guarantees.
+
+| Variant               | Use                                                                       | Budget           |
+| --------------------- | ------------------------------------------------------------------------- | ---------------- |
+| `accent`              | **The** action of the whole view; earned/celebratory                      | **one per view** |
+| `primary`             | The main action of a card or dialog                                       | one per card     |
+| `subtle`              | A filled but unemphatic action — uses `--muted`                           | —                |
+| `outline`             | The workhorse secondary. A control that must still look like one          | —                |
+| `ghost`               | Tertiary; toolbar actions. **Only beside a louder neighbour** — see below | —                |
+| `link`                | Inline navigation inside prose (pair with `size="inline"`)                | —                |
+| `destructive`         | Confirmed, primary destruction — a dialog's final Delete                  | one per dialog   |
+| `destructive-outline` | A destructive action that is _not_ the screen's main event                | —                |
+
+`ghost` has no resting fill and only a transparent border, so **alone on a surface it reads as
+background** — the "is that even a button?" failure. It resolves its edge to `--outline` on hover and
+focus, which is enough _beside_ a filled primary (a dialog's Cancel) and not enough on its own. A
+standalone quiet control takes `outline`, not `ghost`.
+
+`destructive-outline` exists because a filled red button sitting in a quiet informational box reads as
+a warning about a decision the member has not made yet. "Leave this circle" is the reference case.
+
+> **Removed:** the `tonal` variant this table used to list was never implemented. `primary-container`
+> is still a live token — the nav's active pill uses it (§8.11) — but there is no `tonal` button.
 
 ### 8.2 Buttons — the full matrix
 
@@ -300,6 +316,15 @@ defect with gold at 2.15:1 and handled it case by case.)
 | `outline`     | transparent, 1px `--outline` | `#241e19` | `#2f2821` | `--on-surface` | 12.7 label · **5.77** boundary |
 | `ghost`       | transparent                  | `#241e19` | `#2f2821` | `--on-surface` | 12.7 label                     |
 | `link`        | —                            | underline | —         | `--primary`    | **11.24**                      |
+
+> **The two `outline` boundary numbers above were aspirational until 2026-08-02.** `app/globals.css`
+> carried `* { border-color: var(--border) }` **unlayered**, and unlayered CSS beats every `@layer` —
+> including the `@layer utilities` Tailwind puts `border-outline` in. So every border-colour utility in
+> the app resolved to `--border`, and the `outline` variant's boundary was rendering at the **1.31:1
+> light / 1.81:1 dark** decorative hairline it was explicitly written to stop using. The 1.4.11 fix was
+> in the source and not on the screen. Moving that rule into `@layer base` restored it — measured
+> **4.33 light / 5.33 on card, 5.77 on page** in dark. If a border colour ever "does nothing" again,
+> check the cascade layer before the token.
 
 **Focus-visible**, identical for every variant: `outline: 2px solid var(--primary); outline-offset: 2px`.
 Measured **5.85 light / 11.24 dark** on the page, **4.77 / 7.54** on the highest surface. Never removed;
@@ -331,26 +356,50 @@ label stays, **width does not change**, `aria-busy="true"`, pointer events off.
 
 ### 8.5 Buttons — sizes
 
-| Size   | Painted | Tap target                 | Use                                    |
-| ------ | ------- | -------------------------- | -------------------------------------- |
-| `sm`   | 36px    | **44px** via `tap-area-44` | Dense rows, inline actions             |
-| `md`   | 44px    | 44px                       | Default                                |
-| `lg`   | 52px    | 52px                       | The primary action on a focused screen |
-| `icon` | 44×44   | 44px                       | Icon-only — **requires `aria-label`**  |
+| Size      | Painted | Tap target                      | Use                                       |
+| --------- | ------- | ------------------------------- | ----------------------------------------- |
+| `sm`      | 36px    | **44px** via `tap-area-44`      | Dense rows, headers, inline actions       |
+| `icon-sm` | 36×36   | **44×44** via `tap-area-44-box` | Icon-only, paired with `sm`               |
+| `md`      | 44px    | 44px                            | Default — dialogs, page CTAs              |
+| `icon`    | 44×44   | 44px                            | Icon-only, paired with `md`               |
+| `lg`      | 52px    | 52px                            | The primary action on a focused screen    |
+| `inline`  | auto    | **none, deliberately**          | A control inside running text; use `link` |
 
-44px is the Apple HIG floor; Material asks 48dp. `tap-area-44` expands **vertically only** — horizontal
-expansion would overlap the 8px gap between side-by-side controls and steal a neighbour's taps.
+**The text size and its icon square are a PAIR — `icon-sm` with `sm`, `icon` with `md`.** Mixing them
+was the app's most visible size defect: the Group header put a 36px `sm` button beside a 44px `icon`
+button in the same row, an 8px step between two adjacent controls. If you place an icon button next to
+a text button, they take matching sizes or the row looks broken.
+
+Icon-only **requires `aria-label`**.
+
+44px is the Apple HIG floor; Material asks 48dp. The two tap utilities differ, and the difference
+matters:
+
+- `tap-area-44` expands **vertically only**, spanning the element's own width. Correct for a text
+  button that is already wide enough and merely short — horizontal expansion there would eat into the
+  8px gap between side-by-side controls and steal a neighbour's taps.
+- `tap-area-44-box` centres a 44×44 box on the control, because a 36px **square** is under the floor on
+  _both_ axes and `tap-area-44` would leave it 36px wide. Its 4px-per-side overhang exactly meets a
+  neighbour's at the midpoint of a standard 8px gap, so it never overlaps.
+
+`inline` is the one size with no tap target, on purpose: a word inside a paragraph cannot carry a 44px
+box without shifting the line. It exists so inline controls stop being hand-rolled `<button>`s — before
+it, every size forced a height and padding, which made the `link` variant unusable in prose.
 
 ### 8.6 Buttons — anti-patterns
 
-| Don't                                             | Because                                                |
-| ------------------------------------------------- | ------------------------------------------------------ |
-| Two `accent` buttons in one view                  | The budget is one; the second cancels the first        |
-| `destructive` as the default focus in a confirm   | The safe path is the default                           |
-| Icon-only with no `aria-label`                    | Unnameable to a screen reader, untestable by role+name |
-| A changing name **and** `aria-pressed`            | "Sound off, not pressed" — a double negative. Pick one |
-| `opacity` to quieten any variant                  | Use the variant that is already quieter                |
-| A destructive action distinguished only by colour | Accent and danger are 31° apart (§3.1)                 |
+| Don't                                             | Because                                                                                                                            |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Two `accent` buttons in one view                  | The budget is one; the second cancels the first                                                                                    |
+| `destructive` as the default focus in a confirm   | The safe path is the default                                                                                                       |
+| Icon-only with no `aria-label`                    | Unnameable to a screen reader, untestable by role+name                                                                             |
+| A changing name **and** `aria-pressed`            | "Sound off, not pressed" — a double negative. Pick one                                                                             |
+| `opacity` to quieten any variant                  | Use the variant that is already quieter                                                                                            |
+| A destructive action distinguished only by colour | Accent and danger are 31° apart (§3.1)                                                                                             |
+| A bare `<button className="text-primary">`        | Opts out of the edge, focus ring, tap target, disabled pair and pressed state. Use `outline`, or `link` + `size="inline"` in prose |
+| `disabled:opacity-*` on a hand-rolled control     | The same 2.16:1 bug §8.4 fixed in the primitive, reintroduced locally                                                              |
+| `size="icon"` beside `size="sm"`                  | An 8px height step in one row. Pair `icon-sm` with `sm`                                                                            |
+| `ghost` alone on a surface                        | No resting fill and a transparent edge — it reads as background. `outline` is the standalone quiet tier                            |
 
 ### 8.7 Inputs and fields
 
@@ -427,15 +476,36 @@ as a _thing_ is a boundary at the 3:1 floor. v1 had a near-invisible fill _and_ 
 
 ### 8.11 Navigation
 
-| Part            | Token                                         |
-| --------------- | --------------------------------------------- |
-| Surface         | `--surface-high`                              |
-| Border          | `--outline-variant` (hairline)                |
-| Active item     | `--primary` label + 2px `--primary` indicator |
-| Inactive item   | `--on-surface-variant`                        |
-| Hover / pressed | `--surface-highest`                           |
+**One definition, two layouts.** The bottom bar and the sidebar share `navItemVariants`
+(`components/app/nav-item-variants.ts`) and differ only by `layout: "stack" | "row"`. They used to be
+styled independently, which is why they had no coordination: the sidebar gave the active item a filled
+pill, the bottom bar gave it a 2px hairline, and neither had a visible hover or pressed state.
 
-Active state is **never colour alone** — the indicator bar and the heavier icon stroke carry it too.
+| Part          | Token                                                       |
+| ------------- | ----------------------------------------------------------- |
+| Surface       | `--chrome`                                                  |
+| Active item   | `--primary-container` pill + `--on-primary-container` label |
+| Inactive item | `--muted-foreground`                                        |
+| Hover         | `--chrome-hover`                                            |
+| Pressed       | `--chrome-active`                                           |
+
+> **Nav state layers come from the CHROME pair, never `--surface-*`.** `--surface-active` is
+> byte-identical to `--chrome` in **both** themes (`#f3e6da` light, `#110e0b` dark) — measured at a
+> contrast ratio of **1.000** against it. So the obvious `active:bg-surface-active` was a literal
+> no-op: pressing a nav item changed nothing on screen, which is the mechanical reason the nav could
+> not signal it was pressable. `--chrome-hover` / `--chrome-active` are the same 8%/12% M3 recipe taken
+> over `--chrome`, measured at **1.166 / 1.262** light and **1.176 / 1.302** dark.
+
+The active fill is the `--primary-container` **token**, not `bg-primary/10`: an alpha over chrome
+resolves to a different colour in each theme and can never be measured once. Measured **13.34:1** label
+on pill (light) and **7.15:1** (dark).
+
+The pill is a `motion.span` with a shared `layoutId`, so it glides between tabs. It sits at `-z-10`
+under the label, and the item therefore carries **`isolate`** — without its own stacking context a
+negative z-index escapes and the pill paints _behind_ the nav's own `bg-chrome`, rendering as nothing
+at all.
+
+Active state is **never colour alone** — the pill and the heavier icon stroke carry it too.
 `aria-current="page"` on the active link.
 
 ### 8.12 Segmented controls and toggles
@@ -453,6 +523,14 @@ Active state is **never colour alone** — the indicator bar and the heavier ico
   a dark reload doesn't animate across.
 - **A binary control does not need to spell out both options at full width.** Constrain it to its
   content; a two-segment pill filling a sidebar is a control shouting a small fact.
+  _This rule was written before the code obeyed it._ The theme control shipped in the sidebar foot as
+  `w-full` — a 224px labelled pill for one preference — until 2026-08-02. The sidebar now takes
+  `ThemeToggleButton`, a single `outline` `icon-sm` button whose **name** carries the change
+  ("Switch to dark theme", so no `aria-pressed` — §8.6). The labelled radiogroup stays on `/profile`,
+  where a preference deserves its options named, and its shell now matches `Segmented` exactly (same
+  radius, track, thumb token, padding). The two were the same control drawn twice, differing only by
+  accident — `rounded-full` vs `rounded-xl`, `bg-elevated` vs `bg-card`. Their **semantics** stay
+  different on purpose: radiogroup for a preference, tablist for in-page views.
 
 ### 8.13 Cards, dialogs, menus
 

@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { springGlide } from "@/lib/motion";
 import { NAV_ITEMS, NO_GROUP_NAV_ITEMS, resolveNavItem } from "./nav-items";
+import { navItemVariants } from "./nav-item-variants";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
 
@@ -36,7 +37,7 @@ export function BottomNav({
     >
       <ul
         className={cn(
-          "mx-auto grid max-w-[28rem]",
+          "mx-auto grid max-w-[28rem] gap-1 p-1.5",
           hasGroups ? "grid-cols-4" : "grid-cols-2",
         )}
       >
@@ -48,18 +49,20 @@ export function BottomNav({
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={cn(
-                  "relative flex flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors duration-[var(--duration-fast)]",
-                  active
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
+                className={navItemVariants({ layout: "stack", active })}
               >
+                {/* The pill itself is what slides between tabs. It used to be a
+                    2px bar pinned to the top edge, which reads as a ruler on
+                    the frame rather than as the tab being selected — and it
+                    left the item with no filled state to press against. It sits
+                    BEHIND the content (-z-10 + a stacking context) so the label
+                    never has to fight it. */}
                 {active && (
-                  <motion.div
+                  <motion.span
+                    aria-hidden
                     layoutId="bottom-nav-active"
                     transition={springGlide}
-                    className="absolute inset-x-4 top-0 h-0.5 rounded-full bg-primary"
+                    className="absolute inset-0 -z-10 rounded-lg bg-primary-container"
                   />
                 )}
                 <Icon className={cn("size-6", active && "stroke-[2.4]")} />

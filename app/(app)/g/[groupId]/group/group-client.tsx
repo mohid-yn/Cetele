@@ -203,7 +203,12 @@ export function GroupClient({
               <Link
                 href={groupHref(groupId, "/group/manage")}
                 aria-label="Manage group"
-                className={buttonVariants({ variant: "outline", size: "icon" })}
+                // `icon-sm` (36px), not `icon` (44px): its neighbour is a `sm`
+                // button, and the two sat side by side with an 8px height step.
+                className={buttonVariants({
+                  variant: "outline",
+                  size: "icon-sm",
+                })}
               >
                 <SettingsIcon className="size-5" />
               </Link>
@@ -427,17 +432,20 @@ export function GroupClient({
               <SectionHeading
                 action={
                   canManage ? (
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => setGroupLogOpen(true)}
-                        className="font-medium text-primary"
                       >
                         Log for group
-                      </button>
+                      </Button>
                       <Link
                         href={groupHref(groupId, "/group/manage")}
-                        className="font-medium text-primary"
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
                       >
                         Manage
                       </Link>
@@ -539,14 +547,20 @@ export function GroupClient({
                   </p>
                 ) : (
                   <>
-                    <button
-                      type="button"
+                    {/* `destructive-outline`, not a bare danger-coloured text
+                        button: this is the only way out of a circle and it had
+                        no boundary at all. `loading` also replaces a hand-rolled
+                        `disabled:opacity-60` — the primitive disables through a
+                        TOKEN PAIR, because opacity over a coloured label is how
+                        the disabled primary ended up at 2.16:1. */}
+                    <Button
+                      variant="destructive-outline"
+                      size="sm"
+                      loading={leaveAct.pending}
                       onClick={() => setLeaveOpen(true)}
-                      disabled={leaveAct.pending}
-                      className="text-sm font-medium text-danger disabled:opacity-60"
                     >
                       {leaveAct.pending ? "Leaving…" : "Leave this circle"}
-                    </button>
+                    </Button>
                     <p className="mt-1 text-xs text-muted-foreground">
                       You&apos;ll stop counting toward the circle&apos;s goals.
                       The dhikr you logged stays — rejoin and it counts again.

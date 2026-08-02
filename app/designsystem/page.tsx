@@ -25,7 +25,7 @@ import {
 import { RingDemo } from "./ring-demo";
 import { AppIconLogo, WebAppLogo } from "@/components/ui/logo";
 import * as Icons from "@/components/app/icons";
-import { CheckIcon, FlameIcon } from "@/components/app/icons";
+import { CheckIcon, FlameIcon, SettingsIcon } from "@/components/app/icons";
 
 export const metadata: Metadata = {
   title: "Design System · Cetele",
@@ -60,6 +60,15 @@ function Section({
       </div>
       {children}
     </section>
+  );
+}
+
+/** A small caption above a row of specimens, so a section can hold several. */
+function DsLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      {children}
+    </p>
   );
 }
 
@@ -451,27 +460,139 @@ export default function DesignSystemPage() {
         <Section
           id="buttons"
           title="Buttons"
-          description="One accent button per view (the primary action). Sizes sm / md / lg + icon."
+          description="Every control in the app comes from this one primitive — there are no hand-rolled buttons. Pick the tier by how much of the screen's attention the action deserves, then the size by the density around it."
         >
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button variant="primary">Primary</Button>
-              <Button variant="accent">Accent</Button>
-              <Button variant="outline">Outline</Button>
-              <Button variant="subtle">Subtle</Button>
-              <Button variant="ghost">Ghost</Button>
-              <Button variant="link">Link</Button>
-              <Button variant="destructive">Destructive</Button>
+          <div className="space-y-8">
+            <div>
+              <DsLabel>Tiers — loudest to quietest</DsLabel>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="accent">Accent</Button>
+                <Button variant="primary">Primary</Button>
+                <Button variant="subtle">Subtle</Button>
+                <Button variant="outline">Outline</Button>
+                <Button variant="ghost">Ghost</Button>
+                <Button variant="link">Link</Button>
+              </div>
+              <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
+                <strong className="font-semibold text-foreground">
+                  Accent is rationed to ONE per view
+                </strong>{" "}
+                — the single action you want taken (D25). Primary is the
+                ordinary confirm. Outline is the workhorse for a secondary
+                control that still has to look like a control. Ghost is quiet by
+                design and is only safe beside a louder neighbour: alone on a
+                surface it reads as background, so it grows an edge on hover and
+                focus.
+              </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button size="sm">Small</Button>
-              <Button size="md">Medium</Button>
-              <Button size="lg">Large</Button>
-              <Button size="icon" aria-label="Add">
-                +
-              </Button>
-              <Button loading>Saving</Button>
-              <Button disabled>Disabled</Button>
+
+            <div>
+              <DsLabel>Destructive — two weights</DsLabel>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="destructive">Delete circle</Button>
+                <Button variant="destructive-outline">Leave this circle</Button>
+              </div>
+              <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
+                Filled is for a confirmed, primary destruction — a
+                dialog&rsquo;s final Delete. The outline weight is for a
+                destructive action that is not the screen&rsquo;s main event; a
+                filled red button sitting in a quiet informational box reads as
+                a warning about a decision the member has not made yet.
+              </p>
+            </div>
+
+            <div>
+              <DsLabel>Sizes — text and its matching icon square</DsLabel>
+              <div className="flex flex-wrap items-end gap-3">
+                <Button variant="outline" size="sm">
+                  Small · 36
+                </Button>
+                <Button variant="outline" size="icon-sm" aria-label="Settings">
+                  <SettingsIcon />
+                </Button>
+                <Button variant="outline" size="md">
+                  Medium · 44
+                </Button>
+                <Button variant="outline" size="icon" aria-label="Settings">
+                  <SettingsIcon />
+                </Button>
+                <Button variant="outline" size="lg">
+                  Large · 52
+                </Button>
+              </div>
+              <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
+                The two families are <strong>paired</strong>:{" "}
+                <code className="rounded bg-muted px-1 font-mono">icon-sm</code>{" "}
+                goes with{" "}
+                <code className="rounded bg-muted px-1 font-mono">sm</code>, and{" "}
+                <code className="rounded bg-muted px-1 font-mono">icon</code>{" "}
+                with <code className="rounded bg-muted px-1 font-mono">md</code>
+                . Mixing them was the app&rsquo;s most visible size defect — a
+                36px button and a 44px icon button in the same header row. Both
+                small sizes paint under 44px and reach it with an invisible tap
+                area, so touch never loses.
+              </p>
+            </div>
+
+            <div>
+              <DsLabel>Inline — inside a sentence</DsLabel>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                Catching up on Friday ·{" "}
+                <Button
+                  variant="link"
+                  size="inline"
+                  className="font-medium underline"
+                >
+                  back to today
+                </Button>
+              </p>
+              <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
+                <code className="rounded bg-muted px-1 font-mono">inline</code>{" "}
+                drops the height and padding so a control can sit in running
+                text. It is the one size with no 44px target — a word inside a
+                paragraph cannot have one without shifting the line — and the
+                only reason those controls used to be hand-rolled{" "}
+                <code className="rounded bg-muted px-1 font-mono">
+                  &lt;button&gt;
+                </code>
+                s.
+              </p>
+            </div>
+
+            <div>
+              <DsLabel>States</DsLabel>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button loading>Saving</Button>
+                <Button disabled>Disabled</Button>
+                <Button variant="outline" disabled>
+                  Disabled
+                </Button>
+                <Button variant="accent" leadingIcon={<CheckIcon />}>
+                  With icon
+                </Button>
+              </div>
+              <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
+                Disabled is a{" "}
+                <strong className="font-semibold text-foreground">
+                  token pair
+                </strong>{" "}
+                (
+                <code className="rounded bg-muted px-1 font-mono">
+                  --disabled-fill
+                </code>{" "}
+                /{" "}
+                <code className="rounded bg-muted px-1 font-mono">
+                  --disabled-foreground
+                </code>
+                ), never{" "}
+                <code className="rounded bg-muted px-1 font-mono">opacity</code>
+                : a washed-out fill put a white label on a disabled primary at
+                2.16:1. Any hand-rolled{" "}
+                <code className="rounded bg-muted px-1 font-mono">
+                  disabled:opacity-*
+                </code>{" "}
+                is a bug, not a shortcut.
+              </p>
             </div>
           </div>
         </Section>

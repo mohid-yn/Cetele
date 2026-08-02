@@ -238,6 +238,8 @@
   --color-danger-active: var(--danger-active);
   --color-surface-hover: var(--surface-hover);
   --color-surface-active: var(--surface-active);
+  --color-chrome-hover: var(--chrome-hover);
+  --color-chrome-active: var(--chrome-active);
 
   /* Disabled is a token PAIR, never opacity: v1's `disabled:opacity-50` on a
      coloured fill produced a white label at 2.16:1 — illegible on every
@@ -330,6 +332,15 @@
   --danger-active: #a3583c;
   --surface-hover: #f7ebe0;
   --surface-active: #f3e6da;
+  /* State layers for the CHROME tier (nav, sidebar, sticky headers).
+     --surface-* is computed from --card and cannot serve here: --surface-active
+     is #f3e6da, which is --chrome EXACTLY, so a pressed nav item rendered as
+     no change at all. That is the mechanical reason the nav could not say it
+     was pressable — the standard layer was a no-op on the one surface the nav
+     uses. Same 8%/12% M3 recipe as every other pair, precomputed to solid hex,
+     but taken over --chrome with --chrome-foreground as the on-colour. */
+  --chrome-hover: #e2d6ca;
+  --chrome-active: #dacec2;
   --disabled-fill: #f7ebe0;
   --disabled-foreground: #867077; /* 3.2:1 — readable, though 1.4.3 exempts it */
 
@@ -488,6 +499,10 @@
   --danger-active: #e99e84;
   --surface-hover: #241e19;
   --surface-active: #110e0b;
+  /* Same trap, mirrored: --surface-active is #110e0b, which is --chrome
+     exactly. Computed over --chrome with --chrome-foreground at 8%/12%. */
+  --chrome-hover: #231f1b;
+  --chrome-active: #2c2723;
   --disabled-fill: #241e19;
   --disabled-foreground: #a08a91;
 
@@ -629,8 +644,25 @@
   display: block;
 }
 
-* {
-  border-color: var(--border);
+/* The default border colour, so a bare `border` utility draws the decorative
+   hairline rather than `currentColor`.
+
+   `@layer base` is LOAD-BEARING. Unlayered CSS beats every @layer, and Tailwind
+   puts its utilities in `@layer utilities` — so as a bare `* { }` this rule
+   silently defeated EVERY border-colour utility in the app. Measured: with the
+   rule unlayered, `border-outline`, `border-danger`, `border-primary-300` and
+   even `border-transparent` all computed to --border. The `outline` button
+   variant has therefore never rendered --outline: its boundary was the 1.31:1
+   decorative hairline the variant was explicitly written to stop using, so the
+   1.4.11 fix recorded in button.tsx was never actually in effect. Layering it
+   costs nothing (the utility is more specific anyway) and restores every one.
+
+   The `*` selector also has to stay off ::before/::after — the tap-area
+   utilities draw those with no border at all. */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 
 body {
@@ -796,6 +828,23 @@ body {
     left: 0;
     height: 44px;
     transform: translateY(-50%);
+  }
+}
+
+/* The square sibling. `tap-area-44` spans its element's own WIDTH (left:0
+   right:0), which is correct for a text button that is already wide enough and
+   only short. A 36px icon button is under the minimum on BOTH axes, so it needs
+   the box centred on the control rather than stretched across it. */
+@utility tap-area-44-box {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
   }
 }
 

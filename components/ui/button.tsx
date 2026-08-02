@@ -10,7 +10,7 @@ const buttonVariants = cva(
   // disabled primary and destructive button. Filled variants add the fill; the
   // label and the killed shadow are shared here so ghost/link degrade correctly.
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium " +
-    "transition-[background-color,box-shadow,transform] duration-[var(--duration-fast)] " +
+    "transition-[background-color,border-color,box-shadow,transform] duration-[var(--duration-fast)] " +
     "ease-[var(--ease-brand)] active:translate-y-px " +
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring " +
     "disabled:pointer-events-none disabled:text-disabled-foreground disabled:shadow-none " +
@@ -33,8 +33,15 @@ const buttonVariants = cva(
         outline:
           "border border-outline bg-transparent text-foreground " +
           "hover:bg-surface-hover active:bg-surface-active disabled:border-border",
+        // Ghost is the quiet tier, but it must still LOOK like a control the
+        // moment you reach for it. The border is transparent at rest (so it
+        // stays quiet beside a filled primary — a dialog's Cancel) and resolves
+        // to --outline on hover/focus. Declared at rest rather than added on
+        // hover so the box never changes size; `border-box` means the edge
+        // costs no layout either way.
         ghost:
-          "text-foreground hover:bg-surface-hover active:bg-surface-active",
+          "border border-transparent text-foreground hover:border-outline " +
+          "hover:bg-surface-hover active:bg-surface-active",
         subtle:
           "bg-muted text-foreground hover:bg-surface-active " +
           "active:bg-chrome disabled:bg-disabled-fill",
@@ -42,13 +49,39 @@ const buttonVariants = cva(
         destructive:
           "bg-danger text-danger-foreground shadow-sm hover:bg-danger-hover " +
           "active:bg-danger-active disabled:bg-disabled-fill",
+        // A destructive action that is NOT the screen's main event — "Leave
+        // this circle" sits in a quiet informational box, and a filled red
+        // button there reads as a warning about a decision the member has not
+        // made yet. Outline shell, danger label: unmistakably destructive,
+        // without shouting. `destructive` stays for confirmed, primary
+        // destruction (a dialog's final Delete).
+        "destructive-outline":
+          "border border-outline bg-transparent text-danger " +
+          "hover:border-danger hover:bg-surface-hover active:bg-surface-active " +
+          "disabled:border-border",
       },
+      // Two families that must stay paired: a text size and the icon-only
+      // square that matches its PAINTED height. `icon` (44) beside `sm` (36)
+      // was the app's most visible size defect — an 8px step between two
+      // controls sitting in the same header row. Reach for `icon-sm` next to
+      // `sm`, and `icon` next to `md`.
       size: {
         // 36px painted, 44px tappable — see `tap-area-44` in globals.css.
         sm: "h-9 px-3 text-sm tap-area-44",
         md: "h-11 px-5 text-sm",
         lg: "h-13 px-7 text-base",
+        // `tap-area-44-box`, not `tap-area-44`: the latter only stretches the
+        // element's own width, which leaves a 36px square 36px wide.
+        "icon-sm": "size-9 tap-area-44-box",
         icon: "size-11",
+        // For a control that sits INSIDE a sentence — "· back to today". Every
+        // other size imposes a height and horizontal padding, which is why the
+        // `link` variant could not actually be used inline and those controls
+        // were all hand-rolled `<button>`s instead. Pair it with `link`; it
+        // inherits the surrounding type size, and it is the one size that
+        // deliberately does not carry a 44px target, because a word inside a
+        // paragraph cannot have one without shifting the line.
+        inline: "h-auto p-0 text-[length:inherit]",
       },
     },
     defaultVariants: { variant: "primary", size: "md" },

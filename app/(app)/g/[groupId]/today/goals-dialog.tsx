@@ -273,14 +273,15 @@ export function GoalsDialog({
                       {t.label}
                     </label>
                     {stretched && (
-                      <button
-                        type="button"
+                      <Button
+                        variant="link"
+                        size="inline"
                         disabled={saving}
                         onClick={() => setRow(t.id, String(t.target))}
-                        className="shrink-0 text-xs font-medium text-primary underline underline-offset-4 disabled:opacity-50"
+                        className="shrink-0 text-xs font-medium underline"
                       >
                         Back to the circle&rsquo;s
-                      </button>
+                      </Button>
                     )}
                   </div>
                   {/* The member's own cycle, alongside their own number — the

@@ -39,7 +39,7 @@ export function Segmented<T extends string>({
             className={cn(
               // min-h-11 = 44px. Was 32px (py-1.5). These are full-width
               // (flex-1), so growing the height can't crowd a neighbour.
-              "relative flex min-h-11 flex-1 items-center justify-center rounded-lg px-3 text-sm font-medium transition-colors duration-[var(--duration-fast)]",
+              "relative flex min-h-11 flex-1 items-center justify-center rounded-lg px-3 text-sm font-medium transition-colors duration-[var(--duration-fast)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               active
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground",

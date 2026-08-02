@@ -320,13 +320,14 @@ export function TodayClient({
               {fmtLongDate(date)}
             </span>{" "}
             ·{" "}
-            <button
-              type="button"
+            <Button
+              variant="link"
+              size="inline"
+              className="font-medium underline"
               onClick={() => setDate(todayISO)}
-              className="font-medium text-primary underline"
             >
               back to today
-            </button>
+            </Button>
           </p>
         )}
       </div>
