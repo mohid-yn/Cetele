@@ -124,7 +124,20 @@ test("correcting down: undo one, then set an exact count", async ({ page }) => {
   await expect(ring).toHaveAttribute("aria-valuenow", "2");
   await expect(page.getByText("Tap anywhere to count")).toBeVisible();
 
-  // it is a real write, not just optimistic UI: a reload serves 2 from the DB
+  // it is a real write, not just optimistic UI: a reload serves 2 from the DB.
+  //
+  // DRAIN THE QUEUE FIRST. The assertion above is satisfied by the OPTIMISTIC
+  // paint — undo is a `set` op on the same serialized FIFO queue as taps, and
+  // the displayed count is `replay(confirmed, pendingOps)` by design (§4), so
+  // the ring reads 2 while `set_count` is still in flight. `page.reload()` is a
+  // hard navigation and tears the JS context down, exactly like the
+  // `page.goto()` hazard §7 documents — caught it doing so and coming back
+  // reading **3**, i.e. the undo lost outright. Latent since 2026-07-25: undo
+  // used to be pessimistic (two awaited round-trips), so the paint itself
+  // proved the write had landed and this reload was safe. The optimistic
+  // rewrite invalidated that assumption and the spec was never updated, which
+  // is why this line has been the suite's most-blamed "flake" (§7).
+  await page.waitForLoadState("networkidle");
   await page.reload();
   await expect(page.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
@@ -152,6 +165,10 @@ test("correcting down: undo one, then set an exact count", async ({ page }) => {
   await closeCelebration(page);
   await expect(page.getByText("Completed — tap to keep going")).toBeVisible();
 
+  // Same drain as above: `Edit count` is a `set` op on that same queue, so the
+  // closed ring and the celebration are both optimistic and prove nothing about
+  // what reached Postgres.
+  await page.waitForLoadState("networkidle");
   await page.reload();
   await expect(page.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
@@ -341,8 +358,12 @@ test("undo mid-flush can't dip the count under a slow network", async ({
   expect(seen.has("3")).toBe(false);
   await expect(ring).toHaveAttribute("aria-valuenow", "2");
 
-  // and it was a real write, not just optimistic paint: the DB serves 2
+  // and it was a real write, not just optimistic paint: the DB serves 2.
+  // The 3s settling loop above usually drains the queue on its own, but that is
+  // incidental timing under a 500ms throttle, not a guarantee — drain it
+  // explicitly, like the two reloads earlier in this file.
   await throttle(false);
+  await page.waitForLoadState("networkidle");
   await page.reload();
   await expect(page.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
