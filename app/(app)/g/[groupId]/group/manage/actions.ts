@@ -206,6 +206,36 @@ export async function updateTask(
   return ok;
 }
 
+/**
+ * Who a task is for (0023). `null` = everyone; an array = exactly those members.
+ *
+ * Straight through to the RPC with no client-side validation beyond the shape:
+ * the admin check, the member check and the empty-set refusal all live in
+ * `set_task_assignees`, because assignment is membership-shaped and those writes
+ * are RPC-only (D42). Returning the applied set lets the row reconcile from the
+ * write itself rather than trusting a refetch (D45).
+ */
+export async function setTaskAssignees(
+  groupId: string,
+  taskId: string,
+  userIds: string[] | null,
+): Promise<Result & { assignees?: string[] | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_task_assignees", {
+    p_task: taskId,
+    // The generator types a `uuid[]` argument as non-nullable, so it cannot
+    // express this function's NULL — which is not "no assignees" but "everyone",
+    // the whole point of the null sentinel (0023). The cast is at the one call
+    // site rather than by loosening the generated types, which are rewritten
+    // wholesale by `supabase gen types` and would lose the edit.
+    p_user_ids: userIds as string[],
+  });
+  if (error) return fail(error.message);
+
+  revalidateManage(groupId);
+  return { error: null, assignees: userIds };
+}
+
 export async function deleteTask(
   groupId: string,
   taskId: string,

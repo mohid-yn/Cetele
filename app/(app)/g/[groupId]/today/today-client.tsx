@@ -32,6 +32,7 @@ import { useLocalToday } from "@/lib/use-local-today";
 import { usePropState } from "@/lib/use-prop-state";
 import { GoalsDialog } from "./goals-dialog";
 import { isDueOn, daysUntilDue, dueLabel, frequencyLabel } from "@/lib/goals";
+import { visibleOn, type Assignment } from "@/lib/assignments";
 import type { Landmark } from "@/lib/retention";
 import {
   PeerReactions,
@@ -83,13 +84,15 @@ export function TodayClient({
   timeZone,
   todayISO: serverTodayISO,
   streak,
-  tasks,
   counts,
   circle,
   collectivePct,
   cheersForMe,
   landmark,
   welcome,
+  me,
+  assignments,
+  tasks: allTasks,
 }: {
   groupId: string;
   groupName: string;
@@ -99,6 +102,14 @@ export function TodayClient({
   todayISO: string;
   streak: number;
   tasks: TodayTask[];
+  /** My own user id — the subject of every assignment question below. */
+  me: string;
+  /**
+   * Assignment intervals touching me, for this circle's tasks (0023). Passed
+   * as intervals rather than a pre-filtered list because the day-strip renders
+   * a fortnight: which tasks were mine depends on WHICH DAY is selected.
+   */
+  assignments: Assignment[];
   /** date → taskId → my count (last 14 days) */
   counts: Record<string, Record<string, number>>;
   circle: CircleMember[];
@@ -120,6 +131,21 @@ export function TodayClient({
     router.refresh();
   });
   const isToday = date === todayISO;
+
+  // Only the tasks that are MINE (0023). Everything below — the rings, the
+  // day-strip's done-marks, the glance, the goals dialog — reads `tasks`, so
+  // scoping once here keeps them all in step.
+  //
+  // `visibleOn`, not `assignedOn`: a task assigned to me this morning must still
+  // be offered on yesterday, or the day-strip could never repair a day (D48) and
+  // would just refuse with nothing on screen saying why. The engine still judges
+  // strictly — `private.obligations` credits a past day only if the task was
+  // actually mine then, or I completed it.
+  const tasks = React.useMemo(
+    () =>
+      allTasks.filter((t) => visibleOn(assignments, t.id, me, date, todayISO)),
+    [allTasks, assignments, me, date, todayISO],
+  );
 
   // My own bar per task (D51), held locally so a save from the goals dialog
   // re-renders the rings from the WRITE's own return rather than a refetch

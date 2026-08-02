@@ -114,9 +114,20 @@ export function daysUntilDue(s: Schedule, dayISO: string): number {
   return MAX_FREQUENCY_DAYS;
 }
 
-/** "Daily" / "Every 3 days" — the one place this phrasing is written. */
+/**
+ * "Daily" / "Weekly" / "Every 3 days" — the one place this phrasing is written.
+ *
+ * The two common intervals get their real NAMES rather than their arithmetic.
+ * "Every 7 days" is a number a reader has to convert; "Weekly" is the word they
+ * were already thinking in, and these are the values a circle actually picks.
+ * It lives here rather than in the picker so the chip you press and the caption
+ * you read it back from cannot end up calling the same interval two things.
+ */
 export function frequencyLabel(days: number): string {
-  return days === 1 ? "Daily" : `Every ${days} days`;
+  if (days === 1) return "Daily";
+  if (days === 7) return "Weekly";
+  if (days === 14) return "Every 2 weeks";
+  return `Every ${days} days`;
 }
 
 /** "Due today" / "Due tomorrow" / "Due in 3 days". */

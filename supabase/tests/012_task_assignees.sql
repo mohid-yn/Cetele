@@ -158,6 +158,55 @@ select ok(private.assigned_on('a2000000-0000-0000-0000-00000000e001',
   'closing the everyone-row leaves the days it covered ALONE (negative one, other side)');
 
 -- ----------------------------------------------------------------------------
+-- 3b. The D48 escape — and that it does not weaken the negative above
+-- ----------------------------------------------------------------------------
+-- The everyone-row is anchored at tasks.created_at, so in a BRAND-NEW circle the
+-- whole 14-day back-fill window predates every assignment. Without an escape,
+-- closing yesterday's ring in a new circle counts for nothing — which is the
+-- collision 0021 hit on the task-age bound and this migration first repeated.
+-- Requiring a COMPLETED log keeps it safe: it can only pull in an obligation
+-- that is already satisfied.
+
+-- An INCOMPLETE log on a pre-assignment day must NOT pull the task in — that
+-- would turn starting something early into a missed occasion (D8).
+insert into public.logs (user_id, task_id, date, count) values
+  ('a2000000-0000-0000-0000-00000000000b', 'a2000000-0000-0000-0000-00000000e002',
+   current_date - 7, 0);
+
+select is((select count(*) from private.obligations(
+             'a2000000-0000-0000-0000-00000000000b', current_date - 7)
+           where task_id = 'a2000000-0000-0000-0000-00000000e002'), 0::bigint,
+  'a log BELOW target on a pre-assignment day pulls nothing in');
+
+-- A completed one does, so a repaired day can rebuild the chain (D48).
+update public.logs set count = 1
+ where user_id = 'a2000000-0000-0000-0000-00000000000b'
+   and task_id = 'a2000000-0000-0000-0000-00000000e002'
+   and date    = current_date - 7;
+
+select is((select count(*) from private.obligations(
+             'a2000000-0000-0000-0000-00000000000b', current_date - 7)
+           where task_id = 'a2000000-0000-0000-0000-00000000e002'), 1::bigint,
+  '...but a COMPLETED one does — the D48 back-fill escape');
+
+-- The safety property, stated precisely: the obligation the escape pulls in is
+-- itself already MET, so a day can only become more complete. (Not
+-- `is_day_complete` for the whole day — e001 is also owed on that day via its
+-- still-covering everyone-row and is unmet, which is a fact about e001, not
+-- about the escape.)
+select is((select count(*)
+             from private.obligations(
+                    'a2000000-0000-0000-0000-00000000000b', current_date - 7) o
+            where o.task_id = 'a2000000-0000-0000-0000-00000000e002'
+              and coalesce((
+                    select l.count from public.logs l
+                    where l.user_id = 'a2000000-0000-0000-0000-00000000000b'
+                      and l.task_id = o.task_id
+                      and l.date    = current_date - 7
+                  ), 0) < o.target), 0::bigint,
+  '...and the obligation it pulls in is, by construction, already satisfied');
+
+-- ----------------------------------------------------------------------------
 -- 4. NEGATIVE TWO — unassigning does not un-own days already carried
 -- ----------------------------------------------------------------------------
 

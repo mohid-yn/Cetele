@@ -680,6 +680,45 @@ export type Database = {
           },
         ];
       };
+      task_assignments: {
+        Row: {
+          assigned_at: string;
+          id: string;
+          task_id: string;
+          unassigned_at: string | null;
+          user_id: string | null;
+        };
+        Insert: {
+          assigned_at?: string;
+          id?: string;
+          task_id: string;
+          unassigned_at?: string | null;
+          user_id?: string | null;
+        };
+        Update: {
+          assigned_at?: string;
+          id?: string;
+          task_id?: string;
+          unassigned_at?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "task_assignments_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "task_assignments_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       tasks: {
         Row: {
           created_at: string;
@@ -821,6 +860,10 @@ export type Database = {
       };
       set_reminder: {
         Args: { p_enabled: boolean; p_task: string; p_time: string };
+        Returns: undefined;
+      };
+      set_task_assignees: {
+        Args: { p_task: string; p_user_ids: string[] };
         Returns: undefined;
       };
       set_task_frequency: {

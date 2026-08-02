@@ -7,6 +7,13 @@ import type { BreakdownMember } from "@/components/app/member-breakdown";
 import type { GridRow } from "@/components/app/task-grid";
 import type { Pair } from "@/components/app/pair-goal";
 import { gardenStage, pickBuddy, monthKey, PAIR_TARGET } from "@/lib/retention";
+import {
+  assignedOn,
+  visibleOn,
+  collectiveGoal,
+  currentAssignees,
+  toAssignments,
+} from "@/lib/assignments";
 import { GroupLive } from "./group-live";
 import {
   GroupClient,
@@ -89,6 +96,19 @@ export default async function GroupPage({
       .gte("date", isoDaysAgo(todayISO, DAYS)),
   );
 
+  // Who each task belongs to (0023). ALL intervals: the breakdown renders a
+  // fortnight per member, so a CLOSED interval is what says "this was theirs
+  // last Tuesday" and is the difference between a fair grid and one that shows
+  // a member failing tasks they never had.
+  const { data: assignmentRows } = await q(
+    "group.assignments (all intervals)",
+    supabase
+      .from("task_assignments")
+      .select("task_id, user_id, assigned_at, unassigned_at")
+      .in("task_id", taskIds.length ? taskIds : [ZERO_UUID]),
+  );
+  const assignments = toAssignments(assignmentRows);
+
   // Admin oversight needs peer streaks (RLS: self + members of groups I admin).
   const streakMap = new Map<string, number>();
   if (canManage && memberIds.length) {
@@ -138,12 +158,22 @@ export default async function GroupPage({
 
   // Overview — collective per-task total today vs (target × members). Each
   // member counts on their own today, so a cross-timezone circle still sums.
-  const taskTotals: TaskTotal[] = taskList.map((t) => ({
-    taskId: t.id,
-    label: t.label,
-    total: memberIds.reduce((s, u) => s + countOf(u, t.id, todayOf(u)), 0),
-    goal: t.target_count * memberList.length,
-  }));
+  // The goal is scaled to who actually CARRIES each task (0023), not to the
+  // whole circle — a task two of eight members carry could never be closed
+  // against `target × 8`, so the bar would be unfillable by construction. The
+  // numerator is scoped the same way, so a stray log from someone since taken
+  // off the task cannot push the ring past a goal that no longer counts them.
+  const taskTotals: TaskTotal[] = taskList.map((t) => {
+    const who = currentAssignees(assignments, t.id);
+    const carriers = who ?? memberIds;
+    return {
+      taskId: t.id,
+      label: t.label,
+      assignees: who,
+      total: carriers.reduce((s, u) => s + countOf(u, t.id, todayOf(u)), 0),
+      goal: collectiveGoal(t.target_count, who, memberList.length),
+    };
+  });
 
   // Members — today's total contribution per member (sorted desc).
   const contributions: Contribution[] = memberList
@@ -199,35 +229,57 @@ export default async function GroupPage({
       const mDates = Array.from({ length: DAYS }, (_, i) =>
         isoDaysAgo(mToday, DAYS - 1 - i),
       );
-      const rows: GridRow[] = taskList.map((t) => ({
+      // This member's OWN list (0023), resolved per day — a task they were
+      // never given must not appear as fourteen empty cells against their name,
+      // and one they were taken off mid-window must still show the days they
+      // carried it.
+      const theirTasks = taskList.filter((t) =>
+        mDates.some((d) => visibleOn(assignments, t.id, m.user_id, d, mToday)),
+      );
+      const rows: GridRow[] = theirTasks.map((t) => ({
         taskId: t.id,
         label: t.label,
         cells: mDates.map((date) => {
           const cell = index.get(`${m.user_id}|${t.id}|${date}`);
           const count = cell?.count ?? 0;
           const target = t.target_count;
+          // Permissive, like the member's own grid: an admin proxy-logging a
+          // repair (D29 + D48) must not be blocked on a day that fell before
+          // the assignment. `daysFull` below stays strict — that one is scored.
+          const mine = visibleOn(assignments, t.id, m.user_id, date, mToday);
           return {
             date,
             count,
             target,
-            pct: target ? Math.min(1, count / target) : 0,
-            full: count >= target,
+            // A day the task was not theirs is not a day they fell short —
+            // `owed: false` lets the grid render it as absent rather than empty.
+            owed: mine,
+            pct: target && mine ? Math.min(1, count / target) : 0,
+            full: mine && count >= target,
             loggedBy: cell?.loggedBy ?? null,
           };
         }),
       }));
-      const daysFull = taskList.length
-        ? mDates.filter((d) =>
-            taskList.every(
-              (t) => countOf(m.user_id, t.id, d) >= t.target_count,
-            ),
-          ).length
-        : 0;
+      // A day counts as full only against what was owed THAT day, and a day
+      // owing nothing is skipped rather than counted (mirrors is_day_complete).
+      const owedDays = mDates.filter((d) =>
+        taskList.some((t) => assignedOn(assignments, t.id, m.user_id, d)),
+      );
+      const daysFull = owedDays.filter((d) =>
+        taskList
+          .filter((t) => assignedOn(assignments, t.id, m.user_id, d))
+          .every((t) => countOf(m.user_id, t.id, d) >= t.target_count),
+      ).length;
       breakdowns[m.user_id] = {
         id: m.user_id,
         name: names[m.user_id],
         role: m.role as BreakdownMember["role"],
-        score: Math.round((daysFull / DAYS) * 100),
+        // Over the days they were OWED something, not over the calendar — a
+        // member given a task on Friday must not be scored 5/14 for the four
+        // days before it was theirs.
+        score: owedDays.length
+          ? Math.round((daysFull / owedDays.length) * 100)
+          : 0,
         daysFull,
         streak: streakMap.get(m.user_id) ?? 0,
         rows,

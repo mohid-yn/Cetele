@@ -202,14 +202,20 @@ revoke all on function private.assigned_on(uuid, uuid, date)
 -- than patched, because `create or replace function` needs the whole body and
 -- this is the one predicate the entire app is judged by.
 --
--- NOTE there is deliberately NO log-claim escape hatch on the assignment
--- clause, unlike the task-age clause above it. That escape exists because
--- `tasks.created_at` was BACKFILLED onto rows that predated it, so a brand-new
--- circle's tasks would otherwise not exist on the days D48 lets its members
--- repair. Assignments are versioned from birth — the backfill above anchors
--- every existing task at its own creation date — so there is no unversioned
--- past to rescue here. A member assigned a task today simply did not owe it
--- last week, which is correct rather than a gap.
+-- The assignment clause carries the SAME per-task log-claim escape as the
+-- task-age clause above it, and for the same reason. The first cut of this
+-- migration left it out, reasoning that assignments are versioned from birth so
+-- there is no unversioned past to rescue. That was wrong, and e2e caught it: the
+-- everyone-row is anchored at `tasks.created_at`, so in a BRAND-NEW circle the
+-- entire 14-day back-fill window predates every assignment — and D48 exists
+-- precisely to let a new member repair those days. Without the escape, closing
+-- yesterday's ring in a new circle left the streak at 1.
+--
+-- It is safe for the same reason it is safe one clause up: the escape requires a
+-- COMPLETED log (`count >= target_count`), so it can only ever pull in an
+-- obligation that is already satisfied. A day can still only become MORE
+-- complete, never less — which means assigning a task today STILL cannot make a
+-- member owe it last Tuesday, unless they actually completed it last Tuesday.
 
 create or replace function private.obligations(p_user uuid, p_day date)
   returns table (task_id uuid, group_id uuid, target integer)
@@ -242,8 +248,18 @@ create or replace function private.obligations(p_user uuid, p_day date)
                  and l3.count >= t.target_count
              )
         )
-    -- 0023: and it was actually mine that day.
-    and private.assigned_on(t.id, p_user, p_day);
+    -- 0023: and it was actually mine that day — or I completed it that day,
+    -- which is the D48 escape (see the header).
+    and (
+          private.assigned_on(t.id, p_user, p_day)
+          or exists (
+               select 1 from public.logs l4
+               where l4.user_id = p_user
+                 and l4.task_id = t.id
+                 and l4.date    = p_day
+                 and l4.count >= t.target_count
+             )
+        );
 $$;
 
 revoke all on function private.obligations(uuid, date)

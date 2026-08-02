@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { Button, Dialog, Input } from "@/components/ui";
-import { goalCap, frequencyLabel, MAX_FREQUENCY_DAYS } from "@/lib/goals";
+import { goalCap, frequencyLabel } from "@/lib/goals";
+import { FrequencyPicker } from "@/components/app/frequency-picker";
 import { setTaskGoal, setTaskFrequency } from "./actions";
 
 /**
@@ -289,39 +290,27 @@ export function GoalsDialog({
                       the circle is not already daily: there is nothing denser
                       than every day, so the control would be inert. */}
                   {t.frequencyDays > 1 && (
-                    <div className="mt-2 flex items-center gap-3">
-                      <label
-                        htmlFor={`${inputId}-freq`}
-                        className="text-xs text-muted-foreground"
-                      >
-                        How often
-                      </label>
-                      <select
+                    <div className="mt-3">
+                      {/* `max` is the circle's own cycle: a looser interval is
+                          not OFFERED rather than offered and refused. The
+                          caption carries the rule, because a picker that simply
+                          stops at "Every 3 days" does not say why. */}
+                      <FrequencyPicker
                         id={`${inputId}-freq`}
+                        label="How often"
                         disabled={saving}
-                        className="h-11 rounded-lg border border-input bg-background px-3 text-base text-foreground md:text-sm"
-                        value={freqDraft[t.id] ?? String(t.frequencyDays)}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setFreqDraft((f) => ({ ...f, [t.id]: v }));
+                        max={t.frequencyDays}
+                        value={Number(freqDraft[t.id] ?? t.frequencyDays)}
+                        onChange={(d) => {
+                          setFreqDraft((f) => ({ ...f, [t.id]: String(d) }));
                           setFormError(null);
                         }}
-                      >
-                        {Array.from(
-                          { length: MAX_FREQUENCY_DAYS },
-                          (_, k) => k + 1,
-                        )
-                          // Denser than the circle, or the circle's own — a
-                          // looser interval is not offered rather than offered
-                          // and refused.
-                          .filter((d) => d <= t.frequencyDays)
-                          .map((d) => (
-                            <option key={d} value={String(d)}>
-                              {frequencyLabel(d)}
-                              {d === t.frequencyDays ? " (the circle's)" : ""}
-                            </option>
-                          ))}
-                      </select>
+                      />
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Your circle asks for this{" "}
+                        {frequencyLabel(t.frequencyDays).toLowerCase()} — you
+                        can only go more often.
+                      </p>
                     </div>
                   )}
                   <div className="mt-2 flex items-center gap-3">

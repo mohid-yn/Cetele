@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { resolveGroup } from "@/lib/active-group";
+import { toAssignments } from "@/lib/assignments";
 import { ManageClient } from "./manage-client";
 
 /**
@@ -51,6 +52,7 @@ export default async function ManageGroupPage({
     { data: members },
     { data: tasks },
     { data: invites },
+    { data: assignmentRows },
     { data: canClaim },
   ] = await Promise.all([
     supabase
@@ -72,6 +74,13 @@ export default async function ManageGroupPage({
       .select("id, email, code, created_at")
       .eq("group_id", active.groupId)
       .order("created_at"),
+    // Who each task is for (0023). Only the OPEN intervals: this screen edits
+    // the present, and the closed ones are history that only `obligations`
+    // reads. RLS already scopes these to circles I'm in.
+    supabase
+      .from("task_assignments")
+      .select("task_id, user_id, assigned_at, unassigned_at")
+      .is("unassigned_at", null),
     // M7 (D27): a co-admin can claim the group if the owner is absent.
     supabase.rpc("can_claim_ownership", { p_group: active.groupId }),
   ]);
@@ -110,6 +119,7 @@ export default async function ManageGroupPage({
       myRole={active.role}
       members={memberRows}
       tasks={tasks ?? []}
+      assignments={toAssignments(assignmentRows)}
       defaultCode={defaultCode}
       invites={lockedInvites}
       canClaim={canClaim ?? false}

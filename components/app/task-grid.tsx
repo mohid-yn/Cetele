@@ -30,6 +30,11 @@ export type GridCell = {
   pct: number;
   full: boolean;
   loggedBy: string | null;
+  /**
+   * Was this task this member's on this day (0023)? A day it was not theirs is
+   * not a day they fell short, and must not be drawn like one.
+   */
+  owed: boolean;
 };
 export type GridRow = { taskId: string; label: string; cells: GridCell[] };
 
@@ -42,7 +47,13 @@ export type GridRow = { taskId: string; label: string; cells: GridCell[] };
  *  touched one (`bg-primary/20`), inverting the ramp and reading as punishment,
  *  which D8 rules out. A hairline at track strength makes the slot unmistakable
  *  while its fill stays the lightest rung of the scale. */
-function cellClass(pct: number, count: number): string {
+function cellClass(pct: number, count: number, owed = true): string {
+  // Not theirs that day (0023): no fill AND no outline. The empty-day hairline
+  // means "a slot you could have filled", so wearing it here would say the
+  // member missed something that was never asked of them — the same punishment
+  // read the hairline itself exists to avoid, one step along. Absence is the
+  // honest mark for an absent obligation.
+  if (!owed) return "bg-transparent";
   if (count <= 0) return "bg-muted ring-1 ring-inset ring-progress-track";
   if (pct >= 1) return "bg-primary";
   if (pct >= 0.66) return "bg-primary/70";
@@ -204,15 +215,28 @@ export function TaskGrid({
                     <button
                       key={c.date}
                       type="button"
+                      // A day the task was not theirs is inert: there is nothing
+                      // to correct, and offering the editor would invite an
+                      // admin to log against an obligation that never existed.
+                      disabled={!c.owed}
                       onClick={() => pick(row.taskId, row.label, c)}
-                      title={`${fmtFull(c.date)} — ${c.count.toLocaleString()} / ${c.target.toLocaleString()}`}
-                      aria-label={`${row.label}, ${fmtFull(c.date)}: ${c.count} of ${c.target}`}
+                      title={
+                        c.owed
+                          ? `${fmtFull(c.date)} — ${c.count.toLocaleString()} / ${c.target.toLocaleString()}`
+                          : `${fmtFull(c.date)} — not assigned`
+                      }
+                      aria-label={
+                        c.owed
+                          ? `${row.label}, ${fmtFull(c.date)}: ${c.count} of ${c.target}`
+                          : `${row.label}, ${fmtFull(c.date)}: not assigned`
+                      }
                       className={cn(
                         // Height comes from the ROW, width from the track — an
                         // `aspect-square` here would make a widened desktop cell
                         // as TALL as it is wide and burst the row.
-                        "grid h-full w-full place-items-center rounded-md transition-transform hover:scale-105",
-                        cellClass(c.pct, c.count),
+                        "grid h-full w-full place-items-center rounded-md transition-transform",
+                        c.owed && "hover:scale-105",
+                        cellClass(c.pct, c.count, c.owed),
                         isPicked &&
                           "ring-2 ring-accent ring-offset-1 ring-offset-card",
                       )}

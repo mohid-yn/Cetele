@@ -17,6 +17,7 @@ import {
   cardVariants,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { assigneeLabel } from "@/lib/assignments";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { GroupGarden } from "@/components/app/group-garden";
@@ -61,6 +62,12 @@ export type TaskTotal = {
   label: string;
   total: number;
   goal: number;
+  /**
+   * Who carries this task (0023) — `null` = everyone. The circle keeps ONE
+   * shared picture, so a task scoped to two people is still listed here with
+   * its count; only the member's own Today is narrowed to what they carry.
+   */
+  assignees: string[] | null;
 };
 export type Contribution = {
   userId: string;
@@ -293,34 +300,48 @@ export function GroupClient({
                     </p>
                   ) : (
                     <ul className="mt-5 flex flex-col gap-3 border-t border-border pt-5">
-                      {taskTotals.map(({ taskId, label, total, goal }) => {
-                        const pct =
-                          goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
-                        const met = goal > 0 && total >= goal;
-                        return (
-                          <li key={taskId}>
-                            <div className="mb-1 flex items-baseline justify-between text-sm">
-                              <span className="flex items-center gap-1.5 font-medium text-foreground">
-                                {label}
-                                {met && (
-                                  <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
-                                    <CheckIcon className="size-3.5" />
-                                    met
-                                  </span>
-                                )}
-                              </span>
-                              <span className="text-muted-foreground tabular-nums">
-                                {total.toLocaleString()} /{" "}
-                                {goal.toLocaleString()}
-                              </span>
-                            </div>
-                            <ProgressBar
-                              value={pct}
-                              tone={met ? "success" : "primary"}
-                            />
-                          </li>
-                        );
-                      })}
+                      {taskTotals.map(
+                        ({ taskId, label, total, goal, assignees }) => {
+                          const pct =
+                            goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
+                          const met = goal > 0 && total >= goal;
+                          return (
+                            <li key={taskId}>
+                              <div className="mb-1 flex items-baseline justify-between text-sm">
+                                <span className="flex items-center gap-1.5 font-medium text-foreground">
+                                  {label}
+                                  {/* Named only when it is NOT everyone's: the
+                                    common case needs no label, and printing
+                                    "Everyone" on every row would be chrome that
+                                    never changes. */}
+                                  {assignees !== null && (
+                                    <span className="text-xs font-normal text-muted-foreground">
+                                      {assigneeLabel(
+                                        assignees,
+                                        (id) => names[id],
+                                      )}
+                                    </span>
+                                  )}
+                                  {met && (
+                                    <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
+                                      <CheckIcon className="size-3.5" />
+                                      met
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-muted-foreground tabular-nums">
+                                  {total.toLocaleString()} /{" "}
+                                  {goal.toLocaleString()}
+                                </span>
+                              </div>
+                              <ProgressBar
+                                value={pct}
+                                tone={met ? "success" : "primary"}
+                              />
+                            </li>
+                          );
+                        },
+                      )}
                     </ul>
                   )}
                 </section>

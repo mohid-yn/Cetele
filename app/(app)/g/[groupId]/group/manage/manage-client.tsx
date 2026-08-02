@@ -14,50 +14,17 @@ import {
 } from "@/components/ui";
 import { ArrowLeftIcon, PlusIcon, CheckIcon } from "@/components/app/icons";
 import { RoleToggle, selectCls } from "@/components/app/role-toggle";
+import { FrequencyPicker } from "@/components/app/frequency-picker";
 import { useAction } from "@/lib/use-action";
 import { usePropState } from "@/lib/use-prop-state";
-import { MAX_FREQUENCY_DAYS, frequencyLabel } from "@/lib/goals";
+import { frequencyLabel } from "@/lib/goals";
+import {
+  assigneeLabel,
+  currentAssignees,
+  type Assignment,
+} from "@/lib/assignments";
+import { AssigneesDialog } from "./assignees-dialog";
 import * as act from "./actions";
-
-/**
- * How often a task comes round (0021). A SELECT, not a number box: the range is
- * 1–14 and closed, every option is nameable ("Daily", "Every 3 days"), and a
- * free-text field would invite 30 and then have to refuse it. Reuses the role
- * toggle's select styling so it sits with the rest of the admin controls.
- */
-function FrequencyField({
-  id,
-  value,
-  onChange,
-  label = "How often",
-}: {
-  id: string;
-  value: string;
-  onChange: (v: string) => void;
-  label?: string;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <label htmlFor={id} className="text-sm text-muted-foreground">
-        {label}
-      </label>
-      <select
-        id={id}
-        className={selectCls}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {Array.from({ length: MAX_FREQUENCY_DAYS }, (_, i) => i + 1).map(
-          (d) => (
-            <option key={d} value={String(d)}>
-              {frequencyLabel(d)}
-            </option>
-          ),
-        )}
-      </select>
-    </div>
-  );
-}
 
 /**
  * Client leaf for the server-first manage screen (M2). All data arrives as
@@ -144,16 +111,24 @@ function CopyField({ label, value }: { label: string; value: string }) {
 function TaskRow({
   groupId,
   task,
+  members,
+  assignees,
   onRemove,
   onSaved,
+  onAssigneesSaved,
 }: {
   groupId: string;
   task: ManageTask;
+  members: ManageMember[];
+  /** `null` = everyone (0023). */
+  assignees: string[] | null;
   onRemove: (task: ManageTask) => void;
   onSaved: (task: ManageTask) => void;
+  onAssigneesSaved: (taskId: string, assignees: string[] | null) => void;
 }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = React.useState(false);
+  const [pickingWho, setPickingWho] = React.useState(false);
   const [label, setLabel] = React.useState(task.label);
   const [subtitle, setSubtitle] = React.useState(task.subtitle ?? "");
   const [target, setTarget] = React.useState(String(task.target_count));
@@ -209,10 +184,10 @@ function TaskRow({
             placeholder="Target each time"
             aria-label="Target each time"
           />
-          <FrequencyField
+          <FrequencyPicker
             id={`freq-${task.id}`}
-            value={frequency}
-            onChange={setFrequency}
+            value={parseInt(frequency, 10)}
+            onChange={(d) => setFrequency(String(d))}
           />
           <div className="flex gap-2">
             <Button
@@ -234,6 +209,11 @@ function TaskRow({
     );
   }
 
+  const whoFor = assigneeLabel(
+    assignees,
+    (id) => members.find((m) => m.userId === id)?.name,
+  );
+
   return (
     <li className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm">
       <div className="min-w-0 flex-1">
@@ -254,6 +234,20 @@ function TaskRow({
           {" · "}
           {frequencyLabel(task.frequency_days).toLowerCase()}
         </p>
+        {/* `outline`, not `ghost`: this is the one control on the row that
+            carries a SETTING rather than an action, and it has to read as
+            something you can open. The accessible name names the task, because
+            "Everyone" repeated down a list says nothing about which row it
+            belongs to. */}
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-2"
+          aria-label={`Who is ${task.label} for? Currently ${whoFor}`}
+          onClick={() => setPickingWho(true)}
+        >
+          {whoFor}
+        </Button>
       </div>
       <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
         Edit
@@ -266,6 +260,16 @@ function TaskRow({
       >
         Remove
       </Button>
+      <AssigneesDialog
+        open={pickingWho}
+        onClose={() => setPickingWho(false)}
+        groupId={groupId}
+        taskId={task.id}
+        taskLabel={task.label}
+        members={members}
+        assignees={assignees}
+        onSaved={(next) => onAssigneesSaved(task.id, next)}
+      />
     </li>
   );
 }
@@ -276,6 +280,7 @@ export function ManageClient({
   myRole,
   members: propMembers,
   tasks: propTasks,
+  assignments: propAssignments,
   invites: propInvites,
   defaultCode: propDefaultCode,
   canClaim,
@@ -285,6 +290,7 @@ export function ManageClient({
   myRole: Role;
   members: ManageMember[];
   tasks: ManageTask[];
+  assignments: Assignment[];
   invites: ManageInvite[];
   defaultCode: string | null;
   canClaim: boolean;
@@ -295,6 +301,19 @@ export function ManageClient({
   const [tasks, setTasks] = usePropState(propTasks);
   const [invites, setInvites] = usePropState(propInvites);
   const [defaultCode, setDefaultCode] = usePropState(propDefaultCode);
+
+  // Assignments are held as the RESOLVED per-task answer rather than as raw
+  // intervals: this screen only ever edits the present, and reconciling a
+  // save's own return (D45) is simpler on the shape the dialog hands back.
+  const [assignees, setAssignees] = usePropState(
+    React.useMemo(
+      () =>
+        Object.fromEntries(
+          propTasks.map((t) => [t.id, currentAssignees(propAssignments, t.id)]),
+        ) as Record<string, string[] | null>,
+      [propTasks, propAssignments],
+    ),
+  );
 
   const isOwner = myRole === "owner";
   const owner = members.find((m) => m.role === "owner");
@@ -608,7 +627,8 @@ export function ManageClient({
           Tasks in {group.name}
         </h2>
         <p className="mb-2 text-xs text-muted-foreground">
-          Every member follows this list. Targets are per person, per day.
+          Targets are per person. A task goes to everyone unless you pick who
+          it&rsquo;s for.
         </p>
         <ul className="flex flex-col gap-2">
           {tasks.map((t) => (
@@ -616,9 +636,14 @@ export function ManageClient({
               key={t.id}
               groupId={group.id}
               task={t}
+              members={members}
+              assignees={assignees[t.id] ?? null}
               onRemove={setRemovingTask}
               onSaved={(u) =>
                 setTasks((ts) => ts.map((x) => (x.id === u.id ? u : x)))
+              }
+              onAssigneesSaved={(taskId, next) =>
+                setAssignees((a) => ({ ...a, [taskId]: next }))
               }
             />
           ))}
@@ -654,11 +679,11 @@ export function ManageClient({
               placeholder="Daily target"
               aria-label="New task daily target"
             />
-            <FrequencyField
+            <FrequencyPicker
               id="new-task-frequency"
               label="How often"
-              value={newFrequency}
-              onChange={setNewFrequency}
+              value={parseInt(newFrequency, 10)}
+              onChange={(d) => setNewFrequency(String(d))}
             />
             <Button
               variant="accent"

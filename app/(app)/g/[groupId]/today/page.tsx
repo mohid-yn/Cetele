@@ -3,6 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveGroup } from "@/lib/active-group";
 import { localDateISO, isoDaysAgo } from "@/lib/local-date";
 import { effectiveGoal } from "@/lib/goals";
+import {
+  assignedOn,
+  collectiveGoal,
+  currentAssignees,
+  toAssignments,
+} from "@/lib/assignments";
 import { q } from "@/lib/db-log";
 import {
   REACTIONS,
@@ -96,6 +102,7 @@ export default async function TodayPage({
     { data: todayLogs },
     { data: reactions },
     { data: myGoals },
+    { data: assignmentRows },
   ] = await q(
     "today.logs (my 14d + circle today + reactions + my goals)",
     Promise.all([
@@ -136,8 +143,22 @@ export default async function TodayPage({
           "task_id",
           taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
         ),
+      // Who each of this circle's tasks belongs to (0023). ALL intervals, not
+      // just the open ones: the day-strip renders a fortnight, and a closed
+      // interval is what says "this was mine last Tuesday". RLS scopes these to
+      // circles I'm in; the whole circle's rows are read because the roster
+      // below has to score each member against THEIR OWN list.
+      supabase
+        .from("task_assignments")
+        .select("task_id, user_id, assigned_at, unassigned_at")
+        .in(
+          "task_id",
+          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+        ),
     ]),
   );
+
+  const assignments = toAssignments(assignmentRows);
 
   // taskId → my raised bar, where I have one (D51)
   const goalByTask = new Map(
@@ -173,10 +194,17 @@ export default async function TodayPage({
   const circle: CircleMember[] = (members ?? [])
     .map((m) => {
       const mine = byMember.get(m.user_id);
-      const closed = (tasks ?? []).filter(
+      // Each member is scored against THEIR OWN list (0023) — a task they are
+      // not assigned can neither be closed by them nor counted against them.
+      // Scoring everyone against the circle's full list would show a member
+      // permanently short by however many tasks they were never given.
+      const theirs = (tasks ?? []).filter((t) =>
+        assignedOn(assignments, t.id, m.user_id, todayISO),
+      );
+      const closed = theirs.filter(
         (t) => (mine?.get(t.id) ?? 0) >= t.target_count,
       ).length;
-      const total = (tasks ?? []).length;
+      const total = theirs.length;
       return {
         userId: m.user_id,
         name: m.profiles?.name ?? "Member",
@@ -204,9 +232,21 @@ export default async function TodayPage({
   const total = (todayLogs ?? [])
     .filter((l) => memberIds.has(l.user_id))
     .reduce((s, l) => s + l.count, 0);
-  const goal =
-    (members?.length ?? 0) *
-    (tasks ?? []).reduce((s, t) => s + t.target_count, 0);
+  // The denominator is per TASK now (0023): a task two of eight members carry
+  // asks for `target × 2`, not `target × 8`. Scaling it to the whole circle
+  // would leave the ring structurally unable to reach 100% — the circle would
+  // be shown a bar it cannot fill, which is exactly the "you are behind" read
+  // D8 forbids.
+  const goal = (tasks ?? []).reduce(
+    (s, t) =>
+      s +
+      collectiveGoal(
+        t.target_count,
+        currentAssignees(assignments, t.id),
+        members?.length ?? 0,
+      ),
+    0,
+  );
   const collectivePct = goal ? Math.round((total / goal) * 100) : 0;
 
   // ---- The two day-one / comeback banners -----------------------------------
@@ -275,6 +315,8 @@ export default async function TodayPage({
           myFrequencyDays: freqByTask.get(t.id) ?? null,
           createdOn: t.created_at.slice(0, 10),
         }))}
+        me={me}
+        assignments={assignments}
         counts={counts}
         circle={circle}
         collectivePct={collectivePct}
