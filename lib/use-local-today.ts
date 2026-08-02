@@ -42,6 +42,25 @@ export function useLocalToday(
       setToday(next);
       cbRef.current?.(next, prev);
     };
+    // Immediately, not only on the next tick. `initial` is a snapshot the SERVER
+    // took, and it can already be wrong on arrival: `TimezoneSync` (D44) writes
+    // the real zone from the browser and refreshes, so the first render of a
+    // fresh account computes "today" in UTC and the second computes it in the
+    // member's own zone. Waiting for the interval left the client holding the
+    // UTC date for up to 30 seconds after the correction had landed — measured
+    // in e2e, with `timeZone: "Australia/Sydney"` and `serverTodayISO:
+    // "2026-08-03"` while this hook still returned "2026-08-02".
+    //
+    // Everything downstream keys off the value this returns, so during that
+    // window a member's taps went to the WRONG DAY — the silent mis-dating D44
+    // exists to prevent — and, once assignment and target history are resolved
+    // on the member's calendar (0023/0024), their whole task list disappeared:
+    // a task assigned "today" is in the future for a client that thinks it is
+    // still yesterday. That is the symptom that finally exposed this.
+    //
+    // Safe for hydration: an effect runs only after the server and client have
+    // already agreed on `initial`.
+    check();
     // 30s keeps the boundary tight without meaningful cost; the wake-up events
     // are what actually catch the common case (phone unlocked after midnight).
     const id = setInterval(check, 30_000);

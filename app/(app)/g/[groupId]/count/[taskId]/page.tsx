@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { localDateISO, isoDaysAgo } from "@/lib/local-date";
 import { groupHref } from "@/lib/group-href";
 import { effectiveGoal } from "@/lib/goals";
+import { toConfigVersions } from "@/lib/task-config";
 import { CountClient } from "./count-client";
 
 /**
@@ -62,23 +63,35 @@ export default async function CountPage({
 
   const timeZone = profile?.timezone ?? "UTC";
   const todayISO = localDateISO(timeZone);
-  const [{ data: logs }, { data: myGoal }] = await Promise.all([
-    supabase
-      .from("logs")
-      .select("date, count")
-      .eq("user_id", me)
-      .eq("task_id", task.id)
-      .gte("date", isoDaysAgo(todayISO, 13)),
-    // My own raised bar for this task, if I have set one (D51). RLS scopes
-    // member_task_goals to own-rows, so the user filter is precision, not
-    // safety — and no peer's goal can be read here even by mistake.
-    supabase
-      .from("member_task_goals")
-      .select("target_count")
-      .eq("user_id", me)
-      .eq("task_id", task.id)
-      .maybeSingle(),
-  ]);
+  const [{ data: logs }, { data: myGoal }, { data: versionRows }] =
+    await Promise.all([
+      supabase
+        .from("logs")
+        .select("date, count")
+        .eq("user_id", me)
+        .eq("task_id", task.id)
+        .gte("date", isoDaysAgo(todayISO, 13)),
+      // My own raised bar for this task, if I have set one (D51). RLS scopes
+      // member_task_goals to own-rows, so the user filter is precision, not
+      // safety — and no peer's goal can be read here even by mistake.
+      supabase
+        .from("member_task_goals")
+        .select("target_count")
+        .eq("user_id", me)
+        .eq("task_id", task.id)
+        .maybeSingle(),
+      // What this task has asked for over time (0024). ALL intervals, not just
+      // the live one: the day-strip below marks a fortnight of past days done,
+      // and each has to be measured against the target IT asked for — otherwise
+      // an admin raising the bar un-ticks every day already kept, while the
+      // streak (correctly) still counts them.
+      supabase
+        .from("task_config_versions")
+        .select(
+          "task_id, target_count, frequency_days, effective_from, effective_to",
+        )
+        .eq("task_id", task.id),
+    ]);
 
   const counts: Record<string, number> = {};
   for (const l of logs ?? []) counts[l.date] = l.count;
@@ -107,6 +120,7 @@ export default async function CountPage({
       todayISO={todayISO}
       initialDate={initialDate}
       initialCounts={counts}
+      versions={toConfigVersions(versionRows)}
     />
   );
 }

@@ -719,6 +719,41 @@ export type Database = {
           },
         ];
       };
+      task_config_versions: {
+        Row: {
+          effective_from: string;
+          effective_to: string | null;
+          frequency_days: number;
+          id: string;
+          target_count: number;
+          task_id: string;
+        };
+        Insert: {
+          effective_from?: string;
+          effective_to?: string | null;
+          frequency_days: number;
+          id?: string;
+          target_count: number;
+          task_id: string;
+        };
+        Update: {
+          effective_from?: string;
+          effective_to?: string | null;
+          frequency_days?: number;
+          id?: string;
+          target_count?: number;
+          task_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "task_config_versions_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       tasks: {
         Row: {
           created_at: string;

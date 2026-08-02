@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveGroup } from "@/lib/active-group";
-import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import { localDateISO, isoDaysAgo, timestampDateISO } from "@/lib/local-date";
 import { q } from "@/lib/db-log";
 import type { BreakdownMember } from "@/components/app/member-breakdown";
 import type { GridRow } from "@/components/app/task-grid";
 import type { Pair } from "@/components/app/pair-goal";
 import { gardenStage, pickBuddy, monthKey, PAIR_TARGET } from "@/lib/retention";
+import { toConfigVersions, targetOn, frequencyOn } from "@/lib/task-config";
+import { isDueOn } from "@/lib/goals";
 import {
   assignedOn,
   visibleOn,
@@ -64,7 +66,9 @@ export default async function GroupPage({
       supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
       supabase
         .from("tasks")
-        .select("id, label, target_count")
+        // frequency + anchor: the breakdown's `daysFull` is a score and has to
+        // mirror is_day_complete, which skips a task that had not come round.
+        .select("id, label, target_count, frequency_days, created_at")
         .eq("group_id", groupId)
         .order("sort_order"),
       supabase
@@ -108,6 +112,21 @@ export default async function GroupPage({
       .in("task_id", taskIds.length ? taskIds : [ZERO_UUID]),
   );
   const assignments = toAssignments(assignmentRows);
+
+  // And what each task ASKED for over that fortnight (0024) — same argument one
+  // column along: a grid drawn against the live target redraws every past day
+  // the moment an admin moves it, and the breakdown's score would then disagree
+  // with the streak it sits next to.
+  const { data: versionRows } = await q(
+    "group.task_config_versions (all intervals)",
+    supabase
+      .from("task_config_versions")
+      .select(
+        "task_id, target_count, frequency_days, effective_from, effective_to",
+      )
+      .in("task_id", taskIds.length ? taskIds : [ZERO_UUID]),
+  );
+  const versions = toConfigVersions(versionRows);
 
   // Admin oversight needs peer streaks (RLS: self + members of groups I admin).
   const streakMap = new Map<string, number>();
@@ -225,7 +244,8 @@ export default async function GroupPage({
   const breakdowns: Record<string, BreakdownMember> = {};
   if (canManage) {
     for (const m of memberList) {
-      const mToday = localDateISO(m.profiles?.timezone ?? "UTC");
+      const mTz = m.profiles?.timezone ?? "UTC";
+      const mToday = localDateISO(mTz);
       const mDates = Array.from({ length: DAYS }, (_, i) =>
         isoDaysAgo(mToday, DAYS - 1 - i),
       );
@@ -234,7 +254,9 @@ export default async function GroupPage({
       // and one they were taken off mid-window must still show the days they
       // carried it.
       const theirTasks = taskList.filter((t) =>
-        mDates.some((d) => visibleOn(assignments, t.id, m.user_id, d, mToday)),
+        mDates.some((d) =>
+          visibleOn(assignments, t.id, m.user_id, d, mToday, mTz),
+        ),
       );
       const rows: GridRow[] = theirTasks.map((t) => ({
         taskId: t.id,
@@ -242,11 +264,20 @@ export default async function GroupPage({
         cells: mDates.map((date) => {
           const cell = index.get(`${m.user_id}|${t.id}|${date}`);
           const count = cell?.count ?? 0;
-          const target = t.target_count;
+          // The target THAT DAY asked for (0024) — a record of a day, not a
+          // reading of the current setting.
+          const target = targetOn(versions, t.id, date, mTz, t.target_count);
           // Permissive, like the member's own grid: an admin proxy-logging a
           // repair (D29 + D48) must not be blocked on a day that fell before
           // the assignment. `daysFull` below stays strict — that one is scored.
-          const mine = visibleOn(assignments, t.id, m.user_id, date, mToday);
+          const mine = visibleOn(
+            assignments,
+            t.id,
+            m.user_id,
+            date,
+            mToday,
+            mTz,
+          );
           return {
             date,
             count,
@@ -261,14 +292,39 @@ export default async function GroupPage({
         }),
       }));
       // A day counts as full only against what was owed THAT day, and a day
-      // owing nothing is skipped rather than counted (mirrors is_day_complete).
-      const owedDays = mDates.filter((d) =>
-        taskList.some((t) => assignedOn(assignments, t.id, m.user_id, d)),
-      );
+      // owing nothing is skipped rather than counted (mirrors is_day_complete
+      // on all three bounds: mine that day, DUE that day, against the target
+      // that day asked for). This is a score an admin reads about a member, so
+      // it has to be the same verdict the streak reached — not an approximation
+      // of it that drifts every time a task is edited.
+      const owedOn = (d: string) =>
+        taskList.filter(
+          (t) =>
+            assignedOn(assignments, t.id, m.user_id, d, mTz) &&
+            isDueOn(
+              {
+                frequencyDays: frequencyOn(
+                  versions,
+                  t.id,
+                  d,
+                  mTz,
+                  t.frequency_days,
+                ),
+                myFrequencyDays: null,
+                // The anchor on THEIR calendar too — `private.obligations`
+                // resolves `tasks.created_at` through `user_date`.
+                createdOn: timestampDateISO(mTz, t.created_at),
+              },
+              d,
+            ),
+        );
+      const owedDays = mDates.filter((d) => owedOn(d).length > 0);
       const daysFull = owedDays.filter((d) =>
-        taskList
-          .filter((t) => assignedOn(assignments, t.id, m.user_id, d))
-          .every((t) => countOf(m.user_id, t.id, d) >= t.target_count),
+        owedOn(d).every(
+          (t) =>
+            countOf(m.user_id, t.id, d) >=
+            targetOn(versions, t.id, d, mTz, t.target_count),
+        ),
       ).length;
       breakdowns[m.user_id] = {
         id: m.user_id,

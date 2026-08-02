@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveGroup } from "@/lib/active-group";
-import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import { localDateISO, isoDaysAgo, timestampDateISO } from "@/lib/local-date";
 import { q } from "@/lib/db-log";
 import { assignedOn, visibleOn, toAssignments } from "@/lib/assignments";
+import { toConfigVersions, targetOn, frequencyOn } from "@/lib/task-config";
+import { isDueOn } from "@/lib/goals";
 import type { GridRow } from "@/components/app/task-grid";
 import type { EarnedBadge } from "@/components/app/badges";
 import { ProgressClient } from "./progress-client";
@@ -46,7 +48,9 @@ export default async function ProgressPage({
       supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
       supabase
         .from("tasks")
-        .select("id, label, target_count")
+        // frequency + anchor: `daysFull` below is a SCORE and has to mirror
+        // private.is_day_complete, which skips a task that had not come round.
+        .select("id, label, target_count, frequency_days, created_at")
         .eq("group_id", groupId)
         .order("sort_order"),
       supabase
@@ -66,42 +70,59 @@ export default async function ProgressPage({
   const taskList = tasks ?? [];
   const taskIds = taskList.map((t) => t.id);
 
-  const [{ data: logs }, { data: dc30 }, { data: assignmentRows }] =
-    await Promise.all([
-      q(
-        "progress.logs (my 14d)",
-        supabase
-          .from("logs")
-          .select("task_id, date, count, logged_by")
-          .eq("user_id", me)
-          .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
-          .gte("date", isoDaysAgo(todayISO, DAYS - 1)),
-      ),
-      // M6: the 30-day consistency band reads the rollup (raw logs only keep 14
-      // days). Completed days only — today has no rollup row yet (D8: don't dip
-      // the number for a day still in progress).
-      q(
-        "progress.daily_completion (30d band)",
-        supabase
-          .from("daily_completion")
-          .select("completion_pct")
-          .eq("user_id", me)
-          .eq("group_id", groupId)
-          .gte("date", isoDaysAgo(todayISO, BAND_WINDOW)),
-      ),
-      // Which of this circle's tasks were mine, and when (0023). All intervals —
-      // the grid renders a fortnight, so a closed one is what keeps the days I
-      // did carry a task on my record after being taken off it.
-      q(
-        "progress.assignments (all intervals)",
-        supabase
-          .from("task_assignments")
-          .select("task_id, user_id, assigned_at, unassigned_at")
-          .in("task_id", taskIds.length ? taskIds : [ZERO_UUID]),
-      ),
-    ]);
+  const [
+    { data: logs },
+    { data: dc30 },
+    { data: assignmentRows },
+    { data: versionRows },
+  ] = await Promise.all([
+    q(
+      "progress.logs (my 14d)",
+      supabase
+        .from("logs")
+        .select("task_id, date, count, logged_by")
+        .eq("user_id", me)
+        .in("task_id", taskIds.length ? taskIds : [ZERO_UUID])
+        .gte("date", isoDaysAgo(todayISO, DAYS - 1)),
+    ),
+    // M6: the 30-day consistency band reads the rollup (raw logs only keep 14
+    // days). Completed days only — today has no rollup row yet (D8: don't dip
+    // the number for a day still in progress).
+    q(
+      "progress.daily_completion (30d band)",
+      supabase
+        .from("daily_completion")
+        .select("completion_pct")
+        .eq("user_id", me)
+        .eq("group_id", groupId)
+        .gte("date", isoDaysAgo(todayISO, BAND_WINDOW)),
+    ),
+    // Which of this circle's tasks were mine, and when (0023). All intervals —
+    // the grid renders a fortnight, so a closed one is what keeps the days I
+    // did carry a task on my record after being taken off it.
+    q(
+      "progress.assignments (all intervals)",
+      supabase
+        .from("task_assignments")
+        .select("task_id, user_id, assigned_at, unassigned_at")
+        .in("task_id", taskIds.length ? taskIds : [ZERO_UUID]),
+    ),
+    // What each task asked for, over time (0024). The grid renders a
+    // fortnight and marks each cell against a target; using the LIVE one
+    // would redraw the whole record every time an admin moved the number.
+    q(
+      "progress.task_config_versions (all intervals)",
+      supabase
+        .from("task_config_versions")
+        .select(
+          "task_id, target_count, frequency_days, effective_from, effective_to",
+        )
+        .in("task_id", taskIds.length ? taskIds : [ZERO_UUID]),
+    ),
+  ]);
 
   const assignments = toAssignments(assignmentRows);
+  const versions = toConfigVersions(versionRows);
 
   // Band = % of the last 30 completed days that were fully done (all rings).
   // A full day rolls up to exactly 100; missing/partial days aren't counted.
@@ -131,7 +152,7 @@ export default async function ProgressPage({
   // My own list (0023) — a task I was never given is not part of my record, and
   // a task I was taken off still is, for the days I carried it.
   const myTasks = taskList.filter((t) =>
-    dates14.some((d) => visibleOn(assignments, t.id, me, d, todayISO)),
+    dates14.some((d) => visibleOn(assignments, t.id, me, d, todayISO, tz)),
   );
 
   const rows: GridRow[] = myTasks.map((t) => ({
@@ -140,11 +161,14 @@ export default async function ProgressPage({
     cells: dates14.map((date) => {
       const cell = index.get(`${t.id}|${date}`);
       const count = cell?.count ?? 0;
-      const target = t.target_count;
+      // The target THAT DAY asked for (0024), not the one it asks for now: a
+      // cell is a record of a day, and an admin moving the number cannot
+      // redraw a fortnight of them.
+      const target = targetOn(versions, t.id, date, tz, t.target_count);
       // `visibleOn`, not `assignedOn`: a task assigned to me today must stay
       // editable across the fortnight so a past day can still be repaired
       // (D48). `daysFull` below judges strictly — that one is a score.
-      const owed = visibleOn(assignments, t.id, me, date, todayISO);
+      const owed = visibleOn(assignments, t.id, me, date, todayISO, tz);
       return {
         date,
         count,
@@ -157,16 +181,43 @@ export default async function ProgressPage({
     }),
   }));
 
+  // "N of the last 14 days complete" is a SCORE, so it mirrors
+  // private.is_day_complete on all three of its bounds — mine that day (0023),
+  // due that day (0021), against the target that day asked for (0024). The
+  // member's own denser cycle is deliberately absent: it is an aim, and judging
+  // someone on the extra occasions they volunteered for is the exact failure
+  // D51 exists to prevent.
   const daysFull = taskList.length
     ? dates14.filter((d) => {
-        const owedThatDay = taskList.filter((t) =>
-          assignedOn(assignments, t.id, me, d),
+        const owedThatDay = taskList.filter(
+          (t) =>
+            assignedOn(assignments, t.id, me, d, tz) &&
+            isDueOn(
+              {
+                frequencyDays: frequencyOn(
+                  versions,
+                  t.id,
+                  d,
+                  tz,
+                  t.frequency_days,
+                ),
+                myFrequencyDays: null,
+                // The anchor on my calendar too — `private.obligations` reads
+                // `tasks.created_at` through `user_date`.
+                createdOn: timestampDateISO(tz, t.created_at),
+              },
+              d,
+            ),
         );
         // A day owing nothing is skipped, never counted as kept — the vacuous
         // truth `every()` would otherwise hand out (mirrors is_day_complete).
         return (
           owedThatDay.length > 0 &&
-          owedThatDay.every((t) => countOf(t.id, d) >= t.target_count)
+          owedThatDay.every(
+            (t) =>
+              countOf(t.id, d) >=
+              targetOn(versions, t.id, d, tz, t.target_count),
+          )
         );
       }).length
     : 0;

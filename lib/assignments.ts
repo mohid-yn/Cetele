@@ -22,15 +22,17 @@
  * shared tasks without anyone re-assigning anything.
  */
 
+import { timestampDateISO } from "@/lib/local-date";
+
 /** One assignment interval, as the screens read it out of `task_assignments`. */
 export type Assignment = {
   taskId: string;
   /** `null` = every member of the circle. */
   userId: string | null;
-  /** ISO date (`YYYY-MM-DD`) the interval opened. */
-  assignedOn: string;
-  /** ISO date the interval closed, or `null` while it is still open. */
-  unassignedOn: string | null;
+  /** Raw `timestamptz` — reduced to a date per MEMBER, never stored reduced. */
+  assignedAt: string;
+  /** Raw `timestamptz`, or `null` while the interval is still open. */
+  unassignedAt: string | null;
 };
 
 /** A `task_assignments` row as PostgREST returns it. */
@@ -42,26 +44,30 @@ export type AssignmentRow = {
 };
 
 /**
- * DB rows → the shape the screens compare against.
+ * DB rows → the shape the predicates below read. Timestamps stay RAW.
  *
- * The timestamps are reduced to dates in **UTC**, because that is exactly what
- * `private.assigned_on` does (`assigned_at::date`, evaluated in the database's
- * own zone). Converting to the member's local date here would be more
- * "correct" in isolation and would be WRONG in the way that matters: the screen
- * would disagree with the predicate the streak, the rollup and the garden are
- * computed from, so a task could appear on Today that nothing else counted.
- * When a mirror and its original disagree, the mirror is the bug.
+ * They used to be reduced to dates here, in UTC, on the argument that
+ * `private.assigned_on` did the same (`assigned_at::date`, in the database's
+ * own zone) and that a mirror must not be more correct than its original. The
+ * first half was true and the second was the wrong conclusion: both were wrong
+ * together. `p_day` is the member's LOCAL date (D34), so comparing it against a
+ * UTC-reduced timestamp puts the boundary a whole day out for a large slice of
+ * every day — measured, an assignment made at 08:00 in Sydney was assigned
+ * "yesterday", and one closed at 08:00 stopped applying a day before the member
+ * was told. Both functions now reduce on the MEMBER's calendar
+ * (`private.user_date`), so the mirror still matches — it just matches
+ * something correct.
+ *
+ * Kept raw rather than reduced once, because the same rows are scored for
+ * DIFFERENT members: the group breakdown and Today's roster resolve each member
+ * on their own clock, and a single pre-reduced date cannot serve two zones.
  */
 export function toAssignments(rows: AssignmentRow[] | null): Assignment[] {
-  // Through `Date` rather than slicing the string: PostgREST renders a
-  // timestamptz with an offset, and slicing would silently take the date in
-  // whatever zone that offset happens to be.
-  const utcDate = (ts: string) => new Date(ts).toISOString().slice(0, 10);
   return (rows ?? []).map((r) => ({
     taskId: r.task_id,
     userId: r.user_id,
-    assignedOn: utcDate(r.assigned_at),
-    unassignedOn: r.unassigned_at ? utcDate(r.unassigned_at) : null,
+    assignedAt: r.assigned_at,
+    unassignedAt: r.unassigned_at,
   }));
 }
 
@@ -79,13 +85,15 @@ export function assignedOn(
   taskId: string,
   userId: string,
   dayISO: string,
+  timeZone: string,
 ): boolean {
   return rows.some(
     (a) =>
       a.taskId === taskId &&
       (a.userId === null || a.userId === userId) &&
-      a.assignedOn <= dayISO &&
-      (a.unassignedOn === null || dayISO < a.unassignedOn),
+      timestampDateISO(timeZone, a.assignedAt) <= dayISO &&
+      (a.unassignedAt === null ||
+        dayISO < timestampDateISO(timeZone, a.unassignedAt)),
   );
 }
 
@@ -110,16 +118,19 @@ export function visibleOn(
   userId: string,
   dayISO: string,
   todayISO: string,
+  timeZone: string,
 ): boolean {
   return (
-    assignedOn(rows, taskId, userId, dayISO) ||
-    assignedOn(rows, taskId, userId, todayISO)
+    assignedOn(rows, taskId, userId, dayISO, timeZone) ||
+    assignedOn(rows, taskId, userId, todayISO, timeZone)
   );
 }
 
-/** The intervals open right now for a task — what the admin is editing. */
+/** The intervals open right now for a task — what the admin is editing. No day
+ *  math and so no timezone: "still open" is `unassigned_at is null`, which is
+ *  true or false on every calendar at once. */
 function openFor(rows: Assignment[], taskId: string): Assignment[] {
-  return rows.filter((a) => a.taskId === taskId && a.unassignedOn === null);
+  return rows.filter((a) => a.taskId === taskId && a.unassignedAt === null);
 }
 
 /** Is this task the whole circle's? */

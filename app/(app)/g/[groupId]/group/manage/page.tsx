@@ -76,10 +76,18 @@ export default async function ManageGroupPage({
       .order("created_at"),
     // Who each task is for (0023). Only the OPEN intervals: this screen edits
     // the present, and the closed ones are history that only `obligations`
-    // reads. RLS already scopes these to circles I'm in.
+    // reads.
+    //
+    // Scoped through the FK to THIS circle. RLS alone would not do it: it
+    // admits every circle the viewer belongs to, so an admin of five circles
+    // pulled all five circles' assignment rows into the payload of a screen
+    // about one. `currentAssignees` filters by task id downstream, which is why
+    // nothing looked wrong — the rows were simply carried and discarded, and
+    // the cost grew with how many circles the admin had joined.
     supabase
       .from("task_assignments")
-      .select("task_id, user_id, assigned_at, unassigned_at")
+      .select("task_id, user_id, assigned_at, unassigned_at, tasks!inner()")
+      .eq("tasks.group_id", active.groupId)
       .is("unassigned_at", null),
     // M7 (D27): a co-admin can claim the group if the owner is absent.
     supabase.rpc("can_claim_ownership", { p_group: active.groupId }),

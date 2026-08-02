@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveGroup } from "@/lib/active-group";
-import { localDateISO, isoDaysAgo } from "@/lib/local-date";
+import { localDateISO, isoDaysAgo, timestampDateISO } from "@/lib/local-date";
 import { effectiveGoal } from "@/lib/goals";
 import {
   assignedOn,
@@ -9,6 +9,7 @@ import {
   currentAssignees,
   toAssignments,
 } from "@/lib/assignments";
+import { toConfigVersions } from "@/lib/task-config";
 import { q } from "@/lib/db-log";
 import {
   REACTIONS,
@@ -79,9 +80,11 @@ export default async function TodayPage({
         .select("current, last_active")
         .eq("user_id", me)
         .maybeSingle(),
+      // `timezone` too: every figure below that spans MEMBERS resolves each of
+      // them on THEIR OWN day (§4 / D34), never on the viewer's.
       supabase
         .from("memberships")
-        .select("user_id, profiles(name)")
+        .select("user_id, profiles(name, timezone)")
         .eq("group_id", active.groupId),
       // created_at → am I still new? (CET-21 endowed progress)
       supabase
@@ -103,6 +106,7 @@ export default async function TodayPage({
     { data: reactions },
     { data: myGoals },
     { data: assignmentRows },
+    { data: versionRows },
   ] = await q(
     "today.logs (my 14d + circle today + reactions + my goals)",
     Promise.all([
@@ -116,11 +120,21 @@ export default async function TodayPage({
           taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
         )
         .gte("date", isoDaysAgo(todayISO, 13)),
-      // the whole circle's today (collective line + circle list)
+      // The whole circle's today (collective line + circle list) — a RANGE, not
+      // the viewer's single date. A member's "today" is their own (D34), so
+      // when viewer and member straddle midnight the member's real
+      // contribution lands on a date the viewer's calendar has not reached.
+      // Pinning `.eq("date", todayISO)` dropped it: "the circle today" read 0
+      // while that member's own Today showed the taps. Exactly the bug fixed on
+      // the group hub on 2026-07-25 (§4) — this screen was left on the old
+      // shape. One day either side covers every real offset (UTC-12…UTC+14);
+      // each row is then matched against its own member's date below, so the
+      // slack is inert.
       supabase
         .from("logs")
-        .select("user_id, task_id, count")
-        .eq("date", todayISO)
+        .select("user_id, task_id, count, date")
+        .gte("date", isoDaysAgo(todayISO, 1))
+        .lte("date", isoDaysAgo(todayISO, -1))
         .in(
           "task_id",
           taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
@@ -155,10 +169,25 @@ export default async function TodayPage({
           "task_id",
           taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
         ),
+      // What each task has asked for over time (0024). ALL intervals, for the
+      // same reason as the assignments above: the day-strip marks a fortnight
+      // of past days done, and each one is measured against the target IT
+      // asked for. Reading the live target would let an admin's raise un-tick
+      // every day already kept, while the streak went on counting them.
+      supabase
+        .from("task_config_versions")
+        .select(
+          "task_id, target_count, frequency_days, effective_from, effective_to",
+        )
+        .in(
+          "task_id",
+          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+        ),
     ]),
   );
 
   const assignments = toAssignments(assignmentRows);
+  const versions = toConfigVersions(versionRows);
 
   // taskId → my raised bar, where I have one (D51)
   const goalByTask = new Map(
@@ -175,9 +204,27 @@ export default async function TodayPage({
     (counts[l.date] ??= {})[l.task_id] = l.count;
   }
 
-  // circle: each member's closed-ring count today
+  // Each member's own today (D34) — the day THEY are counting on, not the one
+  // the viewer happens to be on.
+  const memberTz = new Map(
+    (members ?? []).map((m) => [m.user_id, m.profiles?.timezone ?? "UTC"]),
+  );
+  const tzOf = (u: string) => memberTz.get(u) ?? "UTC";
+  const memberToday = new Map(
+    (members ?? []).map((m) => [
+      m.user_id,
+      localDateISO(m.profiles?.timezone ?? "UTC"),
+    ]),
+  );
+  const todayOf = (u: string) => memberToday.get(u) ?? todayISO;
+
+  // circle: each member's closed-ring count on their own today. The range query
+  // above returns three days, so every row is matched against its own member's
+  // date — the two extra days exist only so a member ahead of or behind the
+  // viewer is not silently missing.
   const byMember = new Map<string, Map<string, number>>();
   for (const l of todayLogs ?? []) {
+    if (l.date !== todayOf(l.user_id)) continue;
     if (!byMember.has(l.user_id)) byMember.set(l.user_id, new Map());
     byMember.get(l.user_id)!.set(l.task_id, l.count);
   }
@@ -199,7 +246,13 @@ export default async function TodayPage({
       // Scoring everyone against the circle's full list would show a member
       // permanently short by however many tasks they were never given.
       const theirs = (tasks ?? []).filter((t) =>
-        assignedOn(assignments, t.id, m.user_id, todayISO),
+        assignedOn(
+          assignments,
+          t.id,
+          m.user_id,
+          todayOf(m.user_id),
+          tzOf(m.user_id),
+        ),
       );
       const closed = theirs.filter(
         (t) => (mine?.get(t.id) ?? 0) >= t.target_count,
@@ -228,9 +281,26 @@ export default async function TodayPage({
   // CURRENT members only (D41) — `logs` outlive a membership, so summing the raw
   // rows would keep counting someone who has left (the goal already scales to
   // the live member count, so an ex-member would push the ring past 100%).
+  //
+  // The NUMERATOR is scoped to who carries each task, matching the denominator
+  // below and the same figure on the group screen. Without it a member since
+  // taken off a task keeps pushing the ring up against a goal that no longer
+  // counts them — the two screens then report different percentages for the
+  // same circle on the same day, which is worse than either being wrong.
   const memberIds = new Set((members ?? []).map((m) => m.user_id));
+  const carriersOf = new Map(
+    (tasks ?? []).map((t) => {
+      const who = currentAssignees(assignments, t.id);
+      return [t.id, who === null ? memberIds : new Set(who)];
+    }),
+  );
   const total = (todayLogs ?? [])
-    .filter((l) => memberIds.has(l.user_id))
+    .filter(
+      (l) =>
+        memberIds.has(l.user_id) &&
+        l.date === todayOf(l.user_id) &&
+        (carriersOf.get(l.task_id)?.has(l.user_id) ?? false),
+    )
     .reduce((s, l) => s + l.count, 0);
   // The denominator is per TASK now (0023): a task two of eight members carry
   // asks for `target × 2`, not `target × 8`. Scaling it to the whole circle
@@ -256,7 +326,12 @@ export default async function TodayPage({
     0,
   );
   const welcome = showWelcome({
-    joinedOn: myMembership?.created_at?.slice(0, 10) ?? null,
+    // On MY calendar (D34), not UTC: slicing the timestamp dates a member who
+    // joined at 00:45 in Sydney to the previous day, and the welcome is gated on
+    // "joined today".
+    joinedOn: myMembership?.created_at
+      ? timestampDateISO(tz, myMembership.created_at)
+      : null,
     todayISO,
     myCountToday,
   });
@@ -313,10 +388,14 @@ export default async function TodayPage({
           // member's OWN midnight (D34) rather than the server's.
           frequencyDays: t.frequency_days,
           myFrequencyDays: freqByTask.get(t.id) ?? null,
-          createdOn: t.created_at.slice(0, 10),
+          // On MY calendar, like `private.obligations` resolves it (0024) —
+          // slicing the string takes the date in whatever offset PostgREST
+          // happened to render, which is the UTC reduction this replaced.
+          createdOn: timestampDateISO(tz, t.created_at),
         }))}
         me={me}
         assignments={assignments}
+        versions={versions}
         counts={counts}
         circle={circle}
         collectivePct={collectivePct}

@@ -32,7 +32,8 @@ import { useLocalToday } from "@/lib/use-local-today";
 import { usePropState } from "@/lib/use-prop-state";
 import { GoalsDialog } from "./goals-dialog";
 import { isDueOn, daysUntilDue, dueLabel, frequencyLabel } from "@/lib/goals";
-import { visibleOn, type Assignment } from "@/lib/assignments";
+import { visibleOn, assignedOn, type Assignment } from "@/lib/assignments";
+import { targetOn, frequencyOn, type ConfigVersion } from "@/lib/task-config";
 import type { Landmark } from "@/lib/retention";
 import {
   PeerReactions,
@@ -92,6 +93,7 @@ export function TodayClient({
   welcome,
   me,
   assignments,
+  versions,
   tasks: allTasks,
 }: {
   groupId: string;
@@ -110,6 +112,12 @@ export function TodayClient({
    * a fortnight: which tasks were mine depends on WHICH DAY is selected.
    */
   assignments: Assignment[];
+  /**
+   * Every target/cycle this circle's tasks have run under (0024). Intervals for
+   * the same reason as the assignments above: what a day asked for depends on
+   * WHICH DAY, and the strip renders a fortnight of them.
+   */
+  versions: ConfigVersion[];
   /** date → taskId → my count (last 14 days) */
   counts: Record<string, Record<string, number>>;
   circle: CircleMember[];
@@ -143,8 +151,10 @@ export function TodayClient({
   // actually mine then, or I completed it.
   const tasks = React.useMemo(
     () =>
-      allTasks.filter((t) => visibleOn(assignments, t.id, me, date, todayISO)),
-    [allTasks, assignments, me, date, todayISO],
+      allTasks.filter((t) =>
+        visibleOn(assignments, t.id, me, date, todayISO, timeZone),
+      ),
+    [allTasks, assignments, me, date, todayISO, timeZone],
   );
 
   // My own bar per task (D51), held locally so a save from the goals dialog
@@ -173,24 +183,46 @@ export function TodayClient({
     usePropState<Record<string, number>>(freqSeed);
 
   const countOn = (taskId: string, d: string) => counts[d]?.[taskId] ?? 0;
+  // What the circle asked of me for this task on this day (0024). An admin may
+  // have moved the target or the cycle since; a past day is judged by what IT
+  // asked for, exactly as `private.obligations` does.
+  const shareOn = (t: TodayTask, d: string) =>
+    targetOn(versions, t.id, d, timeZone, t.target);
+  // The schedule this task ran under on that day. `mine` decides whether the
+  // member's own denser cycle is folded in: it is an AIM, so it belongs to what
+  // the screen offers and never to what the screen scores. `private.obligations`
+  // passes null for exactly this reason.
+  const schedOn = (t: TodayTask, d: string, mine: boolean) => ({
+    frequencyDays: frequencyOn(versions, t.id, d, timeZone, t.frequencyDays),
+    myFrequencyDays: mine ? (freqById[t.id] ?? t.myFrequencyDays) : null,
+    createdOn: t.createdOn,
+  });
+
   // The day-strip's done-marks mirror a SERVER fact — the day the streak and
   // the rollup counted — so they key on the circle's share, never on a
   // personal goal (D51). A member aiming higher must not see yesterday go
-  // unmarked while their streak says they kept it.
-  // Mirrors private.is_day_complete: only what was DUE that day counts, and a
-  // day owing nothing is not a day kept (it is skipped, never ticked).
+  // unmarked while their streak says they kept it. Nor may an admin raising
+  // the target un-tick it (0024), which is the same revocation with a
+  // different hand on the pen.
+  //
+  // Mirrors private.is_day_complete on all three bounds: only what was MINE
+  // that day (0023), only what was DUE that day (0021), each against the target
+  // THAT day asked for (0024) — and a day owing nothing is not a day kept, it
+  // is skipped.
+  //
+  // Over `allTasks`, deliberately, not the `tasks` memo above: that one is
+  // scoped to the SELECTED day, so scoring another day through it made the
+  // strip's marks depend on which day happened to be selected — a task I was
+  // taken off this morning would stop being required on the days I carried it.
   const dayFull = (d: string) => {
-    const owed = tasks.filter((t) =>
-      isDueOn(
-        {
-          frequencyDays: t.frequencyDays,
-          myFrequencyDays: t.myFrequencyDays,
-          createdOn: t.createdOn,
-        },
-        d,
-      ),
+    const owed = allTasks.filter(
+      (t) =>
+        assignedOn(assignments, t.id, me, d, timeZone) &&
+        isDueOn(schedOn(t, d, false), d),
     );
-    return owed.length > 0 && owed.every((t) => countOn(t.id, d) >= t.target);
+    return (
+      owed.length > 0 && owed.every((t) => countOn(t.id, d) >= shareOn(t, d))
+    );
   };
 
   const rings = tasks.map((t) => {
@@ -198,12 +230,15 @@ export function TodayClient({
     // `done` = my ring is closed (my goal). `shareDone` = I have done what the
     // circle asked, which is the threshold everything shared is measured at.
     // With no personal goal the two are the same number and nothing changes.
-    const goal = goalOf(t);
-    const sched = {
-      frequencyDays: t.frequencyDays,
-      myFrequencyDays: freqById[t.id] ?? t.myFrequencyDays,
-      createdOn: t.createdOn,
-    };
+    //
+    // Both are resolved for the day being SHOWN (0024). My own bar is recovered
+    // from the resolved goal — `effectiveGoal` is `greatest()`, so anything
+    // above the live target is the override — and then floored at that day's
+    // share, so a back-filled day aims at what it actually asked for.
+    const share = shareOn(t, date);
+    const myBar = goalOf(t) > t.target ? goalOf(t) : 0;
+    const goal = Math.max(share, myBar);
+    const sched = schedOn(t, date, true);
     // A task not due on the selected day is still SHOWN — hiding it would make
     // a circle whose tasks are all on cycles look empty and broken. It is
     // marked instead, with the one fact that answers "why isn't this counting":
@@ -223,8 +258,9 @@ export function TodayClient({
       due,
       daysAway: due ? 0 : daysUntilDue(sched, date),
       done: count >= goal,
-      shareDone: count >= t.target,
-      stretched: goal > t.target,
+      share,
+      shareDone: count >= share,
+      stretched: goal > share,
     };
   });
   // Everything the headline and the CTA reason about is scoped to what is
@@ -410,6 +446,7 @@ export function TodayClient({
               task: t,
               count,
               goal,
+              share,
               due,
               daysAway,
               done,
@@ -449,7 +486,7 @@ export function TodayClient({
                     <ProgressRing
                       value={due ? count : 0}
                       max={goal}
-                      mark={due && stretched ? t.target : undefined}
+                      mark={due && stretched ? share : undefined}
                       size={72}
                       thickness={8}
                     >
@@ -507,8 +544,7 @@ export function TodayClient({
                             {count.toLocaleString()} / {goal.toLocaleString()}
                             {stretched && (
                               <span className="ms-1.5 tabular-nums">
-                                · circle&rsquo;s share{" "}
-                                {t.target.toLocaleString()}
+                                · circle&rsquo;s share {share.toLocaleString()}
                               </span>
                             )}
                           </p>

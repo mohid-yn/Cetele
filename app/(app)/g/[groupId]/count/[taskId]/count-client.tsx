@@ -18,6 +18,7 @@ import { playComplete, playTen } from "@/lib/sound";
 import { groupHref } from "@/lib/group-href";
 import { useLocalToday } from "@/lib/use-local-today";
 import { goalCap } from "@/lib/goals";
+import { targetOn, type ConfigVersion } from "@/lib/task-config";
 import { incrementCount } from "../../today/actions";
 import { setCount } from "../../group/actions";
 
@@ -83,6 +84,7 @@ export function CountClient({
   todayISO: serverTodayISO,
   initialDate,
   initialCounts,
+  versions,
 }: {
   groupId: string;
   /** The viewer — set_count's target, so a correction is always a self-edit. */
@@ -103,6 +105,9 @@ export function CountClient({
   todayISO: string;
   initialDate: string;
   initialCounts: Record<string, number>; // date → my count (last 14 days)
+  /** Every target/cycle this task has run under (0024) — the day-strip marks a
+   *  fortnight, and each day is judged against the target IT asked for. */
+  versions: ConfigVersion[];
 }) {
   const router = useRouter();
   const { celebrate } = useCelebration();
@@ -118,20 +123,44 @@ export function CountClient({
   // burying the control in this screen's correction tray made it unfindable.
   // This screen still honours it completely: the ring runs to it, the arc is
   // notched at the circle's share, and the caption names both numbers.
-  const goal = task.goal;
-  const stretched = goal > task.target;
+  //
+  // Both thresholds are resolved PER DAY (0024). An admin may have moved the
+  // target since a day went by, and this screen back-fills a fortnight: a day
+  // is measured against the number IT asked for, exactly as
+  // `private.obligations` does. Reading the live target here would let a raise
+  // un-tick every day already kept while the streak still counted them.
+  const shareOn = React.useCallback(
+    (d: string) => targetOn(versions, task.id, d, timeZone, task.target),
+    [versions, task.id, timeZone, task.target],
+  );
+  // My own raised bar, recovered from the goal the server already resolved:
+  // `effectiveGoal` is `greatest(target, override)`, so anything above the live
+  // target IS the override. Recovering it beats passing it a second time — two
+  // props that have to agree are somewhere for them to disagree. It is NOT
+  // versioned: a personal goal is an aim, never a verdict (D51).
+  const myBar = task.goal > task.target ? task.goal : 0;
+  const goalOn = React.useCallback(
+    (d: string) => Math.max(shareOn(d), myBar),
+    [shareOn, myBar],
+  );
+
+  const share = shareOn(date);
+  const goal = goalOn(date);
+  const stretched = goal > share;
   // "This day's ring was ALREADY closed before the current tap" — the guard
   // that keeps the celebration rare. It must be seeded from the day's real
   // count, not from `false`: a ref that starts unclosed on every mount means
   // returning to a finished ring and tapping it re-fires the congratulations,
   // which is exactly how a reward stops meaning anything. Re-seeded whenever
   // the day being counted changes.
-  const justCompleted = React.useRef((initialCounts[initialDate] ?? 0) >= goal);
+  const justCompleted = React.useRef(
+    (initialCounts[initialDate] ?? 0) >= goalOn(initialDate),
+  );
   // The same guard for the circle's SHARE, which is a separate transition once
   // the two numbers differ: reaching it is the moment that feeds the day and
   // the streak, so it cannot go unmarked just because the ring keeps going.
   const shareMarked = React.useRef(
-    (initialCounts[initialDate] ?? 0) >= task.target,
+    (initialCounts[initialDate] ?? 0) >= shareOn(initialDate),
   );
 
   // The DISPLAYED count per date, mirrored in a ref so it can be read
@@ -140,12 +169,12 @@ export function CountClient({
   // Always kept equal to replay(confirmed, pending ops); see `recompute`.
   const countsRef = React.useRef(initialCounts);
   const ringClosed = React.useCallback(
-    (d: string) => (countsRef.current[d] ?? 0) >= goal,
-    [goal],
+    (d: string) => (countsRef.current[d] ?? 0) >= goalOn(d),
+    [goalOn],
   );
   const shareDone = React.useCallback(
-    (d: string) => (countsRef.current[d] ?? 0) >= task.target,
-    [task.target],
+    (d: string) => (countsRef.current[d] ?? 0) >= shareOn(d),
+    [shareOn],
   );
   const applyCounts = React.useCallback(
     (fn: (c: Record<string, number>) => Record<string, number>) => {
@@ -308,7 +337,7 @@ export function CountClient({
   const syncMilestones = React.useCallback(
     (next: number) => {
       const closing = next >= goal && !justCompleted.current;
-      if (next < task.target) shareMarked.current = false;
+      if (next < share) shareMarked.current = false;
       else if (!shareMarked.current) {
         shareMarked.current = true;
         // Suppressed when the goal is closing in the same breath, and when
@@ -325,7 +354,7 @@ export function CountClient({
         celebrate({ title: "Ring closed!" });
       }
     },
-    [goal, task.target, stretched, sound, celebrate],
+    [goal, share, stretched, sound, celebrate],
   );
 
   // Set the day to an exact number (undo a stray tap, or fix it outright).
@@ -435,8 +464,9 @@ export function CountClient({
         // history being erased and is the same revocation the streak refuses
         // to do. It also put this strip out of step with the one on Today,
         // which has always keyed on the share. The RING still fills toward my
-        // goal — an aim is live, a record is not.
-        isDone={(d) => (counts[d] ?? 0) >= task.target}
+        // goal — an aim is live, a record is not. And it is THAT DAY's share
+        // (0024): an admin raising the target cannot un-tick a day either.
+        isDone={(d) => (counts[d] ?? 0) >= shareOn(d)}
         onChange={(d) => {
           // switching to a day that's already finished must not re-arm the
           // celebration for it
@@ -463,7 +493,7 @@ export function CountClient({
           // different number from the goal. A raised bar otherwise HIDES the
           // one threshold that feeds the streak: at 100 of 300 the ring looks
           // a third done while the day is, in fact, complete.
-          mark={stretched ? task.target : undefined}
+          mark={stretched ? share : undefined}
           sound={sound}
           onTap={handleTap}
         />
@@ -471,9 +501,9 @@ export function CountClient({
           <p className="-mt-2 text-center text-xs text-muted-foreground">
             Your goal. The circle asks{" "}
             <span className="font-medium text-foreground tabular-nums">
-              {task.target.toLocaleString()}
+              {share.toLocaleString()}
             </span>
-            {count >= task.target && (
+            {count >= share && (
               <span className="text-success"> — done, the rest is yours</span>
             )}
           </p>
@@ -600,6 +630,10 @@ export function CountClient({
                 // (D36a) — a personal goal doesn't move it, so this must not
                 // read `goal` or the dialog would accept what set_count then
                 // refuses, after the optimistic write is already on screen.
+                // The LIVE target, not the day's (0024): the cap bounds what may
+                // be WRITTEN now, and `set_count` computes it the same way. A
+                // day whose target has since been lowered must not lose the
+                // correction window it is entitled to.
                 const cap = goalCap(task.target);
                 if (v > cap) {
                   setError(
