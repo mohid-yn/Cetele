@@ -20,7 +20,7 @@ import { Card, buttonVariants } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { Landmark } from "@/lib/retention";
 import { dismissBanner } from "@/app/(app)/g/[groupId]/today/actions";
-import { SproutIcon } from "@/components/app/icons";
+import { CloseIcon, SproutIcon } from "@/components/app/icons";
 
 export function FreshStartBanner({
   landmark,
@@ -47,9 +47,9 @@ export function FreshStartBanner({
         type="button"
         aria-label="Dismiss"
         onClick={close}
-        className="absolute top-2.5 right-3 text-lg leading-none text-muted-foreground hover:text-foreground"
+        className="absolute top-2.5 right-3 text-muted-foreground hover:text-foreground"
       >
-        ✕
+        <CloseIcon aria-hidden className="size-4" />
       </button>
       <div className="flex items-start gap-3">
         <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-primary-700">

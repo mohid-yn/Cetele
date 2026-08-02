@@ -24,6 +24,7 @@ import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
 import {
   CheckIcon,
   ChevronRightIcon,
+  HandsIcon,
   TargetIcon,
 } from "@/components/app/icons";
 import { groupHref } from "@/lib/group-href";
@@ -219,12 +220,16 @@ export function TodayClient({
       : dueRings.length === 0
         ? `Nothing due${isToday ? " today" : ""} — rest is part of it`
         : left === 0
-          ? `All rings closed${isToday ? " today" : ""} — mashaAllah 🎉`
+          ? `All rings closed${isToday ? " today" : ""} — mashaAllah`
           : sharesLeft === 0
             ? `Your circle's share is done — ${left} ring${left === 1 ? "" : "s"} left on your own goal`
             : closed === 0
               ? "A fresh page — start with one ring"
               : `${left} ring${left === 1 ? "" : "s"} to close — you're almost there`;
+
+  // The one state that earns a mark beside the glance: everything due is done.
+  // Not "nothing was due" — resting is fine, but it is not an achievement.
+  const allClosed = dueRings.length > 0 && left === 0;
 
   // One primary action (goal-gradient): continue the ring closest to done.
   const next = dueRings
@@ -252,7 +257,19 @@ export function TodayClient({
             <Eyebrow className="mt-0.5">{fmtLongDate(todayISO)}</Eyebrow>
           </div>
         }
-        subtitle={<span className="font-medium text-foreground">{glance}</span>}
+        /* The 🎉 that used to end this sentence was the screen's one
+           celebratory mark, so it is replaced rather than just deleted — with
+           the completion tick the rest of the app already uses for "met", in
+           `success`. Same family as the per-task "met" chip on Group, which is
+           the point: one vocabulary for done. */
+        subtitle={
+          <span className="flex items-center gap-1.5 font-medium text-foreground">
+            {allClosed && (
+              <CheckIcon aria-hidden className="size-4 shrink-0 text-success" />
+            )}
+            {glance}
+          </span>
+        }
         action={<StreakChip current={streak} />}
       />
 
@@ -524,9 +541,15 @@ export function TodayClient({
         <section>
           <SectionHeading
             action={
-              cheersForMe > 0
-                ? `you received ${cheersForMe} today 🤲`
-                : undefined
+              cheersForMe > 0 ? (
+                /* The same hands the Dua reaction is drawn with — this line
+                   counts those taps, so it should be marked with the thing
+                   being counted rather than a second, unrelated glyph. */
+                <span className="flex items-center gap-1">
+                  <HandsIcon aria-hidden className="size-3.5 shrink-0" />
+                  you received {cheersForMe} today
+                </span>
+              ) : undefined
             }
           >
             Your circle today

@@ -29,7 +29,7 @@ export function RingDemo() {
         </ProgressRing>
       </button>
       <p className="text-sm text-muted-foreground">
-        {done ? "✨ Ring closed — masha’Allah" : "Tap the ring to count"}
+        {done ? "Ring closed — masha’Allah" : "Tap the ring to count"}
       </p>
       <Button variant="ghost" size="sm" onClick={() => setCount(0)}>
         Reset

@@ -15,6 +15,7 @@
 import Link from "next/link";
 import { Card, ProgressBar, buttonVariants } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { SproutIcon } from "@/components/app/icons";
 
 export function WelcomeCard({
   groupName,
@@ -27,8 +28,16 @@ export function WelcomeCard({
 }) {
   return (
     <Card className="border-primary-500/30 bg-primary-500/10 p-4">
-      <p className="font-display text-base font-semibold text-foreground">
-        Welcome to {groupName} 🌿
+      {/* The medallion is FreshStartBanner's exactly (same size, ramp steps and
+          radius). These two banners share the Today screen and the same Card
+          treatment, so the leaf that used to sit at the end of this line as an
+          emoji becomes the thing that makes them read as one family — and it
+          takes its colour from a token instead of the OS's emoji font. */}
+      <p className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary-100 text-primary-700">
+          <SproutIcon aria-hidden className="size-4" />
+        </span>
+        Welcome to {groupName}
       </p>
 
       {collectivePct > 0 ? (

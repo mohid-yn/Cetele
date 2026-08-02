@@ -111,7 +111,10 @@ export async function sendTestPush(): Promise<
 
   const { sent, dead } = await sendToDevices(subs, {
     title: "Cetele",
-    body: "Test notification — reminders are working on this device. ✅",
+    // No emoji: a notification body is rendered by the OS, in the OS's own
+    // emoji font, on a surface this app does not style — the one place a glyph
+    // is guaranteed to be off-system. The sentence carries it on its own.
+    body: "Test notification — reminders are working on this device.",
     url: "/today",
     tag: "cetele-test",
   });

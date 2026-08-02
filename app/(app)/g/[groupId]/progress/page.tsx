@@ -150,7 +150,9 @@ export default async function ProgressPage({
     Promise.all([
       supabase
         .from("badges")
-        .select("id, glyph, label, description")
+        // `glyph` is deliberately not read: the catalog's six values are emoji,
+        // and the mark is now a drawn icon keyed on `id` (see badges.tsx).
+        .select("id, label, description")
         .order("sort_order"),
       supabase
         .from("badge_awards")
@@ -164,7 +166,6 @@ export default async function ProgressPage({
   );
   const badges: EarnedBadge[] = (catalog ?? []).map((b) => ({
     id: b.id,
-    glyph: b.glyph,
     label: b.label,
     description: b.description,
     earnedOn: earnedOn.get(b.id) ?? null,

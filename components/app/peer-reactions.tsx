@@ -3,9 +3,9 @@
 /**
  * One-tap peer reactions (CET-18) — the social spark Cetele had no version of.
  *
- * When a peer closes every ring, anyone in the circle can send a one-tap dua /
- * "mashaAllah" / ❤️ — near-zero effort, manufacturing relatedness (the digital
- * nod across the room; Strava's kudos run on exactly this).
+ * When a peer closes every ring, anyone in the circle can send a one-tap dua,
+ * "mashaAllah", heart or flame — near-zero effort, manufacturing relatedness
+ * (the digital nod across the room; Strava's kudos run on exactly this).
  *
  * Optimistic: a tap flips the pill immediately, then reconciles against the
  * RPC's authoritative answer (`toggle_reaction` returns whether MY reaction now
@@ -32,7 +32,26 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { REACTIONS, type ReactionKind } from "@/lib/retention";
+import {
+  FlameIcon,
+  HandsIcon,
+  HeartIcon,
+  SparkIcon,
+} from "@/components/app/icons";
 import { toggleReaction } from "@/app/(app)/g/[groupId]/today/actions";
+
+/** kind → the drawn mark. Lives here and not beside REACTIONS because that is
+ *  a `.ts` module and these are components. Typed by `Record<ReactionKind, …>`,
+ *  so adding a kind to the union fails the build here until it has a mark. */
+const REACTION_ICONS: Record<
+  ReactionKind,
+  (p: React.SVGProps<SVGSVGElement>) => React.ReactElement
+> = {
+  dua: HandsIcon,
+  mashaAllah: SparkIcon,
+  heart: HeartIcon,
+  fire: FlameIcon,
+};
 
 /** Reaction tallies for one peer: kind → total sent, and whether I sent one. */
 export type ReactionTally = Record<
@@ -103,6 +122,7 @@ export function PeerReactions({
       {REACTIONS.map((r) => {
         const isMine = mine[r.kind];
         const count = peersOnly(tally, r.kind) + (isMine ? 1 : 0);
+        const Icon = REACTION_ICONS[r.kind];
         return (
           <button
             key={r.kind}
@@ -118,7 +138,7 @@ export function PeerReactions({
                 : "border-border bg-card text-muted-foreground hover:bg-muted",
             )}
           >
-            <span aria-hidden>{r.glyph}</span>
+            <Icon aria-hidden className="size-4" />
             {count > 0 && (
               <span className="text-xs font-semibold tabular-nums">
                 {count}

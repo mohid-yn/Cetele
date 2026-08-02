@@ -34,6 +34,7 @@ import { SteadfastnessBoard } from "@/components/app/steadfastness-board";
 import { groupHref } from "@/lib/group-href";
 import { useAction } from "@/lib/use-action";
 import {
+  AwardIcon,
   CheckIcon,
   ChevronRightIcon,
   GridIcon,
@@ -43,7 +44,6 @@ import { logForGroup, leaveGroup } from "./actions";
 
 type Role = "owner" | "admin" | "member";
 type Tab = "overview" | "standings" | "members";
-const MEDALS = ["🥇", "🥈", "🥉"];
 
 /** Crossfade for the in-place tab panels (no route change → the page transition
  *  doesn't cover this; a quick fade keeps switching Overview/Standings/Members
@@ -372,8 +372,31 @@ export function GroupClient({
                       name={row.name}
                       you={row.isMe}
                       leading={
-                        <span className="w-7 shrink-0 text-center font-display text-lg font-bold text-muted-foreground tabular-nums">
-                          {i < 3 ? MEDALS[i] : i + 1}
+                        /* Rank. The top three used to be 🥇🥈🥉, which is three
+                           tiers of METAL — and v3 has no metallic ramp to draw
+                           them in (sage + rose on paper), so an honest icon
+                           translation would have needed either three new
+                           gold/silver/bronze tokens or an alpha ladder on a 2px
+                           stroke, the exact thing §4 forbids. It also doesn't
+                           need three: this ranking is explicitly for fun and
+                           resets weekly (D28 — no permanent ladder), so one
+                           mark for the week's leader says everything a podium
+                           would. Ranks 2 and 3 gain a readable number they
+                           never had. The icon carries no text, so the rank goes
+                           to a screen reader explicitly — an emoji announced
+                           itself ("1st place medal"), a drawn shape does not. */
+                        <span className="grid w-7 shrink-0 place-items-center font-display text-lg font-bold text-muted-foreground tabular-nums">
+                          {i === 0 ? (
+                            <>
+                              <AwardIcon
+                                aria-hidden
+                                className="size-5 text-primary"
+                              />
+                              <span className="sr-only">Rank 1</span>
+                            </>
+                          ) : (
+                            i + 1
+                          )}
                         </span>
                       }
                       status={

@@ -164,6 +164,91 @@ export const AwardIcon = (p: IconProps) => (
   </svg>
 );
 
+/* ---------------------------------------------------------------------------
+   The badge catalog + reaction set, drawn rather than emoji'd.
+
+   Every one of these replaced a character that took its colour and its whole
+   visual style from the OS's emoji font — the one thing a token-driven UI
+   cannot reach, and the reason the speaker toggle was redrawn before them.
+   They are deliberately in the same 24/2px stroke language as the rest, so a
+   badge tile and a nav icon read as one family.
+   --------------------------------------------------------------------------- */
+
+/** A single leaf — "Steadfast". Distinct from `SproutIcon`'s two seed leaves. */
+export const LeafIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z" />
+    <path d="M2 21c0-3 1.9-5.4 5.1-6C9.5 14.5 12 13 13 12" />
+  </svg>
+);
+
+/** A grown tree — "Deeply rooted", the 100-day landmark. */
+export const TreeIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M8 19a4 4 0 0 1-2.2-7.3A3.5 3.5 0 0 1 9 6.6a4 4 0 0 1 6.4 0 3.5 3.5 0 0 1 3.3 5.1A4 4 0 0 1 16 19Z" />
+    <path d="M12 19v3" />
+  </svg>
+);
+
+/**
+ * A tasbih — "Consistent". The one icon in this set drawn from the practice
+ * itself rather than from a generic metaphor: a strand of beads is what a
+ * cetele is counted on.
+ */
+export const BeadsIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    {/* Seven beads on the loop, drawn as separate FILLED dots with real gaps.
+        The first version laid dots ON a stroked circle: a 3px dot centred on a
+        2px stroke overlaps it almost entirely, so at 28px the whole thing
+        closed into one notched blob. No strand line — the ring of beads IS the
+        strand, and the gaps are what say "beads" rather than "circle". */}
+    <circle cx="12" cy="11" r="7" />
+    <circle cx="12" cy="4" r="2.4" fill="currentColor" stroke="none" />
+    <circle cx="19" cy="11" r="2.4" fill="currentColor" stroke="none" />
+    <circle cx="5" cy="11" r="2.4" fill="currentColor" stroke="none" />
+    {/* The imam bead and its tassel. Load-bearing: without them a ring of
+        evenly spaced dots is a loading spinner. The beads are much wider than
+        the strand on purpose — the first two attempts (dots at r=1.4–1.6, with
+        and without the strand) rendered as scattered specks at the 28px the
+        badge tile actually uses, reading as a sparkle rather than a tasbih. */}
+    <circle cx="12" cy="18" r="2.8" fill="currentColor" stroke="none" />
+    <path d="M12 20.8v2.2" />
+  </svg>
+);
+
+/** A five-pointed star — "Devoted", the rarest badge. */
+export const StarIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="m12 3.5 2.6 5.3 5.9.9-4.25 4.15 1 5.85L12 16.9l-5.25 2.8 1-5.85L3.5 9.7l5.9-.9Z" />
+  </svg>
+);
+
+/**
+ * Two open palms cupped together — the "Dua" reaction.
+ *
+ * Kept to four strokes on purpose: this renders at 16px inside a reaction pill,
+ * and every extra finger turned the shape into a smudge at that size. The
+ * silhouette (a bowl, opening upward) is what carries it, not the detail.
+ */
+export const HandsIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    {/* Two palms cupped into a bowl, opening upward, with the seam where they
+        meet. The first attempt drew fingers rising out of the middle and read
+        as a single raised claw — at 16px the SILHOUETTE is the whole message,
+        so the shape is now a wide shallow bowl and nothing else. */}
+    <path d="M2.5 11a9.5 9.5 0 0 0 19 0" />
+    <path d="M12 20.5V11" />
+    <path d="M2.5 11 5 7.4M21.5 11 19 7.4" />
+  </svg>
+);
+
+/** Dismiss. Replaces a literal ✕, which is a font glyph, not a drawn shape. */
+export const CloseIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="m6 6 12 12M18 6 6 18" />
+  </svg>
+);
+
 export const SettingsIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="12" cy="12" r="3" />

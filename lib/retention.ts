@@ -172,13 +172,18 @@ export const PAIR_TARGET = 10;
 /** Mirrors the `kind` CHECK constraint on `public.reactions` (migration 0015). */
 export type ReactionKind = "dua" | "mashaAllah" | "heart" | "fire";
 
-export const REACTIONS: { kind: ReactionKind; glyph: string; label: string }[] =
-  [
-    { kind: "dua", glyph: "🤲", label: "Dua" },
-    { kind: "mashaAllah", glyph: "✨", label: "MashaAllah" },
-    { kind: "heart", glyph: "❤️", label: "Heart" },
-    { kind: "fire", glyph: "🔥", label: "On fire" },
-  ];
+/**
+ * The reaction set, in display order. It carries no glyph: the mark for each
+ * kind is a drawn icon, mapped in `peer-reactions.tsx`, because this is a `.ts`
+ * module and the icon is a component. The `label` is the accessible name and
+ * the only text a screen reader gets, so it has to stand alone.
+ */
+export const REACTIONS: { kind: ReactionKind; label: string }[] = [
+  { kind: "dua", label: "Dua" },
+  { kind: "mashaAllah", label: "MashaAllah" },
+  { kind: "heart", label: "Heart" },
+  { kind: "fire", label: "On fire" },
+];
 
 // ---------------------------------------------------------------------------
 // CET-19 — fresh-start re-engagement

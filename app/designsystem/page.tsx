@@ -11,6 +11,7 @@ import {
   CardTitle,
   Eyebrow,
   Field,
+  Grid,
   HeroCard,
   HeroChip,
   Input,
@@ -19,10 +20,12 @@ import {
   Spinner,
   Stat,
   StatRing,
+  cardVariants,
 } from "@/components/ui";
 import { RingDemo } from "./ring-demo";
 import { AppIconLogo, WebAppLogo } from "@/components/ui/logo";
-import { FlameIcon } from "@/components/app/icons";
+import * as Icons from "@/components/app/icons";
+import { CheckIcon, FlameIcon } from "@/components/app/icons";
 
 export const metadata: Metadata = {
   title: "Design System · Cetele",
@@ -139,6 +142,16 @@ const SHADOWS = [
   "shadow-xl",
 ];
 
+/**
+ * The icon gallery, derived from the module's own exports rather than
+ * hand-listed. A second, manual copy of this list would drift the moment
+ * someone adds an icon — and a living reference that quietly omits half the set
+ * is worse than none, because it reads as "that icon doesn't exist" and the
+ * next person draws a duplicate. (Same lesson as the CI env heredoc, §4.)
+ * Everything `icons.tsx` exports IS an icon, so the namespace is the list.
+ */
+const ICON_SET = Object.entries(Icons).sort(([a], [b]) => a.localeCompare(b));
+
 const NAV = [
   ["Brand", "brand"],
   ["Colors", "colors"],
@@ -151,6 +164,7 @@ const NAV = [
   ["Badges", "badges"],
   ["Forms", "forms"],
   ["Avatars", "avatars"],
+  ["Icons", "icons"],
   ["Progress", "progress"],
   ["Patterns", "patterns"],
   ["Stats", "stats"],
@@ -241,7 +255,7 @@ export default function DesignSystemPage() {
                 ],
                 [
                   "Sage, deeper — success",
-                  "Complete / on track. Same family as the brand, by design. Always paired with a ✓ glyph.",
+                  "Complete / on track. Same family as the brand, by design. Always paired with a CheckIcon.",
                   "bg-success",
                 ],
                 [
@@ -521,6 +535,31 @@ export default function DesignSystemPage() {
           </div>
         </Section>
 
+        {/* ICONS */}
+        <Section
+          id="icons"
+          title="Icons"
+          description="The whole set, drawn in one language: 24×24, 2px round-capped strokes on currentColor. There are NO emoji in this app — an emoji is rendered by the OS, in the OS's own font and its own colours, which is the one mark a token contract cannot reach. It also changes shape between platforms and greys out inconsistently when disabled. If a mark is missing, draw it here rather than reaching for a character."
+        >
+          <div className={cardVariants({ padding: "md" })}>
+            <Grid cols="tiles" gap="md">
+              {ICON_SET.map(([name, Icon]) => (
+                <div
+                  key={name}
+                  className="flex flex-col items-center gap-2 text-center"
+                >
+                  <div className="grid size-12 place-items-center rounded-xl bg-muted text-foreground">
+                    <Icon aria-hidden className="size-6" />
+                  </div>
+                  <span className="font-mono text-[0.65rem] leading-tight text-muted-foreground">
+                    {name}
+                  </span>
+                </div>
+              ))}
+            </Grid>
+          </div>
+        </Section>
+
         {/* PROGRESS */}
         <Section
           id="progress"
@@ -540,7 +579,7 @@ export default function DesignSystemPage() {
               </div>
               <div className="flex flex-col items-center gap-2">
                 <ProgressRing value={100} max={100}>
-                  <span className="text-xl text-success">✓</span>
+                  <CheckIcon aria-hidden className="size-6 text-success" />
                 </ProgressRing>
                 <span className="text-xs text-muted-foreground">Complete</span>
               </div>
@@ -632,7 +671,7 @@ export default function DesignSystemPage() {
               <Stat
                 label="Streak"
                 value="12"
-                icon={<span>🔥</span>}
+                icon={<FlameIcon aria-hidden className="size-5" />}
                 hint="days"
               />
               <Stat label="Group total" value="41,300" hint="/ 100,000" />
