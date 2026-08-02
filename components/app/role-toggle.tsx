@@ -5,7 +5,9 @@ import type { MemberRole } from "@/lib/roles";
 
 /** Token-styled native <select> className, shared by the admin forms. */
 export const selectCls =
-  "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-50";
+  "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none " +
+  // Token pair, never opacity — see input.tsx.
+  "disabled:cursor-not-allowed disabled:border-border disabled:bg-disabled-fill disabled:text-disabled-foreground";
 
 /**
  * Member / Co-admin segmented control — clearer than a dropdown for a binary
@@ -36,10 +38,15 @@ export function RoleToggle({
             // and 48dp (Material 3) recommendations this app already follows
             // elsewhere. Two adjacent segments can't use invisible hit-area
             // expansion without overlapping each other, so the segments grow.
-            "flex min-h-11 items-center rounded-md px-3 text-sm font-medium transition-colors disabled:opacity-40 " +
+            // `disabled:opacity-40` here was the worst instance of the family:
+            // it faded the ACTIVE segment's sage fill and its near-white label
+            // together, measured at **1.85:1** — the exact 2.16:1-class failure
+            // the Button primitive documents at the top of its own file.
+            "flex min-h-11 items-center rounded-md px-3 text-sm font-medium transition-colors " +
+            "disabled:cursor-not-allowed " +
             (value === r
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground")
+              ? "bg-primary text-primary-foreground disabled:bg-disabled-fill disabled:text-disabled-foreground"
+              : "text-muted-foreground hover:text-foreground disabled:text-disabled-foreground")
           }
         >
           {r === "member" ? "Member" : "Co-admin"}

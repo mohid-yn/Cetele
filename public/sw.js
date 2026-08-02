@@ -32,7 +32,23 @@
 // v5 (2026-07-12): adds the Web Push handlers (M8/CET-11). Caching logic is
 // UNCHANGED from v4 — the allowlist rule below still stands, and this bump is
 // what makes browsers pick up the new push/notificationclick listeners.
-const CACHE = "cetele-static-v5";
+//
+// v6 (2026-08-02): caching logic UNCHANGED again — this bump exists to evict a
+// stale BRAND ASSET, and it is the case the bump rule kept missing.
+//
+// The allowlist below takes `/icons/`, `/splash/` and every `.svg` — and none
+// of those filenames are content-hashed, unlike `/_next/static/`. So once a
+// browser has one, cache-first serves it FOREVER; the only thing that can evict
+// it is a change to this constant. The v3 re-palette (2026-08-01) recoloured
+// `public/logo.svg` from emerald+gold to sage+rose and regenerated the icons and
+// 36 splash images without touching this file, so every browser that had the
+// worker installed beforehand kept being served the OLD GOLD MARK. Caught by
+// looking at `/designsystem` and seeing a gold arrow under a caption that said
+// "rose arrow" — the server was serving the right file the whole time.
+//
+// **Bump this on any change to a cached asset, not only on a change to this
+// file.** Logo, PWA icons, splash images, manifest: if you regenerate one, bump.
+const CACHE = "cetele-static-v6";
 
 /** Immutable build output + static files. Everything else is app data. */
 function isStaticAsset(url) {

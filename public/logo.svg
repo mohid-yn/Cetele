@@ -26,9 +26,9 @@
       <stop offset="100%" stop-color="#62a26c" />
     </linearGradient>
     <linearGradient id="ceteleRose" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#fc7e97" />
-      <stop offset="50%" stop-color="#ffa9b8" />
-      <stop offset="100%" stop-color="#ffd4db" />
+      <stop offset="0%" stop-color="#e98a9b" />
+      <stop offset="50%" stop-color="#f1b0ba" />
+      <stop offset="100%" stop-color="#f7d7dc" />
     </linearGradient>
     <filter id="ceteleShadow" x="-10%" y="-10%" width="130%" height="130%">
       <feDropShadow dx="2" dy="4" stdDeviation="5" flood-opacity="0.3" />
@@ -68,5 +68,5 @@
            filter="url(#ceteleShadow)" />
 
   <polygon points="260,255 380,45 325,120"
-           fill="#ffa9b8" opacity="0.6" />
+           fill="#f1b0ba" opacity="0.6" />
 </svg>

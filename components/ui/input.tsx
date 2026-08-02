@@ -17,7 +17,14 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         "text-foreground placeholder:text-muted-foreground",
         "transition-[border-color,box-shadow] duration-[var(--duration-fast)]",
         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        // Disabled is a TOKEN PAIR, never opacity — the same rule the Button
+        // primitive states at the top of its own file, which this one had been
+        // quietly breaking. `opacity-50` fades the fill, the text AND the
+        // placeholder together toward whatever happens to be behind, so the
+        // result depends on the surface rather than on a measured value.
+        "disabled:cursor-not-allowed disabled:border-border",
+        "disabled:bg-disabled-fill disabled:text-disabled-foreground",
+        "disabled:placeholder:text-disabled-foreground",
         "aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/30",
         className,
       )}
@@ -33,7 +40,7 @@ const Label = React.forwardRef<HTMLLabelElement, React.ComponentProps<"label">>(
       ref={ref}
       className={cn(
         "text-sm font-medium text-foreground select-none",
-        "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+        "peer-disabled:cursor-not-allowed peer-disabled:text-disabled-foreground",
         className,
       )}
       {...props}

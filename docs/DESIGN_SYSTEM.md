@@ -27,7 +27,7 @@ Each swatch becomes the hue anchor of a full tonal palette, and each keeps a rea
 
 | Swatch           |     | Role                                                       | Where it survives                   |
 | ---------------- | --- | ---------------------------------------------------------- | ----------------------------------- |
-| `#ED6B86` rose   | ▮   | **Accent** — the one earned action, celebration            | **Exactly, as `--accent` in light** |
+| `#ED6B86` rose   | ▮   | **Accent** — the one earned action, celebration            | Hue + L\* kept; chroma ×0.75 (§3.2) |
 | `#7FB285` sage   | ▮   | **Primary** — brand, calm, growth, completion              | primary tone 70                     |
 | `#C6AD94` tan    | ▮   | **Neutral** — paper, every surface and border              | neutral tone 70                     |
 | `#463239` plum   | ▮   | **Neutral-variant** — ink, outlines, secondary text        | neutral-variant tone 20             |
@@ -68,29 +68,30 @@ resting card measured **1.01:1** against the page), so every state is a real tok
 value. Same model, no runtime uncertainty.
 
 **Deviation, deliberate: the accent is a light fill with a dark label.** M3 would make the accent tone
-40 (`#a22c4c`, a deep wine) so it can carry white text. That throws away the rose you picked. Instead
-`--accent` is **`#ED6B86` exactly**, with a tone-10 label at **5.84:1** — and it holds through hover
-(5.16) and pressed (4.81). This also matches what the app already did with gold.
+40 (`#94414f`, a deep wine) so it can carry white text. That throws away the rose you picked. Instead
+`--accent` keeps the rose's hue and lightness with a tone-10 label at **5.85:1** — holding through
+hover (5.16) and pressed (4.84). This also matches what the app already did with gold. The fill itself
+is now `#d9798a` rather than the swatch exactly; see §3.2.
 
 ---
 
 ## 3. Tonal palettes
 
-| Tone   | primary · sage        | accent · rose         | neutral · tan         | neutral-var · plum |
-| ------ | --------------------- | --------------------- | --------------------- | ------------------ |
-| 10     | `#112013`             | `#2f1017`             | `#1f1b16`             | `#1f1a1c`          |
-| 20     | `#1f3723`             | `#501d28`             | `#372f27`             | `#372e31`          |
-| 30     | `#23522c`             | `#7d1c37`             | `#524435`             | `#514247`          |
-| 40     | `#346d3f`             | `#a22c4c`             | `#6d5b49`             | `#6c595f`          |
-| 45     | —                     | `#b33657`             | —                     | —                  |
-| 50     | `#488753`             | `#c44162`             | `#87735e`             | `#867077`          |
-| 60     | `#62a26c`             | `#e25d7b`             | `#a28c77`             | `#a08a91`          |
-| **62** | —                     | **`#ED6B86`** ← yours | —                     | —                  |
-| 70     | **`#82bd8a`** ≈ yours | `#fc7e97`             | **`#bca894`** ≈ yours | `#bba5ac`          |
-| 80     | `#a3d6a9`             | **`#ffa9b8`** ≈ yours | `#d5c3b2`             | `#d4c1c7`          |
-| 90     | `#d4ead6`             | `#ffd4db`             | `#eee0d3`             | `#e9e0e3`          |
-| 95     | `#e4f7e6`             | `#ffe9ec`             | `#faefe3`             | `#f6eef1`          |
-| 98     | `#effff0`             | `#fff6f7`             | `#fff8ee`             | `#fef8fa`          |
+| Tone   | primary · sage        | accent · rose        | neutral · tan         | neutral-var · plum |
+| ------ | --------------------- | -------------------- | --------------------- | ------------------ |
+| 10     | `#112013`             | `#2a1318`            | `#1f1b16`             | `#1f1a1c`          |
+| 20     | `#1f3723`             | `#482329`            | `#372f27`             | `#372e31`          |
+| 30     | `#23522c`             | `#702b3a`            | `#524435`             | `#514247`          |
+| 40     | `#346d3f`             | `#94414f`            | `#6d5b49`             | `#6c595f`          |
+| 45     | —                     | `#a2475a`            | —                     | —                  |
+| 50     | `#488753`             | `#b25266`            | `#87735e`             | `#867077`          |
+| 60     | `#62a26c`             | `#ce6c7f`            | `#a28c77`             | `#a08a91`          |
+| **62** | —                     | `#d9798a` ← softened | —                     | —                  |
+| 70     | **`#82bd8a`** ≈ yours | `#e98a9b`            | **`#bca894`** ≈ yours | `#bba5ac`          |
+| 80     | `#a3d6a9`             | `#f1b0ba`            | `#d5c3b2`             | `#d4c1c7`          |
+| 90     | `#d4ead6`             | `#f7d7dc`            | `#eee0d3`             | `#e9e0e3`          |
+| 95     | `#e4f7e6`             | `#fbeaec`            | `#faefe3`             | `#f6eef1`          |
+| 98     | `#effff0`             | `#fdf7f7`            | `#fff8ee`             | `#fef8fa`          |
 
 **Status hues.** Sited to maximise the minimum gap between neighbours, which this palette makes hard —
 see §3.1.
@@ -125,6 +126,38 @@ Measured, the best available compromise is **danger at H=40°**, which maximises
 
 ---
 
+### 3.2 The accent was SOFTENED, 2026-08-02 — chroma ×0.75
+
+The accent column above is the original derivation. Every accent tone now carries **0.75× its chroma**,
+with **L\* and hue untouched**.
+
+**Why.** Measured in CIE LCH, the original rose was the loudest colour in a palette whose stated
+direction (§1) is _muted botanical warmth_:
+
+|                       | L\*  | C\*      | H°    |
+| --------------------- | ---- | -------- | ----- |
+| rose (was)            | 61.9 | **53.6** | 10.9  |
+| rose (now, `#d9798a`) | 61.9 | **39.8** | 10.8  |
+| sage — the brand      | 41.3 | 35.9     | 145.9 |
+| rust — danger         | 38.7 | 48.7     | 47.0  |
+| surfaces, mean        | ~96  | 6.0      | ~85   |
+
+It was **1.49× the chroma of the brand colour** and 9× the surfaces — and **more chromatic than
+danger**, so the error colour was quieter than the celebration colour, which is backwards for the one
+pair that must never be confused (§3.1). It is now 1.11× the brand, and danger is again the more
+saturated of the two.
+
+**Because L\* is preserved, no contrast pair moved.** Label on accent goes 5.84 → **5.85** at rest,
+5.16 → 5.16 hover, 4.81 → **4.84** pressed; `--accent-ink` 5.6 → **5.75** on card. Working in LCH is
+what makes a chroma change safe: pull chroma and every ratio holds; pull lightness and they all move.
+
+`public/logo.svg` was scaled by the same factor, and the 4 PWA icons + 36 iOS launch images
+regenerated — a mark that out-saturates the UI it sits in is the same mismatch one level up.
+
+> This reverses "**`--accent` is `#ED6B86` exactly**" from the original v3 derivation, on the owner's
+> call. The hue was never the problem: sage→rose is **135°**, a split-complementary pairing, and
+> sage-green with dusty rose is a classic botanical combination. The loudness was.
+
 ## 4. Colour roles
 
 ### 4.1 Light
@@ -133,9 +166,9 @@ Measured, the best available compromise is **danger at H=40°**, which maximises
 | --------------------- | --------- | --- | -------------------------- | --------- |
 | `--primary`           | `#346d3f` | ▮   | `--on-primary`             | `#f7fff8` |
 | `--primary-container` | `#d4ead6` | ▮   | `--on-primary-container`   | `#112013` |
-| `--accent`            | `#ED6B86` | ▮   | `--on-accent`              | `#2f1017` |
-| `--accent-container`  | `#ffd4db` | ▮   | `--on-accent-container`    | `#2f1017` |
-| `--accent-ink`        | `#b33657` | ▮   | _accent as text/thin mark_ | 5.56:1    |
+| `--accent`            | `#ED6B86` | ▮   | `--on-accent`              | `#2a1318` |
+| `--accent-container`  | `#f7d7dc` | ▮   | `--on-accent-container`    | `#2a1318` |
+| `--accent-ink`        | `#a2475a` | ▮   | _accent as text/thin mark_ | 5.56:1    |
 | `--surface`           | `#fff8ee` | ▮   | `--on-surface`             | `#1f1b16` |
 | `--surface-lowest`    | `#fffdf4` | ▮   | `--on-surface-variant`     | `#514247` |
 | `--surface-low`       | `#fdf2e7` | ▮   | `--outline`                | `#867077` |
@@ -154,9 +187,9 @@ Measured, the best available compromise is **danger at H=40°**, which maximises
 | --------------------- | --------- | --- | -------------------------- | --------- |
 | `--primary`           | `#a3d6a9` | ▮   | `--on-primary`             | `#1f3723` |
 | `--primary-container` | `#23522c` | ▮   | `--on-primary-container`   | `#d4ead6` |
-| `--accent`            | `#fc7e97` | ▮   | `--on-accent`              | `#501d28` |
-| `--accent-container`  | `#7d1c37` | ▮   | `--on-accent-container`    | `#ffd4db` |
-| `--accent-ink`        | `#fc7e97` | ▮   | _accent as text/thin mark_ | 7.56:1    |
+| `--accent`            | `#e98a9b` | ▮   | `--on-accent`              | `#482329` |
+| `--accent-container`  | `#702b3a` | ▮   | `--on-accent-container`    | `#f7d7dc` |
+| `--accent-ink`        | `#e98a9b` | ▮   | _accent as text/thin mark_ | 7.56:1    |
 | `--surface`           | `#16130f` | ▮   | `--on-surface`             | `#eee0d3` |
 | `--surface-lowest`    | `#110e0b` | ▮   | `--on-surface-variant`     | `#d4c1c7` |
 | `--surface-low`       | `#1f1b16` | ▮   | `--outline`                | `#a08a91` |
@@ -227,12 +260,12 @@ Every interactive surface has five states. The layer is the `on-` colour composi
 | **light** `danger`            | `#964222` | `#9e5133` | `#a3583c`       |
 | **light** `success`           | `#21703e` | `#327b4d` | `#3b8154`       |
 | **light** `primary-container` | `#d4ead6` | `#c4dac6` | `#bdd2bf`       |
-| **light** `accent-container`  | `#ffd4db` | `#eec4cb` | `#e6bcc3`       |
+| **light** `accent-container`  | `#f7d7dc` | `#eec4cb` | `#e6bcc3`       |
 | **dark** `primary`            | `#a3d6a9` | `#98c99e` | `#93c399`       |
-| **dark** `accent`             | `#fc7e97` | `#ee768e` | `#e7728a`       |
+| **dark** `accent`             | `#e98a9b` | `#ee768e` | `#e7728a`       |
 | **dark** `danger`             | `#ffaf93` | `#f1a489` | `#e99e84`       |
 | **dark** `primary-container`  | `#23522c` | `#315e3a` | `#386440`       |
-| **dark** `accent-container`   | `#7d1c37` | `#872b44` | `#8d324b`       |
+| **dark** `accent-container`   | `#702b3a` | `#872b44` | `#8d324b`       |
 
 For transparent variants (`ghost`, `outline`, list rows, nav items) the layer composites over the
 surface beneath: hover `surface-default`, pressed `surface-high`.
@@ -255,7 +288,7 @@ Every number in this document was computed, not judged. **114/114 pairings pass.
 A plant sits on soil; a ring's notch sits on the arc; a nav icon sits on `surface-high`.
 
 **The accent cannot carry a thin mark on light.** `#ED6B86` on the page measures **2.83:1** — under the
-non-text floor. Use `--accent-ink` (`#b33657`, 5.56:1) for accent text, icons and thin strokes on light
+non-text floor. Use `--accent-ink` (`#a2475a`, 5.56:1) for accent text, icons and thin strokes on light
 surfaces. The bright rose is for **fills**, where its dark label does the work. (v1 had this exact
 defect with gold at 2.15:1 and handled it case by case.)
 
@@ -298,8 +331,8 @@ a warning about a decision the member has not made yet. "Leave this circle" is t
 | Variant       | Rest                         | Hover     | Pressed   | Label          | Measured (rest/hover/press)    |
 | ------------- | ---------------------------- | --------- | --------- | -------------- | ------------------------------ |
 | `primary`     | `#346d3f`                    | `#44794e` | `#4b7f55` | `#f7fff8`      | **6.05 / 5.04 / 4.62**         |
-| `accent`      | `#ED6B86`                    | `#de647d` | `#d66079` | `#2f1017`      | **5.84 / 5.16 / 4.81**         |
-| `tonal`       | `#d4ead6`                    | `#c4dac6` | `#bdd2bf` | `#112013`      | **13.34 / 11.45 / 10.8**       |
+| `accent`      | `#d9798a`                    | `#cb7181` | `#c46d7c` | `#2a1318`      | **5.85 / 5.16 / 4.84**         |
+| _(container)_ | `#d4ead6`                    | `#c4dac6` | `#bdd2bf` | `#112013`      | **13.34 / 11.45 / 10.8**       |
 | `destructive` | `#964222`                    | `#9e5133` | `#a3583c` | `#fffdfa`      | **6.71 / 5.67 / 5.19**         |
 | `outline`     | transparent, 1px `--outline` | `#f7ebe0` | `#f3e6da` | `--on-surface` | 14.6 label · **4.33** boundary |
 | `ghost`       | transparent                  | `#f7ebe0` | `#f3e6da` | `--on-surface` | 14.6 label                     |
@@ -310,8 +343,8 @@ a warning about a decision the member has not made yet. "Leave this circle" is t
 | Variant       | Rest                         | Hover     | Pressed   | Label          | Measured (rest/hover/press)    |
 | ------------- | ---------------------------- | --------- | --------- | -------------- | ------------------------------ |
 | `primary`     | `#a3d6a9`                    | `#98c99e` | `#93c399` | `#1f3723`      | **7.83 / 6.87 / 6.45**         |
-| `accent`      | `#fc7e97`                    | `#ee768e` | `#e7728a` | `#501d28`      | **5.54 / 4.92 / 4.63**         |
-| `tonal`       | `#23522c`                    | `#315e3a` | `#386440` | `#d4ead6`      | **7.15 / 5.92 / 5.5**          |
+| `accent`      | `#e98a9b`                    | `#dc8292` | `#d67e8d` | `#482329`      | **5.54 / 4.94 / 4.67**         |
+| _(container)_ | `#23522c`                    | `#315e3a` | `#386440` | `#d4ead6`      | **7.15 / 5.92 / 5.5**          |
 | `destructive` | `#ffaf93`                    | `#f1a489` | `#e99e84` | `#4a2517`      | **7.49 / 6.60 / 6.18**         |
 | `outline`     | transparent, 1px `--outline` | `#241e19` | `#2f2821` | `--on-surface` | 12.7 label · **5.77** boundary |
 | `ghost`       | transparent                  | `#241e19` | `#2f2821` | `--on-surface` | 12.7 label                     |
@@ -348,6 +381,19 @@ disabled primary and destructive button in the app was illegible.
 | Light | `--surface-default` `#f7ebe0` | `--outline` `#867077` | `--outline-variant` |
 | Dark  | `--surface-default` `#241e19` | `--outline` `#a08a91` | `--outline-variant` |
 
+> **The rule was stated here and broken nearly everywhere else.** A 2026-08-02 sweep found **eight**
+> live `disabled:opacity-*` sites outside the Button primitive, including in `Input` and `Label` —
+> the form primitives every screen composes. Worst measured: the RoleToggle's active segment faded
+> its sage fill and near-white label together at **1.85:1**, the same class of failure this section
+> documents fixing. All are now the token pair. Also removed: a `<li>` that carried `opacity-60` for
+> its disabled state under a comment claiming "the label stays at full strength" — container-level
+> opacity fades every descendant, including the one line explaining _why_ the row was inert.
+>
+> **The line is persistence, not the property.** `opacity` for a **transient pending** state (a
+> reaction pill dimming for the ~200ms of its own write) is fine and is not what this rule is about;
+> a token pair there would flash a colour change on every tap. The rule governs states a member can
+> sit and look at.
+
 Plus `cursor: not-allowed`, `aria-disabled="true"`, and — where the reason isn't obvious — text saying
 what is missing. A dead control explains nothing.
 
@@ -362,8 +408,19 @@ label stays, **width does not change**, `aria-busy="true"`, pointer events off.
 | `icon-sm` | 36×36   | **44×44** via `tap-area-44-box` | Icon-only, paired with `sm`               |
 | `md`      | 44px    | 44px                            | Default — dialogs, page CTAs              |
 | `icon`    | 44×44   | 44px                            | Icon-only, paired with `md`               |
-| `lg`      | 52px    | 52px                            | The primary action on a focused screen    |
 | `inline`  | auto    | **none, deliberately**          | A control inside running text; use `link` |
+
+> **`lg` (52px) was removed, 2026-08-02.** It was used **zero** times in the app — only in the
+> `/designsystem` gallery — after months of development. A rung nothing reaches for is not a size, it
+> is an unused option, and an unused _larger_ one is "some buttons are too big" waiting for the next
+> person to find it. Two weights cover every context this app actually has: `sm` for dense rows and
+> headers, `md` for dialog actions and page CTAs. If a screen ever genuinely needs a heavier primary
+> action, add the rung back **and use it** — don't leave it lying around.
+>
+> The audit that found it also found only **one** call site fighting the scale: the count screen's
+> "Edit count" was `size="sm"` with an `h-11` override to match its 44px `size="icon"` sibling — the
+> Group header's mismatch again, papered over at the call site instead of fixed by picking the right
+> rung. It is now `md`.
 
 **The text size and its icon square are a PAIR — `icon-sm` with `sm`, `icon` with `md`.** Mixing them
 was the app's most visible size defect: the Group header put a 36px `sm` button beside a 44px `icon`
@@ -428,6 +485,28 @@ Always a `container` / `on-container` pair — never a fill at reduced alpha wit
 | Info     | `#d7e4f2` / `#141c25` — **13.5** | `#2f4963` / `#d7e4f2` — **7.4** | i     |
 
 `rounded-full`, `shrink-0` so a long neighbouring name cannot squash it.
+
+#### The accent budget is real — audit it per SCREEN, not per component
+
+D25 rations the accent to **one earned action or celebration per view**. Each component that reached
+for it looked defensible on its own; together they blew the budget. A 2026-08-02 audit of the Members
+screen found **three** rose elements and **not an action among them**:
+
+| Was rose            | Why it wasn't an action                                   | Now                                                                                  |
+| ------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Streak chip         | A **state** you are in, and permanent on Today + Progress | `primary` — sage already means growth/continuity                                     |
+| `owner` role badge  | A **role**, neither earned nor an action                  | `primary`; `co-admin` drops to `outline`, so roles read as one hierarchy             |
+| Standings "you" row | **Identity**                                              | `--primary-container`, the same token the nav's active pill uses for "where you are" |
+
+That left rose for what D25 actually reserves it for: an accent button, and celebration. An accent
+seen on every row stops being emphasis and becomes decoration — which is the failure mode, not the
+hue.
+
+**Use the container ROLE, not a ramp step, whenever the element contains theme-aware text.** The
+standings row was first written as `bg-primary-100`; ramp steps are fixed values that do not flip with
+the theme, and that row's children carry `text-foreground`, so on dark it would have put near-white
+text on a light sage fill. `--primary-container` is a pair and flips. Measured on it: foreground
+**13.48** light / **7.02** dark, muted-foreground **7.45** / **5.29**.
 
 ### 8.9 Progress — the signature
 

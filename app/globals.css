@@ -11,7 +11,7 @@
    Primary = sage  (#346d3f light / #a3d6a9 dark): brand, calm, growth, AND the
    completion signal — green stays the culturally-expected hue for a dhikr
    audience and the retention-correct "done" colour at once.
-   Accent  = rose  (#ed6b86): the ONE earned action + celebration per view.
+   Accent  = rose  (#d9798a): the ONE earned action + celebration per view.
    Neutral = tan, Outline = plum: one warm family, no cool grey anywhere.
 
    Every value below was generated and measured, not picked by eye.
@@ -65,18 +65,30 @@
   --color-primary-900: #1f3723;
   --color-primary-950: #112013;
 
-  /* ---- Accent · rose, hue 9° (earned action + celebration only) ---- */
-  --color-accent-50: #fff6f7;
-  --color-accent-100: #ffd4db;
-  --color-accent-200: #ffa9b8; /* ← the owner's salmon swatch #fab3a9 */
-  --color-accent-300: #fc7e97;
-  --color-accent-400: #e25d7b;
-  --color-accent-500: #c44162;
-  --color-accent-600: #a93051;
-  --color-accent-700: #932443;
-  --color-accent-800: #7d1c37;
-  --color-accent-900: #501d28;
-  --color-accent-950: #2f1017;
+  /* ---- Accent · rose, hue 11° (earned action + celebration only) ----
+     SOFTENED 2026-08-02: every tone keeps its L* and hue and had its CHROMA
+     scaled x0.75. Measured, the old rose was the loudest colour in a palette
+     whose stated direction is "muted botanical warmth" — C* 53.6 against the
+     brand sage's 35.9 (1.49x) and the surfaces' 6.0 (9x), and MORE chromatic
+     than danger (48.7), so the error colour was quieter than the celebration
+     colour. Now C* 39.8: 1.11x the brand, and danger is once again the more
+     saturated of the two. Because L* is preserved, every contrast pair is
+     unchanged or better — label on accent 5.85/5.16/4.84 light (was
+     5.84/5.16/4.81), 5.54/4.94/4.67 dark; accent-ink 5.75 on card (was 5.6).
+     The owner's original swatch was #ED6B86; this reverses that part of v3
+     deliberately, on their call. `public/logo.svg` was scaled by the same
+     factor so the mark does not out-saturate the UI it sits in. */
+  --color-accent-50: #fdf7f7;
+  --color-accent-100: #f7d7dc;
+  --color-accent-200: #f1b0ba; /* ← the owner's salmon swatch #fab3a9 */
+  --color-accent-300: #e98a9b;
+  --color-accent-400: #ce6c7f;
+  --color-accent-500: #b25266;
+  --color-accent-600: #984154;
+  --color-accent-700: #843546;
+  --color-accent-800: #702b3a;
+  --color-accent-900: #482329;
+  --color-accent-950: #2a1318;
 
   /* ---- Neutral · tan, hue 67° (paper). Replaces the v1 SLATE ramp entirely:
      warm surfaces meeting a cool grey scale was a 170° hue jump, which is what
@@ -308,11 +320,11 @@
      white-on-rose is 2.98:1 (fails), the tone-10 label is 5.84:1 and still
      clears 4.5 at pressed (4.81) — which is the tightest margin in the system,
      so the accent fill cannot be made any lighter without a darker label. */
-  --accent: #ed6b86;
-  --accent-foreground: #2f1017;
-  --accent-container: #ffd4db;
-  --on-accent-container: #2f1017;
-  --accent-ink: #b33657; /* rose as TEXT/thin stroke on light — 5.6:1 */
+  --accent: #d9798a;
+  --accent-foreground: #2a1318;
+  --accent-container: #f7d7dc;
+  --on-accent-container: #2a1318;
+  --accent-ink: #a2475a; /* rose as TEXT/thin stroke on light — 5.75:1 */
 
   --success: #21703e; /* deeper sage — same family as the brand, by design */
   --success-foreground: #f6fff9;
@@ -326,8 +338,8 @@
   /* ---- M3 state layers, precomputed to solid hex ---- */
   --primary-hover: #44794e;
   --primary-active: #4b7f55;
-  --accent-hover: #de647d;
-  --accent-active: #d66079;
+  --accent-hover: #cb7181;
+  --accent-active: #c46d7c;
   --danger-hover: #9e5133;
   --danger-active: #a3583c;
   --surface-hover: #f7ebe0;
@@ -475,11 +487,11 @@
   --primary-foreground: #1f3723; /* 7.8:1 */
   --primary-container: #23522c;
   --on-primary-container: #d4ead6; /* 7.2:1 */
-  --accent: #fc7e97; /* lightened rose so it won't vibrate on dark */
-  --accent-foreground: #501d28; /* 5.5:1, holds 4.6 at pressed */
-  --accent-container: #7d1c37;
-  --on-accent-container: #ffd4db;
-  --accent-ink: #fc7e97; /* on dark the accent IS legible as a mark — 7.6:1 */
+  --accent: #e98a9b; /* lightened rose so it won't vibrate on dark */
+  --accent-foreground: #482329; /* 5.5:1, holds 4.6 at pressed */
+  --accent-container: #702b3a;
+  --on-accent-container: #f7d7dc;
+  --accent-ink: #e98a9b; /* on dark the accent IS legible as a mark — 6.99:1 */
 
   --success: #99d9a9;
   --success-foreground: #193823;
@@ -493,8 +505,8 @@
   /* ---- M3 state layers, precomputed to solid hex ---- */
   --primary-hover: #98c99e;
   --primary-active: #93c399;
-  --accent-hover: #ee768e;
-  --accent-active: #e7728a;
+  --accent-hover: #dc8292;
+  --accent-active: #d67e8d;
   --danger-hover: #f1a489;
   --danger-active: #e99e84;
   --surface-hover: #241e19;

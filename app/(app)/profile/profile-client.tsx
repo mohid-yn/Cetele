@@ -417,13 +417,23 @@ function ReminderRow({
     <li
       className={cn(
         "flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2.5",
-        // Dimmed, not hidden — and the label stays at full strength so the task
-        // is still readable while its controls are inert.
-        disabled && "opacity-60",
+        // The row recedes by SURFACE, not by opacity. It used to be
+        // `opacity-60` on this element, under a comment claiming "the label
+        // stays at full strength" — which container-level opacity makes
+        // impossible: it fades every descendant, the label and the "needs a
+        // device that can receive" explanation included. That explanation is
+        // the one thing a member must be able to read here, since it is the
+        // only place the app says why the controls are inert.
+        disabled && "bg-muted/60",
       )}
     >
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">
+        <p
+          className={cn(
+            "truncate text-sm font-medium",
+            disabled ? "text-muted-foreground" : "text-foreground",
+          )}
+        >
           {task.label}
         </p>
         <p className="truncate text-xs text-muted-foreground">
@@ -447,7 +457,9 @@ function ReminderRow({
           disabled={disabled}
           aria-label={`Reminder time for ${task.label}`}
           onChange={(e) => save(e.target.value, enabled)}
-          className="h-9 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground tabular-nums disabled:cursor-not-allowed"
+          // The container no longer fades, so the inert controls carry their
+          // own disabled treatment — token pair, matching Input.
+          className="h-9 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground tabular-nums disabled:cursor-not-allowed disabled:border-border disabled:bg-disabled-fill disabled:text-disabled-foreground"
         />
         <button
           type="button"
@@ -459,6 +471,7 @@ function ReminderRow({
           className={cn(
             "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed",
             enabled ? "bg-primary" : "bg-muted",
+            disabled && "bg-disabled-fill",
           )}
         >
           <span

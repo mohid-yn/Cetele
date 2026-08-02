@@ -471,7 +471,11 @@ export function ManageClient({
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-danger hover:bg-danger-500/10 disabled:opacity-40"
+                      // No `disabled:opacity-40`: the primitive's base already
+                      // sets `disabled:text-disabled-foreground`, and fading
+                      // danger text by 40% was putting a destructive label
+                      // below the readable floor.
+                      className="text-danger hover:bg-danger-500/10"
                       disabled={isSelf}
                       onClick={() =>
                         setRemovingMember({ userId: m.userId, name: m.name })

@@ -502,8 +502,13 @@ export function CountClient({
           )}
           <Button
             variant="ghost"
-            size="sm"
-            className="h-11 rounded-none px-5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            // `md` (44px natively), not `sm` + an `h-11` override. Its sibling
+            // in this segmented group is `size="icon"` at 44px, and the two
+            // were being matched by hand — the same 36-vs-44 mismatch as the
+            // Group header, papered over at the call site instead of fixed by
+            // picking the right rung.
+            size="md"
+            className="rounded-none text-muted-foreground hover:bg-muted hover:text-foreground"
             onClick={() => {
               setDraft(String(count));
               setEditOpen(true);

@@ -60,16 +60,24 @@ const buttonVariants = cva(
           "hover:border-danger hover:bg-surface-hover active:bg-surface-active " +
           "disabled:border-border",
       },
-      // Two families that must stay paired: a text size and the icon-only
-      // square that matches its PAINTED height. `icon` (44) beside `sm` (36)
-      // was the app's most visible size defect — an 8px step between two
-      // controls sitting in the same header row. Reach for `icon-sm` next to
-      // `sm`, and `icon` next to `md`.
+      // TWO weights, each with the icon-only square that matches its PAINTED
+      // height — and they must stay paired. `icon` (44) beside `sm` (36) was
+      // the app's most visible size defect: an 8px step between two controls
+      // in the same header row. Reach for `icon-sm` next to `sm`, `icon` next
+      // to `md`.
+      //
+      // There was a third rung, `lg` (52px). It was used **zero** times in the
+      // app — only in the /designsystem gallery — so it was not a size, it was
+      // an unused option, and an unused LARGER option is "some buttons are too
+      // big" waiting for the next person to reach for it. Two weights cover
+      // every real context here: `sm` for dense rows and headers, `md` for
+      // dialog actions and page CTAs. If a screen ever genuinely needs a
+      // heavier primary action, add the rung back deliberately and USE it —
+      // don't leave it lying around for someone to discover.
       size: {
         // 36px painted, 44px tappable — see `tap-area-44` in globals.css.
         sm: "h-9 px-3 text-sm tap-area-44",
         md: "h-11 px-5 text-sm",
-        lg: "h-13 px-7 text-base",
         // `tap-area-44-box`, not `tap-area-44`: the latter only stretches the
         // element's own width, which leaves a 36px square 36px wide.
         "icon-sm": "size-9 tap-area-44-box",

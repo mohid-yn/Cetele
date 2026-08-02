@@ -516,9 +516,6 @@ export default function DesignSystemPage() {
                 <Button variant="outline" size="icon" aria-label="Settings">
                   <SettingsIcon />
                 </Button>
-                <Button variant="outline" size="lg">
-                  Large · 52
-                </Button>
               </div>
               <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
                 The two families are <strong>paired</strong>:{" "}
@@ -527,10 +524,16 @@ export default function DesignSystemPage() {
                 <code className="rounded bg-muted px-1 font-mono">sm</code>, and{" "}
                 <code className="rounded bg-muted px-1 font-mono">icon</code>{" "}
                 with <code className="rounded bg-muted px-1 font-mono">md</code>
-                . Mixing them was the app&rsquo;s most visible size defect — a
-                36px button and a 44px icon button in the same header row. Both
-                small sizes paint under 44px and reach it with an invisible tap
-                area, so touch never loses.
+                . There are only these two weights: a third rung (
+                <code className="rounded bg-muted px-1 font-mono">lg</code>,
+                52px) was carried for months and used <strong>zero</strong>{" "}
+                times outside this page, so it was not a size but an unused
+                option — and an unused larger one is &ldquo;some buttons are too
+                big&rdquo; waiting for the next person to find it. Mixing the
+                pairs was the app&rsquo;s most visible size defect — a 36px
+                button and a 44px icon button in the same header row. Both small
+                sizes paint under 44px and reach it with an invisible tap area,
+                so touch never loses.
               </p>
             </div>
 

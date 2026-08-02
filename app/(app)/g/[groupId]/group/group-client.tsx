@@ -368,8 +368,21 @@ export function GroupClient({
                     key={row.userId}
                     className={cn(
                       "rounded-2xl border p-3 shadow-sm",
+                      // "This row is you" is the same idea as "this tab is
+                      // where you are", so it takes the same sage container
+                      // the nav's active pill uses — not the rose accent,
+                      // which is rationed to one earned action per view (D25);
+                      // identity is not an action. It also drops an alpha tint
+                      // (`accent-500/10`) for a real token, which is the rule
+                      // everywhere else.
+                      // `primary-container`, NOT `bg-primary-100`: the ramp
+                      // steps are fixed values that do not flip with the
+                      // theme, and this row's children carry theme-aware
+                      // `text-foreground` / `text-muted-foreground`. A fixed
+                      // light-sage fill would therefore meet near-white text
+                      // on dark. The container role is a PAIR and flips.
                       row.isMe
-                        ? "border-accent-500/40 bg-accent-500/10"
+                        ? "border-primary bg-primary-container"
                         : "border-border bg-card",
                     )}
                   >

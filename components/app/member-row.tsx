@@ -41,13 +41,19 @@ export function MemberRow({
               this whole flex row, so a long name ellipsised the badge itself
               ("owne", "yo") instead of the name. */}
           <span className="min-w-0 truncate">{name}</span>
+          {/* Roles read as a hierarchy in ONE family: owner is the filled sage
+              badge, co-admin the outlined one, member unmarked. `owner` used
+              to be the rose `accent`, which is rationed to one earned ACTION
+              per view (D25) — a role is neither earned nor an action, and on a
+              members list it put rose on every row beside the streak chip and
+              the "you" tint, three rose marks and not an action among them. */}
           {role === "owner" && (
-            <Badge variant="accent" size="sm" className="shrink-0">
+            <Badge variant="primary" size="sm" className="shrink-0">
               owner
             </Badge>
           )}
           {role === "admin" && (
-            <Badge variant="primary" size="sm" className="shrink-0">
+            <Badge variant="outline" size="sm" className="shrink-0">
               co-admin
             </Badge>
           )}

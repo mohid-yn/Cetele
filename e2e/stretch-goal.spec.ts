@@ -282,6 +282,16 @@ test("a goal above 500 can still be closed in one press", async ({ page }) => {
   await expect(page.getByText("delta out of range")).toBeHidden();
 
   // The whole 600 survives a round-trip — so every chunk landed, in order.
+  //
+  // Wait for the queue to DRAIN before reloading. `Mark done` splits 594 into
+  // 500 + 94 and the display is optimistic, so the screen reads 600 while the
+  // second chunk is still in flight — and `page.reload()` is a hard navigation,
+  // which tears the JS context down exactly like the `page.goto()` hazard the
+  // repo already documents. Caught it doing so under load: the page came back
+  // reading **506**, i.e. 6 + one 500-chunk, with the 94 lost. The assertion
+  // below is about the SPLIT, not about how fast it flushes, so the wait
+  // belongs here rather than in a longer timeout.
+  await page.waitForLoadState("networkidle");
   await page.reload();
   await expect(page.getByText("600", { exact: true })).toBeVisible();
   await expect(page.getByText("of 600")).toBeVisible();
