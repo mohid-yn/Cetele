@@ -42,7 +42,53 @@ review_ — is **met**.
 | Perf         | CWV baseline measured 2026-07-26 — all thresholds pass except the count screen's FIRST tap; numbers + two open questions in §2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Working tree | on `mohidkhanzada/design-system-v3` — the v3 re-palette, committed but **not yet merged to `staging`** and not yet seen on a preview URL                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
-**Last work (2026-08-02, latest) — buttons are one system again, and a cascade bug had been
+**Last work (2026-08-02, latest) — the size scale recalibrated, disabled-by-opacity killed, and rose
+softened into the palette (`button-consistency` cont., no migration).** Three owner follow-ups.
+**(1) Recalibrate.** I had argued the scale was fine; that was wrong on evidence I had not looked
+for. **`size="lg"` was used ZERO times** in the app — only in the `/designsystem` gallery. A rung
+nothing reaches for is not a size, it is an unused option, and an unused LARGER one is "some buttons
+are too big" waiting for the next person. Removed: the scale is now **two weights each with its icon
+square** (`sm`/`icon-sm`, `md`/`icon`) plus `inline`. A sweep for call sites fighting the scale found
+exactly one — the count screen's "Edit count" was `sm` + an `h-11` override to match its 44px `icon`
+sibling, the Group header's mismatch again, papered over at the call site. **(2) Disabled by
+opacity.** _Correcting my own previous commit message, which said three cases:_ it was two, and
+**eight more were still live** — including in the **`Input` and `Label` primitives** every form
+composes, which is the worst place for it. Worst measured: RoleToggle's active segment faded its
+sage fill and near-white label together at **1.85:1**, the exact failure `button.tsx` documents
+fixing at the top of its own file. Also removed a `<li>` carrying `opacity-60` under a comment
+claiming "the label stays at full strength" — container opacity fades every descendant, including
+the one line explaining WHY the row was inert. **The line is persistence, not the property:** opacity
+for a transient _pending_ state (a reaction pill dimming for the ~200ms of its own write) stays,
+because a token pair there would flash a colour change on every tap. **(3) Rose.** Owner: _"in the
+design system you use pink/rose i dont know if that compliments everythign well."_ Measured in CIE
+LCH, **the hue was never the problem** — sage→rose is **135°**, a split-complementary pairing. The
+loudness was: rose sat at **C\* 53.6** against the brand sage's 35.9 (**1.49×**) and the surfaces'
+6.0 (9×), and was **more chromatic than danger** (48.7), so the error colour was quieter than the
+celebration colour. On a palette whose stated direction is "muted botanical warmth", the accent was
+the loudest thing in it. Every accent tone now carries **0.75× its chroma with L\* and hue
+untouched**: `#ED6B86` → **`#d9798a`**, C\* 39.8, 1.11× the brand, danger again the more saturated.
+**Because L\* is preserved, no contrast pair moved** — 5.84→5.85 rest, 5.16 hover, 4.81→4.84 pressed,
+accent-ink 5.6→5.75; verified live in the browser, not only computed. Logo scaled by the same factor;
+icons + 36 splash images regenerated. **Rose was also over-ISSUED:** D25 rations it to one earned
+action per view, but it also marked the streak chip (a state, permanent on two screens), the owner
+badge (a role) and the standings "you" row (identity) — **three rose marks on Members and not an
+action among them**, which is how an accent stops being emphasis and becomes decoration. Streak and
+owner → sage, co-admin → outline so roles read as one hierarchy, "you" → `--primary-container`.
+**A shipping bug found by LOOKING, not measuring:** `/designsystem` rendered a **gold** logo arrow
+under a caption saying "rose arrow", with the server serving the correct file all along. `sw.js`
+allowlists `.svg`, `/icons/` and `/splash/`, **none of which are content-hashed**, so cache-first
+serves them forever and only the `CACHE` constant evicts them — and that constant was last bumped
+**2026-07-12**, while the v3 re-palette recoloured the brand mark on **2026-08-01**. Every existing
+user still had the pre-v3 emerald+gold mark and would have kept it through promotion. `CACHE` → **v6**
+and the rule corrected in both places (§4). e2e **33/33**, four gates green. _Also fixed a real race
+in `stretch-goal.spec`:_ it called `page.reload()` straight after a chunked write and was caught
+reading **506** — 6 plus one 500-chunk, the 94 lost; a hard navigation racing an in-flight write, the
+same hazard §7 documents for `page.goto()`. _And the correction I owe the previous entry:_ a
+**full-suite A/B against stashed baseline failed once and passed once**, so `stretch-goal.spec` is
+load-sensitive on BOTH trees — the repeated failures I had begun to attribute to my own changes were
+not mine.
+
+**Before that (2026-08-02) — buttons are one system again, and a cascade bug had been
 disabling half of it (`button-consistency`, no migration).** Owner: _"i dont like how buttons are
 currently configured and built into the ui… the buttons in the nav bar have no coordination or way
 of telling people they are buttons they look baked into the backgound… the light and dark mode
@@ -733,8 +779,10 @@ Net-new product ideas park until then.
 
 ## 3. How we work
 
-**Ship in increments, verify, then commit.** End commit messages with
-`Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+**Ship in increments, verify, then commit.** End commit messages with a
+`Co-Authored-By: Claude <model> <noreply@anthropic.com>` trailer naming **whichever model wrote the
+commit** — the history carries both `Opus 4.8` and `Opus 5`, which is correct, not drift. Don't copy
+a version out of this file.
 
 ### Branching — `main` is production, `staging` is the soak (D50, 2026-07-28)
 
@@ -863,7 +911,7 @@ variable; `cp .env.ci .env.local` + the service-role key from `supabase status -
 Run them directly — you're inside WSL.
 The **service worker only registers in production** (`pnpm build && pnpm start`), not `pnpm dev`.
 
-**Design system (v3):** sage `#346D3F` + rose `#ED6B86` on warm paper `#FAF6EC` (light-first; dark = warm brown).
+**Design system (v3):** sage `#346D3F` + rose `#d9798a` on warm paper `#FFF8EE` (light-first; dark = warm brown).
 Sage = brand + calm + completion/growth; **rose is scarce** — one earned action or celebration per view.
 The emerald + gold of v1/v2 is **gone**, brand mark included (2026-08-01). **No emoji anywhere in the UI** —
 every mark is a drawn icon in `components/app/icons.tsx`; the `/designsystem` gallery is derived from that

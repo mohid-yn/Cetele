@@ -17,8 +17,10 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 
 - **Track in Linear** (team `CET`, https://linear.app/mohidkz/team/CET) via the Linear MCP — keep issue state in sync with the code.
 - **Confirm consequential product decisions** with the user, then log them in STATUS.md "Decisions locked".
-- **Build in increments**, verify, then commit. End commit messages with:
-  `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+- **Build in increments**, verify, then commit. End commit messages with a
+  `Co-Authored-By: Claude <model> <noreply@anthropic.com>` trailer naming **whichever model
+  wrote the commit** — the history carries `Opus 4.8` and `Opus 5` for exactly that reason.
+  Don't copy a version out of this file; it will be stale.
 - **Branching — `main` is PRODUCTION and is gated; `staging` is the soak (D50):**
   - **Nothing reaches `main` that has not sat on `staging` first.** `main` is only ever **fast-forwarded from `staging`**.
   - Cut one **feature branch per Linear issue off `staging`** (not `main`), named to match the issue's git branch (`mohidkhanzada/cet-N-slug`). Never commit features straight to either long-lived branch.
@@ -31,7 +33,7 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 
 ## UI / design system
 
-Themed **sage `#346D3F` + rose `#ED6B86` on warm paper `#FAF6EC`** (light-first; dark = warm
+Themed **sage `#346D3F` + rose `#d9798a` on warm paper `#FFF8EE`** (light-first; dark = warm
 brown). This is **v3** — the whole palette was re-derived from the owner's swatches as Material 3
 tonal ramps (D20 → D25 → v3; the emerald + gold of v1/v2 is gone, brand mark included).
 Sage = brand + calm/spiritual + completion/growth; rose = earned action +
@@ -67,6 +69,11 @@ inside WSL. Verify build + lint + tsc are green before committing.
 > not in `pnpm dev`. PWA icons: `node scripts/gen-icons.mjs`; iOS splash images:
 > `node scripts/gen-splash.mjs`. The installed PWA caches the old manifest/icons — to
 > see a `start_url`/splash change, remove the home-screen icon and re-add it.
+>
+> **Regenerated `logo.svg`, an icon, a splash image or the manifest? Bump `CACHE` in
+> `public/sw.js`.** Those filenames are not content-hashed, so the worker's cache-first
+> rule serves the old bytes forever and only the cache NAME can evict them. v3 shipped a
+> recoloured brand mark without bumping it and every existing user kept the old one.
 
 ## Stack
 

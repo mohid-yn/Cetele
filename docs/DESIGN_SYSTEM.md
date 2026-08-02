@@ -166,9 +166,9 @@ regenerated — a mark that out-saturates the UI it sits in is the same mismatch
 | --------------------- | --------- | --- | -------------------------- | --------- |
 | `--primary`           | `#346d3f` | ▮   | `--on-primary`             | `#f7fff8` |
 | `--primary-container` | `#d4ead6` | ▮   | `--on-primary-container`   | `#112013` |
-| `--accent`            | `#ED6B86` | ▮   | `--on-accent`              | `#2a1318` |
+| `--accent`            | `#d9798a` | ▮   | `--on-accent`              | `#2a1318` |
 | `--accent-container`  | `#f7d7dc` | ▮   | `--on-accent-container`    | `#2a1318` |
-| `--accent-ink`        | `#a2475a` | ▮   | _accent as text/thin mark_ | 5.56:1    |
+| `--accent-ink`        | `#a2475a` | ▮   | _accent as text/thin mark_ | 5.75:1    |
 | `--surface`           | `#fff8ee` | ▮   | `--on-surface`             | `#1f1b16` |
 | `--surface-lowest`    | `#fffdf4` | ▮   | `--on-surface-variant`     | `#514247` |
 | `--surface-low`       | `#fdf2e7` | ▮   | `--outline`                | `#867077` |
@@ -256,13 +256,13 @@ Every interactive surface has five states. The layer is the `on-` colour composi
 |                               | Rest      | Hover     | Focus / Pressed |
 | ----------------------------- | --------- | --------- | --------------- |
 | **light** `primary`           | `#346d3f` | `#44794e` | `#4b7f55`       |
-| **light** `accent`            | `#ED6B86` | `#de647d` | `#d66079`       |
+| **light** `accent`            | `#d9798a` | `#cb7181` | `#c46d7c`       |
 | **light** `danger`            | `#964222` | `#9e5133` | `#a3583c`       |
 | **light** `success`           | `#21703e` | `#327b4d` | `#3b8154`       |
 | **light** `primary-container` | `#d4ead6` | `#c4dac6` | `#bdd2bf`       |
 | **light** `accent-container`  | `#f7d7dc` | `#eec4cb` | `#e6bcc3`       |
 | **dark** `primary`            | `#a3d6a9` | `#98c99e` | `#93c399`       |
-| **dark** `accent`             | `#e98a9b` | `#ee768e` | `#e7728a`       |
+| **dark** `accent`             | `#e98a9b` | `#dc8292` | `#d67e8d`       |
 | **dark** `danger`             | `#ffaf93` | `#f1a489` | `#e99e84`       |
 | **dark** `primary-container`  | `#23522c` | `#315e3a` | `#386440`       |
 | **dark** `accent-container`   | `#702b3a` | `#872b44` | `#8d324b`       |
@@ -287,7 +287,7 @@ Every number in this document was computed, not judged. **114/114 pairings pass.
 **Judge against the surface the element is actually drawn on, per theme** — not `--surface` by default.
 A plant sits on soil; a ring's notch sits on the arc; a nav icon sits on `surface-high`.
 
-**The accent cannot carry a thin mark on light.** `#ED6B86` on the page measures **2.83:1** — under the
+**The accent cannot carry a thin mark on light.** `#d9798a` on the page measures **2.82:1** — under the
 non-text floor. Use `--accent-ink` (`#a2475a`, 5.56:1) for accent text, icons and thin strokes on light
 surfaces. The bright rose is for **fills**, where its dark label does the work. (v1 had this exact
 defect with gold at 2.15:1 and handled it case by case.)
@@ -368,8 +368,8 @@ never replaced by a colour change alone.
 The state layer moves the fill **toward** its label, so contrast drops on every filled button —
 `primary` goes 6.05 → 5.04 → 4.62. That is M3's model working as designed, and it is safe **only
 because the rest state starts with headroom.** Any new filled variant must therefore be checked at
-**pressed**, not at rest. The accent is the tight one: it starts at 5.84 and lands at 4.81, which is
-why the accent fill cannot be made any lighter than `#ED6B86` without a darker label.
+**pressed**, not at rest. The accent is the tight one: it starts at 5.85 and lands at 4.84, which is
+why the accent fill cannot be made any lighter than `#d9798a` without a darker label.
 
 ### 8.4 Disabled — a token pair, never `opacity`
 
