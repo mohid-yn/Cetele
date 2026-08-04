@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
 import { signOutIfStaleSession } from "@/lib/stale-session";
 import { configureWebPush, sendToDevices } from "@/lib/push/send";
+import { MAX_NAME_LENGTH } from "@/lib/profile";
 
 type Result = { error: string | null };
 
@@ -15,6 +16,49 @@ async function me() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   return { supabase, uid: data?.claims?.sub as string | undefined };
+}
+
+/**
+ * Change my display name.
+ *
+ * A plain UPDATE, not an RPC: 0003 grants `update (name, avatar_url)` on
+ * `profiles` to `authenticated` and the `profiles_update_self` policy pins the
+ * row to `auth.uid()`, so the authority is already RLS + the column grant. There
+ * is nothing atomic to protect here either — one field, one writer, last write
+ * wins is the correct semantics (contrast `set_reminder`, where two controls in
+ * one row race).
+ *
+ * The name is denormalised nowhere — every screen reads `profiles.name` through
+ * a join — but it renders on the roster, standings, the admin breakdown and the
+ * reaction rows, all server-rendered and all prefetched into the client Router
+ * Cache. So this busts the whole tree rather than `/profile`: a member who
+ * renames themselves and then finds the old name still on Group would
+ * reasonably conclude the save failed. It is a once-in-an-account write, so the
+ * cost of the wide revalidate is paid essentially never.
+ */
+export async function updateName(
+  name: string,
+): Promise<Result & { name?: string }> {
+  const { supabase, uid } = await me();
+  if (!uid) return { error: "You are signed out." };
+
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Your name can't be empty." };
+  if (trimmed.length > MAX_NAME_LENGTH) {
+    return { error: `Keep it under ${MAX_NAME_LENGTH} characters.` };
+  }
+
+  const { error } = await q(
+    "profile.rename",
+    supabase.from("profiles").update({ name: trimmed }).eq("id", uid),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+
+  revalidatePath("/", "layout");
+  // Returned so the client reconciles from the write's own outcome rather than
+  // from a refetch (D45) — and so it shows the TRIMMED name, not what was typed.
+  return { error: null, name: trimmed };
 }
 
 /**

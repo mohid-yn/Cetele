@@ -7,6 +7,7 @@ import {
   Badge,
   Button,
   Card,
+  Input,
   Screen,
   Spinner,
   cardVariants,
@@ -21,6 +22,7 @@ import {
 } from "@/components/app/install-guide";
 import { useAction } from "@/lib/use-action";
 import { usePropState } from "@/lib/use-prop-state";
+import { MAX_NAME_LENGTH } from "@/lib/profile";
 import {
   pushEnvironment,
   type PushEnvironment,
@@ -33,6 +35,7 @@ import {
   removePushSubscription,
   setReminder,
   sendTestPush,
+  updateName,
 } from "./actions";
 
 export type ReminderTask = {
@@ -52,7 +55,7 @@ function to12h(time: string): string {
 }
 
 export function ProfileClient({
-  name,
+  name: serverName,
   role,
   groupName,
   streak,
@@ -70,6 +73,12 @@ export function ProfileClient({
   vapidPublicKey: string;
 }) {
   const pushAct = useAction();
+
+  // The name is edited on this screen, so it is held here rather than read
+  // straight off the prop: the avatar's initials derive from it too, and the two
+  // must never disagree mid-save. Prop-seeded so the server's value wins once
+  // the refresh lands.
+  const [name, setName] = usePropState(serverName);
 
   // Kept locally so enabling push unlocks the rows in the same interaction,
   // reconciled from each action's own outcome rather than a refetch (D45).
@@ -159,9 +168,7 @@ export function ProfileClient({
       <header className="flex flex-col items-center gap-2 pt-2 text-center">
         <Avatar name={name} size="xl" />
         <div>
-          <h1 className="font-display text-xl font-bold text-foreground">
-            {name}
-          </h1>
+          <NameEditor name={name} onSaved={setName} />
           <div className="mt-1 flex flex-wrap justify-center gap-1.5">
             {role === "owner" && <Badge variant="accent">Owner</Badge>}
             {role === "admin" && <Badge variant="primary">Co-admin</Badge>}
@@ -314,6 +321,119 @@ export function ProfileClient({
         </Button>
       </form>
     </Screen>
+  );
+}
+
+/**
+ * The member's own display name, edited in place.
+ *
+ * In place rather than in a dialog because the name is already the largest thing
+ * on this screen: the control belongs on the surface it governs (§4), and a
+ * modal for one text field is a step nobody needs. The heading and the input
+ * swap in the same slot, so nothing below moves.
+ *
+ * `act.error` renders only while editing, because `useAction` clears its error
+ * on the next run and there is nothing to clear it on cancel — a stale message
+ * left under the heading would outlive the attempt it described.
+ */
+function NameEditor({
+  name,
+  onSaved,
+}: {
+  name: string;
+  onSaved: (next: string) => void;
+}) {
+  const act = useAction();
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(name);
+  const editButton = React.useRef<HTMLButtonElement>(null);
+  const field = React.useRef<HTMLInputElement>(null);
+
+  function close() {
+    setEditing(false);
+    // The control the member was on is about to unmount; without this, focus
+    // falls to the body and a keyboard user restarts from the top of the page.
+    editButton.current?.focus();
+  }
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (draft.trim() === name) {
+      close();
+      return;
+    }
+    // Empty is NOT short-circuited here — the action owns that message, and one
+    // wasted round trip on a rare mistake beats two copies of the rule.
+    act.run(
+      () => updateName(draft),
+      (res) => {
+        if (res.name) onSaved(res.name);
+        close();
+      },
+      // The field is disabled for the duration of the write, and disabling an
+      // element drops focus to the body — so a refused save would otherwise
+      // leave a keyboard user reading an error with no way back to the input
+      // except to hunt for it.
+      () => field.current?.focus(),
+    );
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex items-center justify-center gap-2">
+        <h1 className="font-display text-xl font-bold text-foreground">
+          {name}
+        </h1>
+        <Button
+          ref={editButton}
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setDraft(name);
+            setEditing(true);
+          }}
+        >
+          Edit
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col items-center gap-2">
+      <Input
+        ref={field}
+        value={draft}
+        autoFocus
+        maxLength={MAX_NAME_LENGTH}
+        aria-label="Your name"
+        disabled={act.pending}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") close();
+        }}
+        className="max-w-64 text-center"
+      />
+      <div className="flex items-center gap-2">
+        <Button type="submit" size="sm" disabled={act.pending}>
+          {act.pending ? "Saving…" : "Save"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={act.pending}
+          onClick={close}
+        >
+          Cancel
+        </Button>
+      </div>
+      {act.error && (
+        <p role="alert" className="text-xs text-danger">
+          {act.error}
+        </p>
+      )}
+    </form>
   );
 }
 
