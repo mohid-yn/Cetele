@@ -6,6 +6,7 @@ import {
   Avatar,
   Badge,
   Button,
+  buttonVariants,
   Card,
   Eyebrow,
   Field,
@@ -777,6 +778,20 @@ export function ManageClient({
               progress. You and the organisers can see how far each member has
               got; nothing on it affects streaks or the circle&rsquo;s figures.
             </p>
+            {/* The report is not group-scoped, because progress is not either
+                (D55) — one person on one programme has one record however many
+                circles they are in. RLS decides whose rows an admin sees. */}
+            {roadmapId && (
+              <Link
+                href="/programme"
+                className={buttonVariants({
+                  variant: "outline",
+                  className: "mt-3 w-full",
+                })}
+              >
+                See how members are getting on
+              </Link>
+            )}
             <ErrorNote error={roadmapAct.error} />
           </Card>
         </section>
