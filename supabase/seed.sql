@@ -69,3 +69,48 @@ where user_id = '00000000-0000-0000-0000-0000000000a1';
 -- band, group-90 North Star, and steadfastness board render on a fresh DB. In
 -- production the nightly pg_cron job does this; here we run it once inline.
 select private.run_daily_rollup();
+
+-- ----------------------------------------------------------------------------
+-- A roadmap for the Fajr Circle to follow (0025, D55).
+--
+-- INVENTED CONTENT, and it lives here for exactly that reason: the real 2026
+-- programme is the administration's to supply (STATUS §2, roadmap Q1), and a
+-- migration that shipped placeholder titles would put them in production. The
+-- seed never runs against prod.
+-- ----------------------------------------------------------------------------
+insert into public.roadmaps (id, name, starts_on, ends_on, published)
+values ('00000000-0000-0000-0000-0000000000f1', '2026 programme',
+        date_trunc('year', current_date)::date,
+        (date_trunc('year', current_date) + interval '1 year - 1 day')::date,
+        true)
+on conflict (id) do nothing;
+
+insert into public.roadmap_items (id, roadmap_id, kind, title, source, url, unit, target, sort_order)
+values
+  ('00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-0000000000f1', 'watch',  'Seerah series',           'Weekly lectures · 24 parts', 'https://example.org/seerah', 'videos',   24, 1),
+  ('00000000-0000-0000-0000-0000000000f3', '00000000-0000-0000-0000-0000000000f1', 'watch',  'Fiqh of purification',    'Short course · 8 parts',     'https://example.org/fiqh',   'videos',    8, 2),
+  ('00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000f1', 'read',   'Purification of the Heart', 'Hamza Yusuf',              null,                          'chapters', 12, 3),
+  ('00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000f1', 'read',   'Nur al-Idah',             'Set text for the year',      null,                          'chapters',  9, 4),
+  ('00000000-0000-0000-0000-0000000000f6', '00000000-0000-0000-0000-0000000000f1', 'custom', 'Winter retreat',          'Three days, attendance taken', null,                        'sessions',  1, 5),
+  ('00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-0000000000f1', 'custom', 'Teach one session',       'Any circle, any topic',      null,                          'sessions',  1, 6)
+on conflict (id) do nothing;
+
+insert into public.roadmap_rewards (id, roadmap_id, threshold, label, description)
+values
+  ('00000000-0000-0000-0000-0000000000f8', '00000000-0000-0000-0000-0000000000f1', 2, 'Circle kitab set',   'Collected at the halaqah'),
+  ('00000000-0000-0000-0000-0000000000f9', '00000000-0000-0000-0000-0000000000f1', 4, 'Retreat place held', 'Winter retreat, travel covered'),
+  ('00000000-0000-0000-0000-0000000000fa', '00000000-0000-0000-0000-0000000000f1', 6, 'Ijazah sitting',     'Invitation to the closing sitting')
+on conflict (id) do nothing;
+
+update public.groups set roadmap_id = '00000000-0000-0000-0000-0000000000f1'
+where id = '00000000-0000-0000-0000-0000000000b1';
+
+-- Ahmad is partway through, so the ladder renders with a rung already unlocked
+-- and one marked "next" — the states that only appear with real progress.
+insert into public.roadmap_progress (user_id, item_id, done)
+values
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000f2', 17),
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000f3', 8),
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000f4', 4),
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000f7', 1)
+on conflict (user_id, item_id) do nothing;

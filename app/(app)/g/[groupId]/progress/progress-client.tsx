@@ -14,6 +14,7 @@ import { SectionHeading } from "@/components/app/section-heading";
 import { BadgesGrid, type EarnedBadge } from "@/components/app/badges";
 import { FlameIcon, ShieldIcon } from "@/components/app/icons";
 import { TaskGrid, type GridRow } from "@/components/app/task-grid";
+import { RoadmapEntryCard } from "@/components/app/roadmap-entry-card";
 
 /**
  * Client leaf for the server-first Progress (M5). Streak hero +
@@ -43,6 +44,9 @@ export function ProgressClient({
   names,
   hasTasks,
   badges,
+  groupId,
+  roadmap,
+  todayISO,
 }: {
   current: number;
   longest: number;
@@ -58,6 +62,11 @@ export function ProgressClient({
   hasTasks: boolean;
   /** Escalating achievement badges (CET-20) — earned ones carry a date. */
   badges: EarnedBadge[];
+  groupId: string;
+  /** The programme this circle follows (D55), or null — most follow none. */
+  roadmap: { name: string; endsOn: string } | null;
+  /** The member's own today (D34). */
+  todayISO: string;
 }) {
   const tone =
     daysFull >= days * 0.8
@@ -124,6 +133,19 @@ export function ProgressClient({
           {bandFull} of the last {bandWindow} days fully completed.
         </p>
       </Card>
+
+      {/* The circle's yearly programme (D55), when it follows one. Sits with
+          the longitudinal things — a roadmap is the slowest arc in the app —
+          and above the badges, because it is a live destination rather than a
+          record of what is already done. */}
+      {roadmap && (
+        <RoadmapEntryCard
+          groupId={groupId}
+          name={roadmap.name}
+          endsOn={roadmap.endsOn}
+          todayISO={todayISO}
+        />
+      )}
 
       {/* Achievements (CET-20) — earned, escalating, and permanent (D43). */}
       <BadgesGrid badges={badges} />

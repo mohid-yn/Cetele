@@ -39,6 +39,8 @@ export type ManageGroup = {
   id: string;
   name: string;
   created_by: string | null;
+  /** The programme this circle follows (D55), or null — most follow none. */
+  roadmap_id: string | null;
 };
 export type ManageMember = {
   userId: string;
@@ -287,6 +289,7 @@ export function ManageClient({
   invites: propInvites,
   defaultCode: propDefaultCode,
   canClaim,
+  roadmaps,
 }: {
   group: ManageGroup;
   me: string;
@@ -297,6 +300,8 @@ export function ManageClient({
   invites: ManageInvite[];
   defaultCode: string | null;
   canClaim: boolean;
+  /** Published programmes this circle could follow (D55). Often empty. */
+  roadmaps: { id: string; name: string }[];
 }) {
   // The three lists render from local state (CET-30): a mutation shows the
   // moment its action succeeds, without waiting on a refetch that can be dropped.
@@ -304,6 +309,7 @@ export function ManageClient({
   const [tasks, setTasks] = usePropState(propTasks);
   const [invites, setInvites] = usePropState(propInvites);
   const [defaultCode, setDefaultCode] = usePropState(propDefaultCode);
+  const [roadmapId, setRoadmapId] = usePropState(group.roadmap_id);
 
   // Assignments are held as the RESOLVED per-task answer rather than as raw
   // intervals: this screen only ever edits the present, and reconciling a
@@ -331,6 +337,7 @@ export function ManageClient({
   const taskAct = useAction();
   const settingsAct = useAction();
   const ownershipAct = useAction();
+  const roadmapAct = useAction();
   const claimAct = useAction();
   const [claimOpen, setClaimOpen] = React.useState(false);
 
@@ -730,6 +737,50 @@ export function ManageClient({
           <ErrorNote error={settingsAct.error} />
         </Card>
       </section>
+
+      {/* Programme ------------------------------------------------------- */}
+      {roadmaps.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-sm font-semibold text-foreground">
+            Programme
+          </h2>
+          <Card className="p-4">
+            <Field label="This circle follows" htmlFor="group-roadmap">
+              <select
+                id="group-roadmap"
+                className={selectCls}
+                value={roadmapId ?? ""}
+                disabled={roadmapAct.pending}
+                onChange={(e) => {
+                  const next = e.target.value || null;
+                  const previous = roadmapId;
+                  // Optimistic, undone on refusal — without the undo a write
+                  // RLS filtered away still looks applied (lib/use-action.ts).
+                  setRoadmapId(next);
+                  void roadmapAct.run(
+                    () => act.setGroupRoadmap(group.id, next),
+                    undefined,
+                    () => setRoadmapId(previous),
+                  );
+                }}
+              >
+                <option value="">No programme</option>
+                {roadmaps.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Everyone in the circle sees the programme and records their own
+              progress. You and the organisers can see how far each member has
+              got; nothing on it affects streaks or the circle&rsquo;s figures.
+            </p>
+            <ErrorNote error={roadmapAct.error} />
+          </Card>
+        </section>
+      )}
 
       {/* Ownership ------------------------------------------------------- */}
       <section>

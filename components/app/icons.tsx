@@ -249,6 +249,56 @@ export const CloseIcon = (p: IconProps) => (
   </svg>
 );
 
+/* ---------------------------------------------------------------------------
+ * Roadmap marks. A roadmap item is done SOMEWHERE ELSE — a playlist, a book —
+ * so its mark has to say "this is a thing out in the world", which is why the
+ * set carries a source kind (play/book) and a way out (external link) rather
+ * than the counting vocabulary the daily tasks use.
+ * ------------------------------------------------------------------------- */
+
+/** A watch item — a video or a playlist. */
+export const PlayIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M10.3 8.6v6.8L16 12z" />
+  </svg>
+);
+
+/** A read item — a book, an essay, a wird to be studied. */
+export const BookIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 6.8C10.6 5.3 8.6 4.7 4.5 4.7v12.6c4.1 0 6.1.6 7.5 2.1 1.4-1.5 3.4-2.1 7.5-2.1V4.7c-4.1 0-6.1.6-7.5 2.1Z" />
+    <path d="M12 6.8v12.6" />
+  </svg>
+);
+
+/** A reward waiting at a milestone. */
+export const GiftIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3.5 8.6h17v3.2h-17z" />
+    <path d="M5.2 11.8v8a1 1 0 0 0 1 1h11.6a1 1 0 0 0 1-1v-8" />
+    <path d="M12 8.6v12.2" />
+    <path d="M12 8.6S10.7 4 8.6 4a2.3 2.3 0 0 0 0 4.6ZM12 8.6S13.3 4 15.4 4a2.3 2.3 0 0 1 0 4.6Z" />
+  </svg>
+);
+
+/** Leaves the app — the item itself lives on YouTube, a library, a PDF. */
+export const ExternalLinkIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M14 4h6v6" />
+    <path d="M20 4 11.5 12.5" />
+    <path d="M18.5 14.4V19a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19V7.5A1.5 1.5 0 0 1 5.5 6h4.6" />
+  </svg>
+);
+
+/** The roadmap itself — a destination, not a daily loop. */
+export const FlagIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5.8 21V3.4" />
+    <path d="M5.8 4.6h11.4l-2.1 3.7 2.1 3.7H5.8" />
+  </svg>
+);
+
 export const SettingsIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="12" cy="12" r="3" />

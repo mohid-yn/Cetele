@@ -230,18 +230,21 @@ export type Database = {
           created_by: string | null;
           id: string;
           name: string;
+          roadmap_id: string | null;
         };
         Insert: {
           created_at?: string;
           created_by?: string | null;
           id?: string;
           name: string;
+          roadmap_id?: string | null;
         };
         Update: {
           created_at?: string;
           created_by?: string | null;
           id?: string;
           name?: string;
+          roadmap_id?: string | null;
         };
         Relationships: [
           {
@@ -249,6 +252,13 @@ export type Database = {
             columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "groups_roadmap_id_fkey";
+            columns: ["roadmap_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmaps";
             referencedColumns: ["id"];
           },
         ];
@@ -648,6 +658,145 @@ export type Database = {
           },
         ];
       };
+      roadmap_items: {
+        Row: {
+          id: string;
+          kind: string;
+          roadmap_id: string;
+          sort_order: number;
+          source: string | null;
+          target: number;
+          title: string;
+          unit: string;
+          url: string | null;
+        };
+        Insert: {
+          id?: string;
+          kind: string;
+          roadmap_id: string;
+          sort_order?: number;
+          source?: string | null;
+          target: number;
+          title: string;
+          unit: string;
+          url?: string | null;
+        };
+        Update: {
+          id?: string;
+          kind?: string;
+          roadmap_id?: string;
+          sort_order?: number;
+          source?: string | null;
+          target?: number;
+          title?: string;
+          unit?: string;
+          url?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_items_roadmap_id_fkey";
+            columns: ["roadmap_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmaps";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      roadmap_progress: {
+        Row: {
+          done: number;
+          item_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          done: number;
+          item_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          done?: number;
+          item_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_progress_item_id_fkey";
+            columns: ["item_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmap_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "roadmap_progress_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      roadmap_rewards: {
+        Row: {
+          description: string | null;
+          id: string;
+          label: string;
+          roadmap_id: string;
+          threshold: number;
+        };
+        Insert: {
+          description?: string | null;
+          id?: string;
+          label: string;
+          roadmap_id: string;
+          threshold: number;
+        };
+        Update: {
+          description?: string | null;
+          id?: string;
+          label?: string;
+          roadmap_id?: string;
+          threshold?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_rewards_roadmap_id_fkey";
+            columns: ["roadmap_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmaps";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      roadmaps: {
+        Row: {
+          created_at: string;
+          ends_on: string;
+          id: string;
+          name: string;
+          published: boolean;
+          starts_on: string;
+        };
+        Insert: {
+          created_at?: string;
+          ends_on: string;
+          id?: string;
+          name: string;
+          published?: boolean;
+          starts_on: string;
+        };
+        Update: {
+          created_at?: string;
+          ends_on?: string;
+          id?: string;
+          name?: string;
+          published?: boolean;
+          starts_on?: string;
+        };
+        Relationships: [];
+      };
       streaks: {
         Row: {
           current: number;
@@ -807,6 +956,7 @@ export type Database = {
           created_by: string | null;
           id: string;
           name: string;
+          roadmap_id: string | null;
         };
         SetofOptions: {
           from: "*";
@@ -839,6 +989,7 @@ export type Database = {
           created_by: string | null;
           id: string;
           name: string;
+          roadmap_id: string | null;
         };
         SetofOptions: {
           from: "*";
@@ -896,6 +1047,10 @@ export type Database = {
       set_reminder: {
         Args: { p_enabled: boolean; p_task: string; p_time: string };
         Returns: undefined;
+      };
+      set_roadmap_progress: {
+        Args: { p_done: number; p_item: string };
+        Returns: number;
       };
       set_task_assignees: {
         Args: { p_task: string; p_user_ids: string[] };

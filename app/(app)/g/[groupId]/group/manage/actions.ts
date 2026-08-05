@@ -51,6 +51,34 @@ export async function renameGroup(
   return ok;
 }
 
+/**
+ * Put this circle on a programme, or take it off (D55).
+ *
+ * A plain UPDATE like `renameGroup`, and for the same reason: one column, one
+ * writer, last write wins is the correct semantics, and there is nothing atomic
+ * to protect. The authority is `groups_update_admin` plus the column grant
+ * added in 0025 — a member's update matches no row and is a silent no-op.
+ *
+ * Revalidates Progress as well as Manage: the way IN to the roadmap is a card
+ * on Progress, and an admin who follows a programme and then finds Progress
+ * unchanged would reasonably conclude the save failed.
+ */
+export async function setGroupRoadmap(
+  groupId: string,
+  roadmapId: string | null,
+): Promise<Result> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("groups")
+    .update({ roadmap_id: roadmapId })
+    .eq("id", groupId);
+  if (error) return fail(error.message);
+
+  revalidateManage(groupId);
+  revalidatePath(groupHref(groupId, "/progress"));
+  return ok;
+}
+
 /** Owner-only (RLS). Cascades tasks/memberships/invites; clears the cookie. */
 export async function deleteGroup(groupId: string): Promise<Result> {
   const supabase = await createClient();

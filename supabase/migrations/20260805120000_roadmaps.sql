@@ -124,6 +124,20 @@ alter table public.groups
 
 create index groups_roadmap_id_idx on public.groups (roadmap_id);
 
+-- 0006 revoked default privileges and 0007 column-scoped every client grant, so
+-- a new column starts unwritable. The authority is the EXISTING
+-- `groups_update_admin` policy — same arrangement as `name`, and the same
+-- reasoning `renameGroup` records: one column, one writer, last write wins is
+-- the correct semantics. There is nothing atomic here to protect, so this stays
+-- a plain UPDATE rather than an RPC (contrast the membership-shaped writes of
+-- D42/D35/D43).
+--
+-- Known and accepted: an admin could point a circle at an UNPUBLISHED roadmap
+-- if they somehow knew its uuid — they cannot read one, so it would have to be
+-- guessed. The result is inert: `roadmaps` is only selectable while published,
+-- so the screen falls back to "not following" until it is.
+grant update (roadmap_id) on public.groups to authenticated;
+
 comment on column public.groups.roadmap_id is
   'The programme this circle follows (0025, D55), or NULL. Set by the circle''s '
   'owner/admin. Grants access to the roadmap; it does NOT own the progress — '

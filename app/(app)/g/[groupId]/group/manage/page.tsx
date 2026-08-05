@@ -54,10 +54,11 @@ export default async function ManageGroupPage({
     { data: invites },
     { data: assignmentRows },
     { data: canClaim },
+    { data: roadmaps },
   ] = await Promise.all([
     supabase
       .from("groups")
-      .select("id, name, created_by")
+      .select("id, name, created_by, roadmap_id")
       .eq("id", active.groupId)
       .maybeSingle(),
     supabase
@@ -91,6 +92,12 @@ export default async function ManageGroupPage({
       .is("unassigned_at", null),
     // M7 (D27): a co-admin can claim the group if the owner is absent.
     supabase.rpc("can_claim_ownership", { p_group: active.groupId }),
+    // The programmes this circle could follow (0025, D55). RLS returns only
+    // PUBLISHED ones, which is what makes this list safe to render without a
+    // filter here — an unpublished roadmap is staged, not offered.
+    supabase.from("roadmaps").select("id, name").order("starts_on", {
+      ascending: false,
+    }),
   ]);
 
   if (!group) redirect("/groups");
@@ -131,6 +138,7 @@ export default async function ManageGroupPage({
       defaultCode={defaultCode}
       invites={lockedInvites}
       canClaim={canClaim ?? false}
+      roadmaps={(roadmaps ?? []).map((r) => ({ id: r.id, name: r.name }))}
     />
   );
 }

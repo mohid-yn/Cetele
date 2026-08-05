@@ -306,5 +306,32 @@ select ok(not has_function_privilege('anon',
   'public.set_roadmap_progress(uuid, integer)', 'execute'),
   '...and anon holds no execute on it');
 
+
+-- The opt-in itself: an admin may point their circle at a programme, a member
+-- may not. The authority is the existing groups_update_admin policy plus the
+-- column grant — no new policy, same shape as renaming a circle.
+select ok(has_column_privilege('authenticated', 'public.groups', 'roadmap_id', 'update'),
+  'roadmap_id is client-updatable — the opt-in is an ordinary admin act');
+
+select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000b');
+update public.groups set roadmap_id = null
+  where id = 'c5000000-0000-0000-0000-0000000000d1';
+select pg_temp.reset_role();
+
+select is((select roadmap_id from public.groups
+            where id = 'c5000000-0000-0000-0000-0000000000d1'),
+  'c5000000-0000-0000-0000-0000000000a1'::uuid,
+  'a MEMBER cannot un-follow the circle''s programme — RLS filters the row, so '
+  'the update is a silent no-op rather than an error');
+
+select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000a');
+update public.groups set roadmap_id = null
+  where id = 'c5000000-0000-0000-0000-0000000000d1';
+select pg_temp.reset_role();
+
+select is((select roadmap_id from public.groups
+            where id = 'c5000000-0000-0000-0000-0000000000d1'), null::uuid,
+  '...and the OWNER can');
+
 select * from finish();
 rollback;
