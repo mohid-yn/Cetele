@@ -19,6 +19,7 @@ export type GroupSubPath =
   | "/group"
   | "/group/manage"
   | "/progress"
+  | "/roadmap"
   | `/count/${string}`;
 
 /** Build a group-scoped URL, e.g. groupHref(id, "/today") → /g/<id>/today. */
@@ -52,12 +53,22 @@ export function groupIdFromPath(pathname: string): string | null {
 
 /**
  * The sub-path within a group route, e.g. `/g/<id>/group/manage` → "/group".
- * Used to keep the same tab when switching groups. Falls back to "/today".
+ * Used to keep the same tab when switching groups, and by the nav to decide
+ * which tab is lit.
+ *
+ * **Every group-scoped route must be listed here.** The fallback is "/today",
+ * so an unlisted one does not merely go unrecognised — it silently claims to BE
+ * Today, and the nav lights the Today tab while you are somewhere else. That is
+ * how `/roadmap` shipped: the route was added and this function was not told,
+ * so the roadmap screen highlighted Today. A route with no tab of its own
+ * (`/group/manage`, `/roadmap`) still needs its own value, so that it matches
+ * no nav item and nothing is lit — which is the honest state, not an omission.
  */
 export function groupSubPath(pathname: string): GroupSubPath {
   const rest = pathname.replace(/^\/g\/[^/]+/, "");
   if (rest.startsWith("/group/manage")) return "/group/manage";
   if (rest.startsWith("/group")) return "/group";
   if (rest.startsWith("/progress")) return "/progress";
+  if (rest.startsWith("/roadmap")) return "/roadmap";
   return "/today";
 }
