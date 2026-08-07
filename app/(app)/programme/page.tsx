@@ -35,7 +35,7 @@ export default async function ProgrammeReportPage() {
   const me = claims?.claims.sub as string | undefined;
   if (!me) redirect("/");
 
-  const [{ data: roadmaps }, { data: rows }, { data: reqs }] =
+  const [{ data: roadmaps }, { data: rows }, { data: reqs }, { data: roster }] =
     await Promise.all([
       q(
         "programme.roadmaps",
@@ -60,23 +60,51 @@ export default async function ProgrammeReportPage() {
           .from("roadmap_level_requirements")
           .select("roadmap_id, level, category, min_total"),
       ),
+      // WHO IS ON THE PROGRAMME, including the people at zero. Built from
+      // progress alone, this screen could not see them: a member who had
+      // recorded nothing had no row, so "has not started" and "is not enrolled"
+      // rendered identically — and the person an admin most needs to notice is
+      // the one who has not begun. Absence cannot be read out of the table that
+      // records presence, so it comes from membership instead, through an RPC
+      // carrying the SAME three readers as the progress policy (0025).
+      q("programme.roster", supabase.rpc("roadmap_roster")),
     ]);
 
   // Levels, not items — the unit the programme is built in and rewarded on, and
   // the same rule the member's own screen uses. `levelsComplete` mirrors
   // `private.levels_complete` (0025), so this screen and the database agree on
-  // who has finished what; pgTAP 014 pins the mirror against the SQL.
+  // who has finished what. The agreement is a TESTED claim, not a hope: pgTAP
+  // 014 asserts the cases against the SQL and `lib/roadmap.test.ts` asserts the
+  // same cases against this mirror. (This comment used to credit pgTAP with
+  // both halves. It only ever ran the SQL — nothing executed the TypeScript at
+  // all, and the unit suite is what closed that.)
   type Person = { userId: string; name: string; levels: number };
 
+  // Keyed (member, roadmap) — a person on two programmes is two rows on this
+  // screen, and a person in two circles on ONE programme is still one (D55).
   const progressByUser = new Map<
     string,
     { name: string; roadmapId: string; done: Map<string, number> }
   >();
 
+  // The roster goes in FIRST, so everyone enrolled has an entry before any
+  // progress lands. Someone who has recorded nothing keeps an empty `done` map
+  // and scores zero levels honestly, rather than vanishing.
+  for (const p of roster ?? []) {
+    progressByUser.set(`${p.user_id}:${p.roadmap_id}`, {
+      name: p.name ?? "Unknown",
+      roadmapId: p.roadmap_id,
+      done: new Map<string, number>(),
+    });
+  }
+
   for (const r of rows ?? []) {
     const roadmapId = r.roadmap_items?.roadmap_id;
     if (!roadmapId) continue;
     const key = `${r.user_id}:${roadmapId}`;
+    // A progress row with no roster entry is ordinary and must not be dropped:
+    // it is how a member who has LEFT every circle on the programme still reads
+    // their own record (nothing earned is ever revoked, §4).
     const entry = progressByUser.get(key) ?? {
       name: r.profiles?.name ?? "Unknown",
       roadmapId,
@@ -153,14 +181,20 @@ export default async function ProgrammeReportPage() {
               Nothing recorded yet
             </p>
             <p className="max-w-xs text-sm text-balance text-muted-foreground">
-              Once people on a programme start recording, they show up here.
+              People on a circle&rsquo;s programme show up here, whether or not
+              they have started.
             </p>
           </div>
         </Card>
       ) : (
         programmes.map((p) => (
           <section key={p.id}>
-            <SectionHeading action={`${p.people.length} recording`}>
+            {/* "on the programme", not "recording" — the roster now includes
+                the people who have not started, and calling them recorders
+                would be the same wrong answer in a different place. */}
+            <SectionHeading
+              action={`${p.people.length} ${p.people.length === 1 ? "person" : "people"}`}
+            >
               {p.name}
             </SectionHeading>
             <Card padding="none">

@@ -306,7 +306,15 @@ create or replace function private.category_complete(
     where roadmap_id = p_roadmap and level = p_level and category = p_category
   )
   select
-    case
+    -- A category with NO items is not complete, for the same reason an empty
+    -- LEVEL is not (see below): `not exists (… where done < target)` over an
+    -- empty set is TRUE, so without this guard an unauthored category is
+    -- vacuously finished. Neither caller can reach it — both enumerate only the
+    -- categories that HAVE items — but the client mirror already returned false
+    -- here, and a latent disagreement between the two is the trap this pair is
+    -- written to avoid, not a detail to leave for whoever calls it next.
+    exists (select 1 from items)
+    and case
       when (select count(*) from req) = 0 then
         -- Every item, or nothing.
         not exists (select 1 from items where done < target)
@@ -549,6 +557,61 @@ $$;
 revoke all on function public.set_roadmap_progress(uuid, integer) from public, anon;
 grant execute on function public.set_roadmap_progress(uuid, integer) to authenticated;
 
+-- ============================================================================
+-- roadmap_roster — WHO IS ON A PROGRAMME, including the people at zero
+-- ============================================================================
+-- The report was built from `roadmap_progress` alone, so a member who had
+-- recorded NOTHING had no row and did not appear at all. For a screen whose job
+-- is "who has earned the contribution" that is the wrong silence: "has not
+-- started" and "is not on the programme" rendered identically, and the person
+-- an admin most needs to notice is the one at zero.
+--
+-- Progress cannot answer it, because absence is the very thing being asked
+-- about. Membership can — but only through the SAME predicate the progress
+-- policy uses, or the screen grows a second, more generous rule:
+--
+--   1. yourself, always;
+--   2. an admin of a circle that BOTH follows the roadmap AND holds that member
+--      — the arm that makes sharing some OTHER circle insufficient;
+--   3. a super admin, who is in no circle and must still see the cohort.
+--
+-- That is `private.can_read_roadmap_progress`'s three arms, item-free. It is an
+-- RPC rather than a view because arm 3 has to cross circles the caller does not
+-- belong to, which is exactly what RLS on `memberships` is there to stop — so
+-- the widening happens once, inside SECURITY DEFINER, in the open.
+--
+-- Names only. This reaches no logs, no streaks, no daily_completion, and no
+-- circle identity: which circle someone is in is not the programme's business
+-- (D26/D27), so the group is joined THROUGH and never returned.
+
+create or replace function public.roadmap_roster()
+  returns table (roadmap_id uuid, user_id uuid, name text)
+  language sql security definer stable set search_path = '' as $$
+  select distinct g.roadmap_id, pr.id, pr.name
+  from public.memberships them
+  join public.groups   g  on g.id = them.group_id and g.roadmap_id is not null
+  join public.profiles pr on pr.id = them.user_id
+  where them.user_id = (select auth.uid())
+     or private.is_super_admin()
+     or exists (
+          select 1
+          from public.memberships me
+          where me.group_id = g.id
+            and me.user_id = (select auth.uid())
+            and me.role in ('owner', 'admin')
+        );
+$$;
+
+revoke all on function public.roadmap_roster() from public, anon;
+grant execute on function public.roadmap_roster() to authenticated;
+
+comment on function public.roadmap_roster() is
+  'Who is on each programme, INCLUDING members who have recorded nothing '
+  '(0025, D55) — the question roadmap_progress cannot answer, because absence '
+  'is what is being asked. Same three readers as '
+  'private.can_read_roadmap_progress. Returns names only: never a circle, '
+  'never anything from the daily engine.';
+
 comment on function public.set_roadmap_progress(uuid, integer) is
   'Record how far the CALLER has got with one roadmap item (0025, D55). Clamps '
   'to [0, item.target] and refuses an item on a programme the caller does not '
@@ -575,3 +638,9 @@ comment on function public.set_roadmap_progress(uuid, integer) is
 -- No public RPC wraps them: an exported entry point nothing calls is API surface
 -- to maintain and a thing to get wrong. `private` is not exposed through
 -- PostgREST, so these are reachable only from inside the database.
+--
+-- The mirror is pinned to these by `lib/roadmap.test.ts`, which runs the SAME
+-- cases suite 014 runs here. Note what that does NOT cover: the screen's
+-- PERCENTAGES have no counterpart in this file at all — the database computes no
+-- fractions — so nothing here can contradict them, and their only defence is
+-- those unit tests.

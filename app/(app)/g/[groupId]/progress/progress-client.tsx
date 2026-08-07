@@ -64,7 +64,7 @@ export function ProgressClient({
   badges: EarnedBadge[];
   groupId: string;
   /** The programme this circle follows (D55), or null — most follow none. */
-  roadmap: { name: string; endsOn: string } | null;
+  roadmap: { name: string; startsOn: string; endsOn: string } | null;
   /** The member's own today (D34). */
   todayISO: string;
 }) {
@@ -142,6 +142,7 @@ export function ProgressClient({
         <RoadmapEntryCard
           groupId={groupId}
           name={roadmap.name}
+          startsOn={roadmap.startsOn}
           endsOn={roadmap.endsOn}
           todayISO={todayISO}
         />

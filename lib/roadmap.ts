@@ -26,7 +26,19 @@
  * screen can render without a round trip per item. Same arrangement as
  * `lib/assignments.ts` against `task_due_on` — and the same warning that file
  * earned the hard way: a mirror agreeing with its original proves nothing when
- * both are wrong. The mirror is checked against the SQL in pgTAP 014.
+ * both are wrong.
+ *
+ * WHAT IS CHECKED, AND WHAT IS NOT. `roadmap.test.ts` runs the completion rules
+ * here against the SAME cases pgTAP 014 asserts against the SQL, case for case,
+ * so the two are pinned to one oracle. That is the part with a twin.
+ *
+ * THE PERCENTAGES HAVE NO TWIN. `categoryPct` / `levelPct` exist only here — the
+ * database never computes a fraction — so no cross-check can catch them, and the
+ * unit tests are the only thing standing behind them. That is not incidental: a
+ * budget met with a compulsory item outstanding rendered a 100% bar over an
+ * incomplete category for exactly as long as nobody looked, because there was
+ * nothing on either side of the mirror to disagree with it. Anything added here
+ * that the SQL does not also compute needs its test written first.
  */
 
 /** The booklet's five kinds of work. Drives grouping, icon and heading. */
@@ -147,6 +159,15 @@ export const requirementFor = (
  * reach `minTotal`, AND every compulsory item must be finished outright —
  * reaching 600 minutes without the two compulsory lectures is not finishing it.
  * Without a requirement, every item must be finished.
+ *
+ * A category with NO items is not complete, for the reason an empty LEVEL is
+ * not: vacuous completion in a half-authored programme hands out rewards. The
+ * SQL originally disagreed here — `not exists (… where done < target)` over an
+ * empty set is TRUE — and neither caller could reach it, because both enumerate
+ * only the categories that have items. It is fixed in the SQL rather than
+ * papered over here: a latent disagreement in this pair is exactly what the
+ * header warns about, and "unreachable today" is not a property either side
+ * enforces.
  */
 export function categoryComplete(
   items: RoadmapItem[],
@@ -212,6 +233,27 @@ export function currentLevel(
 }
 
 /**
+ * 100% MEANS COMPLETE, and nothing else may round up into it.
+ *
+ * A percentage is the loudest thing on the screen, so it must not be able to
+ * contradict the rule beside it. Two ways it could, both real:
+ *
+ *   * a BUDGET is met while a compulsory item is untouched — on the real level-1
+ *     content the optional lectures total 943 minutes against a 600-minute
+ *     budget, so a member can reach 689 of 600 with neither required lecture
+ *     watched. The bar read 100%, the heading read "689 of 600 minutes", and the
+ *     category was not complete;
+ *   * plain ROUNDING — 249 of 250 units is 99.6%, which `Math.round` takes to
+ *     100 with an item still unfinished.
+ *
+ * So a fraction that lands on 100 is held at 99 unless the thing it measures is
+ * actually finished. 99 is honest and it is legible: "so close", which is what
+ * the member needs to see when two lectures are outstanding.
+ */
+const capBelowComplete = (pct: number, complete: boolean) =>
+  pct >= 100 && !complete ? 99 : pct;
+
+/**
  * How far through a category, as a fraction — for the bar under its heading.
  * Budgeted categories measure against the BUDGET, not the sum of every item on
  * the menu: at level 1 there are 1,228 minutes available against a 600-minute
@@ -231,10 +273,20 @@ export function categoryPct(
   const done = group.reduce((n, i) => n + cappedDone(i), 0);
   const target = req ? req.minTotal : group.reduce((n, i) => n + i.target, 0);
   if (!target) return 0;
-  return Math.min(100, Math.round((done / target) * 100));
+
+  return capBelowComplete(
+    Math.min(100, Math.round((done / target) * 100)),
+    categoryComplete(items, reqs, level, category),
+  );
 }
 
-/** Overall progress through ONE level, averaged over its categories evenly. */
+/**
+ * Overall progress through ONE level, averaged over its categories evenly.
+ *
+ * Capped for the same reason its parts are, and it needs its own cap rather
+ * than inheriting theirs: an average of 100 and 99 is 99.5, which rounds back up
+ * to 100 across a level that is not finished.
+ */
 export function levelPct(
   items: RoadmapItem[],
   reqs: LevelRequirement[],
@@ -243,7 +295,10 @@ export function levelPct(
   const cats = categoriesAt(items, level);
   if (!cats.length) return 0;
   const sum = cats.reduce((n, c) => n + categoryPct(items, reqs, level, c), 0);
-  return Math.round(sum / cats.length);
+  return capBelowComplete(
+    Math.round(sum / cats.length),
+    levelComplete(items, reqs, level),
+  );
 }
 
 /** The next reward still to unlock, or null once every one is earned. */
@@ -267,6 +322,37 @@ export function daysLeft(endsOn: string, todayISO: string): number {
   return Math.max(0, Math.round((end - today) / 86_400_000));
 }
 
+/**
+ * Where the member stands in the programme's window, on THEIR calendar (D34).
+ *
+ * This exists because "0 days left" is not the truth about a closed programme —
+ * it is the truth about the last day of an open one, and the two read
+ * identically forever after `ends_on` passes. A year-long thing that says "0
+ * days left" every day for the following decade is worse than saying nothing.
+ *
+ * `days` is the distance to the boundary that matters: to the end while it is
+ * running, to the START while it is still upcoming (a programme staged early is
+ * visible before it opens, which is the whole point of `published`).
+ *
+ * Whether writes should CLOSE with the window is a separate, open question
+ * (STATUS Q5). Nothing here refuses anything; it reports.
+ */
+export type ProgrammeWindow = {
+  state: "upcoming" | "open" | "closed";
+  days: number;
+};
+
+export function programmeWindow(
+  startsOn: string,
+  endsOn: string,
+  todayISO: string,
+): ProgrammeWindow {
+  if (todayISO < startsOn)
+    return { state: "upcoming", days: daysLeft(startsOn, todayISO) };
+  if (todayISO > endsOn) return { state: "closed", days: 0 };
+  return { state: "open", days: daysLeft(endsOn, todayISO) };
+}
+
 /** Whether the window is open on the member's own calendar. */
 export const isActiveOn = (roadmap: Roadmap, todayISO: string) =>
-  todayISO >= roadmap.startsOn && todayISO <= roadmap.endsOn;
+  programmeWindow(roadmap.startsOn, roadmap.endsOn, todayISO).state === "open";

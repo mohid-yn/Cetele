@@ -65,6 +65,13 @@ colors/spacing or fork primitives.
 `pnpm lint` · `pnpm exec tsc --noEmit` (typecheck). Run them directly — you're
 inside WSL. Verify build + lint + tsc are green before committing.
 
+Tests: `pnpm test:unit` (pure logic, Node's own runner — no dependency, no DB,
+sub-second) · `pnpm test:rls` (pgTAP) · `pnpm test:e2e` (Playwright).
+**`test:unit` is where a client MIRROR of a SQL rule is pinned** — `lib/roadmap.ts`
+against migration 0025, case for case with pgTAP 014. A rule that exists only on
+the client (a percentage, a label) has no database twin to disagree with it, so
+the unit suite is its only check; write the test with the code.
+
 > Note: the service worker only registers in **production** (`pnpm build && pnpm start`),
 > not in `pnpm dev`. PWA icons: `node scripts/gen-icons.mjs`; iOS splash images:
 > `node scripts/gen-splash.mjs`. The installed PWA caches the old manifest/icons — to

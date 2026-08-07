@@ -740,7 +740,14 @@ export function ManageClient({
       </section>
 
       {/* Programme ------------------------------------------------------- */}
-      {roadmaps.length > 0 && (
+      {/* `|| roadmapId`, not `roadmaps.length > 0` alone. `roadmaps` is what RLS
+          lets this admin read, which is PUBLISHED ones only — and nothing
+          un-follows a circle when a programme is unpublished. Gated on the list
+          alone, unpublishing the circle's own programme made this whole section
+          disappear and left `groups.roadmap_id` set with no control anywhere to
+          clear it, while members got "isn't following a programme". The circle
+          was stuck on an invisible programme. */}
+      {(roadmaps.length > 0 || roadmapId) && (
         <section>
           <h2 className="mb-2 text-sm font-semibold text-foreground">
             Programme
@@ -771,6 +778,15 @@ export function ManageClient({
                     {r.name}
                   </option>
                 ))}
+                {/* A <select> whose value matches no option does not report the
+                    value — it shows the first option instead. So an unpublished
+                    programme did not merely go unnamed: this control positively
+                    read "No programme" for a circle that was following one. */}
+                {roadmapId && !roadmaps.some((r) => r.id === roadmapId) && (
+                  <option value={roadmapId}>
+                    Current programme (no longer published)
+                  </option>
+                )}
               </select>
             </Field>
             <p className="mt-2 text-xs text-muted-foreground">
@@ -778,6 +794,14 @@ export function ManageClient({
               progress. You and the organisers can see how far each member has
               got; nothing on it affects streaks or the circle&rsquo;s figures.
             </p>
+            {roadmapId && !roadmaps.some((r) => r.id === roadmapId) && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                This circle&rsquo;s programme is no longer published, so nobody
+                can see it. Choose another, or select &ldquo;No
+                programme&rdquo;. Everyone&rsquo;s recorded progress is kept
+                either way.
+              </p>
+            )}
             {/* The report is not group-scoped, because progress is not either
                 (D55) — one person on one programme has one record however many
                 circles they are in. RLS decides whose rows an admin sees. */}

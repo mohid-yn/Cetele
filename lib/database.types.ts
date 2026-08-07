@@ -1061,6 +1061,14 @@ export type Database = {
         Args: { p_note?: string; p_report: string; p_status: string };
         Returns: undefined;
       };
+      roadmap_roster: {
+        Args: never;
+        Returns: {
+          name: string;
+          roadmap_id: string;
+          user_id: string;
+        }[];
+      };
       save_push_subscription: {
         Args: {
           p_auth: string;

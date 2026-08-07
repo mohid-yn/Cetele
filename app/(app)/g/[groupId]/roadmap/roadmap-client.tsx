@@ -22,22 +22,30 @@ import {
   categoryComplete,
   categoryPct,
   currentLevel,
-  daysLeft,
   itemsIn,
   levelComplete,
   levelPct,
   levelsComplete,
   levelsOf,
+  programmeWindow,
   requirementFor,
   type Roadmap,
 } from "@/lib/roadmap";
 import { setRoadmapProgress } from "./actions";
 
-/** A plain calendar date, read at UTC so no zone can shift the day shown. */
-const fmtDate = (iso: string) =>
+/**
+ * A plain calendar date, read at UTC so no zone can shift the day shown.
+ *
+ * The YEAR appears whenever it is not the member's current one. "closes 31
+ * December" is unambiguous inside the programme's own year and actively
+ * misleading outside it — a closed 2026 programme read as though it closes this
+ * December, which is the same failure as the "0 days left" it sat beside.
+ */
+const fmtDate = (iso: string, todayISO: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, {
     day: "numeric",
     month: "long",
+    year: iso.slice(0, 4) === todayISO.slice(0, 4) ? undefined : "numeric",
     timeZone: "UTC",
   });
 
@@ -56,9 +64,22 @@ export function RoadmapClient({
   // The last value the SERVER confirmed for each item — what a failed write
   // falls back to. Without it a failure would revert to a stale prop, which on
   // this screen means showing progress the member had already recorded.
+  //
+  // Re-seeded with the prop, exactly as `usePropState` re-seeds `items` above.
+  // Seeded ONCE by `useRef`'s initial argument it was never refreshed, so after
+  // a genuine server refetch a failed write rolled the row back PAST the
+  // refetch, to whatever the first render happened to hold — the stale value
+  // this ref exists to avoid.
+  //
+  // In an effect, not during render: mutating a ref while rendering is the
+  // `react-hooks/refs` error, and it would be wrong here anyway. Nothing can
+  // read this before the first commit — the only reader is a tap handler.
   const confirmed = React.useRef(
     new Map(roadmap.items.map((i) => [i.id, i.done])),
   );
+  React.useEffect(() => {
+    confirmed.current = new Map(roadmap.items.map((i) => [i.id, i.done]));
+  }, [roadmap.items]);
 
   // One write at a time PER ITEM, in the order the taps happened. The controls
   // send an ABSOLUTE value, so two in flight at once can land out of order and
@@ -112,7 +133,17 @@ export function RoadmapClient({
   const levels = levelsOf(items);
   const done = levelsComplete(items, reqs);
   const current = currentLevel(items, reqs);
-  const left = daysLeft(roadmap.endsOn, todayISO);
+  const phase = programmeWindow(roadmap.startsOn, roadmap.endsOn, todayISO);
+
+  // `currentLevel` returns null for TWO different situations, and the hero used
+  // to render both as "Programme complete · 100%": everything finished, and
+  // there being nothing to finish. A published roadmap whose items have not
+  // landed yet — staged early, or authored in a second migration — congratulated
+  // every member on completing it, under a caption reading "0 levels · none
+  // finished yet". The SQL guards this exact case in `level_complete` (an empty
+  // level is not a finished one, pgTAP 014); the screen did not.
+  const empty = levels.length === 0;
+  const finished = !empty && current === null;
 
   // Open the level the member is actually on. A finished programme opens the
   // last level rather than nothing, so the screen is never blank.
@@ -129,7 +160,12 @@ export function RoadmapClient({
             <span className="font-semibold text-foreground">
               {roadmap.name}
             </span>{" "}
-            · closes {fmtDate(roadmap.endsOn)}
+            ·{" "}
+            {phase.state === "closed"
+              ? `closed ${fmtDate(roadmap.endsOn, todayISO)}`
+              : phase.state === "upcoming"
+                ? `opens ${fmtDate(roadmap.startsOn, todayISO)}`
+                : `closes ${fmtDate(roadmap.endsOn, todayISO)}`}
           </span>
         }
       />
@@ -144,16 +180,38 @@ export function RoadmapClient({
             style={{ color: "var(--gradient-hero-accent)" }}
           />
         }
-        label={current ? `Level ${current}` : "Programme complete"}
-        stat={current ? `${levelPct(items, reqs, current)}%` : "100%"}
+        label={
+          current
+            ? `Level ${current}`
+            : finished
+              ? "Programme complete"
+              : "Not published yet"
+        }
+        stat={
+          current
+            ? `${levelPct(items, reqs, current)}%`
+            : finished
+              ? "100%"
+              : "—"
+        }
         caption={
-          done === 0
-            ? `${levels.length} levels · none finished yet`
-            : `${done} of ${levels.length} levels finished`
+          empty
+            ? "This programme has no work on it yet"
+            : done === 0
+              ? `${levels.length} levels · none finished yet`
+              : `${done} of ${levels.length} levels finished`
         }
         trailing={
+          // "0 days left" was what a closed programme said, every day, forever —
+          // and it is also what the LAST day of an open one says, so the two
+          // could not be told apart. The window is a state, not a countdown that
+          // bottoms out (`programmeWindow`, D34).
           <HeroChip>
-            {left.toLocaleString()} day{left === 1 ? "" : "s"} left
+            {phase.state === "closed"
+              ? "Closed"
+              : phase.state === "upcoming"
+                ? `Opens in ${phase.days.toLocaleString()} day${phase.days === 1 ? "" : "s"}`
+                : `${phase.days.toLocaleString()} day${phase.days === 1 ? "" : "s"} left`}
           </HeroChip>
         }
       />

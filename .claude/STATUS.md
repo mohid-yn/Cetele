@@ -35,7 +35,7 @@ review_ — is **met**.
 | Repo         | `mohid-yn/Cetele` — `main` auto-deploys to prod                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Supabase     | ref `kwzlrztcwxjunvdhdoqu`, region Seoul (`ap-northeast-2`); Vercel functions colocated in `icn1`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Migrations   | **All 24 applied to prod (2026-08-04), history 24/24, no drift.** The final four — `default_group_invite`, `task_frequency_and_as_of_config`, `task_assignees`, `task_config_history` — went up on the owner's explicit go-ahead and `main` was promoted minutes later. Verified on prod after the push: backfill exact (43 tasks → 43 config versions, 43 open, **0** rows disagreeing with their task's live config), 43 assignment rows all everyone-rows (nobody lost a task), RLS on both new tables, `private.obligations` returning cleanly for a real member on today and on a day a week back. **The predicted interim break did happen and was accepted**: between the DB push and the promotion, the still-deployed old manage screen inserted `role='admin'` invites that the new CHECK refuses, so admin invite creation errored for that window. That is the general rule this row now exists to carry — a migration that tightens a constraint the shipped UI still violates must land WITH its app, and the window is real, not theoretical |
-| Tests        | pgTAP **489** across 13 suites (`pnpm test:rls`) · Playwright e2e **45** across 13 specs (`pnpm test:e2e`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Tests        | Unit **19** (`pnpm test:unit` — Node's own runner, no dependency; the client mirrors) · pgTAP **551** across 14 suites (`pnpm test:rls`) · Playwright e2e **48** across 14 specs (`pnpm test:e2e`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | CI           | green on `main` — was red for days on an env gap, not the app (§4 CI invariant)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Backend plan | M0–M9 **all shipped** ([`docs/BACKEND_BUILD_PLAN.md`](../docs/BACKEND_BUILD_PLAN.md))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Linear       | CET-1…CET-31 all **Done** except CET-10 (deferred) · **out of sync**: nothing from 2026-07-25/26 has an issue — the Linear MCP was not authenticated in that session, so those branches were named by topic, not `cet-N-slug`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -96,6 +96,60 @@ INSIDE `least`. The ten discriminating assertions were **verified to FAIL** agai
 pgTAP **489 → 543**, e2e **45 → 48**. Four gates green, both suites clean on a fresh DB. Verified in a real
 browser on the real content: listening reads "302 of 600 minutes" from the seed, marking a 150-minute
 compulsory lecture takes it to 452 through a reload, and the hero moves 48% → 53%.
+
+**Then a full logic review of the branch found seven more, and they are fixed (2026-08-07, still on
+`mohidkhanzada/roadmap-ui`).** Now pgTAP **543 → 551**, e2e **48**, **unit 19 (new)**, four gates green.
+
+- **A category read 100% while it was NOT complete, and it is reachable on the real level-1 content.**
+  `categoryPct` scored the budget; `categoryComplete` also requires every compulsory item; nothing
+  reconciled them. Level 1's optional lectures total **943 minutes against a 600 budget**, so marking
+  _Lessons From The Qur'an_ (555) + _The Way of Ascension's Light_ (134) gives **689 of 600** with neither
+  required lecture watched — a full bar, a heading reading "689 of 600 minutes", and an incomplete category.
+  With the other four categories done the hero read **"Level 1 · 100% · none finished yet"** beside an
+  "In progress" badge. Levels 2 and 3 cannot reach it (optional-only sums are 452/900 and 1138/1200), which
+  is exactly why it looked fine. **Second way in, needing no compulsory item at all: rounding** — 249 of 250
+  is 99.6%, which `Math.round` takes to 100. Both now go through one `capBelowComplete`, and `levelPct`
+  needs its **own** cap because an average of 100 and 99 is 99.5 and rounds straight back up.
+- **`lib/roadmap.ts` had NO tests, and four places said it did.** `lib/roadmap.ts`, migration 0025,
+  `/programme` and STATUS all claimed "pgTAP 014 pins the mirror against the SQL". pgTAP only ever ran the
+  SQL — **nothing had executed the TypeScript**, and there was no unit runner in the repo at all. New
+  `pnpm test:unit` on **Node's own runner with native type stripping — no dependency added**; every
+  completion case in suite 014 now runs against the mirror too. The percentage bug above is what that gap
+  was hiding: a client-only quantity has no database twin to disagree with it, so nothing could catch it.
+  The three discriminating assertions were **verified to FAIL** against the uncapped expression.
+- **An item-less roadmap rendered "Programme complete · 100%".** `currentLevel` returns null for two
+  different situations and the hero treated both as finished, under a caption reading "0 levels · none
+  finished yet". The SQL guards this exact case (`level_complete`'s `exists`, pinned by 014); the screen did
+  not. Reachable the moment content lands in two migrations, or via the early-staging flow 0025 describes.
+- **The mirror and the SQL genuinely disagreed on an empty category.** `not exists (… where done < target)`
+  over an empty set is TRUE, so `private.category_complete` called a category with no items **complete**;
+  the client returned false. Unreachable through either caller — both enumerate only categories that have
+  items — which is precisely why it survived. Fixed in the SQL (0025 has never been applied anywhere but a
+  local stack) with two new assertions.
+- **Unpublishing a programme stranded the circle following it.** Manage rendered the picker only when RLS
+  returned at least one **published** roadmap, and nothing un-follows a circle. So unpublishing made the
+  whole section vanish with `groups.roadmap_id` still set and **no control anywhere to clear it**, while
+  members got "isn't following a programme". Worse, a `<select>` whose value matches no option shows the
+  first one — so it positively read "No programme" for a circle that was on one. Now the section survives on
+  `roadmapId` alone and names the state.
+- **`isActiveOn` was dead code, and the window lied.** `daysLeft` bottoms out at 0, so a programme closed
+  years ago said "0 days left" every day forever — the same string its final day shows. New
+  `programmeWindow` returns **upcoming / open / closed**; `isActiveOn` is now defined in terms of it rather
+  than unused; and the date shows its **year** whenever it is not the member's current one ("closes 31
+  December" was actively misleading outside the programme's own year). Whether writes should close with the
+  window is still Q5 — nothing here refuses anything, it reports.
+- **`/programme` could not see anyone who had not started.** It was built from `roadmap_progress` alone, so
+  a member with no rows was indistinguishable from someone not enrolled — on a screen whose job is "who has
+  earned the contribution", and the person an admin most needs to notice is the one at zero. **Absence
+  cannot be read out of the table that records presence**, so it now comes from membership through a new
+  `public.roadmap_roster()`, carrying the **same three readers** as the progress policy rather than a second,
+  looser rule (a plain member sees only themselves; an admin only their own following circle; a super admin,
+  who is in no circle, the cohort). Five new pgTAP assertions including both negatives, and the e2e
+  assertion was **verified to FAIL** with the roster stubbed out.
+- **Minor, same pass:** `confirmed` was seeded once by `useRef` and never refreshed, so a failed write after
+  a server refetch rolled back **past** the refetch (now re-seeded in an effect — mutating a ref during
+  render is a lint error and wrong here anyway); two hard-coded `/g/${id}/…` hrefs moved onto `groupHref`;
+  and `window` was shadowed inside a client component.
 
 **Why it is still parked.** Staging reads the **production** Supabase (the undecided row below), and `0025`
 is not applied there. Merging now would deploy app code whose tables do not exist — the same land-together
@@ -995,7 +1049,7 @@ a version out of this file.
 
 1. Branch off **`staging`** (not `main`) — one per Linear issue, named to match Linear's (`mohidkhanzada/cet-N-slug`).
 2. Commit increments; **push** for a Vercel preview URL.
-3. **The four gates green** before merging to `staging`: `pnpm build` · `pnpm lint` · `pnpm exec tsc --noEmit` · `pnpm format:check`. DB or core-loop work also needs `pnpm test:rls` + `pnpm test:e2e`.
+3. **The four gates green** before merging to `staging`: `pnpm build` · `pnpm lint` · `pnpm exec tsc --noEmit` · `pnpm format:check`. DB or core-loop work also needs `pnpm test:unit` + `pnpm test:rls` + `pnpm test:e2e`.
 4. Merge to **`staging`**, push, **delete the feature branch** (local + remote). This step does **not** need owner approval — staging is not production.
 5. **Verify on the staging URL**, not just locally. This is the step the whole arrangement exists for.
 6. **Ask the owner to promote.** On approval: fast-forward `main` from `staging`, push with the override, done. `main` is never merged into — if it can't fast-forward, something bypassed staging and that is the bug.

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buttonVariants, Card, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { FlagIcon } from "@/components/app/icons";
+import { groupHref } from "@/lib/group-href";
 import { cn } from "@/lib/utils";
 
 /**
@@ -46,7 +47,7 @@ export function NoRoadmap({
               styles its outbound link this way. */}
           {canFollow && (
             <Link
-              href={`/g/${groupId}/group/manage`}
+              href={groupHref(groupId, "/group/manage")}
               className={cn(buttonVariants({ variant: "outline" }), "mt-1")}
             >
               Open Manage

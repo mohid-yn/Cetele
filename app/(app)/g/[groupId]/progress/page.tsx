@@ -69,7 +69,7 @@ export default async function ProgressPage({
       // roadmap and cannot disagree with themselves across two screens.
       supabase
         .from("groups")
-        .select("roadmaps(id, name, ends_on)")
+        .select("roadmaps(id, name, starts_on, ends_on)")
         .eq("id", groupId)
         .maybeSingle(),
     ]),
@@ -285,6 +285,7 @@ export default async function ProgressPage({
         group?.roadmaps
           ? {
               name: group.roadmaps.name,
+              startsOn: group.roadmaps.starts_on,
               endsOn: group.roadmaps.ends_on,
             }
           : null

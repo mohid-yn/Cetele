@@ -268,6 +268,60 @@ select is((select count(*) from public.groups
 select pg_temp.reset_role();
 
 -- ----------------------------------------------------------------------------
+-- 6b. roadmap_roster — the people at ZERO, who have no progress row to find
+-- ----------------------------------------------------------------------------
+-- The report was built from roadmap_progress alone, so a member who had
+-- recorded nothing was indistinguishable from someone not on the programme.
+-- The roster answers it from MEMBERSHIP — and must carry exactly the same three
+-- readers as the progress policy, or the screen has a second, looser rule.
+
+-- A super admin is in no circle at all, and must still see the whole cohort —
+-- the administration awards the contribution centrally.
+select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000f');
+
+select is((select count(*) from public.roadmap_roster()
+           where roadmap_id = 'c5000000-0000-0000-0000-0000000000a1'), 3::bigint,
+  'a super admin sees everyone on the roadmap (A, B in G1; D in G3)');
+
+select pg_temp.reset_role();
+
+-- A owns G1, which follows R and holds B. THE POINT: this does not depend on
+-- anybody having a progress row — it is the question progress cannot answer.
+select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000a');
+
+select is((select count(*) from public.roadmap_roster()
+           where roadmap_id = 'c5000000-0000-0000-0000-0000000000a1'), 2::bigint,
+  'an admin sees their own circle''s members on the programme, recorded or not');
+
+select ok((select bool_and(user_id <> 'c5000000-0000-0000-0000-00000000000d')
+           from public.roadmap_roster()),
+  'THE NEGATIVE: and NOT D, on the same roadmap in a circle they do not lead');
+
+select pg_temp.reset_role();
+
+-- THE OTHER NEGATIVE, the one that distinguishes this from "shares a circle".
+-- E admins G2, which genuinely holds B — but G2 follows nothing, so there is no
+-- roster to read. Same predicate as the progress policy, same refusal.
+select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000e');
+
+select is((select count(*) from public.roadmap_roster()), 0::bigint,
+  'an admin whose circle follows no programme has no roster at all');
+
+select pg_temp.reset_role();
+
+-- A plain member sees themselves and nobody else, so someone who IS enrolled is
+-- never told "nothing recorded yet" about their own programme.
+select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000b');
+
+select is((select count(*) from public.roadmap_roster()), 1::bigint,
+  'a plain member sees exactly themselves');
+
+select pg_temp.reset_role();
+
+select ok(not has_function_privilege('anon', 'public.roadmap_roster()', 'execute'),
+  'anon cannot call the roster');
+
+-- ----------------------------------------------------------------------------
 -- 7. Grants — read-only everywhere, writes only through the RPC
 -- ----------------------------------------------------------------------------
 
@@ -339,13 +393,18 @@ select is((select roadmap_id from public.groups
 -- ----------------------------------------------------------------------------
 -- A separate roadmap (P) so these cases cannot disturb the access fixture
 -- above. Level 1 has a plain category (two books, both required) and a BUDGETED
--- one (four lectures, 100 minutes needed, one of them compulsory). Level 2 has
+-- one (three lectures, 100 minutes needed, one of them compulsory). Level 2 has
 -- a single book, so "no skipping" can be tested.
 --
--- The client mirrors every one of these in lib/roadmap.ts, and the point of
--- asserting them HERE is that the mirror has an independent oracle: the trap
--- lib/assignments.ts records is a mirror and an original that are wrong
--- together, and only a third party checking one against the other catches it.
+-- THE CASES BELOW ARE RUN TWICE. `lib/roadmap.test.ts` asserts every one of
+-- them against the client mirror, on the same fixture, in the same order — that
+-- is what gives the mirror an independent oracle. The trap lib/assignments.ts
+-- records is a mirror and an original that are wrong TOGETHER, and only a third
+-- party checking one against the other catches it.
+--
+-- It was not always true. These assertions ran against the SQL alone while
+-- three comments and STATUS all said the mirror was pinned by them; nothing had
+-- ever executed the TypeScript. IF YOU ADD A CASE HERE, ADD IT THERE.
 -- ============================================================================
 
 insert into public.roadmaps (id, name, starts_on, ends_on, published) values
@@ -474,6 +533,20 @@ select is(private.levels_complete('c5000000-0000-0000-0000-00000000000b',
 select ok(not private.level_complete('c5000000-0000-0000-0000-00000000000a',
             'c5000000-0000-0000-0000-0000000000f0', 99),
   'a level with no items is NOT complete');
+
+-- The same hole one level down, and the one the client mirror already refused.
+-- `not exists (… where done < target)` over an empty set is TRUE, so an
+-- unauthored category was vacuously finished. No caller can reach it today —
+-- both enumerate only the categories that have items — which is precisely why
+-- it survived: a divergence nothing calls is a divergence nothing catches.
+
+select ok(not private.category_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 1, 'memorisation'),
+  'a category with no items is NOT complete (empty set, vacuously true)');
+
+select ok(not private.category_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 99, 'book'),
+  '...at a level that does not exist either');
 
 -- ----------------------------------------------------------------------------
 -- The new table is read-only and RLS-gated like the rest.

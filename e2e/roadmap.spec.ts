@@ -52,7 +52,18 @@ test("a circle follows a programme, and its members can record against it", asyn
     label: "Islamic Development Program",
   });
 
+  // BEFORE recording anything: the report already knows this person is on the
+  // programme. Built from `roadmap_progress` alone it could not — a member with
+  // no rows was indistinguishable from someone not enrolled, and the person an
+  // admin most needs to notice is the one who has not started. The roster comes
+  // from membership (`roadmap_roster`), carrying the same three readers as the
+  // progress policy.
+  await page.goto("/programme");
+  await expect(page.getByText("Nothing recorded yet")).toHaveCount(0);
+  await expect(page.getByText("0 of 3 levels")).toBeVisible();
+
   // The way IN is a card on Progress, not a nav tab — see the commit for why.
+  await page.goto(manageUrl);
   await page.getByRole("link", { name: "Progress", exact: true }).click();
   const entry = page.getByRole("link", {
     name: /Islamic Development Program/,
@@ -122,6 +133,22 @@ test("a circle follows a programme, and its members can record against it", asyn
   // are still unwatched, so the level cannot be complete however the minutes
   // add up — and the row says so before the member finds out the hard way.
   await expect(page.getByText("Required").first()).toBeVisible();
+
+  // And now OVER the budget, which is reachable on the real content: level 1's
+  // optional lectures are worth 943 minutes against a 600 requirement. 555 + 134
+  // is 689 of 600 with neither required lecture watched. The category bar used
+  // to read 100% here, over a category that was not complete — the number and
+  // the rule beside it saying opposite things. Nothing may be finished by this.
+  await page
+    .locator("ul > li")
+    .filter({ hasText: "The Way of Ascension" })
+    .first()
+    .getByRole("button", { name: "Mark done" })
+    .click();
+
+  await expect(page.getByText("689 of 600 minutes")).toBeVisible();
+  await expect(page.getByText("Required").first()).toBeVisible();
+  await expect(page.getByText("3 levels · none finished yet")).toBeVisible();
 
   // The member is TOLD who reads this (D55) — being read without knowing is
   // the thing the disclosure exists to prevent.
