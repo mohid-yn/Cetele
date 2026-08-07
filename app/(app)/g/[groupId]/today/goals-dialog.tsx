@@ -121,8 +121,21 @@ export function GoalsDialog({
         nextErrors[t.id] = `Up to ${cap.toLocaleString()} on this one.`;
         continue;
       }
-      // Anything at or below the circle's share is a CLEAR, not a lower goal —
-      // sent as null so the row is deleted rather than storing dead data.
+      // BELOW the circle's share is refused OUT LOUD, not quietly rounded up.
+      // `effectiveGoal` is max(target, override), so a lower number was always
+      // going to resolve back to the target — but the member typed it, pressed
+      // Save and watched the dialog close on their number as if it had taken.
+      // A rule the app enforces silently is a rule the member never learns; the
+      // frequency picker beside this one has always said "you can only go more
+      // often", and the count axis simply never did. (D51)
+      if (value < t.target) {
+        nextErrors[t.id] =
+          `The circle asks ${t.target.toLocaleString()} — you can only aim higher, never lower.`;
+        continue;
+      }
+      // Exactly the circle's share is a CLEAR, not a lower goal — sent as null
+      // so the row is deleted rather than storing dead data. That is what the
+      // "Back to the circle's" link types in, so it must stay legal.
       if (value !== t.goal) changes.push({ task: t, value });
     }
 
@@ -251,10 +264,15 @@ export function GoalsDialog({
         </p>
       ) : (
         <>
+          {/* The rule first, then what it costs you. Stated here as well as in
+              the per-row error, because a member should learn the shape of the
+              control BEFORE it refuses them — an error is the second-best place
+              to explain a rule and the only place this one used to appear. */}
           <p className="text-sm text-muted-foreground">
-            Aim higher than your circle&rsquo;s share. Your goal moves your ring
-            and your reminder — never your streak, your consistency, or what the
-            circle counts.
+            Your circle&rsquo;s share is the floor — you can aim{" "}
+            <span className="font-medium text-foreground">above</span> it, never
+            below. Your goal moves your ring and your reminder; never your
+            streak, your consistency, or what the circle counts.
           </p>
 
           <ul className="mt-4 divide-y divide-border border-y border-border">

@@ -168,11 +168,27 @@ test("a goal below the circle's share is refused, not stored", async ({
   await page.goto("/today");
 
   // The whole raise-only rule in one gesture: ask for less than the circle
-  // asked, and the app puts you back on the circle's number rather than
-  // letting you owe it less. It must be VISIBLE that it did so — silently
-  // ignoring the number is what makes the control read as broken.
+  // asked, and the app refuses OUT LOUD rather than quietly rounding you back
+  // up. This test used to accept the silent version — the dialog closed and the
+  // number simply reverted — while its own comment argued that had to be
+  // visible. It wasn't: `effectiveGoal` is max(target, override), so a low
+  // number was always going to resolve back to the target, and the member
+  // watched the dialog close on their number as though it had taken. The same
+  // shape the cap already refuses with, below.
   await openGoals(page);
-  await setGoal(page, "Salawat", "1");
+  await page.getByLabel("Salawat", { exact: true }).fill("1");
+  await page.getByRole("button", { name: "Save" }).click();
+
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByText(/The circle asks 3 — you can only aim higher, never lower/),
+  ).toBeVisible();
+
+  // And nothing was written: leaving by Cancel, the ring is still on the
+  // circle's share. An error that stops the save but writes anyway is the
+  // failure this half pins.
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
 
   await page
     .getByRole("link", { name: /Salawat/ })
