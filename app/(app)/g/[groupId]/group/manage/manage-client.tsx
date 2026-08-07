@@ -18,6 +18,7 @@ import { FrequencyPicker } from "@/components/app/frequency-picker";
 import { useAction } from "@/lib/use-action";
 import { usePropState } from "@/lib/use-prop-state";
 import { frequencyLabel } from "@/lib/goals";
+import { langOf } from "@/lib/text-direction";
 import {
   assigneeLabel,
   currentAssignees,
@@ -218,11 +219,13 @@ function TaskRow({
     <li className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm">
       <div className="min-w-0 flex-1">
         <p className="font-medium text-foreground">{task.label}</p>
+        {/* `truncate` already contains the overflow here (one line, ellipsis,
+            no wrapping), so this row needs the dir/lang fix only. */}
         {task.subtitle && (
           <p
             className="truncate text-sm text-muted-foreground"
-            dir="rtl"
-            lang="ar"
+            dir="auto"
+            lang={langOf(task.subtitle)}
           >
             {task.subtitle}
           </p>

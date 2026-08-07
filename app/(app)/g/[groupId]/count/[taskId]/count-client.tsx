@@ -19,6 +19,7 @@ import { groupHref } from "@/lib/group-href";
 import { useLocalToday } from "@/lib/use-local-today";
 import { goalCap } from "@/lib/goals";
 import { targetOn, type ConfigVersion } from "@/lib/task-config";
+import { langOf } from "@/lib/text-direction";
 import { incrementCount } from "../../today/actions";
 import { setCount } from "../../group/actions";
 
@@ -445,7 +446,11 @@ export function CountClient({
           {task.label}
         </h1>
         {task.subtitle && (
-          <p className="mt-1 text-lg text-muted-foreground" dir="rtl" lang="ar">
+          <p
+            className="mt-1 text-lg wrap-anywhere text-muted-foreground"
+            dir="auto"
+            lang={langOf(task.subtitle)}
+          >
             {task.subtitle}
           </p>
         )}

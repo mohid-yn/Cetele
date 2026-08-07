@@ -35,6 +35,7 @@ import { isDueOn, daysUntilDue, dueLabel, frequencyLabel } from "@/lib/goals";
 import { visibleOn, assignedOn, type Assignment } from "@/lib/assignments";
 import { targetOn, frequencyOn, type ConfigVersion } from "@/lib/task-config";
 import type { Landmark } from "@/lib/retention";
+import { langOf } from "@/lib/text-direction";
 import {
   PeerReactions,
   type ReactionTally,
@@ -519,15 +520,23 @@ export function TodayClient({
                       </p>
                       {/* Not truncated: the bigger ring left ~192px here and
                         "Allahumma salli ala Muhammad" needs 203, so it clipped
-                        to "…humma salli ala Muhammad" — and with dir="rtl" the
-                        ellipsis lands at the START of the phrase. Clipping the
-                        front off a salawat is not a tradeoff worth making for
-                        one line of height; let it wrap. */}
+                        to "…humma salli ala Muhammad" — and for an RTL subtitle
+                        the ellipsis lands at the START of the phrase. Clipping
+                        the front off a salawat is not a tradeoff worth making
+                        for one line of height; let it wrap.
+
+                        `wrap-anywhere`, not the default: a subtitle holding a
+                        URL is ONE unbroken token with no break opportunity in
+                        it, so it does not wrap — it overflows this column and
+                        paints across the ring to its left. `min-w-0` does not
+                        help, because the token cannot be broken at all.
+                        `dir`/`lang` resolve from the text (lib/text-direction).
+                      */}
                       {t.subtitle && (
                         <p
-                          className="text-sm text-muted-foreground"
-                          dir="rtl"
-                          lang="ar"
+                          className="text-sm wrap-anywhere text-muted-foreground"
+                          dir="auto"
+                          lang={langOf(t.subtitle)}
                         >
                           {t.subtitle}
                         </p>
