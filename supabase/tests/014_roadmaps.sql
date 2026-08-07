@@ -54,10 +54,10 @@ insert into public.roadmaps (id, name, starts_on, ends_on, published) values
   ('c5000000-0000-0000-0000-0000000000a1', '2026 programme', current_date - 60, current_date + 60, true),
   ('c5000000-0000-0000-0000-0000000000a2', '2027 programme', current_date + 61, current_date + 400, false);
 
-insert into public.roadmap_items (id, roadmap_id, kind, title, unit, target, sort_order) values
-  ('c5000000-0000-0000-0000-0000000000b1', 'c5000000-0000-0000-0000-0000000000a1', 'read',  'Nur al-Idah',  'chapters', 3, 1),
-  ('c5000000-0000-0000-0000-0000000000b2', 'c5000000-0000-0000-0000-0000000000a1', 'custom', 'Winter retreat', 'sessions', 1, 2),
-  ('c5000000-0000-0000-0000-0000000000b9', 'c5000000-0000-0000-0000-0000000000a2', 'read',  'Next year',    'chapters', 5, 1);
+insert into public.roadmap_items (id, roadmap_id, level, category, title, unit, target, compulsory, sort_order) values
+  ('c5000000-0000-0000-0000-0000000000b1', 'c5000000-0000-0000-0000-0000000000a1', 1, 'book', 'Nur al-Idah', 'chapters', 3, false, 1),
+  ('c5000000-0000-0000-0000-0000000000b2', 'c5000000-0000-0000-0000-0000000000a1', 1, 'memorisation', 'Short surahs', 'surahs', 1, false, 2),
+  ('c5000000-0000-0000-0000-0000000000b9', 'c5000000-0000-0000-0000-0000000000a2', 1, 'book', 'Next year', 'chapters', 5, false, 1);
 
 insert into public.roadmap_rewards (id, roadmap_id, threshold, label) values
   ('c5000000-0000-0000-0000-0000000000c1', 'c5000000-0000-0000-0000-0000000000a1', 2, 'Retreat place held');
@@ -332,6 +332,160 @@ select pg_temp.reset_role();
 select is((select roadmap_id from public.groups
             where id = 'c5000000-0000-0000-0000-0000000000d1'), null::uuid,
   '...and the OWNER can');
+
+
+-- ============================================================================
+-- Level completion — the rule the whole programme is scored on
+-- ----------------------------------------------------------------------------
+-- A separate roadmap (P) so these cases cannot disturb the access fixture
+-- above. Level 1 has a plain category (two books, both required) and a BUDGETED
+-- one (four lectures, 100 minutes needed, one of them compulsory). Level 2 has
+-- a single book, so "no skipping" can be tested.
+--
+-- The client mirrors every one of these in lib/roadmap.ts, and the point of
+-- asserting them HERE is that the mirror has an independent oracle: the trap
+-- lib/assignments.ts records is a mirror and an original that are wrong
+-- together, and only a third party checking one against the other catches it.
+-- ============================================================================
+
+insert into public.roadmaps (id, name, starts_on, ends_on, published) values
+  ('c5000000-0000-0000-0000-0000000000f0', 'Levels programme', current_date - 10, current_date + 300, true);
+
+insert into public.roadmap_items (id, roadmap_id, level, category, title, unit, target, compulsory, sort_order) values
+  ('c5000000-0000-0000-0000-0000000000f1', 'c5000000-0000-0000-0000-0000000000f0', 1, 'book', 'Book one', 'book', 1, false, 1),
+  ('c5000000-0000-0000-0000-0000000000f2', 'c5000000-0000-0000-0000-0000000000f0', 1, 'book', 'Book two', 'book', 1, false, 2),
+  ('c5000000-0000-0000-0000-0000000000f3', 'c5000000-0000-0000-0000-0000000000f0', 1, 'listening', 'Compulsory talk', 'minutes', 40, true, 1),
+  ('c5000000-0000-0000-0000-0000000000f4', 'c5000000-0000-0000-0000-0000000000f0', 1, 'listening', 'Optional long', 'minutes', 90, false, 2),
+  ('c5000000-0000-0000-0000-0000000000f5', 'c5000000-0000-0000-0000-0000000000f0', 1, 'listening', 'Optional short', 'minutes', 30, false, 3),
+  ('c5000000-0000-0000-0000-0000000000f6', 'c5000000-0000-0000-0000-0000000000f0', 2, 'book', 'Level two book', 'book', 1, false, 1);
+
+insert into public.roadmap_level_requirements (roadmap_id, level, category, min_total) values
+  ('c5000000-0000-0000-0000-0000000000f0', 1, 'listening', 100);
+
+-- ----------------------------------------------------------------------------
+-- THE REGRESSION THAT MATTERS MOST: no progress at all is not completion.
+-- ----------------------------------------------------------------------------
+-- `least` IGNORES nulls in Postgres, so `least(p.done, i.target)` on an item
+-- with no progress row returns the TARGET — every untouched item scored as
+-- finished and a member who had recorded nothing completed the programme. It
+-- shipped looking plausible because the categories where the fixture happened
+-- to have a partial row still read as incomplete. coalesce goes INSIDE least.
+
+select ok(not private.category_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 1, 'book'),
+  'a member with NO progress row has not completed a category (least ignores nulls)');
+
+select ok(not private.level_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 1),
+  '...nor the level');
+
+select is(private.levels_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0'), 0,
+  '...and has earned zero levels');
+
+-- ----------------------------------------------------------------------------
+-- A plain category needs EVERY item.
+-- ----------------------------------------------------------------------------
+insert into public.roadmap_progress (user_id, item_id, done) values
+  ('c5000000-0000-0000-0000-00000000000a', 'c5000000-0000-0000-0000-0000000000f1', 1);
+
+select ok(not private.category_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 1, 'book'),
+  'one book of two is not the book category');
+
+insert into public.roadmap_progress (user_id, item_id, done) values
+  ('c5000000-0000-0000-0000-00000000000a', 'c5000000-0000-0000-0000-0000000000f2', 1);
+
+select ok(private.category_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 1, 'book'),
+  'both books is');
+
+-- ----------------------------------------------------------------------------
+-- A BUDGETED category: the total, AND every compulsory item.
+-- ----------------------------------------------------------------------------
+-- 90 + 30 = 120, comfortably over the 100 needed — but the compulsory talk is
+-- untouched. This is the assertion the `compulsory` column exists for, and the
+-- one that fails if the budget is read on its own.
+
+insert into public.roadmap_progress (user_id, item_id, done) values
+  ('c5000000-0000-0000-0000-00000000000a', 'c5000000-0000-0000-0000-0000000000f4', 90),
+  ('c5000000-0000-0000-0000-00000000000a', 'c5000000-0000-0000-0000-0000000000f5', 30);
+
+select ok(not private.category_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 1, 'listening'),
+  'THE NEGATIVE: 120 of 100 minutes is NOT enough while a compulsory item is unfinished');
+
+select ok(not private.level_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 1),
+  '...so the level is not complete either');
+
+insert into public.roadmap_progress (user_id, item_id, done) values
+  ('c5000000-0000-0000-0000-00000000000a', 'c5000000-0000-0000-0000-0000000000f3', 40);
+
+select ok(private.category_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 1, 'listening'),
+  'the compulsory item lands and the budget is met');
+
+select ok(private.level_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 1),
+  'level 1 is complete');
+
+select is(private.levels_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0'), 1,
+  'one level earned');
+
+-- ----------------------------------------------------------------------------
+-- Over-recording one item cannot buy the budget.
+-- ----------------------------------------------------------------------------
+-- The RPC clamps, but the rule must not depend on the writer having done so —
+-- a direct fix-up or an imported row could carry anything.
+
+select ok(not private.category_complete('c5000000-0000-0000-0000-00000000000b',
+            'c5000000-0000-0000-0000-0000000000f0', 1, 'listening'),
+  'a member with nothing recorded still fails the budget');
+
+insert into public.roadmap_progress (user_id, item_id, done) values
+  ('c5000000-0000-0000-0000-00000000000b', 'c5000000-0000-0000-0000-0000000000f5', 9999);
+
+select ok(not private.category_complete('c5000000-0000-0000-0000-00000000000b',
+            'c5000000-0000-0000-0000-0000000000f0', 1, 'listening'),
+  'a 30-minute talk recorded as 9,999 still only counts for 30');
+
+-- ----------------------------------------------------------------------------
+-- Levels are earned FROM THE BOTTOM UP — no skipping.
+-- ----------------------------------------------------------------------------
+insert into public.roadmap_progress (user_id, item_id, done) values
+  ('c5000000-0000-0000-0000-00000000000b', 'c5000000-0000-0000-0000-0000000000f6', 1);
+
+select ok(private.level_complete('c5000000-0000-0000-0000-00000000000b',
+            'c5000000-0000-0000-0000-0000000000f0', 2),
+  'B has finished level 2 outright');
+
+select is(private.levels_complete('c5000000-0000-0000-0000-00000000000b',
+            'c5000000-0000-0000-0000-0000000000f0'), 0,
+  'THE NEGATIVE: finishing level 2 while level 1 is unfinished earns NOTHING');
+
+-- ----------------------------------------------------------------------------
+-- An empty level is not a finished one.
+-- ----------------------------------------------------------------------------
+-- Without the `exists` guard a level with no items is vacuously complete, and a
+-- half-authored programme hands out every reward on the ladder.
+
+select ok(not private.level_complete('c5000000-0000-0000-0000-00000000000a',
+            'c5000000-0000-0000-0000-0000000000f0', 99),
+  'a level with no items is NOT complete');
+
+-- ----------------------------------------------------------------------------
+-- The new table is read-only and RLS-gated like the rest.
+-- ----------------------------------------------------------------------------
+select ok(not has_table_privilege('authenticated', 'public.roadmap_level_requirements', 'insert')
+      and not has_table_privilege('authenticated', 'public.roadmap_level_requirements', 'update')
+      and not has_table_privilege('authenticated', 'public.roadmap_level_requirements', 'delete'),
+  'level requirements are authored by migration — no client write grant');
+
+select ok((select relrowsecurity from pg_class
+            where oid = 'public.roadmap_level_requirements'::regclass),
+  'RLS is enabled on roadmap_level_requirements');
 
 select * from finish();
 rollback;

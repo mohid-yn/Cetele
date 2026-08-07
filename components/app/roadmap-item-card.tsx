@@ -4,32 +4,41 @@ import * as React from "react";
 import { Badge, Button, buttonVariants, ProgressBar } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
+  BeadsIcon,
   BookIcon,
   CheckIcon,
   ExternalLinkIcon,
   MinusIcon,
   PlayIcon,
   PlusIcon,
-  SparkIcon,
+  StarIcon,
 } from "@/components/app/icons";
-import { isItemComplete, type RoadmapItem } from "@/lib/roadmap";
+import {
+  isItemComplete,
+  type RoadmapCategory,
+  type RoadmapItem,
+} from "@/lib/roadmap";
 
-const KIND_ICON = {
-  watch: PlayIcon,
-  read: BookIcon,
-  custom: SparkIcon,
-} as const;
+const CATEGORY_ICON: Record<RoadmapCategory, typeof BookIcon> = {
+  book: BookIcon,
+  quran: BeadsIcon,
+  quran_studies: StarIcon,
+  memorisation: StarIcon,
+  listening: PlayIcon,
+};
 
 /**
- * What the outbound link is called, per kind. "Open source" was the first
+ * What the outbound link is called, per category. "Open source" was the first
  * wording and it is a trap: on a video row it reads as open-SOURCE software,
  * not "the source it comes from".
  */
-const KIND_LINK_LABEL = {
-  watch: "Open playlist",
-  read: "Open reading",
-  custom: "Open link",
-} as const;
+const CATEGORY_LINK_LABEL: Record<RoadmapCategory, string> = {
+  book: "Open reading",
+  quran: "Open link",
+  quran_studies: "Open link",
+  memorisation: "Open link",
+  listening: "Open playlist",
+};
 
 /**
  * One roadmap item.
@@ -52,12 +61,19 @@ export function RoadmapItemCard({
   /** Report the new `done` value. Clamped by the caller's reducer. */
   onChange: (done: number) => void;
 }) {
-  const Icon = KIND_ICON[item.kind];
+  const Icon = CATEGORY_ICON[item.category];
   const complete = isItemComplete(item);
   const pct = item.target ? Math.min(100, (item.done / item.target) * 100) : 0;
-  // A one-unit item is a yes/no thing (attend the session, finish the essay),
-  // and a "+1 of 1" counter for it is ceremony. It gets a single toggle.
-  const binary = item.target === 1;
+  // A one-unit item is a yes/no thing (read the book, sit the assessment), and
+  // a "+1 of 1" counter for it is ceremony.
+  //
+  // A LECTURE is also yes/no, despite being worth 135 or 555 units. Its unit is
+  // MINUTES, and the booklet's rule is "listen to a total of 600 minutes" chosen
+  // from a menu of whole lectures — so the member's actual decision is which
+  // lectures, not how many minutes of each. A ± pair here would ask someone to
+  // press "+" five hundred and fifty-five times, and a half-watched playlist is
+  // not what the 600 is counted from.
+  const binary = item.target === 1 || item.category === "listening";
 
   return (
     <li
@@ -90,6 +106,16 @@ export function RoadmapItemCard({
                 Complete
               </Badge>
             )}
+            {/* Inside a budgeted category the total is not the whole story: two
+                lectures per level must be done whatever the running minutes
+                say, and a member who reaches 600 without them has not finished
+                the level. Saying so on the row is the only place it can be
+                learned before it bites. */}
+            {item.compulsory && !complete && (
+              <Badge variant="outline" size="sm">
+                Required
+              </Badge>
+            )}
           </div>
 
           {item.source && (
@@ -113,7 +139,7 @@ export function RoadmapItemCard({
                 "mt-1.5 gap-1 text-xs",
               )}
             >
-              {KIND_LINK_LABEL[item.kind]}
+              {CATEGORY_LINK_LABEL[item.category]}
               <ExternalLinkIcon aria-hidden className="size-3.5" />
             </a>
           )}
@@ -128,11 +154,16 @@ export function RoadmapItemCard({
             className="h-1.5"
           />
           <p className="mt-1.5 text-xs text-muted-foreground tabular-nums">
-            {binary
-              ? complete
-                ? "Done"
-                : "Not started"
-              : `${item.done} of ${item.target} ${item.unit}`}
+            {/* A lecture is binary but its SIZE is the whole point — it is what
+                the row is worth against the level's budget — so it says its
+                minutes either way, where a one-unit book just says Done. */}
+            {item.category === "listening"
+              ? `${item.target.toLocaleString()} ${item.unit}${complete ? " · done" : ""}`
+              : binary
+                ? complete
+                  ? "Done"
+                  : "Not started"
+                : `${item.done.toLocaleString()} of ${item.target.toLocaleString()} ${item.unit}`}
           </p>
         </div>
 
@@ -147,7 +178,10 @@ export function RoadmapItemCard({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onChange(complete ? 0 : 1)}
+            // `item.target`, not 1: a lecture is recorded all-or-nothing but is
+            // WORTH its minutes, and writing 1 would credit a 555-minute
+            // playlist as a single minute against the level's budget.
+            onClick={() => onChange(complete ? 0 : item.target)}
           >
             {complete ? "Undo" : "Mark done"}
           </Button>

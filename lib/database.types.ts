@@ -660,8 +660,10 @@ export type Database = {
       };
       roadmap_items: {
         Row: {
+          category: string;
+          compulsory: boolean;
           id: string;
-          kind: string;
+          level: number;
           roadmap_id: string;
           sort_order: number;
           source: string | null;
@@ -671,8 +673,10 @@ export type Database = {
           url: string | null;
         };
         Insert: {
+          category: string;
+          compulsory?: boolean;
           id?: string;
-          kind: string;
+          level: number;
           roadmap_id: string;
           sort_order?: number;
           source?: string | null;
@@ -682,8 +686,10 @@ export type Database = {
           url?: string | null;
         };
         Update: {
+          category?: string;
+          compulsory?: boolean;
           id?: string;
-          kind?: string;
+          level?: number;
           roadmap_id?: string;
           sort_order?: number;
           source?: string | null;
@@ -695,6 +701,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "roadmap_items_roadmap_id_fkey";
+            columns: ["roadmap_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmaps";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      roadmap_level_requirements: {
+        Row: {
+          category: string;
+          level: number;
+          min_total: number;
+          roadmap_id: string;
+        };
+        Insert: {
+          category: string;
+          level: number;
+          min_total: number;
+          roadmap_id: string;
+        };
+        Update: {
+          category?: string;
+          level?: number;
+          min_total?: number;
+          roadmap_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_level_requirements_roadmap_id_fkey";
             columns: ["roadmap_id"];
             isOneToOne: false;
             referencedRelation: "roadmaps";

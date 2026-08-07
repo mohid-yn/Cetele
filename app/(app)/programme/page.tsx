@@ -6,6 +6,7 @@ import { Card, ProgressBar, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { FlagIcon } from "@/components/app/icons";
+import { levelsComplete, levelsOf, type RoadmapCategory } from "@/lib/roadmap";
 
 /**
  * Who has got how far on a programme (D55).
@@ -34,53 +35,105 @@ export default async function ProgrammeReportPage() {
   const me = claims?.claims.sub as string | undefined;
   if (!me) redirect("/");
 
-  const [{ data: roadmaps }, { data: rows }] = await Promise.all([
-    q(
-      "programme.roadmaps",
-      supabase
-        .from("roadmaps")
-        .select("id, name, ends_on, roadmap_items(id)")
-        .order("starts_on", { ascending: false }),
-    ),
-    q(
-      "programme.progress (RLS decides whose)",
-      supabase
-        .from("roadmap_progress")
-        .select(
-          "user_id, done, profiles(name), roadmap_items!inner(id, roadmap_id, target)",
-        ),
-    ),
-  ]);
+  const [{ data: roadmaps }, { data: rows }, { data: reqs }] =
+    await Promise.all([
+      q(
+        "programme.roadmaps",
+        supabase
+          .from("roadmaps")
+          .select(
+            "id, name, ends_on, roadmap_items(id, level, category, title, source, url, unit, target, compulsory)",
+          )
+          .order("starts_on", { ascending: false }),
+      ),
+      q(
+        "programme.progress (RLS decides whose)",
+        supabase
+          .from("roadmap_progress")
+          .select(
+            "user_id, item_id, done, profiles(name), roadmap_items!inner(roadmap_id)",
+          ),
+      ),
+      q(
+        "programme.level requirements",
+        supabase
+          .from("roadmap_level_requirements")
+          .select("roadmap_id, level, category, min_total"),
+      ),
+    ]);
 
-  // An item counts as complete at its own target — the same rule the member's
-  // screen uses (`isItemComplete`), applied to somebody else's row.
-  type Person = { name: string; complete: number };
-  const byRoadmap = new Map<string, Map<string, Person>>();
+  // Levels, not items — the unit the programme is built in and rewarded on, and
+  // the same rule the member's own screen uses. `levelsComplete` mirrors
+  // `private.levels_complete` (0025), so this screen and the database agree on
+  // who has finished what; pgTAP 014 pins the mirror against the SQL.
+  type Person = { userId: string; name: string; levels: number };
+
+  const progressByUser = new Map<
+    string,
+    { name: string; roadmapId: string; done: Map<string, number> }
+  >();
 
   for (const r of rows ?? []) {
-    const item = r.roadmap_items;
-    if (!item) continue;
-    const people = byRoadmap.get(item.roadmap_id) ?? new Map<string, Person>();
-    const person = people.get(r.user_id) ?? {
+    const roadmapId = r.roadmap_items?.roadmap_id;
+    if (!roadmapId) continue;
+    const key = `${r.user_id}:${roadmapId}`;
+    const entry = progressByUser.get(key) ?? {
       name: r.profiles?.name ?? "Unknown",
-      complete: 0,
+      roadmapId,
+      done: new Map<string, number>(),
     };
-    if (r.done >= item.target) person.complete += 1;
-    people.set(r.user_id, person);
-    byRoadmap.set(item.roadmap_id, people);
+    entry.done.set(r.item_id, r.done);
+    progressByUser.set(key, entry);
   }
 
   const programmes = (roadmaps ?? [])
-    .map((r) => ({
-      id: r.id,
-      name: r.name,
-      total: r.roadmap_items?.length ?? 0,
-      people: [...(byRoadmap.get(r.id)?.values() ?? [])].sort(
-        // Furthest along first — this screen exists to answer "who is ready for
-        // the retreat place", and that reading should not need scrolling.
-        (a, b) => b.complete - a.complete || a.name.localeCompare(b.name),
-      ),
-    }))
+    .map((r) => {
+      const catalogue = (r.roadmap_items ?? []).map((i) => ({
+        id: i.id,
+        level: i.level,
+        category: i.category as RoadmapCategory,
+        title: i.title,
+        source: i.source,
+        url: i.url,
+        unit: i.unit,
+        target: i.target,
+        compulsory: i.compulsory,
+        done: 0,
+      }));
+      const requirements = (reqs ?? [])
+        .filter((x) => x.roadmap_id === r.id)
+        .map((x) => ({
+          level: x.level,
+          category: x.category as RoadmapCategory,
+          minTotal: x.min_total,
+        }));
+      const totalLevels = levelsOf(catalogue).length;
+
+      const people: Person[] = [];
+      for (const [key, entry] of progressByUser) {
+        if (entry.roadmapId !== r.id) continue;
+        const items = catalogue.map((i) => ({
+          ...i,
+          done: entry.done.get(i.id) ?? 0,
+        }));
+        people.push({
+          userId: key,
+          name: entry.name,
+          levels: levelsComplete(items, requirements),
+        });
+      }
+
+      return {
+        id: r.id,
+        name: r.name,
+        total: totalLevels,
+        people: people.sort(
+          // Furthest along first — this screen exists to answer "who has earned
+          // the contribution", and that reading should not need scrolling.
+          (a, b) => b.levels - a.levels || a.name.localeCompare(b.name),
+        ),
+      };
+    })
     .filter((p) => p.people.length > 0);
 
   return (
@@ -112,18 +165,18 @@ export default async function ProgrammeReportPage() {
             </SectionHeading>
             <Card padding="none">
               <ul className="divide-y divide-border">
-                {p.people.map((person, i) => {
+                {p.people.map((person) => {
                   const pct = p.total
-                    ? Math.round((person.complete / p.total) * 100)
+                    ? Math.round((person.levels / p.total) * 100)
                     : 0;
                   return (
-                    <li key={`${person.name}-${i}`} className="p-4">
+                    <li key={person.userId} className="p-4">
                       <div className="flex items-baseline justify-between gap-3">
                         <p className="truncate text-sm font-semibold text-foreground">
                           {person.name}
                         </p>
                         <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                          {person.complete} of {p.total} items
+                          {person.levels} of {p.total} levels
                         </p>
                       </div>
                       <ProgressBar value={pct} className="mt-2 h-1.5" />

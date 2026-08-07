@@ -19,27 +19,29 @@ import type { RoadmapReward } from "@/lib/roadmap";
 
 export function RewardLadder({
   rewards,
-  complete,
-  total,
+  levelsDone,
+  totalLevels,
 }: {
   rewards: RoadmapReward[];
-  /** Items finished so far — what a threshold is measured against. */
-  complete: number;
-  /** Items in the roadmap, for the "N of M" reading on each rung. */
-  total: number;
+  /** LEVELS finished so far — what a threshold is measured against. A reward
+   *  is earned by finishing a stage, which is the unit the programme is built
+   *  in and the unit the administration pays out on. */
+  levelsDone: number;
+  /** Levels in the programme, for the "N of M" reading on each rung. */
+  totalLevels: number;
 }) {
   if (!rewards.length) return null;
 
   return (
     <ol className="flex flex-col">
       {rewards.map((r, i) => {
-        const unlocked = complete >= r.threshold;
+        const unlocked = levelsDone >= r.threshold;
         // Exactly one rung is "next": the first still locked. It carries the
         // distance, so the member always has one number to aim at rather than
         // having to work it out across four rungs.
         const isNext =
-          !unlocked && rewards.findIndex((x) => complete < x.threshold) === i;
-        const remaining = r.threshold - complete;
+          !unlocked && rewards.findIndex((x) => levelsDone < x.threshold) === i;
+        const remaining = r.threshold - levelsDone;
         const last = i === rewards.length - 1;
 
         return (
@@ -96,12 +98,14 @@ export function RewardLadder({
                   </Badge>
                 ) : isNext ? (
                   <Badge variant="primary" size="sm">
-                    {remaining} to go
+                    {remaining === 1
+                      ? "1 level to go"
+                      : `${remaining} levels to go`}
                   </Badge>
                 ) : null}
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {r.threshold} of {total} items
+                {r.threshold} of {totalLevels} levels
                 {r.description ? ` · ${r.description}` : ""}
               </p>
             </div>

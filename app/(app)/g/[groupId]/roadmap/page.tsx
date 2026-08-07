@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveGroup } from "@/lib/active-group";
 import { localDateISO } from "@/lib/local-date";
 import { q } from "@/lib/db-log";
-import type { Roadmap } from "@/lib/roadmap";
+import type { Roadmap, RoadmapCategory } from "@/lib/roadmap";
 import { RoadmapClient } from "./roadmap-client";
 import { NoRoadmap } from "./no-roadmap";
 
@@ -57,35 +57,49 @@ export default async function RoadmapPage({
     return <NoRoadmap groupId={groupId} canFollow={active.role !== "member"} />;
   }
 
-  const [{ data: roadmap }, { data: items }, { data: rewards }] =
-    await Promise.all([
-      q(
-        "roadmap.roadmap",
-        supabase
-          .from("roadmaps")
-          .select("id, name, starts_on, ends_on")
-          .eq("id", group.roadmap_id)
-          .maybeSingle(),
-      ),
-      q(
-        "roadmap.items",
-        supabase
-          .from("roadmap_items")
-          .select("id, kind, title, source, url, unit, target")
-          .eq("roadmap_id", group.roadmap_id)
-          .order("sort_order")
-          .order("title"),
-      ),
-      q(
-        "roadmap.rewards",
-        supabase
-          .from("roadmap_rewards")
-          .select("id, threshold, label, description")
-          .eq("roadmap_id", group.roadmap_id)
-          // Ascending by threshold — `nextReward` relies on that order.
-          .order("threshold"),
-      ),
-    ]);
+  const [
+    { data: roadmap },
+    { data: items },
+    { data: rewards },
+    { data: reqs },
+  ] = await Promise.all([
+    q(
+      "roadmap.roadmap",
+      supabase
+        .from("roadmaps")
+        .select("id, name, starts_on, ends_on")
+        .eq("id", group.roadmap_id)
+        .maybeSingle(),
+    ),
+    q(
+      "roadmap.items",
+      supabase
+        .from("roadmap_items")
+        .select(
+          "id, level, category, title, source, url, unit, target, compulsory",
+        )
+        .eq("roadmap_id", group.roadmap_id)
+        .order("level")
+        .order("sort_order")
+        .order("title"),
+    ),
+    q(
+      "roadmap.rewards",
+      supabase
+        .from("roadmap_rewards")
+        .select("id, threshold, label, description")
+        .eq("roadmap_id", group.roadmap_id)
+        // Ascending by threshold — `nextReward` relies on that order.
+        .order("threshold"),
+    ),
+    q(
+      "roadmap.level requirements",
+      supabase
+        .from("roadmap_level_requirements")
+        .select("level, category, min_total")
+        .eq("roadmap_id", group.roadmap_id),
+    ),
+  ]);
 
   // The roadmap row can be missing where the items are not: `roadmaps` is
   // readable only while PUBLISHED, and nothing un-follows a circle when a
@@ -115,14 +129,21 @@ export default async function RoadmapPage({
       label: r.label,
       description: r.description,
     })),
+    requirements: (reqs ?? []).map((r) => ({
+      level: r.level,
+      category: r.category as RoadmapCategory,
+      minTotal: r.min_total,
+    })),
     items: (items ?? []).map((i) => ({
       id: i.id,
-      kind: i.kind as Roadmap["items"][number]["kind"],
+      level: i.level,
+      category: i.category as RoadmapCategory,
       title: i.title,
       source: i.source,
       url: i.url,
       unit: i.unit,
       target: i.target,
+      compulsory: i.compulsory,
       done: doneByItem.get(i.id) ?? 0,
     })),
   };
