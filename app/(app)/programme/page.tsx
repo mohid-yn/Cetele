@@ -5,7 +5,7 @@ import { q } from "@/lib/db-log";
 import { Card, ProgressBar, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
-import { FlagIcon } from "@/components/app/icons";
+import { ArrowLeftIcon, FlagIcon } from "@/components/app/icons";
 import { CohortShape } from "@/components/app/roadmap-cohort";
 import {
   levelDistribution,
@@ -200,6 +200,17 @@ export default async function ProgrammeReportPage() {
 
   return (
     <Screen>
+      {/* This route is reachable from /groups and, for an organiser, from
+          nowhere else — and it is not a nav tab, so without this the only way
+          out was the browser's own back. The bottom bar does carry Groups, but
+          a screen you arrived at by tapping a card should say how to leave. */}
+      <Link
+        href="/groups"
+        className="-ml-2 inline-flex min-h-11 items-center gap-1.5 self-start px-2 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeftIcon className="size-4" /> Back
+      </Link>
+
       <PageHeader
         title="Programme"
         subtitle="How far each person has got. Roadmap progress only — nothing from their circle."
@@ -226,10 +237,20 @@ export default async function ProgrammeReportPage() {
             {/* "on the programme", not "recording" — the roster now includes
                 the people who have not started, and calling them recorders
                 would be the same wrong answer in a different place. */}
+            {/* The NAME opens the programme itself. An organiser could see it
+                measured and never read it: the member's roadmap is at
+                /g/[groupId]/roadmap and is membership-gated, and an organiser
+                is deliberately in no circle (D27) — so they could tell you
+                Zayd had finished level 2 and not what level 2 asks for. */}
             <SectionHeading
               action={`${p.people.length} ${p.people.length === 1 ? "person" : "people"}`}
             >
-              {p.name}
+              <Link
+                href={`/programme/${p.id}`}
+                className="underline decoration-border underline-offset-4 hover:decoration-foreground"
+              >
+                {p.name}
+              </Link>
             </SectionHeading>
             <CohortShape distribution={p.distribution} total={p.total} />
             <Card padding="none">

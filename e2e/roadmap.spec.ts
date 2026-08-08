@@ -237,6 +237,38 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   // three — "your own circles' members if you lead one" — so an organiser who
   // leads nothing read a caption about somebody else's view of the screen.
   await expect(page.getByText(/You are an organiser/)).toBeVisible();
+
+  // THE PROGRAMME ITSELF, which an organiser could not reach at all: the
+  // member's roadmap is at /g/[groupId]/roadmap and is membership-gated, and an
+  // organiser is deliberately in no circle. They could read that Zayd had
+  // finished level 2 and not what level 2 asks for.
+  await page.getByRole("link", { name: "Islamic Development Program" }).click();
+  await page.waitForURL(/\/programme\/[0-9a-f-]+$/);
+
+  await expect(
+    page.getByRole("heading", { name: "Islamic Development Program" }),
+  ).toBeVisible();
+  // By ROLE, not text: "Level 1" also matches the reward rung "Level 1
+  // complete" a few hundred pixels above, and the level headings are the thing
+  // being asserted here.
+  await expect(
+    page.getByRole("heading", { name: "Level 1", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Calling to Good")).toBeVisible();
+
+  // A BUDGETED category reads as a menu with a total, not a list to finish —
+  // the difference between "watch all of these" and "choose 600 minutes".
+  await expect(page.getByText("choose 600 minutes")).toBeVisible();
+  await expect(page.getByText("135 minutes")).toBeVisible();
+
+  // NO PROGRESS on this screen: it says what the programme asks for, and the
+  // member's own roadmap is the one place a `done` is read or written.
+  await expect(page.getByRole("button", { name: "Mark done" })).toHaveCount(0);
+
+  // And there is a way back out — this route is in no nav tab, so without it
+  // the only exit was the browser's own back button.
+  await page.getByRole("link", { name: "Back" }).click();
+  await page.waitForURL("**/programme");
 });
 
 test("an organiser appoints another, and can stand them down", async ({

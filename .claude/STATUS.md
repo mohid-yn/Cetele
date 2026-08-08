@@ -106,6 +106,15 @@ the generated types.
   level-3 Qur'an it takes the **detail** page ("1 Khatm with Interpretation" over the overview's "2
   Khatm"). One of those two choices is wrong and only the owner can say which. Both are now flagged in
   `seed.sql`; **neither is settled.**
+- **Two navigation defects the owner found by USING it, both mine (2026-08-08).** (1) An organiser could
+  see the programme **measured and never read it**: the member's roadmap is at `/g/[groupId]/roadmap`,
+  which is membership-gated, and an organiser is deliberately in no circle — so they could tell you Zayd
+  had finished level 2 and not what level 2 asks for. New read-only `/programme/[roadmapId]`, not
+  group-scoped for the same reason the report is not (D55), with **no viewer check in the file at all** —
+  `roadmap_items`/`_rewards`/`_level_requirements` are already gated on following-or-super-admin (0025),
+  so a member of a following circle can open it too. It renders **targets, never anyone's `done`**: a
+  second place to read progress is a second place for it to disagree. (2) **`/programme` had no way
+  out** — it is in no nav tab, so the only exit was the browser's own back. Back links on both.
 - **A correction to what I reported earlier: `e2e/routing.spec.ts:50` was never broken.** I reported it
   as a pre-existing failure on the branch. It fails against a **dev server** and passes against the
   production build — Playwright's `reuseExistingServer` had been picking up a running `pnpm dev`, which

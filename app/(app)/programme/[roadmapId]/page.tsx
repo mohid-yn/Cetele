@@ -1,0 +1,255 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { q } from "@/lib/db-log";
+import { Badge, Card, Screen } from "@/components/ui";
+import { SectionHeading } from "@/components/app/section-heading";
+import {
+  ArrowLeftIcon,
+  BookIcon,
+  PlayIcon,
+  FlagIcon,
+} from "@/components/app/icons";
+import { RewardLadder } from "@/components/app/roadmap-rewards";
+import {
+  CATEGORY_LABEL,
+  categoriesAt,
+  itemsIn,
+  levelsOf,
+  requirementFor,
+  type LevelRequirement,
+  type RoadmapCategory,
+  type RoadmapItem,
+} from "@/lib/roadmap";
+
+/**
+ * The programme itself, read-only — WHAT the work is, not who has done it.
+ *
+ * WHY IT EXISTS. The report next door answers "how far has everyone got", and
+ * that was the only programme screen an organiser could reach: the member's
+ * roadmap lives at `/g/[groupId]/roadmap` and is membership-gated, so a super
+ * admin — who is deliberately in NO circle (D27) — could see the administration's
+ * own programme measured but never read it. They could tell you Zayd had
+ * finished level 2 and not what level 2 asks for.
+ *
+ * NOT group-scoped, for the same reason the report is not (D55): a programme is
+ * one thing however many circles follow it. RLS decides who may read it —
+ * `roadmap_items` / `_rewards` / `_level_requirements` are gated on following
+ * the roadmap OR being a super admin (0025) — so this file adds no viewer check
+ * at all and a member of a following circle can open it too.
+ *
+ * NO PROGRESS, deliberately. Every count here is the ITEM's target, never
+ * anyone's `done`. The member's own screen is where progress is recorded, and a
+ * second place to read it is a second place for it to disagree.
+ */
+export default async function ProgrammeCataloguePage({
+  params,
+}: {
+  params: Promise<{ roadmapId: string }>;
+}) {
+  const { roadmapId } = await params;
+
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  if (!claims?.claims.sub) redirect("/");
+
+  const [{ data: roadmap }, { data: rows }, { data: reqs }, { data: rewards }] =
+    await Promise.all([
+      q(
+        "catalogue.roadmap",
+        supabase
+          .from("roadmaps")
+          .select("id, name, starts_on, ends_on")
+          .eq("id", roadmapId)
+          .maybeSingle(),
+      ),
+      q(
+        "catalogue.items",
+        supabase
+          .from("roadmap_items")
+          .select(
+            "id, level, category, title, source, url, unit, target, compulsory",
+          )
+          .eq("roadmap_id", roadmapId)
+          .order("level")
+          .order("sort_order")
+          .order("title"),
+      ),
+      q(
+        "catalogue.level requirements",
+        supabase
+          .from("roadmap_level_requirements")
+          .select("level, category, min_total")
+          .eq("roadmap_id", roadmapId),
+      ),
+      q(
+        "catalogue.rewards",
+        supabase
+          .from("roadmap_rewards")
+          .select("id, threshold, label, description")
+          .eq("roadmap_id", roadmapId)
+          .order("threshold"),
+      ),
+    ]);
+
+  // RLS returning nothing and the id being wrong are the same answer here, and
+  // that is correct: "there is no programme you may read at this address" tells
+  // a stranger nothing about whether one exists.
+  if (!roadmap) {
+    return (
+      <Screen>
+        <BackLink />
+        <Card padding="md">
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <div className="grid size-12 place-items-center rounded-2xl bg-muted text-muted-foreground">
+              <FlagIcon aria-hidden className="size-6" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">
+              No programme here
+            </p>
+            <p className="max-w-xs text-sm text-balance text-muted-foreground">
+              Either it doesn&rsquo;t exist, or it isn&rsquo;t one you can read.
+            </p>
+          </div>
+        </Card>
+      </Screen>
+    );
+  }
+
+  // `done` is required by the shared types and is meaningless on this screen —
+  // it is pinned to 0 so nothing here can accidentally render as progress.
+  const items: RoadmapItem[] = (rows ?? []).map((i) => ({
+    id: i.id,
+    level: i.level,
+    category: i.category as RoadmapCategory,
+    title: i.title,
+    source: i.source,
+    url: i.url,
+    unit: i.unit,
+    target: i.target,
+    compulsory: i.compulsory,
+    done: 0,
+  }));
+
+  const requirements: LevelRequirement[] = (reqs ?? []).map((r) => ({
+    level: r.level,
+    category: r.category as RoadmapCategory,
+    minTotal: r.min_total,
+  }));
+
+  const levels = levelsOf(items);
+
+  return (
+    <Screen>
+      <BackLink />
+
+      <div>
+        <h1 className="font-display text-2xl font-bold text-foreground">
+          {roadmap.name}
+        </h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          {levels.length} {levels.length === 1 ? "level" : "levels"} ·{" "}
+          {items.length} {items.length === 1 ? "item" : "items"} · what the
+          programme asks for
+        </p>
+      </div>
+
+      {rewards && rewards.length > 0 && (
+        <section>
+          <SectionHeading>Rewards</SectionHeading>
+          <Card padding="md">
+            {/* levelsDone={0}: this screen has no reader's progress on it and
+                must not imply one. Every rung reads as still to earn, which is
+                what the programme looks like described rather than measured. */}
+            <RewardLadder
+              rewards={rewards}
+              levelsDone={0}
+              totalLevels={levels.length}
+            />
+          </Card>
+        </section>
+      )}
+
+      {levels.length === 0 ? (
+        <Card padding="md">
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            This programme has no work on it yet.
+          </p>
+        </Card>
+      ) : (
+        levels.map((level) => (
+          <section key={level}>
+            <SectionHeading>Level {level}</SectionHeading>
+            <div className="flex flex-col gap-3">
+              {categoriesAt(items, level).map((category) => {
+                const group = itemsIn(items, level, category);
+                const req = requirementFor(requirements, level, category);
+                return (
+                  <Card key={category} padding="none">
+                    <div className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
+                      <h3 className="text-sm font-semibold text-foreground">
+                        {CATEGORY_LABEL[category]}
+                      </h3>
+                      {/* A budgeted category is a MENU with a total, not a list
+                          to finish — saying so here is the difference between
+                          "watch all of these" and "choose 600 minutes of them". */}
+                      <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                        {req
+                          ? `choose ${req.minTotal} ${group[0]?.unit ?? ""}`
+                          : `${group.length} to complete`}
+                      </p>
+                    </div>
+                    <ul className="divide-y divide-border">
+                      {group.map((i) => (
+                        <li key={i.id} className="flex items-start gap-3 p-4">
+                          <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                            {i.category === "listening" ? (
+                              <PlayIcon aria-hidden className="size-4" />
+                            ) : (
+                              <BookIcon aria-hidden className="size-4" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium wrap-anywhere text-foreground">
+                              <span>{i.title}</span>
+                              {i.compulsory && (
+                                <Badge variant="primary" size="sm">
+                                  Required
+                                </Badge>
+                              )}
+                            </p>
+                            {i.source && (
+                              <p className="text-xs wrap-anywhere text-muted-foreground">
+                                {i.source}
+                              </p>
+                            )}
+                          </div>
+                          <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                            {/* A target of 1 in its own unit ("1 book") is
+                                noise; the title already says what it is. */}
+                            {i.target === 1 ? "" : `${i.target} ${i.unit}`}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        ))
+      )}
+    </Screen>
+  );
+}
+
+function BackLink() {
+  return (
+    <Link
+      href="/programme"
+      className="-ml-2 inline-flex min-h-11 items-center gap-1.5 self-start px-2 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeftIcon className="size-4" /> Back
+    </Link>
+  );
+}
