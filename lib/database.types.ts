@@ -224,27 +224,57 @@ export type Database = {
           },
         ];
       };
+      group_roadmaps: {
+        Row: {
+          created_at: string;
+          group_id: string;
+          roadmap_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          group_id: string;
+          roadmap_id: string;
+        };
+        Update: {
+          created_at?: string;
+          group_id?: string;
+          roadmap_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "group_roadmaps_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "group_roadmaps_roadmap_id_fkey";
+            columns: ["roadmap_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmaps";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       groups: {
         Row: {
           created_at: string;
           created_by: string | null;
           id: string;
           name: string;
-          roadmap_id: string | null;
         };
         Insert: {
           created_at?: string;
           created_by?: string | null;
           id?: string;
           name: string;
-          roadmap_id?: string | null;
         };
         Update: {
           created_at?: string;
           created_by?: string | null;
           id?: string;
           name?: string;
-          roadmap_id?: string | null;
         };
         Relationships: [
           {
@@ -252,13 +282,6 @@ export type Database = {
             columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "groups_roadmap_id_fkey";
-            columns: ["roadmap_id"];
-            isOneToOne: false;
-            referencedRelation: "roadmaps";
             referencedColumns: ["id"];
           },
         ];
@@ -997,7 +1020,6 @@ export type Database = {
           created_by: string | null;
           id: string;
           name: string;
-          roadmap_id: string | null;
         };
         SetofOptions: {
           from: "*";
@@ -1030,7 +1052,6 @@ export type Database = {
           created_by: string | null;
           id: string;
           name: string;
-          roadmap_id: string | null;
         };
         SetofOptions: {
           from: "*";

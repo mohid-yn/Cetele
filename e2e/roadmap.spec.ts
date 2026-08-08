@@ -18,6 +18,8 @@ const OWNER = `e2e-roadmap-${STAMP}@example.com`;
 const OUTSIDER = `e2e-roadmap-out-${STAMP}@example.com`;
 // The administration's reader: in NO circle, which is the whole point of them.
 const ORGANISER = `e2e-roadmap-org-${STAMP}@example.com`;
+/** A second published programme, so "follows several" has something to follow. */
+const SECOND_PROGRAMME = "Ramadan Programme (example)";
 
 test.describe.configure({ mode: "serial" });
 
@@ -52,10 +54,29 @@ test("a circle follows a programme, and its members can record against it", asyn
   // thing on the page is the circle name, and an immediate selectOption on a
   // half-rendered screen is a false negative (a trap this suite has hit before).
   await page.goto(manageUrl);
-  await expect(page.locator("#group-roadmap")).toBeVisible();
-  await page.selectOption("#group-roadmap", {
-    label: "Islamic Development Program",
+  // A CHECKBOX now, not a <select> (0028): a circle may follow several, and a
+  // single-value control cannot express that.
+  const optIn = page.getByRole("checkbox", {
+    name: "Islamic Development Program",
   });
+  await expect(optIn).toBeVisible();
+
+  // WAIT FOR THE WRITE ITSELF, armed BEFORE the click so it cannot be missed.
+  // The checkbox flips optimistically the instant it is pressed, so asserting
+  // on it proves nothing, and waiting on the nav tab instead means waiting on
+  // revalidate → refresh → layout → store — a long chain that is fast enough
+  // most of the time and therefore flaky. The Server Action's own response is
+  // the exact moment the row exists.
+  const written = page.waitForResponse(
+    (r) => r.request().method() === "POST" && r.ok(),
+  );
+  await optIn.check();
+  await written;
+
+  // And the nav tab does follow from it.
+  await expect(
+    page.getByRole("link", { name: "Roadmap", exact: true }).first(),
+  ).toBeVisible();
 
   // BEFORE recording anything: the report already knows this person is on the
   // programme. Built from `roadmap_progress` alone it could not — a member with
@@ -189,8 +210,15 @@ test("the roadmap never touches the daily engine", async ({ page }) => {
   // items above changed nothing on Progress: no streak, no consistency, no
   // completed day — the roadmap can only ever ADD.
   await page.goto("/groups");
-  await page.getByRole("link", { name: /Roadmap Circle/ }).click();
+  await page
+    .getByRole("link", { name: /Roadmap Circle/ })
+    .first()
+    .click();
+  // Wait for each landing before acting on it: clicking a nav tab on a
+  // half-mounted screen is the false negative this suite keeps re-learning.
+  await page.waitForURL("**/today");
   await page.getByRole("link", { name: "Progress", exact: true }).click();
+  await page.waitForURL("**/progress");
 
   await expect(page.getByText("of the last 14 days")).toBeVisible();
   await expect(page.getByText("every day is a fresh start")).toBeVisible();
@@ -254,7 +282,9 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   // The cohort shape, and it is TEXT — colour alone never carries a reading
   // (§5). Everyone the organiser can see is at zero, so one bucket holds them
   // all and the empty buckets are not drawn.
-  await expect(page.getByText("not started")).toBeVisible();
+  // `.first()` — the seed carries TWO programmes now (0028), so the organiser
+  // sees a cohort strip per programme and this legend appears once each.
+  await expect(page.getByText("not started").first()).toBeVisible();
 
   // And the footer names THIS reader. It used to describe exactly one of the
   // three — "your own circles' members if you lead one" — so an organiser who
@@ -473,4 +503,87 @@ test("a member walks the timeline: stations, then categories, then items", async
   // be the screen inventing a rule the database does not keep.
   await expect(page.getByRole("button", { name: /^Level 2/ })).toBeVisible();
   await expect(page.getByText("Locked")).toHaveCount(0);
+});
+
+test("a circle follows TWO programmes, and the roadmap switches between them", async ({
+  page,
+}) => {
+  // The whole point of 0028: the old single column made this unrepresentable,
+  // so a circle wanting both had to choose or be split in two.
+  await signIn(page, OWNER);
+  await page.goto("/groups");
+  await page
+    .getByRole("link", { name: /Roadmap Circle/ })
+    .first()
+    .click();
+  await page.waitForURL("**/today");
+  const groupId = page.url().match(/\/g\/([^/]+)\//)![1];
+
+  // The SECOND programme comes from the seed, not from this spec: content is
+  // authored by migration (D55) and `service_role` holds no write grant on
+  // `roadmaps`, so there is deliberately no path for a test to create one.
+
+  await page.goto(`/g/${groupId}/group/manage`);
+  const second = page.getByRole("checkbox", { name: SECOND_PROGRAMME });
+  await expect(second).toBeVisible();
+  await second.check();
+
+  // Both are now followed, and the checkbox list says so — the state a
+  // <select> could not have represented at all.
+  await expect(
+    page.getByRole("checkbox", { name: "Islamic Development Program" }),
+  ).toBeChecked();
+  await expect(second).toBeChecked();
+
+  await page.goto(`/g/${groupId}/roadmap`);
+
+  // THE SWITCHER, which only exists with more than one. It defaults to the
+  // NEWEST programme, which is almost always the live one.
+  const tabs = page.getByRole("link", { name: SECOND_PROGRAMME });
+  await expect(tabs).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Islamic Development Program" }),
+  ).toBeVisible();
+
+  // Switching is a NAVIGATION — a real URL, so it survives a reload and can be
+  // shared, which a client-held selection could not.
+  await page.getByRole("link", { name: "Islamic Development Program" }).click();
+  await page.waitForURL(/\/roadmap\?r=/);
+  // The CHIP marks itself current, which is the switcher's own claim about
+  // what is on screen — the programme name alone is ambiguous, because the
+  // subtitle names it too.
+  await expect(
+    page.getByRole("link", { name: "Islamic Development Program" }),
+  ).toHaveAttribute("aria-current", "page");
+  // And the content really did change: the Ramadan fixture's only book is gone.
+  await expect(page.getByText("A Ramadan Reader")).toHaveCount(0);
+
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Roadmap" }),
+  ).toBeVisible();
+
+  // AND UN-FOLLOWING KEEPS THE RECORD. This circle's owner marked items done in
+  // the first spec; dropping the programme and picking it up again must find
+  // them exactly where they were (D55 — progress belongs to the member).
+  await page.goto(`/g/${groupId}/group/manage`);
+  const first = page.getByRole("checkbox", {
+    name: "Islamic Development Program",
+  });
+  await first.uncheck();
+  await expect(first).not.toBeChecked();
+  await first.check();
+  await expect(first).toBeChecked();
+
+  await page.goto(`/g/${groupId}/roadmap`);
+  await page.getByRole("link", { name: "Islamic Development Program" }).click();
+  await page.waitForURL(/\/roadmap\?r=/);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(
+    page
+      .locator("ul > li")
+      .filter({ hasText: "Calling to Good" })
+      .first()
+      .getByRole("button", { name: "Undo" }),
+  ).toBeVisible();
 });

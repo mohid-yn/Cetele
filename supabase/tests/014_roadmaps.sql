@@ -62,10 +62,15 @@ insert into public.roadmap_items (id, roadmap_id, level, category, title, unit, 
 insert into public.roadmap_rewards (id, roadmap_id, threshold, label) values
   ('c5000000-0000-0000-0000-0000000000c1', 'c5000000-0000-0000-0000-0000000000a1', 2, 'Retreat place held');
 
-insert into public.groups (id, name, created_by, roadmap_id) values
-  ('c5000000-0000-0000-0000-0000000000d1', 'Follows',     'c5000000-0000-0000-0000-00000000000a', 'c5000000-0000-0000-0000-0000000000a1'),
-  ('c5000000-0000-0000-0000-0000000000d2', 'Does not',    'c5000000-0000-0000-0000-00000000000e', null),
-  ('c5000000-0000-0000-0000-0000000000d3', 'Also follows','c5000000-0000-0000-0000-00000000000d', 'c5000000-0000-0000-0000-0000000000a1');
+insert into public.groups (id, name, created_by) values
+  ('c5000000-0000-0000-0000-0000000000d1', 'Follows',     'c5000000-0000-0000-0000-00000000000a'),
+  ('c5000000-0000-0000-0000-0000000000d2', 'Does not',    'c5000000-0000-0000-0000-00000000000e'),
+  ('c5000000-0000-0000-0000-0000000000d3', 'Also follows','c5000000-0000-0000-0000-00000000000d');
+
+-- Following is a ROW now, not a column (0028): a circle may follow several.
+insert into public.group_roadmaps (group_id, roadmap_id) values
+  ('c5000000-0000-0000-0000-0000000000d1', 'c5000000-0000-0000-0000-0000000000a1'),
+  ('c5000000-0000-0000-0000-0000000000d3', 'c5000000-0000-0000-0000-0000000000a1');
 
 insert into public.memberships (user_id, group_id, role) values
   ('c5000000-0000-0000-0000-00000000000a', 'c5000000-0000-0000-0000-0000000000d1', 'owner'),
@@ -362,30 +367,59 @@ select ok(not has_function_privilege('anon',
 
 
 -- The opt-in itself: an admin may point their circle at a programme, a member
--- may not. The authority is the existing groups_update_admin policy plus the
--- column grant — no new policy, same shape as renaming a circle.
-select ok(has_column_privilege('authenticated', 'public.groups', 'roadmap_id', 'update'),
-  'roadmap_id is client-updatable — the opt-in is an ordinary admin act');
+-- may not. Since 0028 that is a row on `group_roadmaps` under its own policies
+-- rather than a column on `groups`, so the assertions moved with it — but the
+-- rule they pin is unchanged.
+select ok(has_table_privilege('authenticated', 'public.group_roadmaps', 'insert')
+      and has_table_privilege('authenticated', 'public.group_roadmaps', 'delete'),
+  'following is client-writable — the opt-in is an ordinary admin act');
+
+select ok(not has_table_privilege('authenticated', 'public.group_roadmaps', 'update'),
+  '...but there is no UPDATE: the row is two ids, to be added or removed');
 
 select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000b');
-update public.groups set roadmap_id = null
-  where id = 'c5000000-0000-0000-0000-0000000000d1';
+delete from public.group_roadmaps
+  where group_id = 'c5000000-0000-0000-0000-0000000000d1';
 select pg_temp.reset_role();
 
-select is((select roadmap_id from public.groups
-            where id = 'c5000000-0000-0000-0000-0000000000d1'),
-  'c5000000-0000-0000-0000-0000000000a1'::uuid,
+select is((select count(*)::int from public.group_roadmaps
+            where group_id = 'c5000000-0000-0000-0000-0000000000d1'), 1,
   'a MEMBER cannot un-follow the circle''s programme — RLS filters the row, so '
-  'the update is a silent no-op rather than an error');
+  'the delete is a silent no-op rather than an error');
+
+-- A member cannot ADD one either, which the column-shaped test could not ask.
+select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000b');
+select throws_ok(
+  $$ insert into public.group_roadmaps (group_id, roadmap_id)
+     values ('c5000000-0000-0000-0000-0000000000d1',
+             'c5000000-0000-0000-0000-0000000000a2') $$,
+  '42501',
+  'new row violates row-level security policy for table "group_roadmaps"',
+  '...nor follow a NEW one');
+select pg_temp.reset_role();
 
 select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000a');
-update public.groups set roadmap_id = null
-  where id = 'c5000000-0000-0000-0000-0000000000d1';
+delete from public.group_roadmaps
+  where group_id = 'c5000000-0000-0000-0000-0000000000d1';
 select pg_temp.reset_role();
 
-select is((select roadmap_id from public.groups
-            where id = 'c5000000-0000-0000-0000-0000000000d1'), null::uuid,
+select is((select count(*)::int from public.group_roadmaps
+            where group_id = 'c5000000-0000-0000-0000-0000000000d1'), 0,
   '...and the OWNER can');
+
+-- THE POINT OF 0028: a circle may follow MORE THAN ONE, which the old single
+-- column made unrepresentable.
+select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000a');
+select lives_ok(
+  $$ insert into public.group_roadmaps (group_id, roadmap_id) values
+       ('c5000000-0000-0000-0000-0000000000d1','c5000000-0000-0000-0000-0000000000a1'),
+       ('c5000000-0000-0000-0000-0000000000d1','c5000000-0000-0000-0000-0000000000a2') $$,
+  'an admin follows TWO programmes at once');
+select pg_temp.reset_role();
+
+select is((select count(*)::int from public.group_roadmaps
+            where group_id = 'c5000000-0000-0000-0000-0000000000d1'), 2,
+  '...and both are recorded');
 
 
 -- ============================================================================

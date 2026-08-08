@@ -32,13 +32,16 @@ export default async function GroupScopedLayout({
   const { groupId } = await params;
 
   const supabase = await createClient();
-  const { data: group } = await q(
-    "groupLayout.roadmap_id (nav tab)",
+  // `limit(1)` — the nav only needs to know whether there is AT LEAST one
+  // (0028: a circle may follow several). Counting them here would be work the
+  // tab does not use.
+  const { data: followed } = await q(
+    "groupLayout.follows a programme (nav tab)",
     supabase
-      .from("groups")
+      .from("group_roadmaps")
       .select("roadmap_id")
-      .eq("id", groupId)
-      .maybeSingle(),
+      .eq("group_id", groupId)
+      .limit(1),
   );
 
   return (
@@ -46,7 +49,7 @@ export default async function GroupScopedLayout({
       <RememberActiveGroup groupId={groupId} />
       <PublishGroupRoadmap
         groupId={groupId}
-        hasRoadmap={group?.roadmap_id != null}
+        hasRoadmap={(followed?.length ?? 0) > 0}
       />
       {children}
     </>

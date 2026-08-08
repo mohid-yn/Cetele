@@ -205,8 +205,9 @@ values
   ('00000000-0000-0000-0000-0000000000fa', '00000000-0000-0000-0000-0000000000f1', 3, 'Level 3 complete', 'The full $3,000 contribution')
 on conflict (id) do nothing;
 
-update public.groups set roadmap_id = '00000000-0000-0000-0000-0000000000f1'
-where id = '00000000-0000-0000-0000-0000000000b1';
+insert into public.group_roadmaps (group_id, roadmap_id)
+values ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000f1')
+on conflict do nothing;
 
 -- Ahmad is partway through LEVEL 1, so the screen renders the states that only
 -- appear with real progress: a finished item, a part-finished one, a listening
@@ -420,3 +421,47 @@ update public.roadmap_items
    set image_url = '/roadmap/quran-annotated-interpretation.png',
        source = 'With Ali Ünal''s Annotated Interpretation in Modern English'
  where id = '00000000-0000-0000-0000-00000003a005';
+
+-- ============================================================================
+-- A SECOND programme, so "a circle follows several" is visible (0028, D58)
+-- ----------------------------------------------------------------------------
+-- EXPLICITLY A DEV FIXTURE, and named so nobody mistakes it for the
+-- administration's content: everything above this line is transcribed from the
+-- booklet, and this is not. It exists because a feature whose whole point is
+-- "more than one" cannot be seen, demonstrated or tested with only one
+-- programme in the database — and content is authored by migration (D55), so
+-- there is no client path for a test to create one.
+--
+-- Starts LATER than the Islamic Development Program, so the roadmap switcher's
+-- "newest first" default is exercised rather than assumed.
+insert into public.roadmaps (id, name, starts_on, ends_on, published)
+values ('00000000-0000-0000-0000-0000000000f2', 'Ramadan Programme (example)',
+        (date_trunc('year', current_date) + interval '5 months')::date,
+        (date_trunc('year', current_date) + interval '7 months - 1 day')::date,
+        true)
+on conflict (id) do nothing;
+
+insert into public.roadmap_items
+  (id, roadmap_id, level, category, title, source, unit, target, compulsory, sort_order, description)
+values
+  ('00000000-0000-0000-0000-00000009a001', '00000000-0000-0000-0000-0000000000f2', 1, 'quran', 'Khatm in the month', 'Thirty juz', 'juz', 30, false, 1,
+   'One complete reading across Ramadan — a juz a day.'),
+  ('00000000-0000-0000-0000-00000009a002', '00000000-0000-0000-0000-0000000000f2', 1, 'memorisation', 'Surah Al-Mulk', 'Chapter 67', 'verses', 30, false, 2,
+   'Thirty verses, traditionally read nightly.'),
+  ('00000000-0000-0000-0000-00000009a003', '00000000-0000-0000-0000-0000000000f2', 1, 'listening', 'Nightly reminder series', null, 'minutes', 300, true, 3,
+   'A short talk each evening across the month.')
+on conflict (id) do nothing;
+
+insert into public.roadmap_level_requirements (roadmap_id, level, category, min_total)
+values ('00000000-0000-0000-0000-0000000000f2', 1, 'listening', 300)
+on conflict (roadmap_id, level, category) do nothing;
+
+insert into public.roadmap_rewards (id, roadmap_id, threshold, label, description)
+values ('00000000-0000-0000-0000-0000000000fb', '00000000-0000-0000-0000-0000000000f2', 1,
+        'Programme complete', 'The closing sitting')
+on conflict (id) do nothing;
+
+-- The Fajr Circle follows BOTH, which is the state 0028 exists to allow.
+insert into public.group_roadmaps (group_id, roadmap_id)
+values ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000f2')
+on conflict do nothing;

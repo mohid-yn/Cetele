@@ -58,7 +58,7 @@ export default async function ManageGroupPage({
   ] = await Promise.all([
     supabase
       .from("groups")
-      .select("id, name, created_by, roadmap_id")
+      .select("id, name, created_by, group_roadmaps(roadmap_id)")
       .eq("id", active.groupId)
       .maybeSingle(),
     supabase
@@ -139,6 +139,7 @@ export default async function ManageGroupPage({
       invites={lockedInvites}
       canClaim={canClaim ?? false}
       roadmaps={(roadmaps ?? []).map((r) => ({ id: r.id, name: r.name }))}
+      followedRoadmapIds={(group.group_roadmaps ?? []).map((g) => g.roadmap_id)}
     />
   );
 }

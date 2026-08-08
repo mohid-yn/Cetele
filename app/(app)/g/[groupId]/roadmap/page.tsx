@@ -18,10 +18,14 @@ import { NoRoadmap } from "./no-roadmap";
  */
 export default async function RoadmapPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ groupId: string }>;
+  /** `?r=<roadmapId>` — which programme, when the circle follows several. */
+  searchParams: Promise<{ r?: string }>;
 }) {
   const { groupId } = await params;
+  const { r: wanted } = await searchParams;
 
   const active = await resolveGroup(groupId);
   if (!active) redirect("/groups");
@@ -33,13 +37,15 @@ export default async function RoadmapPage({
   // The window is counted on the MEMBER's calendar (D34), so the zone is read
   // before any date is derived — never the server's.
   const [{ data: group }, { data: profile }] = await Promise.all([
+    // EVERY programme this circle follows (0028) — the switcher needs the list,
+    // not just the one being shown. Ordered by start date so the newest
+    // programme is the default, which is almost always the live one.
     q(
-      "roadmap.group (roadmap_id)",
+      "roadmap.followed programmes",
       supabase
-        .from("groups")
-        .select("roadmap_id")
-        .eq("id", groupId)
-        .maybeSingle(),
+        .from("group_roadmaps")
+        .select("roadmap_id, roadmaps(id, name, starts_on)")
+        .eq("group_id", groupId),
     ),
     q(
       "roadmap.profile (timezone)",
@@ -53,9 +59,26 @@ export default async function RoadmapPage({
   // none (D55). The nav tab is conditional, so arriving here at all means a URL
   // was typed or a link was kept — answer it honestly rather than redirecting,
   // and tell an admin where the control is.
-  if (!group?.roadmap_id) {
+  // What the circle follows, newest first. RLS drops any row whose roadmap the
+  // member may not read, so an unpublished one simply is not in the list.
+  const followed = (group ?? [])
+    .map((row) => row.roadmaps)
+    .filter((x): x is NonNullable<typeof x> => x != null)
+    .sort((a, b) => b.starts_on.localeCompare(a.starts_on));
+
+  // A circle follows a programme by its admins' choice, and most follow none
+  // (D55). The nav tab is conditional, so arriving here at all means a URL was
+  // typed or a link was kept — answer it honestly rather than redirecting, and
+  // tell an admin where the control is.
+  if (followed.length === 0) {
     return <NoRoadmap groupId={groupId} canFollow={active.role !== "member"} />;
   }
+
+  // `?r=` decides, and it is validated against what the circle actually
+  // follows: an id the member is not entitled to must not select anything, and
+  // an id from another circle would otherwise render that circle's programme
+  // here. Falling back to the newest is what makes the bare URL work.
+  const chosen = followed.find((x) => x.id === wanted) ?? followed[0];
 
   const [
     { data: roadmap },
@@ -68,7 +91,7 @@ export default async function RoadmapPage({
       supabase
         .from("roadmaps")
         .select("id, name, starts_on, ends_on")
-        .eq("id", group.roadmap_id)
+        .eq("id", chosen.id)
         .maybeSingle(),
     ),
     q(
@@ -78,7 +101,7 @@ export default async function RoadmapPage({
         .select(
           "id, level, category, title, source, url, unit, target, compulsory, description, image_url",
         )
-        .eq("roadmap_id", group.roadmap_id)
+        .eq("roadmap_id", chosen.id)
         .order("level")
         .order("sort_order")
         .order("title"),
@@ -88,7 +111,7 @@ export default async function RoadmapPage({
       supabase
         .from("roadmap_rewards")
         .select("id, threshold, label, description")
-        .eq("roadmap_id", group.roadmap_id)
+        .eq("roadmap_id", chosen.id)
         // Ascending by threshold — `nextReward` relies on that order.
         .order("threshold"),
     ),
@@ -97,7 +120,7 @@ export default async function RoadmapPage({
       supabase
         .from("roadmap_level_requirements")
         .select("level, category, min_total")
-        .eq("roadmap_id", group.roadmap_id),
+        .eq("roadmap_id", chosen.id),
     ),
   ]);
 
@@ -150,5 +173,12 @@ export default async function RoadmapPage({
     })),
   };
 
-  return <RoadmapClient roadmap={model} todayISO={todayISO} />;
+  return (
+    <RoadmapClient
+      roadmap={model}
+      todayISO={todayISO}
+      groupId={groupId}
+      programmes={followed.map((f) => ({ id: f.id, name: f.name }))}
+    />
+  );
 }

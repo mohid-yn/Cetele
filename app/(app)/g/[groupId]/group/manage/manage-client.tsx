@@ -40,8 +40,6 @@ export type ManageGroup = {
   id: string;
   name: string;
   created_by: string | null;
-  /** The programme this circle follows (D55), or null — most follow none. */
-  roadmap_id: string | null;
 };
 export type ManageMember = {
   userId: string;
@@ -291,6 +289,7 @@ export function ManageClient({
   defaultCode: propDefaultCode,
   canClaim,
   roadmaps,
+  followedRoadmapIds,
 }: {
   group: ManageGroup;
   me: string;
@@ -303,6 +302,8 @@ export function ManageClient({
   canClaim: boolean;
   /** Published programmes this circle could follow (D55). Often empty. */
   roadmaps: { id: string; name: string }[];
+  /** Which of them this circle follows (0028) — several is ordinary now. */
+  followedRoadmapIds: string[];
 }) {
   // The three lists render from local state (CET-30): a mutation shows the
   // moment its action succeeds, without waiting on a refetch that can be dropped.
@@ -310,7 +311,9 @@ export function ManageClient({
   const [tasks, setTasks] = usePropState(propTasks);
   const [invites, setInvites] = usePropState(propInvites);
   const [defaultCode, setDefaultCode] = usePropState(propDefaultCode);
-  const [roadmapId, setRoadmapId] = usePropState(group.roadmap_id);
+  // Re-seeded from the server on every refetch (usePropState), so a second
+  // admin's change lands rather than being masked by our optimistic copy.
+  const [followed, setFollowed] = usePropState(followedRoadmapIds);
 
   // Assignments are held as the RESOLVED per-task answer rather than as raw
   // intervals: this screen only ever edits the present, and reconciling a
@@ -740,72 +743,107 @@ export function ManageClient({
       </section>
 
       {/* Programme ------------------------------------------------------- */}
-      {/* `|| roadmapId`, not `roadmaps.length > 0` alone. `roadmaps` is what RLS
-          lets this admin read, which is PUBLISHED ones only — and nothing
-          un-follows a circle when a programme is unpublished. Gated on the list
-          alone, unpublishing the circle's own programme made this whole section
-          disappear and left `groups.roadmap_id` set with no control anywhere to
-          clear it, while members got "isn't following a programme". The circle
-          was stuck on an invisible programme. */}
-      {(roadmaps.length > 0 || roadmapId) && (
+      {/* Shown whenever there is anything to show OR anything already followed.
+          `roadmaps` is what RLS lets this admin read — PUBLISHED ones only —
+          and nothing un-follows a circle when a programme is unpublished. Gated
+          on the list alone, unpublishing made this whole section disappear
+          while members still saw the programme, with no control anywhere to
+          drop it. */}
+      {(roadmaps.length > 0 || followed.length > 0) && (
         <section>
           <h2 className="mb-2 text-sm font-semibold text-foreground">
-            Programme
+            Programmes
           </h2>
           <Card className="p-4">
-            <Field label="This circle follows" htmlFor="group-roadmap">
-              <select
-                id="group-roadmap"
-                className={selectCls}
-                value={roadmapId ?? ""}
-                disabled={roadmapAct.pending}
-                onChange={(e) => {
-                  const next = e.target.value || null;
-                  const previous = roadmapId;
-                  // Optimistic, undone on refusal — without the undo a write
-                  // RLS filtered away still looks applied (lib/use-action.ts).
-                  setRoadmapId(next);
-                  void roadmapAct.run(
-                    () => act.setGroupRoadmap(group.id, next),
-                    undefined,
-                    () => setRoadmapId(previous),
-                  );
-                }}
-              >
-                <option value="">No programme</option>
-                {roadmaps.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-                {/* A <select> whose value matches no option does not report the
-                    value — it shows the first option instead. So an unpublished
-                    programme did not merely go unnamed: this control positively
-                    read "No programme" for a circle that was following one. */}
-                {roadmapId && !roadmaps.some((r) => r.id === roadmapId) && (
-                  <option value={roadmapId}>
-                    Current programme (no longer published)
-                  </option>
-                )}
-              </select>
-            </Field>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Everyone in the circle sees the programme and records their own
-              progress. You and the organisers can see how far each member has
-              got; nothing on it affects streaks or the circle&rsquo;s figures.
+            <p className="mb-3 text-sm font-medium text-foreground">
+              This circle follows
             </p>
-            {roadmapId && !roadmaps.some((r) => r.id === roadmapId) && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                This circle&rsquo;s programme is no longer published, so nobody
-                can see it. Choose another, or select &ldquo;No
-                programme&rdquo;. Everyone&rsquo;s recorded progress is kept
-                either way.
-              </p>
-            )}
-            {/* The report is not group-scoped, because progress is not either
-                (D55) — one person on one programme has one record however many
-                circles they are in. RLS decides whose rows an admin sees. */}
-            {roadmapId && (
+
+            {/* CHECKBOXES, not a <select> (0028). A circle may follow several,
+                and a single-value control cannot express that — it also had a
+                trap worth remembering: a <select> whose value matches no option
+                silently shows the FIRST one, so an unpublished programme read
+                as "No programme" for a circle that was on it. A list of
+                independent toggles has no such failure mode; each row states
+                its own state. */}
+            <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
+              {roadmaps.map((r) => {
+                const on = followed.includes(r.id);
+                return (
+                  <li key={r.id}>
+                    <label className="flex min-h-11 cursor-pointer items-center gap-3 p-3">
+                      <input
+                        type="checkbox"
+                        className="size-4 shrink-0 accent-primary"
+                        checked={on}
+                        disabled={roadmapAct.pending}
+                        onChange={() => {
+                          const previous = followed;
+                          // Optimistic, undone on refusal — without the undo a
+                          // write RLS filtered away still looks applied.
+                          setFollowed(
+                            on
+                              ? followed.filter((x) => x !== r.id)
+                              : [...followed, r.id],
+                          );
+                          void roadmapAct.run(
+                            () => act.setGroupRoadmap(group.id, r.id, !on),
+                            undefined,
+                            () => setFollowed(previous),
+                          );
+                        }}
+                      />
+                      <span className="min-w-0 flex-1 text-sm text-foreground">
+                        {r.name}
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+
+              {/* A programme this circle follows that the admin can no longer
+                  READ, because it was unpublished. Named rather than hidden:
+                  members can still see it, so an admin who cannot find it here
+                  has no way to understand what they are looking at. */}
+              {followed
+                .filter((id) => !roadmaps.some((r) => r.id === id))
+                .map((id) => (
+                  <li key={id}>
+                    <label className="flex min-h-11 cursor-pointer items-center gap-3 p-3">
+                      <input
+                        type="checkbox"
+                        className="size-4 shrink-0 accent-primary"
+                        checked
+                        disabled={roadmapAct.pending}
+                        onChange={() => {
+                          const previous = followed;
+                          setFollowed(followed.filter((x) => x !== id));
+                          void roadmapAct.run(
+                            () => act.setGroupRoadmap(group.id, id, false),
+                            undefined,
+                            () => setFollowed(previous),
+                          );
+                        }}
+                      />
+                      <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+                        A programme that is no longer published
+                      </span>
+                    </label>
+                  </li>
+                ))}
+            </ul>
+
+            <p className="mt-3 text-xs text-muted-foreground">
+              Everyone in the circle sees the programmes it follows and records
+              their own progress. You and the organisers can see how far each
+              member has got; nothing on them affects streaks or the
+              circle&rsquo;s figures.
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Un-following keeps everything already recorded — pick it up again
+              and members are exactly where they left off.
+            </p>
+            {followed.length > 0 && (
               <Link
                 href="/programme"
                 className={buttonVariants({

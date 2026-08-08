@@ -14,6 +14,7 @@ import { SectionHeading } from "@/components/app/section-heading";
 import { CheckIcon, ChevronDownIcon, FlagIcon } from "@/components/app/icons";
 import { RewardLadder } from "@/components/app/roadmap-rewards";
 import { RoadmapItemCard } from "@/components/app/roadmap-item-card";
+import { RoadmapSwitcher } from "@/components/app/roadmap-switcher";
 import { usePropState } from "@/lib/use-prop-state";
 import { cn } from "@/lib/utils";
 import {
@@ -52,10 +53,15 @@ const fmtDate = (iso: string, todayISO: string) =>
 export function RoadmapClient({
   roadmap,
   todayISO,
+  groupId,
+  programmes,
 }: {
   roadmap: Roadmap;
   /** The member's own today (D34) — the window is counted on their calendar. */
   todayISO: string;
+  groupId: string;
+  /** Everything this circle follows (0028). One is the ordinary case. */
+  programmes: { id: string; name: string }[];
 }) {
   // Optimistic display, re-seeded whenever the server delivers a new list.
   const [items, setItems] = usePropState(roadmap.items);
@@ -188,6 +194,12 @@ export function RoadmapClient({
                 : `closes ${fmtDate(roadmap.endsOn, todayISO)}`}
           </span>
         }
+      />
+
+      <RoadmapSwitcher
+        groupId={groupId}
+        programmes={programmes}
+        currentId={roadmap.id}
       />
 
       {/* The screen's ONE hero, and it reports the LEVEL — the unit the

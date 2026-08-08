@@ -52,9 +52,13 @@ values ('e3000000-0000-0000-0000-000000000001',
         'e2000000-0000-0000-0000-000000000001', 1, 'book',
         'A Book', 'book', 1, true, 1);
 
-insert into public.groups (id, name, created_by, roadmap_id)
+insert into public.groups (id, name, created_by)
 values ('e4000000-0000-0000-0000-000000000001', 'Editable Circle',
-        'e1000000-0000-0000-0000-00000000000f',
+        'e1000000-0000-0000-0000-00000000000f');
+
+-- Following is a row since 0028, not a column.
+insert into public.group_roadmaps (group_id, roadmap_id)
+values ('e4000000-0000-0000-0000-000000000001',
         'e2000000-0000-0000-0000-000000000001');
 
 insert into public.memberships (user_id, group_id, role) values

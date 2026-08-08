@@ -52,30 +52,54 @@ export async function renameGroup(
 }
 
 /**
- * Put this circle on a programme, or take it off (D55).
+ * Follow or un-follow ONE programme (0028, D58).
  *
- * A plain UPDATE like `renameGroup`, and for the same reason: one column, one
- * writer, last write wins is the correct semantics, and there is nothing atomic
- * to protect. The authority is `groups_update_admin` plus the column grant
- * added in 0025 — a member's update matches no row and is a silent no-op.
+ * A toggle rather than a setter, because a circle may follow several. The old
+ * shape wrote a single column, so "choose a programme" and "choose no
+ * programme" were the same call with a different value; now they are an insert
+ * and a delete on a join table, and each one names exactly the pair it touches.
  *
- * Revalidates Progress as well as Manage: the way IN to the roadmap is a card
- * on Progress, and an admin who follows a programme and then finds Progress
- * unchanged would reasonably conclude the save failed.
+ * The authority is the RLS policy, not this file: `group_roadmaps_insert_admin`
+ * / `_delete_admin` require owner-or-co-admin, so a plain member's write
+ * matches no policy and fails. Nothing is re-checked here.
+ *
+ * UN-FOLLOWING KEEPS EVERY RECORDED ROW. `roadmap_progress` is keyed on the
+ * member and the item (D55) and is never touched here — a circle that drops a
+ * programme and picks it up again finds its members exactly where they were.
+ * Nothing earned is revoked (§4).
+ *
+ * Revalidates the group LAYOUT as well as Manage: the layout is what tells the
+ * nav whether to show the Roadmap tab, and an admin who follows a programme and
+ * sees no tab appear would reasonably conclude the save failed.
  */
 export async function setGroupRoadmap(
   groupId: string,
-  roadmapId: string | null,
+  roadmapId: string,
+  follow: boolean,
 ): Promise<Result> {
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("groups")
-    .update({ roadmap_id: roadmapId })
-    .eq("id", groupId);
+
+  const { error } = follow
+    ? await supabase
+        .from("group_roadmaps")
+        // `ignoreDuplicates` → ON CONFLICT DO NOTHING. A plain upsert compiles
+        // to ON CONFLICT DO UPDATE, which needs UPDATE privilege — and 0028
+        // deliberately grants none, because the row is two ids with nothing to
+        // amend. Following twice is a no-op, not an error.
+        .upsert(
+          { group_id: groupId, roadmap_id: roadmapId },
+          { onConflict: "group_id,roadmap_id", ignoreDuplicates: true },
+        )
+    : await supabase
+        .from("group_roadmaps")
+        .delete()
+        .eq("group_id", groupId)
+        .eq("roadmap_id", roadmapId);
   if (error) return fail(error.message);
 
   revalidateManage(groupId);
-  revalidatePath(groupHref(groupId, "/progress"));
+  // "layout" so the group-scoped layout re-runs — it carries the nav-tab flag.
+  revalidatePath(`/g/${groupId}`, "layout");
   return ok;
 }
 
