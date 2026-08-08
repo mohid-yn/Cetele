@@ -106,6 +106,18 @@ the generated types.
   level-3 Qur'an it takes the **detail** page ("1 Khatm with Interpretation" over the overview's "2
   Khatm"). One of those two choices is wrong and only the owner can say which. Both are now flagged in
   `seed.sql`; **neither is settled.**
+- **The "undefined component" that bit four times was the SERVICE WORKER, and it is fixed at the root.**
+  Reported by the owner as a runtime error on `ItemEditor` (`PencilIcon` undefined); the same thing had
+  hit `FlagIcon` three times before and each time I called it a stale chunk and hard-reloaded past it.
+  The cause: `sw.js` serves `/_next/static/**` and every `.js` **cache-first, never revalidated** — right
+  in production, where those filenames are content-hashed, and wrong the instant a production build and
+  `pnpm dev` share an origin. **`pnpm test:e2e` runs `pnpm build && pnpm start` on `localhost:3000`**, so
+  every e2e run registers the worker in production mode and fills its cache; the next `pnpm dev` then
+  serves different code at colliding paths and the browser keeps the old bytes. The symptom looks exactly
+  like a missing export and survives a normal reload. `app/sw-register.tsx` now **actively unregisters**
+  the worker and drops `cetele-*` caches in dev, so any browser that has ever loaded a prod build from
+  this origin self-heals. **One hard reload is needed once** — the fix ships inside a chunk the stale
+  worker may itself be serving. Verified: registration 1 → 0, caches cleared, clean on ordinary reloads.
 - **The roadmap is a TIMELINE now, with the booklet's pictures and prose, and an organiser can EDIT it
   (2026-08-08, migration 0027, D57 — owner's call on both).** Levels are stations on one spine, opening to
   categories, opening to items: two levels of disclosure, because opening a level and getting forty cards

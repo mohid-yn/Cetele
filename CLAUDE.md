@@ -73,7 +73,15 @@ the client (a percentage, a label) has no database twin to disagree with it, so
 the unit suite is its only check; write the test with the code.
 
 > Note: the service worker only registers in **production** (`pnpm build && pnpm start`),
-> not in `pnpm dev`. PWA icons: `node scripts/gen-icons.mjs`; iOS splash images:
+> not in `pnpm dev` — and `dev` now actively **unregisters** it (`app/sw-register.tsx`).
+> That teardown is not tidiness. `sw.js` serves `/_next/static/**` and every `.js`
+> **cache-first, never revalidated**, which is right in prod (content-hashed filenames)
+> and wrong the moment a prod build and `pnpm dev` share `localhost:3000` — which
+> `pnpm test:e2e` makes happen on every run. The symptom is NOT a cache error: it is
+> **`Element type is invalid … got: undefined`** naming whatever component you added
+> most recently, because the stale chunk genuinely lacks it. If you see that, you are
+> holding old bytes — **one hard reload** (Ctrl+Shift+R) runs the teardown and it is
+> then gone for good. PWA icons: `node scripts/gen-icons.mjs`; iOS splash images:
 > `node scripts/gen-splash.mjs`. The installed PWA caches the old manifest/icons — to
 > see a `start_url`/splash change, remove the home-screen icon and re-add it.
 >
