@@ -6,7 +6,13 @@ import { Card, ProgressBar, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { FlagIcon } from "@/components/app/icons";
-import { levelsComplete, levelsOf, type RoadmapCategory } from "@/lib/roadmap";
+import { CohortShape } from "@/components/app/roadmap-cohort";
+import {
+  levelDistribution,
+  levelsComplete,
+  levelsOf,
+  type RoadmapCategory,
+} from "@/lib/roadmap";
 
 /**
  * Who has got how far on a programme (D55).
@@ -35,40 +41,61 @@ export default async function ProgrammeReportPage() {
   const me = claims?.claims.sub as string | undefined;
   if (!me) redirect("/");
 
-  const [{ data: roadmaps }, { data: rows }, { data: reqs }, { data: roster }] =
-    await Promise.all([
-      q(
-        "programme.roadmaps",
-        supabase
-          .from("roadmaps")
-          .select(
-            "id, name, ends_on, roadmap_items(id, level, category, title, source, url, unit, target, compulsory)",
-          )
-          .order("starts_on", { ascending: false }),
-      ),
-      q(
-        "programme.progress (RLS decides whose)",
-        supabase
-          .from("roadmap_progress")
-          .select(
-            "user_id, item_id, done, profiles(name), roadmap_items!inner(roadmap_id)",
-          ),
-      ),
-      q(
-        "programme.level requirements",
-        supabase
-          .from("roadmap_level_requirements")
-          .select("roadmap_id, level, category, min_total"),
-      ),
-      // WHO IS ON THE PROGRAMME, including the people at zero. Built from
-      // progress alone, this screen could not see them: a member who had
-      // recorded nothing had no row, so "has not started" and "is not enrolled"
-      // rendered identically — and the person an admin most needs to notice is
-      // the one who has not begun. Absence cannot be read out of the table that
-      // records presence, so it comes from membership instead, through an RPC
-      // carrying the SAME three readers as the progress policy (0025).
-      q("programme.roster", supabase.rpc("roadmap_roster")),
-    ]);
+  const [
+    { data: roadmaps },
+    { data: rows },
+    { data: reqs },
+    { data: roster },
+    { data: viewer },
+  ] = await Promise.all([
+    q(
+      "programme.roadmaps",
+      supabase
+        .from("roadmaps")
+        .select(
+          "id, name, ends_on, roadmap_items(id, level, category, title, source, url, unit, target, compulsory)",
+        )
+        .order("starts_on", { ascending: false }),
+    ),
+    q(
+      "programme.progress (RLS decides whose)",
+      supabase
+        .from("roadmap_progress")
+        .select(
+          "user_id, item_id, done, profiles(name), roadmap_items!inner(roadmap_id)",
+        ),
+    ),
+    q(
+      "programme.level requirements",
+      supabase
+        .from("roadmap_level_requirements")
+        .select("roadmap_id, level, category, min_total"),
+    ),
+    // WHO IS ON THE PROGRAMME, including the people at zero. Built from
+    // progress alone, this screen could not see them: a member who had
+    // recorded nothing had no row, so "has not started" and "is not enrolled"
+    // rendered identically — and the person an admin most needs to notice is
+    // the one who has not begun. Absence cannot be read out of the table that
+    // records presence, so it comes from membership instead, through an RPC
+    // carrying the SAME three readers as the progress policy (0025).
+    q("programme.roster", supabase.rpc("roadmap_roster")),
+    // WHICH READER this is — for the footer only, never for filtering. The
+    // rows above are already scoped by RLS, and re-deciding the audience in
+    // app code is the second copy of the rule this file's header refuses to
+    // grow. It is read off `profiles` rather than `private.is_super_admin()`
+    // because the private schema is not exposed to PostgREST (0002), and the
+    // self arm of `profiles_select_self_or_shared` covers your own row.
+    q(
+      "programme.viewer (is_super_admin — copy only)",
+      supabase
+        .from("profiles")
+        .select("is_super_admin")
+        .eq("id", me)
+        .maybeSingle(),
+    ),
+  ]);
+
+  const isSuperAdmin = viewer?.is_super_admin ?? false;
 
   // Levels, not items — the unit the programme is built in and rewarded on, and
   // the same rule the member's own screen uses. `levelsComplete` mirrors
@@ -155,6 +182,13 @@ export default async function ProgrammeReportPage() {
         id: r.id,
         name: r.name,
         total: totalLevels,
+        // The cohort SHAPE, not just its members. A list of names answers "how
+        // is Yusuf doing"; the administration's question is "how many have got
+        // how far", because the contribution is paid per level (D55).
+        distribution: levelDistribution(
+          people.map((p) => p.levels),
+          totalLevels,
+        ),
         people: people.sort(
           // Furthest along first — this screen exists to answer "who has earned
           // the contribution", and that reading should not need scrolling.
@@ -197,6 +231,7 @@ export default async function ProgrammeReportPage() {
             >
               {p.name}
             </SectionHeading>
+            <CohortShape distribution={p.distribution} total={p.total} />
             <Card padding="none">
               <ul className="divide-y divide-border">
                 {p.people.map((person) => {
@@ -223,9 +258,14 @@ export default async function ProgrammeReportPage() {
         ))
       )}
 
+      {/* Say which reader this is. The old line described exactly one of the
+          three — "your own circles' members if you lead one" — and a super
+          admin, who leads nothing and is looking at every circle at once, was
+          reading a caption about somebody else's view of the same screen. */}
       <p className="px-1 text-center text-xs text-muted-foreground">
-        You see the people whose progress you are entitled to — your own
-        circles&rsquo; members if you lead one.{" "}
+        {isSuperAdmin
+          ? "You are an organiser, so this is everyone on every circle following a programme."
+          : "You see the people whose progress you are entitled to — your own circles’ members if you lead one."}{" "}
         <Link href="/groups" className="underline">
           Back to your circles
         </Link>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, Card, buttonVariants } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
-import { UsersIcon } from "@/components/app/icons";
+import { FlagIcon, UsersIcon } from "@/components/app/icons";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
 import { groupHref } from "@/lib/group-href";
@@ -15,20 +15,69 @@ import { JoinByCode } from "./join-by-code";
  * Manage (M2) sets the active-group cookie and opens the real manage screen;
  * invite links live there (D34/D35 — per-invite codes, not a group code).
  */
+/**
+ * The programme report — the only screen a super admin is the audience for, and
+ * until now the only one with no way in. Its single link lived inside a circle's
+ * Manage screen, gated on leading a circle that follows a programme: precisely
+ * the thing a super admin does not do.
+ *
+ * It is NOT gated on a programme existing. Checking would cost a query on a
+ * screen that runs for every member on every visit, and the report already says
+ * "Nothing recorded yet" honestly — an entry that leads to an empty state is
+ * better than one that vanishes and leaves nowhere to go.
+ */
+function ProgrammeEntry() {
+  return (
+    <Card className="flex items-center gap-1 p-1.5">
+      <Link
+        href="/programme"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/50"
+      >
+        <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+          <FlagIcon className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-foreground">Programme</p>
+          <p className="text-xs text-muted-foreground">
+            How far everyone has got, across every circle
+          </p>
+        </div>
+      </Link>
+    </Card>
+  );
+}
+
 export default async function GroupsHomePage() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const me = data?.claims.sub;
 
-  const { data: rows } = await q(
-    "groups.memberships (mine + counts)",
-    supabase
-      .from("memberships")
-      .select("role, groups(id, name, memberships(count))")
-      .eq("user_id", me ?? "")
-      .order("role"),
-  );
+  const [{ data: rows }, { data: viewer }] = await Promise.all([
+    q(
+      "groups.memberships (mine + counts)",
+      supabase
+        .from("memberships")
+        .select("role, groups(id, name, memberships(count))")
+        .eq("user_id", me ?? "")
+        .order("role"),
+    ),
+    // A super admin is deliberately in NO circle (D27), so every route in the
+    // app is gated against them by membership and this screen was their dead
+    // end: the empty state told an administrator to start their first circle.
+    // The flag is read here because /groups is a server component and the app
+    // shell does no DB work (§4) — the same constraint that put the roadmap on
+    // a Progress card instead of a fifth nav tab.
+    q(
+      "groups.viewer (is_super_admin)",
+      supabase
+        .from("profiles")
+        .select("is_super_admin")
+        .eq("id", me ?? "")
+        .maybeSingle(),
+    ),
+  ]);
 
+  const isSuperAdmin = viewer?.is_super_admin ?? false;
   const mine = (rows ?? []).filter((r) => r.groups != null);
   const owned = mine.filter((r) => r.role === "owner");
   const shared = mine.filter((r) => r.role === "admin");
@@ -91,9 +140,19 @@ export default async function GroupsHomePage() {
   if (noGroups) {
     return (
       <div className="flex flex-1 flex-col justify-center gap-6 px-5 py-8">
+        {isSuperAdmin && (
+          <div className="mx-auto w-full max-w-sm">
+            <SectionHeading>Administration</SectionHeading>
+            <ProgrammeEntry />
+          </div>
+        )}
+
         <div className="text-center">
           <h1 className="font-display text-2xl font-bold text-foreground">
-            Start your first circle
+            {/* An administrator has not FAILED to make a circle — being in none
+                is the role. Telling them to start their first one was the app
+                mistaking them for a new member. */}
+            {isSuperAdmin ? "Your own circles" : "Start your first circle"}
           </h1>
           <p className="mx-auto mt-2 max-w-sm text-sm text-balance text-muted-foreground">
             Cetele is built around a circle — a small group that keeps a shared
@@ -134,6 +193,13 @@ export default async function GroupsHomePage() {
         subtitle="Circles you own or help run"
         action={<NewGroupButton />}
       />
+
+      {isSuperAdmin && (
+        <section>
+          <SectionHeading>Administration</SectionHeading>
+          <ProgrammeEntry />
+        </section>
+      )}
 
       <section>
         <SectionHeading>My groups ({owned.length})</SectionHeading>

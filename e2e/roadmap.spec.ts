@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { signIn } from "./helpers";
+import { makeSuperAdmin, signIn } from "./helpers";
 
 /**
  * The roadmap loop (D55, migration 0025): a circle follows a published
@@ -16,6 +16,8 @@ import { signIn } from "./helpers";
 const STAMP = Date.now();
 const OWNER = `e2e-roadmap-${STAMP}@example.com`;
 const OUTSIDER = `e2e-roadmap-out-${STAMP}@example.com`;
+// The administration's reader: in NO circle, which is the whole point of them.
+const ORGANISER = `e2e-roadmap-org-${STAMP}@example.com`;
 
 test.describe.configure({ mode: "serial" });
 
@@ -192,4 +194,47 @@ test("an outsider's circle sees no programme, and the report shows them nobody",
   // of all the owner above, who is on the same programme in another circle.
   await page.goto("/programme");
   await expect(page.getByText("Nothing recorded yet")).toBeVisible();
+});
+
+test("a super admin has a way in, and reads the cohort across circles", async ({
+  page,
+}) => {
+  // A circle owner is NOT an organiser: no entry on /groups, and the footer
+  // describes the view they actually have. The negative comes first so the
+  // positive below cannot pass on a section that is simply always rendered.
+  await signIn(page, OUTSIDER);
+  await page.goto("/groups");
+  await expect(page.getByText("Administration")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /^Programme/ })).toHaveCount(0);
+
+  // The gap this closes: a super admin is deliberately in no circle, and the
+  // report's ONLY link lived inside a circle's Manage screen — gated on leading
+  // a circle that follows a programme, which is precisely what they do not do.
+  // Every route was membership-gated, so the app's front door was a dead end
+  // and the screen was reachable by typing the URL and nothing else.
+  await signIn(page, ORGANISER);
+  await makeSuperAdmin(ORGANISER);
+
+  await page.goto("/groups");
+  await expect(page.getByText("Administration")).toBeVisible();
+  // "Start your first circle" is the app mistaking an administrator for a new
+  // member — being in none is the role, not a step they have skipped.
+  await expect(page.getByText("Start your first circle")).toHaveCount(0);
+  await page.getByRole("link", { name: /^Programme/ }).click();
+  await page.waitForURL("**/programme");
+
+  // Across circles they are in none of — the whole point of the reader. The
+  // OWNER above is on the programme through their own circle.
+  await expect(page.getByText("Nothing recorded yet")).toHaveCount(0);
+  await expect(page.getByText("0 of 3 levels").first()).toBeVisible();
+
+  // The cohort shape, and it is TEXT — colour alone never carries a reading
+  // (§5). Everyone the organiser can see is at zero, so one bucket holds them
+  // all and the empty buckets are not drawn.
+  await expect(page.getByText("not started")).toBeVisible();
+
+  // And the footer names THIS reader. It used to describe exactly one of the
+  // three — "your own circles' members if you lead one" — so an organiser who
+  // leads nothing read a caption about somebody else's view of the screen.
+  await expect(page.getByText(/You are an organiser/)).toBeVisible();
 });

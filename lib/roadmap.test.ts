@@ -33,6 +33,7 @@ import {
   daysLeft,
   isActiveOn,
   levelComplete,
+  levelDistribution,
   levelPct,
   levelsComplete,
   levelsOf,
@@ -359,5 +360,69 @@ describe("the window, on the member's own calendar (D34)", () => {
     // midnight, so the subtraction carries no zone and no 23/25-hour day.
     assert.equal(daysLeft("2026-04-06", "2026-04-01"), 5);
     assert.equal(daysLeft("not-a-date", "2026-01-01"), 0);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * The cohort shape. NO SQL TWIN — the database computes no distributions, so
+ * this section is the whole of `levelDistribution`'s coverage, exactly like the
+ * percentage section above. Both exist because the report is the screen an
+ * administrator makes a payment decision on.
+ * ------------------------------------------------------------------------- */
+
+describe("levelDistribution", () => {
+  it("returns a bucket per level count, including the empty ones", () => {
+    assert.deepEqual(levelDistribution([0, 0, 1, 3], 3), [
+      { levels: 0, count: 2 },
+      { levels: 1, count: 1 },
+      { levels: 2, count: 0 },
+      { levels: 3, count: 1 },
+    ]);
+  });
+
+  it("counts EVERYONE — the headcount always matches the roster", () => {
+    const people = [0, 0, 0, 1, 1, 2, 3, 3, 3];
+    const total = levelDistribution(people, 3).reduce((n, b) => n + b.count, 0);
+    assert.equal(total, people.length);
+  });
+
+  it("keeps a nobody-has-started programme honest", () => {
+    // Everyone in bucket 0 and the rest present but empty — the state the
+    // report opens in, and the one an admin most needs to see AS a shape.
+    assert.deepEqual(levelDistribution([0, 0, 0], 2), [
+      { levels: 0, count: 3 },
+      { levels: 1, count: 0 },
+      { levels: 2, count: 0 },
+    ]);
+  });
+
+  it("has a single bucket when the programme has no levels yet", () => {
+    // An item-less roadmap: `levelsOf` is empty, so total is 0. One bucket,
+    // everyone in it — not an empty array, which would render as no cohort.
+    assert.deepEqual(levelDistribution([0, 0], 0), [{ levels: 0, count: 2 }]);
+  });
+
+  it("no one at all is still a valid shape, not a crash", () => {
+    assert.deepEqual(levelDistribution([], 2), [
+      { levels: 0, count: 0 },
+      { levels: 1, count: 0 },
+      { levels: 2, count: 0 },
+    ]);
+  });
+
+  it("CLAMPS rather than drops a count outside the range", () => {
+    // The catalogue shrank under someone who had already finished 3 levels.
+    // Nothing earned is ever revoked (§4), so they stay counted — in the top
+    // bucket. Dropping them would quietly shrink the headcount on the screen
+    // that decides who gets paid.
+    assert.deepEqual(levelDistribution([3, 1], 2), [
+      { levels: 0, count: 0 },
+      { levels: 1, count: 1 },
+      { levels: 2, count: 1 },
+    ]);
+    assert.deepEqual(levelDistribution([-1], 1), [
+      { levels: 0, count: 1 },
+      { levels: 1, count: 0 },
+    ]);
   });
 });

@@ -70,3 +70,27 @@ export async function signIn(page: Page, email: string) {
   // Landing anywhere inside the app means the session cookie stuck.
   await page.waitForURL(/\/today|\/groups|\/g\//);
 }
+
+/**
+ * Make `email` a super admin — the administration's out-of-band role (D27).
+ *
+ * SERVICE ROLE ON PURPOSE, and it is the only way this can be done. The guard
+ * trigger on `profiles` refuses any `is_super_admin` flip from `authenticated`
+ * or `anon`, so there is no client path to grant it and no UI to drive: in
+ * production it is set from the Supabase dashboard. A spec that needs this
+ * reader has to reach round the app exactly as an administrator does.
+ */
+export async function makeSuperAdmin(email: string) {
+  const supabase = admin();
+
+  const { data, error: listError } = await supabase.auth.admin.listUsers();
+  if (listError) throw listError;
+  const user = data.users.find((u) => u.email === email);
+  if (!user) throw new Error(`no such user to promote: ${email}`);
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ is_super_admin: true })
+    .eq("id", user.id);
+  if (error) throw error;
+}

@@ -42,7 +42,46 @@ review_ — is **met**.
 | Perf         | CWV baseline measured 2026-07-26 — all thresholds pass except the count screen's FIRST tap; numbers + two open questions in §2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Working tree | clean on `staging`. The `task-assignees` → `task-config-history` → `profile-name` stack fast-forwarded to `staging` and then to `main` at `1024ddd` (2026-08-04); the three local feature branches still exist and are safe to delete. **`main` and `staging` are level** — the only thing on `staging` after the promotion is this status update                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
-**Last work (2026-08-07) — two fixes SHIPPED to `staging`, and the roadmap rebuilt on the real booklet.**
+**Last work (2026-08-08) — the super admin could not REACH the screen built for them (still on
+`mohidkhanzada/roadmap-ui`).** Found by opening the app, not by a gate: every gate was green while the
+role was unusable. The database half was already right and is untouched — `private.is_super_admin()`
+has gated every roadmap policy since 0025, and `roadmap_roster()` carries the same three readers. The
+whole defect was that **`is_super_admin` appeared nowhere in `app/`, `components/` or `lib/`** outside
+the generated types.
+
+- **The front door was a dead end.** `/programme`'s only link lives inside a circle's Manage screen,
+  gated on leading a circle that follows a programme — precisely what a super admin does not do. Every
+  other route is membership-gated, so **the screen was reachable by typing the URL and nothing else**,
+  and `/groups` told an administrator to "Start your first circle". Being in no circle **is** the role
+  (D27), not a step they skipped. Now `/groups` carries an **Administration** section when the flag is
+  set, in both the populated and the empty branch. Read there because /groups is a server component and
+  **the app shell does no DB work (§4)** — the same constraint that put the roadmap on a Progress card
+  rather than a fifth nav tab, hit a second time.
+- **The footer described one of the three readers to all three.** "your own circles' members if you lead
+  one" — an organiser looking at every circle at once was reading a caption about somebody else's view.
+  The flag is read for **copy only, never for filtering**: the rows are already RLS-scoped, and a second
+  copy of the audience rule in app code is exactly what that file's header refuses to grow. Off
+  `profiles` rather than `private.is_super_admin()`, because the private schema is not exposed to
+  PostgREST and the self arm of `profiles_select_self_or_shared` already covers your own row.
+- **A flat name list could not answer the question the screen exists for.** The contribution is paid per
+  LEVEL (D55), so "how many have got how far" is the reading, and the people at zero are the ones worth
+  chasing — new `levelDistribution` + a `CohortShape` strip. It **counts everyone**: a level count outside
+  the programme's range is clamped into the top bucket, never dropped, because nothing earned is revoked
+  (§4) and silently shrinking a headcount on the screen that decides who gets paid is the one failure it
+  cannot afford. Colour is never the message (§5) — the strip is `aria-hidden` and the legend carries a
+  number and a label per bucket. One theme-aware token at varying opacity, not steps off the primary
+  scale: those tints are fixed hex in both themes, so on dark `bg-primary-300` would invert the reading.
+- **Client-only again, so the unit suite is the whole of its coverage.** `levelDistribution` has no SQL
+  twin — the database computes no distributions — which is the same shape as the `categoryPct` bug. Test
+  written with the code, per CLAUDE.md. Unit **19 → 25**, e2e **48 → 49** (the new spec asserts the
+  negative first: a circle owner sees no Administration section).
+- **What I did NOT build, deliberately: a way to GRANT the flag.** The guard trigger on `profiles`
+  refuses any `is_super_admin` flip from `authenticated`/`anon`, and that is D27 working — a UI to grant
+  it would be a self-escalation path. **It is set from the Supabase dashboard, and that is now written
+  down here rather than being folklore.** `e2e/helpers.ts` reaches round the app with the service role
+  for the same reason.
+
+**Before that (2026-08-07) — two fixes SHIPPED to `staging`, and the roadmap rebuilt on the real booklet.**
 
 **On `staging` now (`2ca2e59`), independent of the roadmap and ready to promote.** Both were found by
 opening the app rather than by any gate.

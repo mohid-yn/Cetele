@@ -356,3 +356,46 @@ export function programmeWindow(
 /** Whether the window is open on the member's own calendar. */
 export const isActiveOn = (roadmap: Roadmap, todayISO: string) =>
   programmeWindow(roadmap.startsOn, roadmap.endsOn, todayISO).state === "open";
+
+/**
+ * How many people are at each level count — the cohort shape, for the report.
+ *
+ * A flat list of names answers "how is Yusuf doing" and nothing else. The
+ * question the administration actually has is "how many have got how far",
+ * because the reward is paid per LEVEL (D55) and the people at zero are the
+ * ones worth noticing. At three circles the list carried that by eye; at the
+ * size the programme is meant to run it does not.
+ *
+ * EVERY bucket from 0 to `totalLevels` is returned, including the empty ones,
+ * and that is deliberate: the caller decides what to draw, and a bucket missing
+ * from the array and a bucket with nobody in it are different claims. The
+ * legend hides the empty ones; the shape does not lie about them.
+ *
+ * Client-only, like `categoryPct` — the database computes no distributions, so
+ * there is no SQL twin to cross-check this against and the unit suite is the
+ * whole of its coverage.
+ */
+export type LevelBucket = { levels: number; count: number };
+
+export function levelDistribution(
+  levelsPerPerson: number[],
+  totalLevels: number,
+): LevelBucket[] {
+  const buckets: LevelBucket[] = Array.from(
+    { length: Math.max(0, totalLevels) + 1 },
+    (_, levels) => ({ levels, count: 0 }),
+  );
+  for (const done of levelsPerPerson) {
+    // Clamped rather than dropped. A count outside the programme's own range
+    // means the catalogue shrank under someone who had already finished those
+    // levels — nothing earned is ever revoked (§4), so they belong in the top
+    // bucket, not off the chart. Silently losing a person from a headcount is
+    // the one failure this screen cannot afford.
+    const at = Math.min(
+      Math.max(0, Math.round(done)),
+      Math.max(0, totalLevels),
+    );
+    buckets[at]!.count += 1;
+  }
+  return buckets;
+}

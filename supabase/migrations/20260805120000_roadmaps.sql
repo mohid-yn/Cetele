@@ -507,6 +507,25 @@ grant select on public.roadmap_rewards            to authenticated;
 grant select on public.roadmap_level_requirements to authenticated;
 grant select on public.roadmap_progress           to authenticated;
 
+-- Promoting an administrator, server-side. 0025 is what made `is_super_admin`
+-- load-bearing: before the roadmap the flag gated recovery and moderation, and
+-- now it decides who can read the cohort a payment is decided on. Someone has
+-- to be able to SET it.
+--
+-- The guard trigger (0001) has always named service_role as an allowed setter —
+-- it refuses the flip only from `authenticated`/`anon`, which is D27 and stays
+-- exactly as it is: there is no client path to this and no UI to grant it. But
+-- 0006 revoked default privileges for EVERY role, service_role included, so the
+-- role the trigger permits could not reach the table at all. This makes that
+-- stated intent true, the same way `push_subscriptions` had to (standard #6).
+--
+-- Column-scoped on purpose: service_role gets `is_super_admin` and nothing else
+-- writable on `profiles`. It is NOT a widening in any real sense — a holder of
+-- the service key can already mint a session for any account through the admin
+-- auth API (which is exactly how `e2e/helpers.ts` signs in), so anyone who could
+-- abuse this could already be that person directly.
+grant select, update (is_super_admin) on public.profiles to service_role;
+
 -- ============================================================================
 -- set_roadmap_progress — the only writer
 -- ============================================================================
