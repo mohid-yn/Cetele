@@ -140,16 +140,14 @@ values
   ('00000000-0000-0000-0000-00000002a002', '00000000-0000-0000-0000-0000000000f1', 2, 'book', 'The Staff of Moses', 'Bediüzzaman Said Nursi', null, 'book', 1, false, 2),
   ('00000000-0000-0000-0000-00000002a003', '00000000-0000-0000-0000-0000000000f1', 2, 'book', 'Riyad-us-Saliheen: The Book of Miscellany', 'Imam An-Nawawi', null, 'book', 1, false, 3),
   ('00000000-0000-0000-0000-00000002a004', '00000000-0000-0000-0000-0000000000f1', 2, 'quran', '1 Khatm', 'Thirty juz', null, 'juz', 30, false, 1),
-  ('00000000-0000-0000-0000-00000002a005', '00000000-0000-0000-0000-0000000000f1', 2, 'quran_studies', 'Tajweed Book 3 — Theory', null, null, 'book', 1, false, 1),
-  -- SECOND booklet contradiction, and it is resolved the OPPOSITE way to the
-  -- level-3 Qur'an one below — which is why both are flagged rather than
-  -- quietly settled. The level-2 OVERVIEW (p.07) says "Tajweed Book 3 Reading";
-  -- the level-2 DETAIL page (p.09) says "Tajweed Book 3 iRead". "iRead" reads
-  -- like a product name and "Reading" like a description of the work, so the
-  -- overview is taken — but for the Qur'an the DETAIL page is taken. One of
-  -- these two choices is inconsistent with the other and only the owner can say
-  -- which. Open question.
-  ('00000000-0000-0000-0000-00000002a006', '00000000-0000-0000-0000-0000000000f1', 2, 'quran_studies', 'Tajweed Book 3 — Reading', null, null, 'book', 1, false, 2),
+  ('00000000-0000-0000-0000-00000002a005', '00000000-0000-0000-0000-0000000000f1', 2, 'quran_studies', 'Tajweed Book 3 (Theory)', null, null, 'book', 1, false, 1),
+  -- SETTLED BY THE ARTWORK, not by preference. The overview (p.07) says
+  -- "Tajweed Book 3 Reading" and the detail page (p.09) says "iRead", and the
+  -- seed originally took the overview while taking the DETAIL page for the
+  -- level-3 Qur'an — two contradictions resolved in opposite directions, which
+  -- is what flagged it. The BOOK COVER on p.09 reads "TAJWEED BOOK 3 (iRead)".
+  -- iRead is the title; "Reading" was the overview paraphrasing it.
+  ('00000000-0000-0000-0000-00000002a006', '00000000-0000-0000-0000-0000000000f1', 2, 'quran_studies', 'Tajweed Book 3 (iRead)', null, null, 'book', 1, false, 2),
   ('00000000-0000-0000-0000-00000002a007', '00000000-0000-0000-0000-0000000000f1', 2, 'quran_studies', 'Qur''an fluency', 'Approximately 4 minutes', null, 'assessment', 1, false, 3),
   ('00000000-0000-0000-0000-00000002a008', '00000000-0000-0000-0000-0000000000f1', 2, 'memorisation', 'Surahs At-Tariq to Al-Layl', 'Chapters 86–92', null, 'surahs', 7, false, 1),
   ('00000000-0000-0000-0000-00000002a009', '00000000-0000-0000-0000-0000000000f1', 2, 'listening', 'Towards the Morality of Qur''an', null, null, 'minutes', 200, true, 1),
@@ -311,6 +309,12 @@ where public.roadmap_items.id = v.id;
 -- action object holding the /URI. Twenty-two of them, and not one appears in
 -- any text extraction.
 --
+-- TWO of the booklet's links are `http://`; they are stored as `https://`, and
+-- that is the ONLY edit made to any of them. It preserves the destination
+-- exactly (YouTube redirects anyway) and avoids shipping a plaintext link into
+-- every member's browser. Everything else — including the `ab_channel`
+-- attribution on the Sawda talk — is byte-for-byte what the booklet carries.
+--
 -- MAPPED BY POSITION, NOT BY ORDER. Each annotation's rectangle was aligned
 -- against the word boxes on its page (`pdftotext -bbox`), so every URL below is
 -- the one sitting on that lecture's own placeholder line — playlist1 through
@@ -327,7 +331,7 @@ from (values
   ('00000000-0000-0000-0000-00000001a014'::uuid, 'https://www.youtube.com/playlist?list=PLukPSg97-iL4iptAKEZ7psEoQFj4TBu42'),  -- The Way of Ascension's Light
   ('00000000-0000-0000-0000-00000001a015'::uuid, 'https://www.youtube.com/watch?v=7yrTMiCMIY8'),                                -- Nusaybah bint Ka'ab
   ('00000000-0000-0000-0000-00000001a016'::uuid, 'https://www.youtube.com/watch?v=BQHGk6swoc8'),                                -- Ubadah ibn al-Samit
-  ('00000000-0000-0000-0000-00000001a017'::uuid, 'https://www.youtube.com/watch?v=KzlHreolLu8'),                                -- Sawda Bint Zama'a
+  ('00000000-0000-0000-0000-00000001a017'::uuid, 'https://www.youtube.com/watch?v=KzlHreolLu8&ab_channel=TheFirsts%7CTheForerunnersofIslam'), -- Sawda Bint Zama'a
   ('00000000-0000-0000-0000-00000001a018'::uuid, 'https://www.youtube.com/watch?v=Vf7nYNbYuQY&list=PLa4GKxenTk5XyfP1cC1Zjm1aQCjXuVdg9'), -- Lessons From The Qur'an
 
   -- Level 2 (booklet p.11)
@@ -365,3 +369,54 @@ from (values
    'Chapters 78–85, completing Juz ''Amma — 259 verses. An-Naba (40) · An-Nazi''at (46) · ''Abasa (42) · At-Takwir (29) · Al-Infitar (19) · Al-Mutaffifin (36) · Al-Inshiqaq (25) · Al-Buruj (22).')
 ) as v(id, description)
 where public.roadmap_items.id = v.id;
+
+
+-- ---------------------------------------------------------------------------
+-- The Qur'an and Qur'an-studies covers, and what the booklet actually shows
+-- ---------------------------------------------------------------------------
+-- Another miss the owner had to point out, and the same root cause as the
+-- links: the FIRST pass took only the three Book pages and assumed the rest of
+-- the programme had no artwork. It does. Pages 04, 09 and 14 each carry a
+-- mushaf under "Qur'an" and the study texts under "Qur'an Studies" — nine more
+-- covers, and with them the real identity of two items the booklet names only
+-- in the abstract.
+--
+-- Placement was read off the RENDERED pages, not off extraction order, because
+-- `pdfimages` emits in content-stream order and that is not reading order (the
+-- level-1 Book page hands back the third cover first).
+update public.roadmap_items
+   set image_url   = v.image_url,
+       source      = coalesce(v.source, public.roadmap_items.source),
+       description = coalesce(v.description, public.roadmap_items.description)
+from (values
+  -- Qur'an: the same mushaf on all three pages, so one file serves all three.
+  ('00000000-0000-0000-0000-00000001a004'::uuid, '/roadmap/mushaf.png', null, null),
+  ('00000000-0000-0000-0000-00000002a004'::uuid, '/roadmap/mushaf.png', null, null),
+  ('00000000-0000-0000-0000-00000003a005'::uuid, '/roadmap/mushaf.png', null, null),
+
+  -- The tajweed texts are a SERIES, which the booklet shows and the roadmap
+  -- never said: "The Madinah Series", published by Madinah Education.
+  ('00000000-0000-0000-0000-00000001a005'::uuid, '/roadmap/tajweed-book-1.png',
+   'The Madinah Series · Madinah Education', null),
+  ('00000000-0000-0000-0000-00000001a006'::uuid, '/roadmap/tajweed-book-2.png',
+   'The Madinah Series · Madinah Education', null),
+  ('00000000-0000-0000-0000-00000002a005'::uuid, '/roadmap/tajweed-book-3-theory.png',
+   'The Madinah Series · Madinah Education', null),
+  ('00000000-0000-0000-0000-00000002a006'::uuid, '/roadmap/tajweed-book-3-iread.png',
+   'The Madinah Series · Madinah Education', null),
+
+  -- "Tafseer" is one word in the booklet and TWO books on the page. Both are
+  -- named here rather than one being picked: the booklet shows them side by
+  -- side and says nothing about choosing, so neither may be dropped silently.
+  ('00000000-0000-0000-0000-00000003a006'::uuid, '/roadmap/the-study-quran.png',
+   'The Study Quran (Seyyed Hossein Nasr) · The Qur''an with Annotated Interpretation (Ali Ünal)',
+   'The booklet shows two editions under Tafseer: The Study Quran — A New Translation and Commentary, edited by Seyyed Hossein Nasr, and The Qur''an with Annotated Interpretation in Modern English by Ali Ünal.')
+) as v(id, image_url, source, description)
+where public.roadmap_items.id = v.id;
+
+-- The level-3 khatm is read WITH interpretation, and the booklet shows which
+-- edition on the same page: Ali Ünal's annotated interpretation.
+update public.roadmap_items
+   set image_url = '/roadmap/quran-annotated-interpretation.png',
+       source = 'With Ali Ünal''s Annotated Interpretation in Modern English'
+ where id = '00000000-0000-0000-0000-00000003a005';

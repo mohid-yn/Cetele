@@ -106,6 +106,29 @@ the generated types.
   level-3 Qur'an it takes the **detail** page ("1 Khatm with Interpretation" over the overview's "2
   Khatm"). One of those two choices is wrong and only the owner can say which. Both are now flagged in
   `seed.sql`; **neither is settled.**
+- **Nine MORE covers, and the level-2 tajweed contradiction is SETTLED by the artwork (2026-08-08).** The
+  owner said links and embeds were still missing and was right a second time. An exhaustive scan —
+  including **inflating all 185 streams**, because a raw regex cannot see inside a compressed object
+  stream — confirms the PDF holds exactly **22 URIs and no more**, and no embedded files, rich media,
+  attachments, forms or scripts. All 22 were already in. What was missing was **artwork**: the first pass
+  took only the three Book pages and assumed the rest of the programme had none. Pages 04/09/14 each
+  carry a **mushaf** under Qur'an and the **study texts** under Qur'an Studies — nine more covers.
+  Placement read off the RENDERED pages, never extraction order: `pdfimages` emits in content-stream
+  order, and on the level-1 Book page that hands back the third cover first.
+- **THE COVER SETTLES IT: "TAJWEED BOOK 3 (iRead)".** The overview said "Reading", the detail page said
+  "iRead", and the seed had taken the overview — while taking the DETAIL page for the level-3 Qur'an,
+  which is how the inconsistency surfaced. The book's own cover reads _iRead_; "Reading" was the overview
+  paraphrasing. **One of the two open contradictions is now closed on evidence rather than preference.**
+  The level-3 Qur'an one stands: overview "2 Khatm" vs detail "1 Khatm with Interpretation".
+- **Two items were named only in the abstract and the booklet shows what they are.** "Tafseer" is **two
+  books** on the page — _The Study Quran_ (Seyyed Hossein Nasr) and _The Qur'an with Annotated
+  Interpretation_ (Ali Ünal) — and both are recorded, because the booklet shows them side by side and
+  says nothing about choosing. The level-3 khatm "with Interpretation" is Ali Ünal's edition. The tajweed
+  texts are **The Madinah Series**, Madinah Education — a publisher the roadmap never carried.
+- **Three links had been altered from the source and are now faithful.** A diff of the database against
+  the PDF's own URIs found the `ab_channel` attribution dropped from the Sawda talk (restored) and two
+  `http://` upgraded to `https://` (kept, and now documented in the seed — it preserves the destination
+  and avoids a plaintext link, and it is the only edit made to any of the 22).
 - **Q7 RESOLVED — the roadmap is a NAV TAB (2026-08-08, owner's call), and the constraint that blocked it
   turned out not to bind.** It had been a card on Progress because a conditional tab needs a per-group DB
   fact and the app shell does no DB work (§4, and for good reason — per-request auth there once took e2e
