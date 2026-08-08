@@ -128,3 +128,36 @@ test("deep-link: a circle URL is shareable, and a stranger is turned away", asyn
   await expect(pageB.getByText("Start your first circle")).toBeVisible();
   await expect(pageB.getByText("Deep Circle")).toHaveCount(0);
 });
+
+test("on a phone, Today carries its own group switcher", async ({ page }) => {
+  // The complaint this closes: switching circles meant leaving Today for the
+  // Group hub, using the switcher that IS its title, and coming back. Three
+  // taps to change context on the screen you were already looking at.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page, OWNER);
+  const alpha = await createCircle(page, "Switch Alpha", "Tasbih");
+  const beta = await createCircle(page, "Switch Beta", "Salawat");
+
+  await page.goto(`/g/${alpha}/today`);
+  const switcher = page.getByRole("button", { name: /Switch Alpha/ });
+  await expect(switcher).toBeVisible();
+
+  await switcher.click();
+  await page.getByRole("option", { name: /Switch Beta/ }).click();
+  await page.waitForURL(`**/g/${beta}/today`);
+
+  // It STAYS on Today — the whole point is not being sent somewhere else.
+  await expect(page.getByText("Continue Salawat")).toBeVisible();
+
+  // And it is absent for someone with one circle: a switcher with nothing to
+  // switch to is a control that does not work. `first()` because the desktop
+  // sidebar carries its own, which is hidden at this width but present in the
+  // DOM — the assertion is about the one INSIDE the page header.
+  await signIn(page, `e2e-solo-${Date.now()}@example.com`);
+  const solo = await createCircle(page, "Solo Circle", "Tahmid");
+  await page.goto(`/g/${solo}/today`);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Solo Circle/ })).toHaveCount(
+    0,
+  );
+});

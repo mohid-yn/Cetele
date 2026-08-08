@@ -18,6 +18,7 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/app/page-header";
+import { GroupSwitcher } from "@/components/app/group-switcher";
 import { SectionHeading } from "@/components/app/section-heading";
 import { StreakChip } from "@/components/app/streak-chip";
 import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
@@ -315,6 +316,27 @@ export function TodayClient({
             <h1 className="font-display text-2xl font-bold text-foreground">
               {firstName}
             </h1>
+            {/* WHICH CIRCLE, and a way out of it. Today is where a member
+                actually lives, and switching used to mean going to Group and
+                using the switcher that IS its title — three taps to change
+                context on the screen you are on. Quiet and secondary here: the
+                h1 above is the person, not the circle.
+
+                `onlyWhenMultiple` because a switcher with nothing to switch to
+                is a control that does not work, and most members have one
+                circle. It is NOT the page title here, so it can simply be
+                absent — the reason /group's copy cannot do the same. */}
+            <GroupSwitcher
+              onlyWhenMultiple
+              initialName={groupName}
+              initialGroupId={groupId}
+              /* lg:hidden — the desktop SIDEBAR already carries a switcher,
+                 prominently. Two controls doing the same job on one screen is
+                 clutter, and it makes "the group switcher" ambiguous to anyone
+                 (or any test) reaching for it by name. Phones have no sidebar,
+                 which is where the complaint came from. */
+              className="mt-0.5 -ml-2 px-2 text-sm lg:hidden"
+            />
             {/* The date is the member's OWN today (useLocalToday, D34) — not the
                 selected day, which the day-strip note below already names. */}
             <Eyebrow className="mt-0.5">{fmtLongDate(todayISO)}</Eyebrow>

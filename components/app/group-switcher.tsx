@@ -35,13 +35,22 @@ export function GroupSwitcher({
   className,
   initialName,
   initialGroupId = null,
+  onlyWhenMultiple = false,
 }: {
   className?: string;
   initialName?: string;
   initialGroupId?: string | null;
+  /**
+   * Render NOTHING for someone with a single circle. Off by default because on
+   * /group the switcher IS the page title and must always be there — but on
+   * Today it is a convenience, and a switcher with nothing to switch to is a
+   * control that does not work. Waits for the store to load rather than
+   * guessing: showing it and then taking it away is worse than a late arrival.
+   */
+  onlyWhenMultiple?: boolean;
 }) {
   const pathname = usePathname();
-  const { groups } = useGroupsSnapshot();
+  const { groups, loaded } = useGroupsSnapshot();
   const [open, setOpen] = React.useState(false);
   // Where to anchor the portaled menu (fixed, viewport coords). The menu is
   // portaled to <body> so nothing in the page can paint over it (D46's page-
@@ -104,6 +113,8 @@ export function GroupSwitcher({
     groups.find((g) => g.id === activeId)?.name ??
     initialName ??
     "Select group";
+
+  const hidden = onlyWhenMultiple && (!loaded || groups.length <= 1);
 
   const roleLabel = (r: Role) =>
     r === "owner" ? "Owner" : r === "admin" ? "Co-admin" : "Member";
@@ -173,6 +184,8 @@ export function GroupSwitcher({
       </div>
     </div>
   );
+
+  if (hidden) return null;
 
   return (
     <>
