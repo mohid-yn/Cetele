@@ -662,7 +662,9 @@ export type Database = {
         Row: {
           category: string;
           compulsory: boolean;
+          description: string | null;
           id: string;
+          image_url: string | null;
           level: number;
           roadmap_id: string;
           sort_order: number;
@@ -675,7 +677,9 @@ export type Database = {
         Insert: {
           category: string;
           compulsory?: boolean;
+          description?: string | null;
           id?: string;
+          image_url?: string | null;
           level: number;
           roadmap_id: string;
           sort_order?: number;
@@ -688,7 +692,9 @@ export type Database = {
         Update: {
           category?: string;
           compulsory?: boolean;
+          description?: string | null;
           id?: string;
+          image_url?: string | null;
           level?: number;
           roadmap_id?: string;
           sort_order?: number;
@@ -1105,6 +1111,15 @@ export type Database = {
       };
       set_reminder: {
         Args: { p_enabled: boolean; p_task: string; p_time: string };
+        Returns: undefined;
+      };
+      set_roadmap_item_content: {
+        Args: {
+          p_description: string;
+          p_image_url: string;
+          p_item: string;
+          p_url: string;
+        };
         Returns: undefined;
       };
       set_roadmap_progress: {

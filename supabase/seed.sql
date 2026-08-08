@@ -162,12 +162,14 @@ values
   ('00000000-0000-0000-0000-00000003a001', '00000000-0000-0000-0000-0000000000f1', 3, 'book', 'Endeavor for Renewal', 'M. Fethullah Gülen', null, 'book', 1, false, 1),
   ('00000000-0000-0000-0000-00000003a002', '00000000-0000-0000-0000-0000000000f1', 3, 'book', 'The Gleams', 'Bediüzzaman Said Nursi', null, 'book', 1, false, 2),
   ('00000000-0000-0000-0000-00000003a003', '00000000-0000-0000-0000-0000000000f1', 3, 'book', 'Ihya Ulum al-Din: The Forty Principles of the Religion', 'Imam al-Ghazali, adapted summary', null, 'book', 1, false, 3),
-  -- Özbüyük, NOT Öztürk. The author is on the cover image and not in the PDF's
-  -- text layer, so this was read off the artwork; the first pass guessed a
-  -- plausible Turkish surname and shipped a real person's name wrong. Anything
-  -- here that came from a cover rather than from extractable text is worth
-  -- re-checking against the artwork, not against memory.
-  ('00000000-0000-0000-0000-00000003a004', '00000000-0000-0000-0000-0000000000f1', 3, 'book', 'Qualities of a Devoted Soul', 'İbrahim Özbüyük', null, 'book', 1, false, 4),
+  -- ÖZÜBÜYÜK, and it took three goes. The author is on the cover artwork and
+  -- not in the PDF's text layer: the first pass guessed "Öztürk" from nothing,
+  -- the second read "Özbüyük" off a 400dpi upscale of a 190x300 image, and the
+  -- embedded image simply does not carry enough pixels to settle it. Confirmed
+  -- at 900dpi AND against the publisher's listing (ISBN 9781597842921). The
+  -- rule this earned: a real person's name is never inferred. If the source
+  -- cannot be read, go and find one that can.
+  ('00000000-0000-0000-0000-00000003a004', '00000000-0000-0000-0000-0000000000f1', 3, 'book', 'Qualities of a Devoted Soul', 'İbrahim Özübüyük', null, 'book', 1, false, 4),
   -- The booklet contradicts itself here: the level-3 overview says "2 Khatm",
   -- the level-3 detail page says "1 Khatm with Interpretation". The detail page
   -- is taken as authoritative and the discrepancy is an open question.
@@ -218,3 +220,74 @@ values
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000001a011', 33),
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000001a014', 134)
 on conflict (user_id, item_id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Descriptions and pictures (0027, D57)
+-- ---------------------------------------------------------------------------
+-- The prose is the BOOKLET's own, transcribed from the three Book pages. It is
+-- separated from the inserts above so the structural rows stay readable and so
+-- this block can be re-run on its own while the copy is still being reviewed.
+--
+-- Only the ten books have both. The covers are the booklet's own artwork,
+-- extracted from the PDF and served from `public/roadmap/` — versioned with the
+-- repo, so there is no bucket to provision and no external host to trust. The
+-- lectures have no picture: their thumbnails live on YouTube behind URLs that
+-- are still placeholders, and a fabricated thumbnail is the same lie as a
+-- fabricated link. They render as the category's icon instead.
+update public.roadmap_items set description = v.description, image_url = v.image_url
+from (values
+  ('00000000-0000-0000-0000-00000001a001'::uuid,
+   '“Call to good and prevent wrong” — amr bil ma''ruf wa nahy an al munkar. Depending on the translations within the Qur''anic contexts, “calling to good” may be rendered as promoting the right, just, honorable, righteous behavior, and virtue; whereas “preventing wrong” is forbidding what is evil, dishonorable, and vice. The Qur''an urges believers to embrace this duty individually and collectively and praises them when they practice this obligation (Al ‘Imran 3:104, 110)',
+   '/roadmap/calling-to-good.png'),
+
+  ('00000000-0000-0000-0000-00000001a002'::uuid,
+   'Belief and Unbelief by Bediüzzaman Said Nursi explores the profound implications of faith and doubt in human life. Drawing from Islamic teachings, Nursi presents a compelling argument for the centrality of belief in achieving spiritual fulfillment, moral clarity, and inner peace. The booklet examines the intellectual and emotional struggles of unbelief, providing insights into the transformative power of faith.',
+   '/roadmap/belief-and-unbelief.png'),
+
+  ('00000000-0000-0000-0000-00000001a003'::uuid,
+   'This book was undertaken specifically with a view toward providing the English-speaking Muslim who possesses a knowledge of at least the fundamentals of Fiqh and Shariat with a reliable and authentic text book of standard Hanafi Fiqh.',
+   '/roadmap/essential-hanafi-fiqh.png'),
+
+  ('00000000-0000-0000-0000-00000002a001'::uuid,
+   'A profound exploration of the spiritual, moral, and practical wisdom of the Qur''an. Through thematic reflections, Gülen provides insights into key verses, offering readers a deeper understanding of their significance in personal and communal life. The book emphasizes the timeless relevance of the Qur''an''s guidance, encouraging introspection, compassion, and commitment to universal values.',
+   '/roadmap/reflections-on-the-quran.png'),
+
+  ('00000000-0000-0000-0000-00000002a002'::uuid,
+   'The Staff of Moses is a collection of Nursi''s writings concerning worship, youth, life after death, belief in the Hereafter and their relation with happiness in this world and the next.',
+   '/roadmap/staff-of-moses.png'),
+
+  ('00000000-0000-0000-0000-00000002a003'::uuid,
+   'Riyad-us-Saliheen is a timeless collection of prophetic traditions compiled by Imam An-Nawawi. This section focuses on the foundational aspects of faith, ethics, and spiritual development, featuring hadiths that highlight themes such as sincerity, patience, gratitude, humility, and the importance of good intentions in daily life.',
+   '/roadmap/riyad-us-saliheen.png'),
+
+  ('00000000-0000-0000-0000-00000003a001'::uuid,
+   'True renewal is realized by retaining the purity of the seed and the root, and by synthesizing an entire inheritance of values with new thoughts and wisdom appropriate to the age. A thorough revival can only be realized with the efforts of the spirit, intellect, feelings, and willpower working in concert.',
+   '/roadmap/endeavor-for-renewal.png'),
+
+  ('00000000-0000-0000-0000-00000003a002'::uuid,
+   'The Gleams is a significant work within the Risale-i Nur collection, consisting of epistles that delve into the manifestations of divine attributes and spiritual truths. Using relatable analogies, clear explanations, and thought-provoking narratives, Nursi illustrates how the natural world and human experience reflect the wisdom and beauty of divine creation.',
+   '/roadmap/the-gleams.png'),
+
+  ('00000000-0000-0000-0000-00000003a003'::uuid,
+   'A comprehensive distillation of Imam al-Ghazali''s magnum opus, Ihya Ulum ad-Din (The Revival of the Religious Sciences), in which he explores the spiritual depth of virtually every aspect of Islam. This condensed work presents profound insights regarding man''s lifelong struggle to draw closer to Allah in a simple framework.',
+   '/roadmap/ihya-ulum-al-din.png'),
+
+  ('00000000-0000-0000-0000-00000003a004'::uuid,
+   'A believer is a devoted individual who has submitted his soul to its true owner. Faith is the greatest reality in the universe. It is a light that enters the heart through the guidance of God and transforms its fortunate bearer into a person of responsibility. This book is based on various essays and narrative stories that illustrate the profundity of faith.',
+   '/roadmap/qualities-of-a-devoted-soul.png')
+) as v(id, description, image_url)
+where public.roadmap_items.id = v.id;
+
+-- The non-book items get prose too, so no card on the timeline is bare. These
+-- are NOT the booklet's words — it gives these only a line each — so they say
+-- exactly what the row already asserts and claim nothing further.
+update public.roadmap_items set description = v.description
+from (values
+  ('00000000-0000-0000-0000-00000001a004'::uuid, 'Read half of the Qur''an over the year — fifteen juz, at whatever pace suits you.'),
+  ('00000000-0000-0000-0000-00000002a004'::uuid, 'A complete khatm: all thirty juz across the year.'),
+  ('00000000-0000-0000-0000-00000003a005'::uuid, 'A complete khatm read WITH its interpretation, so the meaning is taken alongside the recitation.'),
+  ('00000000-0000-0000-0000-00000001a008'::uuid, 'Surahs Ad-Duha to An-Nas — chapters 93 to 114, the last twenty-two of the mushaf.'),
+  ('00000000-0000-0000-0000-00000002a008'::uuid, 'Surahs At-Tariq to Al-Layl — chapters 86 to 92, continuing backwards from where level 1 stopped.'),
+  ('00000000-0000-0000-0000-00000003a008'::uuid, 'Surahs An-Naba to Al-Buruj — chapters 78 to 85, completing Juz ''Amma.')
+) as v(id, description)
+where public.roadmap_items.id = v.id;

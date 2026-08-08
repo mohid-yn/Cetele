@@ -83,16 +83,45 @@ export function RoadmapItemCard({
       )}
     >
       <div className="flex items-start gap-3">
-        <div
-          className={cn(
-            "grid size-10 shrink-0 place-items-center rounded-xl",
-            complete
-              ? "bg-primary-100 text-primary-800"
-              : "bg-muted text-muted-foreground",
-          )}
-        >
-          <Icon aria-hidden className="size-5" />
-        </div>
+        {/* A COVER where we have one, the category's icon where we do not.
+            Books have real artwork (the booklet's own, served from
+            `public/roadmap/`); a lecture's thumbnail lives on YouTube behind a
+            URL that is still a placeholder, and inventing one is the same lie
+            as inventing the link. So the fallback is a drawn mark, never an
+            empty grey box or a broken image.
+
+            A plain <img>, not next/image: `image_url` is organiser-editable and
+            can point at any host, and `remotePatterns` cannot be maintained for
+            "wherever they paste from". Explicit dimensions via the aspect box
+            so nothing reflows as covers load. */}
+        {item.imageUrl ? (
+          <div className="w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-muted shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element --
+                next/image cannot be used: `image_url` is ORGANISER-EDITABLE and
+                may point at any host, and `remotePatterns` cannot be maintained
+                for "wherever they paste from" — an unconfigured host makes
+                next/image THROW, turning one bad paste into a 500 on every
+                member's roadmap. Lazy, bounded, and mostly our own covers. */}
+            <img
+              src={item.imageUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="block aspect-[2/3] w-full object-cover"
+            />
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "grid size-10 shrink-0 place-items-center rounded-xl",
+              complete
+                ? "bg-primary-100 text-primary-800"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            <Icon aria-hidden className="size-5" />
+          </div>
+        )}
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -121,6 +150,16 @@ export function RoadmapItemCard({
           {item.source && (
             <p className="mt-0.5 truncate text-xs text-muted-foreground">
               {item.source}
+            </p>
+          )}
+
+          {/* The booklet's own blurb. CLAMPED to three lines: these run to a
+              full paragraph and a roadmap of 46 of them at full length is a
+              wall nobody reads. `wrap-anywhere` for the same reason the
+              subtitles needed it — a description can carry an unbroken URL. */}
+          {item.description && (
+            <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed wrap-anywhere text-muted-foreground">
+              {item.description}
             </p>
           )}
 

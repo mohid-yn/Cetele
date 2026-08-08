@@ -68,6 +68,11 @@ const item = (s: Spec): RoadmapItem => ({
   title: s.id,
   source: null,
   url: null,
+  // Presentation only (0027) — nothing in the completion rules reads these,
+  // which is exactly why they are null here: if a test ever needs them set to
+  // pass, something has started deciding completion from a description.
+  description: null,
+  imageUrl: null,
   unit: "units",
   target: s.target,
   compulsory: s.compulsory ?? false,

@@ -76,7 +76,7 @@ export default async function RoadmapPage({
       supabase
         .from("roadmap_items")
         .select(
-          "id, level, category, title, source, url, unit, target, compulsory",
+          "id, level, category, title, source, url, unit, target, compulsory, description, image_url",
         )
         .eq("roadmap_id", group.roadmap_id)
         .order("level")
@@ -144,6 +144,8 @@ export default async function RoadmapPage({
       unit: i.unit,
       target: i.target,
       compulsory: i.compulsory,
+      description: i.description,
+      imageUrl: i.image_url,
       done: doneByItem.get(i.id) ?? 0,
     })),
   };

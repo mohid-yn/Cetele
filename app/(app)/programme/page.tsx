@@ -53,7 +53,7 @@ export default async function ProgrammeReportPage() {
       supabase
         .from("roadmaps")
         .select(
-          "id, name, ends_on, roadmap_items(id, level, category, title, source, url, unit, target, compulsory)",
+          "id, name, ends_on, roadmap_items(id, level, category, title, source, url, unit, target, compulsory, description, image_url)",
         )
         .order("starts_on", { ascending: false }),
     ),
@@ -153,6 +153,8 @@ export default async function ProgrammeReportPage() {
         unit: i.unit,
         target: i.target,
         compulsory: i.compulsory,
+        description: i.description,
+        imageUrl: i.image_url,
         done: 0,
       }));
       const requirements = (reqs ?? [])

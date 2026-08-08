@@ -151,6 +151,26 @@ export function RoadmapClient({
     current ?? levels[levels.length - 1] ?? 1,
   );
 
+  // Which CATEGORIES are open, keyed `level:category` so the key stays unique
+  // across stations.
+  //
+  // A SET, not a single value, and that is not a detail. The levels are
+  // one-at-a-time because a member walks them in order (D55) and only one is
+  // ever theirs. Categories are not like that: finishing a book and then
+  // logging the minutes you listened to are the same sitting, and a single-open
+  // accordion makes the second action close the first. The first cut of this
+  // screen got it wrong and the e2e suite is what said so — every existing test
+  // had to reach past a category it had just collapsed.
+  const [openCats, setOpenCats] = React.useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const toggleCat = (key: string) =>
+    setOpenCats((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+
   return (
     <Screen>
       <PageHeader
@@ -234,135 +254,221 @@ export function RoadmapClient({
         />
       </Card>
 
-      {/* One accordion section per level. Levels are walked in ORDER, so the
-          finished ones collapse to a tick and the one in hand is open — the
-          alternative is a single scroll of ninety items where the fifteen that
-          are yours this year are indistinguishable from the rest. */}
-      {levels.map((level) => {
-        const lvlComplete = levelComplete(items, reqs, level);
-        const isOpen = open === level;
-        const cats = categoriesAt(items, level);
+      {/* THE TIMELINE. Levels are stations on one spine, walked in order, and
+          the spine is the point: a roadmap of 46 items across three stages is
+          a journey, and a flat list of collapsed panels does not read as one.
+          Each station opens to its categories, and each category opens to its
+          items — two levels of disclosure, because opening a level and getting
+          forty cards is the wall this replaced.
 
-        return (
-          <section key={level}>
-            <button
-              type="button"
-              onClick={() => setOpen(isOpen ? -1 : level)}
-              aria-expanded={isOpen}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left transition-colors",
-                "hover:bg-surface-hover active:bg-surface-active",
-                lvlComplete ? "border-primary-300" : "border-border",
-              )}
-            >
-              <div
-                className={cn(
-                  "grid size-10 shrink-0 place-items-center rounded-xl font-semibold tabular-nums",
-                  lvlComplete
-                    ? "bg-primary-100 text-primary-800"
-                    : level === current
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground",
-                )}
-              >
-                {lvlComplete ? (
-                  <CheckIcon aria-hidden className="size-5" />
-                ) : (
-                  level
-                )}
-              </div>
+          <ol>, not <div>s: the levels ARE an ordered sequence (D55 — level 2
+          continues where level 1 stopped), and a screen reader should hear that
+          without needing the spine, which is decorative and aria-hidden. */}
+      <ol className="flex flex-col">
+        {levels.map((level, idx) => {
+          const lvlComplete = levelComplete(items, reqs, level);
+          const isOpen = open === level;
+          const isLast = idx === levels.length - 1;
+          const cats = categoriesAt(items, level);
 
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <p className="text-sm font-semibold text-foreground">
-                    Level {level}
-                  </p>
-                  {/* Never colour alone (§5) — the state is also a word. */}
-                  {lvlComplete ? (
-                    <Badge variant="primary" size="sm">
-                      Complete
-                    </Badge>
-                  ) : level === current ? (
-                    <Badge variant="outline" size="sm">
-                      In progress
-                    </Badge>
-                  ) : null}
-                </div>
-                <ProgressBar
-                  value={levelPct(items, reqs, level)}
-                  tone={lvlComplete ? "success" : "primary"}
-                  className="mt-2 h-1.5"
+          return (
+            <li key={level} className="relative pl-11">
+              {/* The spine. Stops at the last station rather than running off
+                  the end of the list — a line into nothing reads as content
+                  that failed to load. */}
+              {!isLast && (
+                <span
+                  aria-hidden
+                  className="absolute top-6 bottom-0 left-[15px] w-0.5 bg-progress-track"
                 />
-              </div>
+              )}
 
-              <ChevronDownIcon
+              {/* The station. `ring-background` punches it out of the spine so
+                  the line appears to pass behind rather than through it. */}
+              <span
                 aria-hidden
                 className={cn(
-                  "size-5 shrink-0 text-muted-foreground transition-transform",
-                  isOpen && "rotate-180",
+                  "absolute top-1 left-0 grid size-8 place-items-center rounded-full text-xs font-bold tabular-nums ring-4 ring-background",
+                  lvlComplete
+                    ? "bg-primary text-primary-foreground"
+                    : level === current
+                      ? "bg-primary-100 text-primary-800 ring-4"
+                      : "bg-progress-track text-muted-foreground",
                 )}
-              />
-            </button>
+              >
+                {lvlComplete ? <CheckIcon className="size-4" /> : level}
+              </span>
 
-            {isOpen && (
-              <div className="mt-3 flex flex-col gap-5">
-                {cats.map((category) => {
-                  const group = itemsIn(items, level, category);
-                  const req = requirementFor(reqs, level, category);
-                  const catDone = categoryComplete(
-                    items,
-                    reqs,
-                    level,
-                    category,
-                  );
-                  const total = group.reduce(
-                    (n, i) => n + Math.min(i.done, i.target),
-                    0,
-                  );
+              <button
+                type="button"
+                onClick={() => setOpen(isOpen ? -1 : level)}
+                aria-expanded={isOpen}
+                className="flex w-full items-center gap-3 rounded-xl py-1.5 pr-2 text-left transition-colors hover:bg-surface-hover"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <p className="font-display text-base font-bold text-foreground">
+                      Level {level}
+                    </p>
+                    {/* Never colour alone (§5) — and never "Locked" either.
+                        Nothing refuses a write to a later level:
+                        `set_roadmap_progress` checks the roadmap is followed
+                        and clamps to the target, and that is all. A badge
+                        saying Locked would be the screen inventing a rule the
+                        database does not keep, which is the nav bug again. */}
+                    {lvlComplete ? (
+                      <Badge variant="primary" size="sm">
+                        Complete
+                      </Badge>
+                    ) : level === current ? (
+                      <Badge variant="outline" size="sm">
+                        In progress
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" size="sm">
+                        Not started
+                      </Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {levelPct(items, reqs, level)}%
+                    </span>
+                  </div>
+                  <ProgressBar
+                    value={levelPct(items, reqs, level)}
+                    tone={lvlComplete ? "success" : "primary"}
+                    className="mt-2 h-1.5"
+                  />
+                </div>
+                <ChevronDownIcon
+                  aria-hidden
+                  className={cn(
+                    "size-5 shrink-0 text-muted-foreground transition-transform",
+                    isOpen && "rotate-180",
+                  )}
+                />
+              </button>
 
-                  return (
-                    <div key={category}>
-                      <SectionHeading
-                        action={
-                          // A budgeted category reports against its BUDGET
-                          // ("302 of 600 minutes"), because that is the rule it
-                          // is judged by. Counting items finished would be a
-                          // different, misleading number: at level 1 there are
-                          // ten lectures on the menu and no requirement to
-                          // watch all ten.
-                          req
-                            ? `${total.toLocaleString()} of ${req.minTotal.toLocaleString()} ${group[0]?.unit ?? ""}`
-                            : `${group.filter((i) => i.done >= i.target).length} of ${group.length} done`
-                        }
+              <div
+                className={cn(
+                  "flex flex-col gap-2",
+                  isOpen ? "mt-3 pb-8" : "pb-6",
+                )}
+              >
+                {isOpen &&
+                  cats.map((category) => {
+                    const group = itemsIn(items, level, category);
+                    const req = requirementFor(reqs, level, category);
+                    const catDone = categoryComplete(
+                      items,
+                      reqs,
+                      level,
+                      category,
+                    );
+                    const total = group.reduce(
+                      (n, i) => n + Math.min(i.done, i.target),
+                      0,
+                    );
+                    const key = `${level}:${category}`;
+                    const catOpen = openCats.has(key);
+                    const covers = group.filter((i) => i.imageUrl).slice(0, 4);
+
+                    return (
+                      <div
+                        key={category}
+                        className={cn(
+                          "overflow-hidden rounded-2xl border bg-card",
+                          catDone ? "border-primary-300" : "border-border",
+                        )}
                       >
-                        {CATEGORY_LABEL[category]}
-                      </SectionHeading>
+                        <button
+                          type="button"
+                          onClick={() => toggleCat(key)}
+                          aria-expanded={catOpen}
+                          className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-surface-hover"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                              <p className="text-sm font-semibold text-foreground">
+                                {CATEGORY_LABEL[category]}
+                              </p>
+                              {catDone && (
+                                <Badge variant="primary" size="sm">
+                                  Done
+                                </Badge>
+                              )}
+                            </div>
+                            {/* A budgeted category reports against its BUDGET
+                                ("302 of 600 minutes"), because that is the rule
+                                it is judged by. Counting items finished would
+                                be a different, misleading number: level 1 has
+                                ten lectures on the menu and no requirement to
+                                watch all ten. */}
+                            <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+                              {req
+                                ? `${total.toLocaleString()} of ${req.minTotal.toLocaleString()} ${group[0]?.unit ?? ""}`
+                                : `${group.filter((i) => i.done >= i.target).length} of ${group.length} done`}
+                            </p>
+                            {req && (
+                              <ProgressBar
+                                value={categoryPct(
+                                  items,
+                                  reqs,
+                                  level,
+                                  category,
+                                )}
+                                tone={catDone ? "success" : "primary"}
+                                className="mt-2 h-1"
+                              />
+                            )}
 
-                      {req && (
-                        <ProgressBar
-                          value={categoryPct(items, reqs, level, category)}
-                          tone={catDone ? "success" : "primary"}
-                          className="mb-3 h-1.5"
-                        />
-                      )}
-
-                      <ul className="flex flex-col gap-3">
-                        {group.map((item) => (
-                          <RoadmapItemCard
-                            key={item.id}
-                            item={item}
-                            onChange={(d) => setDone(item.id, d)}
+                            {/* A glance at what is inside, without opening it.
+                                Only where there is real artwork — an icon
+                                strip would be decoration standing in for
+                                information. */}
+                            {!catOpen && covers.length > 0 && (
+                              <div aria-hidden className="mt-3 flex gap-2">
+                                {covers.map((i) => (
+                                  // eslint-disable-next-line @next/next/no-img-element -- organiser-editable host; see roadmap-item-card.tsx
+                                  <img
+                                    key={i.id}
+                                    src={i.imageUrl!}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="h-16 w-11 rounded-md border border-border object-cover shadow-sm"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <ChevronDownIcon
+                            aria-hidden
+                            className={cn(
+                              "size-5 shrink-0 text-muted-foreground transition-transform",
+                              catOpen && "rotate-180",
+                            )}
                           />
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                })}
+                        </button>
+
+                        {catOpen && (
+                          <ul className="flex flex-col gap-3 border-t border-border bg-muted/30 p-3">
+                            {group.map((item) => (
+                              <RoadmapItemCard
+                                key={item.id}
+                                item={item}
+                                onChange={(d) => setDone(item.id, d)}
+                              />
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
-            )}
-          </section>
-        );
-      })}
+            </li>
+          );
+        })}
+      </ol>
 
       {/* Said plainly, on the screen where the recording happens. Progress goes
           to the people who hand over the rewards — that is the deal, and a

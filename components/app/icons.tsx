@@ -291,6 +291,14 @@ export const ExternalLinkIcon = (p: IconProps) => (
   </svg>
 );
 
+/** Edit — the organiser's pencil on a roadmap item (D57). */
+export const PencilIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3Z" />
+    <path d="M14.5 6.5 17.5 9.5" />
+  </svg>
+);
+
 /** The roadmap itself — a destination, not a daily loop. */
 export const FlagIcon = (p: IconProps) => (
   <svg {...base(p)}>

@@ -11,6 +11,7 @@ import {
   FlagIcon,
 } from "@/components/app/icons";
 import { RewardLadder } from "@/components/app/roadmap-rewards";
+import { ItemEditor } from "./item-editor";
 import {
   CATEGORY_LABEL,
   categoriesAt,
@@ -51,7 +52,8 @@ export default async function ProgrammeCataloguePage({
 
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
-  if (!claims?.claims.sub) redirect("/");
+  const me = claims?.claims.sub as string | undefined;
+  if (!me) redirect("/");
 
   const [{ data: roadmap }, { data: rows }, { data: reqs }, { data: rewards }] =
     await Promise.all([
@@ -68,7 +70,7 @@ export default async function ProgrammeCataloguePage({
         supabase
           .from("roadmap_items")
           .select(
-            "id, level, category, title, source, url, unit, target, compulsory",
+            "id, level, category, title, source, url, unit, target, compulsory, description, image_url",
           )
           .eq("roadmap_id", roadmapId)
           .order("level")
@@ -128,6 +130,8 @@ export default async function ProgrammeCataloguePage({
     unit: i.unit,
     target: i.target,
     compulsory: i.compulsory,
+    description: i.description,
+    imageUrl: i.image_url,
     done: 0,
   }));
 
@@ -138,6 +142,20 @@ export default async function ProgrammeCataloguePage({
   }));
 
   const levels = levelsOf(items);
+
+  // WHO may edit. For rendering the controls only — `set_roadmap_item_content`
+  // refuses a non-organiser regardless, so hiding the pencil is courtesy and
+  // not the gate. Read off `profiles` because the `private` schema is not
+  // exposed to PostgREST, exactly as the report does it.
+  const { data: viewer } = await q(
+    "catalogue.viewer (is_super_admin — controls only)",
+    supabase
+      .from("profiles")
+      .select("is_super_admin")
+      .eq("id", me)
+      .maybeSingle(),
+  );
+  const canEdit = viewer?.is_super_admin ?? false;
 
   return (
     <Screen>
@@ -202,13 +220,26 @@ export default async function ProgrammeCataloguePage({
                     <ul className="divide-y divide-border">
                       {group.map((i) => (
                         <li key={i.id} className="flex items-start gap-3 p-4">
-                          <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                            {i.category === "listening" ? (
-                              <PlayIcon aria-hidden className="size-4" />
-                            ) : (
-                              <BookIcon aria-hidden className="size-4" />
-                            )}
-                          </div>
+                          {i.imageUrl ? (
+                            <div className="w-12 shrink-0 overflow-hidden rounded-md border border-border bg-muted shadow-sm">
+                              {/* eslint-disable-next-line @next/next/no-img-element -- organiser-editable host; see roadmap-item-card.tsx */}
+                              <img
+                                src={i.imageUrl}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                className="block aspect-[2/3] w-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                              {i.category === "listening" ? (
+                                <PlayIcon aria-hidden className="size-4" />
+                              ) : (
+                                <BookIcon aria-hidden className="size-4" />
+                              )}
+                            </div>
+                          )}
                           <div className="min-w-0 flex-1">
                             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium wrap-anywhere text-foreground">
                               <span>{i.title}</span>
@@ -223,12 +254,40 @@ export default async function ProgrammeCataloguePage({
                                 {i.source}
                               </p>
                             )}
+                            {i.description && (
+                              <p className="mt-1 line-clamp-2 text-xs leading-relaxed wrap-anywhere text-muted-foreground">
+                                {i.description}
+                              </p>
+                            )}
+                            {i.url && (
+                              <a
+                                href={i.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-1 inline-block text-xs wrap-anywhere text-primary underline underline-offset-2"
+                              >
+                                {i.url}
+                              </a>
+                            )}
                           </div>
-                          <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                            {/* A target of 1 in its own unit ("1 book") is
-                                noise; the title already says what it is. */}
-                            {i.target === 1 ? "" : `${i.target} ${i.unit}`}
-                          </p>
+                          <div className="flex shrink-0 flex-col items-end gap-2">
+                            <p className="text-xs text-muted-foreground tabular-nums">
+                              {/* A target of 1 in its own unit ("1 book") is
+                                  noise; the title already says what it is. */}
+                              {i.target === 1 ? "" : `${i.target} ${i.unit}`}
+                            </p>
+                            {canEdit && (
+                              <ItemEditor
+                                item={{
+                                  id: i.id,
+                                  title: i.title,
+                                  url: i.url,
+                                  description: i.description,
+                                  imageUrl: i.imageUrl,
+                                }}
+                              />
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>

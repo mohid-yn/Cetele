@@ -68,6 +68,13 @@ export type RoadmapItem = {
   compulsory: boolean;
   /** How many units the member has recorded so far. */
   done: number;
+  /** What the item IS, in prose — the booklet's own blurb (0027). Null renders
+   *  as no paragraph, never a placeholder line. */
+  description: string | null;
+  /** A cover or thumbnail: an app path (`/roadmap/x.png`) or an http(s) URL.
+   *  Null falls back to the category's icon — a missing picture must never
+   *  become a broken image or an empty grey box. */
+  imageUrl: string | null;
 };
 
 /**

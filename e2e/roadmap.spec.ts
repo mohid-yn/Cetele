@@ -83,6 +83,16 @@ test("a circle follows a programme, and its members can record against it", asyn
   await expect(page.getByText("3 levels · none finished yet")).toBeVisible();
   await expect(page.getByText(/Level 1/).first()).toBeVisible();
 
+  // TWO levels of disclosure now (0027): the station is open, and each category
+  // opens to its items. Open the three this spec works in — they are
+  // independent toggles, so opening one no longer closes another.
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await page
+    .getByRole("button", { name: /^Qur'an\b/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: /^Listening/ }).click();
+
   // A one-unit item is a yes/no thing and gets a single toggle, not a counter.
   // `ul > li`, not `li`: the reward LADDER is an <ol>, so a bare li filter
   // matches a reward rung — which has no button on it — not the item card.
@@ -106,6 +116,16 @@ test("a circle follows a programme, and its members can record against it", asyn
   // THE ASSERTION THAT CARRIES THE FEATURE: it survives a reload. Everything
   // above is satisfied by optimistic state with nothing written.
   await page.reload();
+  // Disclosure state is client-side and resets on reload — the STATION reopens
+  // on the member's current level, but the categories do not. That is the
+  // trade for not putting UI state in the URL, and it is why this has to
+  // reopen them before asserting on rows.
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await page
+    .getByRole("button", { name: /^Qur'an\b/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: /^Listening/ }).click();
   await expect(khatm.getByText("3 of 15 juz")).toBeVisible();
   await expect(book.getByRole("button", { name: "Undo" })).toBeVisible();
 
@@ -254,7 +274,9 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   await expect(
     page.getByRole("heading", { name: "Level 1", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Calling to Good")).toBeVisible();
+  await expect(
+    page.getByText("Calling to Good", { exact: true }),
+  ).toBeVisible();
 
   // A BUDGETED category reads as a menu with a total, not a list to finish —
   // the difference between "watch all of these" and "choose 600 minutes".
@@ -331,4 +353,117 @@ test("an organiser appoints another, and can stand them down", async ({
   await signIn(page, OUTSIDER);
   await page.goto("/programme");
   await expect(page.getByText(/You are an organiser/)).toHaveCount(0);
+});
+
+test("the timeline, its pictures, and an organiser editing an item", async ({
+  page,
+}) => {
+  await signIn(page, ORGANISER);
+  await makeSuperAdmin(ORGANISER);
+
+  // The catalogue carries the booklet's own descriptions and cover artwork
+  // (0027). Before this, an item was a title and a target and nothing else.
+  await page.goto("/programme/00000000-0000-0000-0000-0000000000f1");
+  await expect(
+    page.getByRole("heading", { name: "Islamic Development Program" }),
+  ).toBeVisible();
+  await expect(page.getByText(/amr bil ma'ruf/)).toBeVisible();
+  await expect(
+    page.locator('img[src="/roadmap/calling-to-good.png"]'),
+  ).toBeVisible();
+
+  // THE EDITOR. The link is why it exists: the booklet's URLs are placeholders,
+  // so every item shipped with none and the only way to enter a real one was a
+  // migration and a deploy.
+  await page.getByRole("button", { name: "Edit Guarding the Tongue" }).click();
+  const link = page.getByLabel("Link");
+  await expect(link).toBeVisible();
+
+  // A `javascript:` URL is rendered as an anchor to every member of every
+  // circle following the programme. Refused, and the dialog STAYS OPEN with the
+  // reason on it — the shape every other refusal in this app has.
+  await link.fill("javascript:alert(1)");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(
+    page.getByText("a link must start with http:// or https://"),
+  ).toBeVisible();
+
+  await link.fill("https://youtube.com/watch?v=e2e-guarding");
+  await page.getByLabel("Description").fill("A short talk on the tongue.");
+  await page.getByRole("button", { name: "Save" }).click();
+
+  // RELOADED before asserting, deliberately. `router.refresh()` makes the row
+  // update in place, but asserting on that only proves the optimistic path; a
+  // reload proves the edit is IN THE DATABASE, which is the claim that matters
+  // for content every member will read.
+  await page.reload();
+  await expect(
+    page.getByText("https://youtube.com/watch?v=e2e-guarding"),
+  ).toBeVisible();
+  await expect(page.getByText("A short talk on the tongue.")).toBeVisible();
+
+  // AND THE MEMBER SEES IT, which is the whole point of the editor: the two
+  // screens read the same row, so an organiser's edit reaches every circle
+  // following the programme without a deploy.
+  await signIn(page, OWNER);
+  await page.goto("/groups");
+  await page
+    .getByRole("link", { name: /Roadmap Circle/ })
+    .first()
+    .click();
+  await page.waitForURL("**/today");
+  await page.getByRole("link", { name: "Progress", exact: true }).click();
+  await page.getByRole("link", { name: /Islamic Development Program/ }).click();
+  await page.waitForURL("**/roadmap");
+
+  await page.getByRole("button", { name: /^Listening/ }).click();
+  await expect(page.getByText("A short talk on the tongue.")).toBeVisible();
+});
+
+test("a member walks the timeline: stations, then categories, then items", async ({
+  page,
+}) => {
+  await signIn(page, OWNER);
+
+  // OWNER's circle followed the programme in the first spec in this file.
+  await page.goto("/groups");
+  const circle = page.getByRole("link", { name: /Roadmap Circle/ }).first();
+  await expect(circle).toBeVisible();
+  await circle.click();
+  await page.waitForURL("**/today");
+
+  await page.getByRole("link", { name: "Progress", exact: true }).click();
+  await page.getByRole("link", { name: /Islamic Development Program/ }).click();
+  await page.waitForURL("**/roadmap");
+
+  // TWO levels of disclosure. The station opens to categories, and a category
+  // opens to items — opening a level and getting forty cards is the wall this
+  // structure replaced.
+  const station = page.getByRole("button", { name: /^Level 1/ });
+  await expect(station).toHaveAttribute("aria-expanded", "true");
+
+  const book = page.getByRole("button", { name: /^Book/ });
+  await expect(book).toBeVisible();
+  // Collapsed, a category shows its covers rather than its rows.
+  await expect(
+    page.locator('img[src="/roadmap/belief-and-unbelief.png"]').first(),
+  ).toBeVisible();
+  // ...and no item controls, because nothing is open yet.
+  await expect(page.getByRole("button", { name: "Mark done" })).toHaveCount(0);
+
+  await book.click();
+  await expect(
+    page.getByText("Calling to Good", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/amr bil ma'ruf/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Mark done" }).first(),
+  ).toBeVisible();
+
+  // A later level is NOT called "Locked", and that is deliberate: nothing
+  // refuses a write to it. `set_roadmap_progress` checks the programme is
+  // followed and clamps to the target, and that is all — a Locked badge would
+  // be the screen inventing a rule the database does not keep.
+  await expect(page.getByRole("button", { name: /^Level 2/ })).toBeVisible();
+  await expect(page.getByText("Locked")).toHaveCount(0);
 });
