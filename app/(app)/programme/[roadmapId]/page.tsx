@@ -11,6 +11,7 @@ import {
   FlagIcon,
 } from "@/components/app/icons";
 import { RewardLadder } from "@/components/app/roadmap-rewards";
+import { RoadmapCover } from "@/components/app/roadmap-cover";
 import { ItemEditor } from "./item-editor";
 import {
   CATEGORY_LABEL,
@@ -221,26 +222,19 @@ export default async function ProgrammeCataloguePage({
                     <ul className="divide-y divide-border">
                       {group.map((i) => (
                         <li key={i.id} className="flex items-start gap-3 p-4">
-                          {i.imageUrl ? (
-                            <div className="w-12 shrink-0 overflow-hidden rounded-md border border-border bg-muted shadow-sm">
-                              {/* eslint-disable-next-line @next/next/no-img-element -- organiser-editable host; see roadmap-item-card.tsx */}
-                              <img
-                                src={i.imageUrl}
-                                alt=""
-                                loading="lazy"
-                                decoding="async"
-                                className="block aspect-[2/3] w-full object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                              {i.category === "listening" ? (
-                                <PlayIcon aria-hidden className="size-4" />
-                              ) : (
-                                <BookIcon aria-hidden className="size-4" />
-                              )}
-                            </div>
-                          )}
+                          <RoadmapCover
+                            imageUrl={i.imageUrl}
+                            className="w-12"
+                            fallback={
+                              <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                                {i.category === "listening" ? (
+                                  <PlayIcon aria-hidden className="size-4" />
+                                ) : (
+                                  <BookIcon aria-hidden className="size-4" />
+                                )}
+                              </div>
+                            }
+                          />
                           <div className="min-w-0 flex-1">
                             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium wrap-anywhere text-foreground">
                               <span>{i.title}</span>

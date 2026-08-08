@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Badge, Button, buttonVariants, ProgressBar } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { RoadmapCover } from "./roadmap-cover";
 import {
   BeadsIcon,
   BookIcon,
@@ -87,45 +88,29 @@ export function RoadmapItemCard({
       )}
     >
       <div className="flex items-start gap-3">
-        {/* A COVER where we have one, the category's icon where we do not.
-            Books have real artwork (the booklet's own, served from
-            `public/roadmap/`); a lecture's thumbnail lives on YouTube behind a
-            URL that is still a placeholder, and inventing one is the same lie
-            as inventing the link. So the fallback is a drawn mark, never an
-            empty grey box or a broken image.
-
-            A plain <img>, not next/image: `image_url` is organiser-editable and
-            can point at any host, and `remotePatterns` cannot be maintained for
-            "wherever they paste from". Explicit dimensions via the aspect box
-            so nothing reflows as covers load. */}
-        {item.imageUrl ? (
-          <div className="w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-muted shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element --
-                next/image cannot be used: `image_url` is ORGANISER-EDITABLE and
-                may point at any host, and `remotePatterns` cannot be maintained
-                for "wherever they paste from" — an unconfigured host makes
-                next/image THROW, turning one bad paste into a 500 on every
-                member's roadmap. Lazy, bounded, and mostly our own covers. */}
-            <img
-              src={item.imageUrl}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="block aspect-[2/3] w-full object-cover"
-            />
-          </div>
-        ) : (
-          <div
-            className={cn(
-              "grid size-10 shrink-0 place-items-center rounded-xl",
-              complete
-                ? "bg-primary-100 text-primary-800"
-                : "bg-muted text-muted-foreground",
-            )}
-          >
-            <Icon aria-hidden className="size-5" />
-          </div>
-        )}
+        {/* A COVER where we have one, the category's icon where we do not —
+            or where one fails to load. Books have real artwork (the booklet's
+            own, from `public/roadmap/`); a lecture has none, because its
+            thumbnail would have to be fetched from YouTube at render time on a
+            screen every member opens, which is a third-party request the app
+            does not otherwise make. Either way the fallback is a drawn mark,
+            never an empty grey box or a broken image. */}
+        <RoadmapCover
+          imageUrl={item.imageUrl}
+          className="w-14"
+          fallback={
+            <div
+              className={cn(
+                "grid size-10 shrink-0 place-items-center rounded-xl",
+                complete
+                  ? "bg-primary-100 text-primary-800"
+                  : "bg-muted text-muted-foreground",
+              )}
+            >
+              <Icon aria-hidden className="size-5" />
+            </div>
+          }
+        />
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
