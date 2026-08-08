@@ -1,4 +1,4 @@
-import { HomeIcon, GridIcon, UsersIcon, UserIcon } from "./icons";
+import { HomeIcon, GridIcon, UsersIcon, UserIcon, FlagIcon } from "./icons";
 import { groupHref, groupSubPath, type GroupSubPath } from "@/lib/group-href";
 
 /**
@@ -37,6 +37,28 @@ export const NAV_ITEMS: readonly (ScopedItem | FlatItem)[] = [
   },
   { href: "/profile", label: "Profile", shortLabel: "Profile", Icon: UserIcon },
 ] as const;
+
+/**
+ * The Roadmap tab, inserted before Profile for a circle that FOLLOWS a
+ * programme (D55, Q7 resolved). Kept out of `NAV_ITEMS` because it is the only
+ * conditional destination in the app: most circles follow no programme, and a
+ * permanent tab leading to "this circle isn't following a programme" is clutter
+ * rather than navigation. `useGroupHasRoadmap` decides; the navs splice.
+ */
+export const ROADMAP_NAV_ITEM: ScopedItem = {
+  sub: "/roadmap",
+  label: "Roadmap",
+  shortLabel: "Roadmap",
+  Icon: FlagIcon,
+};
+
+/** NAV_ITEMS with Roadmap spliced in before Profile, when the circle has one. */
+export function navItemsWithRoadmap(
+  hasRoadmap: boolean,
+): readonly (ScopedItem | FlatItem)[] {
+  if (!hasRoadmap) return NAV_ITEMS;
+  return [...NAV_ITEMS.slice(0, -1), ROADMAP_NAV_ITEM, NAV_ITEMS.at(-1)!];
+}
 
 /**
  * The nav for someone with NO circle yet (a group-only app has nothing to show

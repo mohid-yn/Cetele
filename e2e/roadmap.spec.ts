@@ -40,10 +40,13 @@ test("a circle follows a programme, and its members can record against it", asyn
   await signIn(page, OWNER);
   const manageUrl = await newCircle(page, `Roadmap Circle ${STAMP}`);
 
-  // Before opting in there is no way in from Progress, and the roadmap route
-  // itself says so rather than redirecting.
+  // Before opting in there is NO Roadmap tab. The tab is the only way in now
+  // (Q7 resolved) and it is conditional — most circles follow no programme, so
+  // a permanent tab leading to "isn't following a programme" would be clutter.
   await page.getByRole("link", { name: "Progress", exact: true }).click();
-  await expect(page.getByText("The circle’s programme")).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Roadmap", exact: true }),
+  ).toHaveCount(0);
 
   // Back to Manage by URL, not history: Manage STREAMS, so for a beat the only
   // thing on the page is the circle name, and an immediate selectOption on a
@@ -64,14 +67,14 @@ test("a circle follows a programme, and its members can record against it", asyn
   await expect(page.getByText("Nothing recorded yet")).toHaveCount(0);
   await expect(page.getByText("0 of 3 levels")).toBeVisible();
 
-  // The way IN is a card on Progress, not a nav tab — see the commit for why.
+  // THE WAY IN IS THE NAV TAB. It appears only for a circle that follows a
+  // programme, and the flag reaches the nav without the app shell doing any DB
+  // work: the group layout reads it and publishes to a store the nav
+  // subscribes to (`lib/use-group-roadmap.ts`).
   await page.goto(manageUrl);
-  await page.getByRole("link", { name: "Progress", exact: true }).click();
-  const entry = page.getByRole("link", {
-    name: /Islamic Development Program/,
-  });
-  await expect(entry).toBeVisible();
-  await entry.click();
+  const tab = page.getByRole("link", { name: "Roadmap", exact: true }).first();
+  await expect(tab).toBeVisible();
+  await tab.click();
   await page.waitForURL("**/roadmap");
 
   await expect(
@@ -412,8 +415,10 @@ test("the timeline, its pictures, and an organiser editing an item", async ({
     .first()
     .click();
   await page.waitForURL("**/today");
-  await page.getByRole("link", { name: "Progress", exact: true }).click();
-  await page.getByRole("link", { name: /Islamic Development Program/ }).click();
+  await page
+    .getByRole("link", { name: "Roadmap", exact: true })
+    .first()
+    .click();
   await page.waitForURL("**/roadmap");
 
   await page.getByRole("button", { name: /^Listening/ }).click();
@@ -432,8 +437,10 @@ test("a member walks the timeline: stations, then categories, then items", async
   await circle.click();
   await page.waitForURL("**/today");
 
-  await page.getByRole("link", { name: "Progress", exact: true }).click();
-  await page.getByRole("link", { name: /Islamic Development Program/ }).click();
+  await page
+    .getByRole("link", { name: "Roadmap", exact: true })
+    .first()
+    .click();
   await page.waitForURL("**/roadmap");
 
   // TWO levels of disclosure. The station opens to categories, and a category

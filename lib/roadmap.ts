@@ -406,3 +406,25 @@ export function levelDistribution(
   }
   return buckets;
 }
+
+/**
+ * Is this a link the screen may render as an anchor?
+ *
+ * MIRRORS the check in `set_roadmap_item_content` (0027), and exists for the
+ * same reason the completion mirror does: the database is the authority, but
+ * the client decides whether to draw the anchor at all, and it must not draw
+ * one it would be unsafe to follow.
+ *
+ * It is not redundant with the RPC. Every `url` written since 0027 has been
+ * through that check — but the column predates it (0025), so anything already
+ * stored, or set by a future migration or a direct dashboard edit, has not.
+ * A `javascript:` value reaching an `href` is stored XSS pointed at every
+ * member of every circle following the programme.
+ *
+ * Whitespace is trimmed and the scheme compared case-insensitively, because
+ * " JavaScript:" is how this rule is usually got round.
+ */
+export function isSafeItemUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url.trim());
+}

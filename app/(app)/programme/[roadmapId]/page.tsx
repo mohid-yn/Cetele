@@ -16,6 +16,7 @@ import {
   CATEGORY_LABEL,
   categoriesAt,
   itemsIn,
+  isSafeItemUrl,
   levelsOf,
   requirementFor,
   type LevelRequirement,
@@ -259,9 +260,9 @@ export default async function ProgrammeCataloguePage({
                                 {i.description}
                               </p>
                             )}
-                            {i.url && (
+                            {isSafeItemUrl(i.url) && (
                               <a
-                                href={i.url}
+                                href={i.url!}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="mt-1 inline-block text-xs wrap-anywhere text-primary underline underline-offset-2"

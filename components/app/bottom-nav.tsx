@@ -6,10 +6,15 @@ import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { springGlide } from "@/lib/motion";
-import { NAV_ITEMS, NO_GROUP_NAV_ITEMS, resolveNavItem } from "./nav-items";
+import {
+  NO_GROUP_NAV_ITEMS,
+  navItemsWithRoadmap,
+  resolveNavItem,
+} from "./nav-items";
 import { navItemVariants } from "./nav-item-variants";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
+import { useGroupHasRoadmap } from "@/lib/use-group-roadmap";
 
 /** Mobile tab bar pinned to the bottom of the app column (hidden on desktop). */
 export function BottomNav({
@@ -24,7 +29,13 @@ export function BottomNav({
   const hasGroups = useHasGroups(initialHasGroups);
   // No circle yet → collapse to the front door + you (the group tabs would be
   // dead links to /groups).
-  const items = hasGroups ? NAV_ITEMS : NO_GROUP_NAV_ITEMS;
+  // Only for the circle in hand: mid-navigation between two circles the store
+  // still holds the old one, and inheriting its answer is how a Roadmap tab
+  // appears on a circle that has no programme.
+  const hasRoadmap = useGroupHasRoadmap(groupId);
+  const items = hasGroups
+    ? navItemsWithRoadmap(hasRoadmap)
+    : NO_GROUP_NAV_ITEMS;
 
   return (
     <nav
@@ -38,7 +49,15 @@ export function BottomNav({
       <ul
         className={cn(
           "mx-auto grid max-w-[28rem] gap-1 p-1.5",
-          hasGroups ? "grid-cols-4" : "grid-cols-2",
+          // Five tabs at 390px is ~72px each, which "Progress" fits at text-xs
+          // with room to spare — measured, not assumed. The count is driven off
+          // `items.length` rather than a second boolean so the grid can never
+          // disagree with what is actually rendered.
+          items.length === 5
+            ? "grid-cols-5"
+            : items.length === 4
+              ? "grid-cols-4"
+              : "grid-cols-2",
         )}
       >
         {items.map((item) => {

@@ -15,6 +15,7 @@ import {
 } from "@/components/app/icons";
 import {
   isItemComplete,
+  isSafeItemUrl,
   type RoadmapCategory,
   type RoadmapItem,
 } from "@/lib/roadmap";
@@ -74,6 +75,9 @@ export function RoadmapItemCard({
   // press "+" five hundred and fifty-five times, and a half-watched playlist is
   // not what the 600 is counted from.
   const binary = item.target === 1 || item.category === "listening";
+  // Bound rather than re-checked at the JSX: a predicate call cannot narrow
+  // `string | null`, and re-testing inline would be two chances to disagree.
+  const href = isSafeItemUrl(item.url) ? item.url! : null;
 
   return (
     <li
@@ -168,9 +172,9 @@ export function RoadmapItemCard({
               nothing about a member's session belongs in a third party's
               referer log. `buttonVariants` rather than <Button> — the primitive
               renders a <button>, and this has to be a real anchor. */}
-          {item.url && (
+          {href && (
             <a
-              href={item.url}
+              href={href}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(

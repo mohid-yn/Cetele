@@ -32,6 +32,7 @@ import {
   currentLevel,
   daysLeft,
   isActiveOn,
+  isSafeItemUrl,
   levelComplete,
   levelDistribution,
   levelPct,
@@ -429,5 +430,49 @@ describe("levelDistribution", () => {
       { levels: 0, count: 1 },
       { levels: 1, count: 0 },
     ]);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * A LINK IS A DESTINATION, and the roadmap renders it as an anchor for every
+ * member of every circle following the programme. `set_roadmap_item_content`
+ * refuses a non-http(s) scheme in the database (pgTAP 016) — this pins the same
+ * rule on the CLIENT, because the card decides whether to render the anchor at
+ * all and a value that reached the column before 0027 existed has never been
+ * through that check.
+ * ------------------------------------------------------------------------- */
+
+describe("isSafeItemUrl", () => {
+  it("accepts the http(s) links the booklet actually carries", () => {
+    assert.equal(
+      isSafeItemUrl(
+        "https://www.youtube.com/playlist?list=PLukPSg97-iL5Smi_OsysIdxo8NvC5Do0q",
+      ),
+      true,
+    );
+    // The booklet mixes schemes — two of its twenty-two annotations are http.
+    assert.equal(
+      isSafeItemUrl(
+        "http://www.youtube.com/playlist?list=PLUwKu6hisEQGzTklJ3OLfEFh7Un4VbDsb",
+      ),
+      true,
+    );
+  });
+
+  it("REFUSES a scheme that executes", () => {
+    assert.equal(isSafeItemUrl("javascript:alert(1)"), false);
+    assert.equal(isSafeItemUrl("data:text/html;base64,PHNjcmlwdD4="), false);
+    // Case and leading whitespace are how this rule is usually got round.
+    assert.equal(isSafeItemUrl("  JavaScript:alert(1)"), false);
+    assert.equal(isSafeItemUrl("JAVASCRIPT:alert(1)"), false);
+  });
+
+  it("refuses a relative or scheme-less string", () => {
+    // Not hostile, just not a destination — rendering it as an anchor would
+    // navigate inside the app and look like a broken page.
+    assert.equal(isSafeItemUrl("www.youtube.com/playlist1"), false);
+    assert.equal(isSafeItemUrl("/roadmap/x.png"), false);
+    assert.equal(isSafeItemUrl(""), false);
+    assert.equal(isSafeItemUrl(null), false);
   });
 });

@@ -6,13 +6,18 @@ import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { springGlide } from "@/lib/motion";
-import { NAV_ITEMS, NO_GROUP_NAV_ITEMS, resolveNavItem } from "./nav-items";
+import {
+  NO_GROUP_NAV_ITEMS,
+  navItemsWithRoadmap,
+  resolveNavItem,
+} from "./nav-items";
 import { navItemVariants } from "./nav-item-variants";
 import { GroupSwitcher } from "@/components/app/group-switcher";
 import { ThemeToggleButton } from "@/components/theme/theme-toggle";
 import { WebAppLogo } from "@/components/ui/logo";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
+import { useGroupHasRoadmap } from "@/lib/use-group-roadmap";
 import { groupHref } from "@/lib/group-href";
 
 /** Persistent left nav for desktop (≥lg). Mirrors the mobile bottom bar. */
@@ -26,7 +31,13 @@ export function Sidebar({
   const pathname = usePathname();
   const groupId = useActiveGroupId(initialGroupId);
   const hasGroups = useHasGroups(initialHasGroups);
-  const items = hasGroups ? NAV_ITEMS : NO_GROUP_NAV_ITEMS;
+  // The desktop nav is a vertical list, so the fifth item costs nothing here —
+  // but it must agree with the bottom bar, or the same circle has two different
+  // navigations depending on viewport width.
+  const hasRoadmap = useGroupHasRoadmap(groupId);
+  const items = hasGroups
+    ? navItemsWithRoadmap(hasRoadmap)
+    : NO_GROUP_NAV_ITEMS;
 
   return (
     // `bg-chrome` — same reason as the bottom nav: the sidebar is the frame.

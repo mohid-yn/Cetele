@@ -42,9 +42,8 @@ export default async function ProgressPage({
     { data: tasks },
     { data: streak },
     { data: members },
-    { data: group },
   ] = await q(
-    "progress.reads (profile+tasks+streak+members+roadmap)",
+    "progress.reads (profile+tasks+streak+members)",
     Promise.all([
       supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
       supabase
@@ -63,15 +62,6 @@ export default async function ProgressPage({
         .from("memberships")
         .select("user_id, profiles(name)")
         .eq("group_id", groupId),
-      // The programme this circle follows, if any (D55). Joined rather than
-      // fetched separately, and it carries NO progress figure — the card is a
-      // way in, not a second dashboard, so the roadmap's numbers stay on the
-      // roadmap and cannot disagree with themselves across two screens.
-      supabase
-        .from("groups")
-        .select("roadmaps(id, name, starts_on, ends_on)")
-        .eq("id", groupId)
-        .maybeSingle(),
     ]),
   );
 
@@ -280,17 +270,6 @@ export default async function ProgressPage({
       viewerId={me}
       names={names}
       hasTasks={taskList.length > 0}
-      groupId={groupId}
-      roadmap={
-        group?.roadmaps
-          ? {
-              name: group.roadmaps.name,
-              startsOn: group.roadmaps.starts_on,
-              endsOn: group.roadmaps.ends_on,
-            }
-          : null
-      }
-      todayISO={todayISO}
     />
   );
 }

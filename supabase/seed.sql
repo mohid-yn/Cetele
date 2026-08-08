@@ -75,18 +75,21 @@ select private.run_daily_rollup();
 -- The Islamic Development Program, for the Fajr Circle to follow (0025, D55)
 -- ----------------------------------------------------------------------------
 -- REAL content, transcribed from the administration's booklet — the levels,
--- books, khatms, surah ranges, tajweed texts, lecture titles and minute
--- budgets are all as published. It lives in the SEED rather than in a content
--- migration because two things are still open:
+-- books, khatms, surah ranges, tajweed texts, lecture titles, minute budgets,
+-- cover artwork, prose and the twenty-two lecture LINKS are all as published.
 --
---   * the booklet's lecture URLs are placeholders (`youtube.com/playlist1`),
---     so every `url` here is NULL — an item with no link renders as no link,
---     which is honest, where a fabricated link is not;
---   * the rewards are not settled (the owner's working figure is a $1,000
---     contribution per level toward an international trip).
+-- The `url` column is NULL in the inserts below and filled at the bottom of
+-- this file, and that split is a correction rather than a style. This seed
+-- originally shipped every link NULL, on the reasoning that the booklet's URLs
+-- were placeholders — which is what the printed text says
+-- ("www.youtube.com/playlist1"). The real links are PDF **annotations**, an
+-- object graph no text extraction touches. They exist, all twenty-two, and the
+-- owner had to point out they were missing.
 --
--- When both are closed this moves to a content migration, unchanged in shape.
--- The seed never runs against production.
+-- It stays in the SEED rather than a content migration only because the rewards
+-- are not settled (the owner's working figure is a $1,000 contribution per level
+-- toward an international trip). When that closes this moves across unchanged
+-- in shape. The seed never runs against production.
 --
 -- Level structure, and why it is sequential rather than nested: the
 -- memorisation blocks are 93–114, then 86–92, then 78–85 — contiguous,
@@ -230,10 +233,14 @@ on conflict (user_id, item_id) do nothing;
 --
 -- Only the ten books have both. The covers are the booklet's own artwork,
 -- extracted from the PDF and served from `public/roadmap/` — versioned with the
--- repo, so there is no bucket to provision and no external host to trust. The
--- lectures have no picture: their thumbnails live on YouTube behind URLs that
--- are still placeholders, and a fabricated thumbnail is the same lie as a
--- fabricated link. They render as the category's icon instead.
+-- repo, so there is no bucket to provision and no external host to trust.
+--
+-- The lectures have no picture, and now that their real links are in (see the
+-- bottom of this file) that is a CHOICE rather than a gap: a YouTube thumbnail
+-- would have to be fetched from a third party at render time, on a screen every
+-- member opens, which is a tracking request the app does not otherwise make.
+-- They render as the category's drawn icon instead. An organiser can paste one
+-- per item if they want it (D57).
 update public.roadmap_items set description = v.description, image_url = v.image_url
 from (values
   ('00000000-0000-0000-0000-00000001a001'::uuid,
@@ -289,5 +296,72 @@ from (values
   ('00000000-0000-0000-0000-00000001a008'::uuid, 'Surahs Ad-Duha to An-Nas — chapters 93 to 114, the last twenty-two of the mushaf.'),
   ('00000000-0000-0000-0000-00000002a008'::uuid, 'Surahs At-Tariq to Al-Layl — chapters 86 to 92, continuing backwards from where level 1 stopped.'),
   ('00000000-0000-0000-0000-00000003a008'::uuid, 'Surahs An-Naba to Al-Buruj — chapters 78 to 85, completing Juz ''Amma.')
+) as v(id, description)
+where public.roadmap_items.id = v.id;
+
+-- ---------------------------------------------------------------------------
+-- The REAL lecture links (0027)
+-- ---------------------------------------------------------------------------
+-- These were shipped NULL on the claim that the booklet's URLs were
+-- placeholders. That was wrong, and the mistake is worth recording because it
+-- will recur: `pdftotext` extracts VISIBLE TEXT, and what is printed under each
+-- lecture really is a placeholder ("www.youtube.com/playlist1"). The working
+-- links are PDF **link annotations** — a separate object graph the text layer
+-- knows nothing about, where the annotation carries a /Rect and points at an
+-- action object holding the /URI. Twenty-two of them, and not one appears in
+-- any text extraction.
+--
+-- MAPPED BY POSITION, NOT BY ORDER. Each annotation's rectangle was aligned
+-- against the word boxes on its page (`pdftotext -bbox`), so every URL below is
+-- the one sitting on that lecture's own placeholder line — playlist1 through
+-- playlist15 and watch1 through watch8, each landing exactly where it should.
+-- Ordering alone would have looked identical and proved nothing.
+update public.roadmap_items set url = v.url
+from (values
+  -- Level 1 (booklet p.06)
+  ('00000000-0000-0000-0000-00000001a009'::uuid, 'https://www.youtube.com/playlist?list=PLukPSg97-iL5Smi_OsysIdxo8NvC5Do0q'),  -- The Believers Heart Realm
+  ('00000000-0000-0000-0000-00000001a010'::uuid, 'https://www.youtube.com/playlist?list=PLUwKu6hisEQGzTklJ3OLfEFh7Un4VbDsb'),  -- Angels in Your Presence 1
+  ('00000000-0000-0000-0000-00000001a011'::uuid, 'https://www.youtube.com/watch?v=SvKJhy-lQRc'),                                -- Guarding the Tongue
+  ('00000000-0000-0000-0000-00000001a012'::uuid, 'https://www.youtube.com/watch?v=Ac1NYpU_JFg'),                                -- The Qur'an: A Clear Guidance
+  ('00000000-0000-0000-0000-00000001a013'::uuid, 'https://www.youtube.com/watch?v=pFX-G12Mm8c'),                                -- In the Wake of Calamity
+  ('00000000-0000-0000-0000-00000001a014'::uuid, 'https://www.youtube.com/playlist?list=PLukPSg97-iL4iptAKEZ7psEoQFj4TBu42'),  -- The Way of Ascension's Light
+  ('00000000-0000-0000-0000-00000001a015'::uuid, 'https://www.youtube.com/watch?v=7yrTMiCMIY8'),                                -- Nusaybah bint Ka'ab
+  ('00000000-0000-0000-0000-00000001a016'::uuid, 'https://www.youtube.com/watch?v=BQHGk6swoc8'),                                -- Ubadah ibn al-Samit
+  ('00000000-0000-0000-0000-00000001a017'::uuid, 'https://www.youtube.com/watch?v=KzlHreolLu8'),                                -- Sawda Bint Zama'a
+  ('00000000-0000-0000-0000-00000001a018'::uuid, 'https://www.youtube.com/watch?v=Vf7nYNbYuQY&list=PLa4GKxenTk5XyfP1cC1Zjm1aQCjXuVdg9'), -- Lessons From The Qur'an
+
+  -- Level 2 (booklet p.11)
+  ('00000000-0000-0000-0000-00000002a009'::uuid, 'https://www.youtube.com/playlist?list=PLukPSg97-iL5c67q6nH71H7tcd0mbMoQu'),  -- Towards the Morality of Qur'an
+  ('00000000-0000-0000-0000-00000002a010'::uuid, 'https://www.youtube.com/playlist?list=PL4Wio4jCwX5HjZieVHP_X1nsC6oijMsRp'),  -- Sacred Text Messages 1
+  ('00000000-0000-0000-0000-00000002a011'::uuid, 'https://www.youtube.com/playlist?list=PLQ02IYL5pmhH9L4PfFvCo0L_hSuRGdMiv'),  -- Angels In Their Presence 2
+  ('00000000-0000-0000-0000-00000002a012'::uuid, 'https://www.youtube.com/playlist?list=PLukPSg97-iL52Y0OOL1BuYWEMk79W8fSg'),  -- Question & Answers
+  ('00000000-0000-0000-0000-00000002a013'::uuid, 'https://www.youtube.com/watch?v=aKFdDikKS6Y'),                                -- Tufayl ibn Amr
+  ('00000000-0000-0000-0000-00000002a014'::uuid, 'https://www.youtube.com/watch?v=JQCWaPze9gI'),                                -- Zaynab bint Jahsh
+
+  -- Level 3 (booklet p.16)
+  ('00000000-0000-0000-0000-00000003a009'::uuid, 'https://www.youtube.com/playlist?list=PLukPSg97-iL5KtxXVVx3To-XBjOzDp-WO'),  -- Lights on the Road
+  ('00000000-0000-0000-0000-00000003a010'::uuid, 'https://www.youtube.com/watch?v=4kwnB8aJqPA&list=PLQ02IYL5pmhHvZ02LKQVeey8H-2XBKMGb'), -- Meeting Muhammad ﷺ
+  ('00000000-0000-0000-0000-00000003a011'::uuid, 'https://www.youtube.com/watch?v=bEjeDEHkWn8&list=PLukPSg97-iL4tZv_cc0i-3H5iAURtadG8'), -- Life Beyond Death
+  ('00000000-0000-0000-0000-00000003a012'::uuid, 'https://www.youtube.com/watch?v=DCYGJ-6GTdc&list=PLQ02IYL5pmhGLpO-oUMpZbuI_5dT9m4fi'), -- Jannah: Home at Last
+  ('00000000-0000-0000-0000-00000003a013'::uuid, 'https://www.youtube.com/watch?v=cw6WoTssw7o&list=PLa4GKxenTk5WX6SyGIukLM2yGY9uZoIAf'), -- The Great Imams
+  ('00000000-0000-0000-0000-00000003a014'::uuid, 'https://www.youtube.com/playlist?list=PLLWosYrkNwE_K9VRWJofr4nyFTXHRi8SV')   -- Sacred Text Messages 2
+) as v(id, url)
+where public.roadmap_items.id = v.id;
+
+-- ---------------------------------------------------------------------------
+-- The memorisation tables, in full (0027)
+-- ---------------------------------------------------------------------------
+-- The booklet prints every chapter with its NUMBER and its VERSE COUNT, and the
+-- roadmap carried only the range ("Chapters 93–114"). The verse counts are what
+-- a member actually plans around — 22 surahs sounds like one thing when it is
+-- 148 verses and quite another at 219 — so they belong on the item.
+update public.roadmap_items set description = v.description
+from (values
+  ('00000000-0000-0000-0000-00000001a008'::uuid,
+   'Chapters 93–114, the last twenty-two of the mushaf — 148 verses in all. Ad-Duha (11) · Al-Inshirah (8) · At-Tin (8) · Al-''Alaq (19) · Al-Qadr (5) · Al-Bayyinah (8) · Az-Zalzalah (8) · Al-''Adiyat (11) · Al-Qari''ah (11) · At-Takathur (8) · Al-''Asr (3) · Al-Humazah (9) · Al-Fil (5) · Quraysh (4) · Al-Ma''un (7) · Al-Kawthar (3) · Al-Kafirun (6) · An-Nasr (3) · Al-Masad (5) · Al-Ikhlas (4) · Al-Falaq (5) · An-Nas (6).'),
+  ('00000000-0000-0000-0000-00000002a008'::uuid,
+   'Chapters 86–92, continuing backwards from where level 1 stopped — 148 verses. At-Tariq (17) · Al-A''la (19) · Al-Ghashiyah (26) · Al-Fajr (30) · Al-Balad (20) · Ash-Shams (15) · Al-Layl (21).'),
+  ('00000000-0000-0000-0000-00000003a008'::uuid,
+   'Chapters 78–85, completing Juz ''Amma — 259 verses. An-Naba (40) · An-Nazi''at (46) · ''Abasa (42) · At-Takwir (29) · Al-Infitar (19) · Al-Mutaffifin (36) · Al-Inshiqaq (25) · Al-Buruj (22).')
 ) as v(id, description)
 where public.roadmap_items.id = v.id;
