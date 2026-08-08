@@ -238,3 +238,65 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   // leads nothing read a caption about somebody else's view of the screen.
   await expect(page.getByText(/You are an organiser/)).toBeVisible();
 });
+
+test("an organiser appoints another, and can stand them down", async ({
+  page,
+}) => {
+  // The bootstrap: the FIRST organiser has no in-app path by design, so this
+  // reaches round the app with the service role exactly as the Supabase
+  // dashboard does. Everything after this point goes through the UI.
+  await signIn(page, ORGANISER);
+  await makeSuperAdmin(ORGANISER);
+  await page.goto("/groups");
+  await expect(page.getByRole("heading", { name: "Organisers" })).toBeVisible();
+
+  // NOTHING HERE ASSERTS A GLOBAL COUNT, and that is deliberate rather than
+  // lazy. The e2e database is shared and accumulates organisers across runs, so
+  // "there is exactly one" is not a property this suite can establish — an
+  // earlier version asserted it and passed alone while failing in the full
+  // suite. The LOCKOUT rule (the last organiser cannot be stood down) is a
+  // database invariant with a transactional fixture and a rollback assertion in
+  // pgTAP 015; what e2e is for is the wiring, so that is all it checks.
+
+  // Appointing by EXACT email. There is no picker and there must not be — a
+  // browsable list of the app's users is the god view D26/D27 refuses.
+  await page.fill("#organiser-email", OUTSIDER);
+  await page.getByRole("button", { name: "Appoint" }).click();
+  await expect(page.getByText(OUTSIDER)).toBeVisible();
+
+  // The refusals are the RPC's own words, surfaced to whoever typed the
+  // address — the only person who can act on either.
+  await page.fill("#organiser-email", OUTSIDER);
+  await page.getByRole("button", { name: "Appoint" }).click();
+  await expect(
+    page.getByText("that person is already an organiser"),
+  ).toBeVisible();
+
+  await page.fill("#organiser-email", `nobody-${STAMP}@example.com`);
+  await page.getByRole("button", { name: "Appoint" }).click();
+  await expect(
+    page.getByText("no account with that email address"),
+  ).toBeVisible();
+
+  // The person just appointed really is one: they can now read the report,
+  // which was gated against them a moment ago (spec above asserts that half).
+  await signIn(page, OUTSIDER);
+  await page.goto("/programme");
+  await expect(page.getByText(/You are an organiser/)).toBeVisible();
+
+  // Standing down, through the confirm step, and the row goes.
+  await signIn(page, ORGANISER);
+  await page.goto("/groups");
+  const row = page.locator("li", { hasText: OUTSIDER });
+  await row.getByRole("button", { name: "Remove" }).click();
+  await page
+    .getByRole("button", { name: "Remove", exact: true })
+    .last()
+    .click();
+  await expect(page.getByText(OUTSIDER)).toHaveCount(0);
+
+  // And the role really is gone, not just the row.
+  await signIn(page, OUTSIDER);
+  await page.goto("/programme");
+  await expect(page.getByText(/You are an organiser/)).toHaveCount(0);
+});

@@ -1033,6 +1033,13 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      grant_super_admin: {
+        Args: { p_email: string };
+        Returns: {
+          name: string;
+          user_id: string;
+        }[];
+      };
       group_consistency: {
         Args: { p_days: number; p_group: string };
         Returns: number;
@@ -1040,6 +1047,14 @@ export type Database = {
       increment_count: {
         Args: { p_date: string; p_delta: number; p_task: string };
         Returns: number;
+      };
+      list_super_admins: {
+        Args: never;
+        Returns: {
+          email: string;
+          name: string;
+          user_id: string;
+        }[];
       };
       lookup_invite: {
         Args: { p_code: string };
@@ -1061,6 +1076,7 @@ export type Database = {
         Args: { p_note?: string; p_report: string; p_status: string };
         Returns: undefined;
       };
+      revoke_super_admin: { Args: { p_user: string }; Returns: undefined };
       roadmap_roster: {
         Args: never;
         Returns: {

@@ -8,6 +8,7 @@ import { q } from "@/lib/db-log";
 import { groupHref } from "@/lib/group-href";
 import { NewGroupButton } from "./new-group";
 import { JoinByCode } from "./join-by-code";
+import { Organisers, type Organiser } from "./organisers";
 
 /**
  * Groups home — the Drive-style "My Drive" for circles (D26). First screen
@@ -78,6 +79,22 @@ export default async function GroupsHomePage() {
   ]);
 
   const isSuperAdmin = viewer?.is_super_admin ?? false;
+
+  // The administration's own roster (D56). Fetched only for an organiser — not
+  // to hide it (the RPC returns an empty set to anyone else, which is the real
+  // gate) but because there is no reason to make the round trip for the
+  // overwhelming majority of visits, and this screen is the app's front door.
+  const organisers: Organiser[] = isSuperAdmin
+    ? (
+        (await q("groups.organisers", supabase.rpc("list_super_admins")))
+          .data ?? []
+      ).map((o) => ({
+        userId: o.user_id,
+        name: o.name,
+        email: o.email,
+      }))
+    : [];
+
   const mine = (rows ?? []).filter((r) => r.groups != null);
   const owned = mine.filter((r) => r.role === "owner");
   const shared = mine.filter((r) => r.role === "admin");
@@ -143,7 +160,10 @@ export default async function GroupsHomePage() {
         {isSuperAdmin && (
           <div className="mx-auto w-full max-w-sm">
             <SectionHeading>Administration</SectionHeading>
-            <ProgrammeEntry />
+            <div className="flex flex-col gap-2">
+              <ProgrammeEntry />
+              <Organisers organisers={organisers} me={me ?? ""} />
+            </div>
           </div>
         )}
 
@@ -197,7 +217,10 @@ export default async function GroupsHomePage() {
       {isSuperAdmin && (
         <section>
           <SectionHeading>Administration</SectionHeading>
-          <ProgrammeEntry />
+          <div className="flex flex-col gap-2">
+            <ProgrammeEntry />
+            <Organisers organisers={organisers} me={me ?? ""} />
+          </div>
         </section>
       )}
 
