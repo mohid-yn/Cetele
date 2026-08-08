@@ -138,6 +138,14 @@ values
   ('00000000-0000-0000-0000-00000002a003', '00000000-0000-0000-0000-0000000000f1', 2, 'book', 'Riyad-us-Saliheen: The Book of Miscellany', 'Imam An-Nawawi', null, 'book', 1, false, 3),
   ('00000000-0000-0000-0000-00000002a004', '00000000-0000-0000-0000-0000000000f1', 2, 'quran', '1 Khatm', 'Thirty juz', null, 'juz', 30, false, 1),
   ('00000000-0000-0000-0000-00000002a005', '00000000-0000-0000-0000-0000000000f1', 2, 'quran_studies', 'Tajweed Book 3 — Theory', null, null, 'book', 1, false, 1),
+  -- SECOND booklet contradiction, and it is resolved the OPPOSITE way to the
+  -- level-3 Qur'an one below — which is why both are flagged rather than
+  -- quietly settled. The level-2 OVERVIEW (p.07) says "Tajweed Book 3 Reading";
+  -- the level-2 DETAIL page (p.09) says "Tajweed Book 3 iRead". "iRead" reads
+  -- like a product name and "Reading" like a description of the work, so the
+  -- overview is taken — but for the Qur'an the DETAIL page is taken. One of
+  -- these two choices is inconsistent with the other and only the owner can say
+  -- which. Open question.
   ('00000000-0000-0000-0000-00000002a006', '00000000-0000-0000-0000-0000000000f1', 2, 'quran_studies', 'Tajweed Book 3 — Reading', null, null, 'book', 1, false, 2),
   ('00000000-0000-0000-0000-00000002a007', '00000000-0000-0000-0000-0000000000f1', 2, 'quran_studies', 'Qur''an fluency', 'Approximately 4 minutes', null, 'assessment', 1, false, 3),
   ('00000000-0000-0000-0000-00000002a008', '00000000-0000-0000-0000-0000000000f1', 2, 'memorisation', 'Surahs At-Tariq to Al-Layl', 'Chapters 86–92', null, 'surahs', 7, false, 1),
@@ -154,7 +162,12 @@ values
   ('00000000-0000-0000-0000-00000003a001', '00000000-0000-0000-0000-0000000000f1', 3, 'book', 'Endeavor for Renewal', 'M. Fethullah Gülen', null, 'book', 1, false, 1),
   ('00000000-0000-0000-0000-00000003a002', '00000000-0000-0000-0000-0000000000f1', 3, 'book', 'The Gleams', 'Bediüzzaman Said Nursi', null, 'book', 1, false, 2),
   ('00000000-0000-0000-0000-00000003a003', '00000000-0000-0000-0000-0000000000f1', 3, 'book', 'Ihya Ulum al-Din: The Forty Principles of the Religion', 'Imam al-Ghazali, adapted summary', null, 'book', 1, false, 3),
-  ('00000000-0000-0000-0000-00000003a004', '00000000-0000-0000-0000-0000000000f1', 3, 'book', 'Qualities of a Devoted Soul', 'İbrahim Öztürk', null, 'book', 1, false, 4),
+  -- Özbüyük, NOT Öztürk. The author is on the cover image and not in the PDF's
+  -- text layer, so this was read off the artwork; the first pass guessed a
+  -- plausible Turkish surname and shipped a real person's name wrong. Anything
+  -- here that came from a cover rather than from extractable text is worth
+  -- re-checking against the artwork, not against memory.
+  ('00000000-0000-0000-0000-00000003a004', '00000000-0000-0000-0000-0000000000f1', 3, 'book', 'Qualities of a Devoted Soul', 'İbrahim Özbüyük', null, 'book', 1, false, 4),
   -- The booklet contradicts itself here: the level-3 overview says "2 Khatm",
   -- the level-3 detail page says "1 Khatm with Interpretation". The detail page
   -- is taken as authoritative and the discrepancy is an open question.

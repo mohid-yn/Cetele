@@ -48,6 +48,16 @@ update public.profiles set name = 'S Two'  where id = 'd1000000-0000-0000-0000-0
 update public.profiles set name = 'Member' where id = 'd1000000-0000-0000-0000-00000000000a';
 update public.profiles set name = 'Target' where id = 'd1000000-0000-0000-0000-00000000000b';
 
+-- HERMETIC, and it has to be. This suite COUNTS organisers — "the roster shows
+-- two", "the last one cannot be stood down" — so it cannot depend on who the
+-- database already happens to have. Run against a stack with a real organiser
+-- on it, the count assertions are off by one and the LOCKOUT negative silently
+-- stops testing anything, because a third organiser means the last-one rule
+-- never fires. That is exactly how it failed the first time it met a developer
+-- database. The whole file runs inside a transaction that rolls back, so this
+-- clears nobody permanently.
+update public.profiles set is_super_admin = false where is_super_admin;
+
 update public.profiles set is_super_admin = true
   where id in ('d1000000-0000-0000-0000-000000000001',
                'd1000000-0000-0000-0000-000000000002');
@@ -246,8 +256,15 @@ select is(
   'd1000000-0000-0000-0000-000000000001'::uuid,
   '...naming WHO did it');
 
+-- Scoped to the fixture's own actors: `audit_log` is never pruned and a real
+-- stack has grants and revokes on it from actual use. An unscoped count here
+-- passes on a fresh database and fails on a used one, which is the same trap
+-- the roster counts above fell into.
 select is(
-  (select count(*)::int from public.audit_log where action = 'revoke_super_admin'),
+  (select count(*)::int from public.audit_log
+    where action = 'revoke_super_admin'
+      and actor_id in ('d1000000-0000-0000-0000-000000000001',
+                       'd1000000-0000-0000-0000-000000000002')),
   2,
   'both stand-downs landed in audit_log');
 

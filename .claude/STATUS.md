@@ -90,6 +90,22 @@ the generated types.
   people standing each other down a second apart otherwise both commit). **Standing yourself down is
   allowed** while others remain — the ordinary hand-over, which a naive "can't revoke self" rule breaks.
   The **first** organiser is still made in the dashboard, and must be. pgTAP **551 → 583**, e2e **49 → 50**.
+- **The seed was audited AGAINST the booklet PDF itself (2026-08-08), and it had a wrong author.**
+  Every listening item, minute figure, budget, surah range, khatm and category matches the source
+  exactly — all 22 lectures, 600/900/1200, 93–114 · 86–92 · 78–85. **But `pdftotext` does not extract
+  the book TITLES** (they are set in a decorative font) or the cover artwork, so the first pass worked
+  from the descriptions and inferred what it could not read. Nine of ten titles were right. The tenth
+  attributed _Qualities of a Devoted Soul_ to "İbrahim **Öztürk**" — the cover says "İbrahim
+  **Özbüyük**". A plausible-looking guess at a real person's name, which is the worst kind: nothing
+  about it reads as missing data. Fixed, and the lesson is in the seed beside it — **anything sourced
+  from a cover image must be re-checked against the artwork, never against memory.** Verified by
+  rendering pages 4/9/14 at 110dpi and the author line at 400dpi.
+- **A SECOND self-contradiction in the booklet, previously unnoticed, and the two are resolved
+  opposite ways.** The level-2 **overview** (p.07) says "Tajweed Book 3 **Reading**"; the level-2
+  **detail** page (p.09) says "Tajweed Book 3 **iRead**". The seed takes the overview. But for the
+  level-3 Qur'an it takes the **detail** page ("1 Khatm with Interpretation" over the overview's "2
+  Khatm"). One of those two choices is wrong and only the owner can say which. Both are now flagged in
+  `seed.sql`; **neither is settled.**
 - **A correction to what I reported earlier: `e2e/routing.spec.ts:50` was never broken.** I reported it
   as a pre-existing failure on the branch. It fails against a **dev server** and passes against the
   production build — Playwright's `reuseExistingServer` had been picking up a running `pnpm dev`, which
@@ -211,10 +227,16 @@ the owner's separate go-ahead for `supabase db push`, then the merge.
 
 **Content is in `seed.sql`, not a migration, and the migration still ships EMPTY.** The booklet's lecture
 URLs are placeholders, so every `url` is NULL — an item with no link renders as no link, which is honest
-where a fabricated link is not. Two things for the owner beyond the URLs and the reward figures: the
-**level-3 Qur'an requirement contradicts itself** in the source (overview "2 Khatm", detail page "1 Khatm
-with Interpretation" — the detail page is taken), and **level 2's budget is 900 minutes against only 919
-available**, which leaves a member almost no choice.
+where a fabricated link is not (the PDF's own links are literally `www.youtube.com/playlist1`). Things for
+the owner beyond the URLs and the reward figures — **the booklet contradicts itself in TWO places, and the
+seed currently resolves them in OPPOSITE directions**, so at least one is wrong:
+
+| Where               | Overview page                   | Detail page                          | Seed takes       |
+| ------------------- | ------------------------------- | ------------------------------------ | ---------------- |
+| Level 3 · Qur'an    | "2 Khatm" (p.12)                | "1 Khatm with Interpretation" (p.14) | the **detail**   |
+| Level 2 · Qur'an St | "Tajweed Book 3 Reading" (p.07) | "Tajweed Book 3 iRead" (p.09)        | the **overview** |
+
+And **level 2's budget is 900 minutes against only 919 available**, which leaves a member almost no choice.
 
 **A nav bug the roadmap shipped with, now fixed.** `groupSubPath` falls back to `"/today"` for any route it
 does not know, so `/roadmap` did not merely go unrecognised — it silently claimed to **be** Today and the
