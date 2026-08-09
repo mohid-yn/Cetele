@@ -140,12 +140,16 @@ export function MemberShares({
 
   return (
     <div>
+      {/* ONE expression, not text-around-an-expression. JSX drops the space
+          where a text run is broken across a line, so the name and the word
+          after it rendered as "of Yusufthan the circle's default" — and an
+          explicit `{" "}` does not survive, because Prettier reflows the line
+          straight back into the broken shape. The group hub's collective
+          caption carries the same fix for the same reason ("100toward"). */}
       <p className="text-sm text-muted-foreground">
         The circle&rsquo;s goal is split between its members. You can ask{" "}
-        <span className="font-medium text-foreground">more</span> of{" "}
-        {memberName} than the circle&rsquo;s default — never less. This is what
-        their day, their streak and the circle&rsquo;s total are measured
-        against.
+        <span className="font-medium text-foreground">more</span>
+        {` of ${memberName} than the circle’s default — never less. This is what their day, their streak and the circle’s total are measured against.`}
       </p>
 
       <ul className="mt-3 divide-y divide-border border-y border-border">
