@@ -412,6 +412,58 @@ export type Database = {
           },
         ];
       };
+      member_task_shares: {
+        Row: {
+          effective_from: string;
+          effective_to: string | null;
+          id: string;
+          set_by: string | null;
+          target_count: number;
+          task_id: string;
+          user_id: string;
+        };
+        Insert: {
+          effective_from?: string;
+          effective_to?: string | null;
+          id?: string;
+          set_by?: string | null;
+          target_count: number;
+          task_id: string;
+          user_id: string;
+        };
+        Update: {
+          effective_from?: string;
+          effective_to?: string | null;
+          id?: string;
+          set_by?: string | null;
+          target_count?: number;
+          task_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "member_task_shares_set_by_fkey";
+            columns: ["set_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "member_task_shares_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "member_task_shares_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       memberships: {
         Row: {
           created_at: string;
@@ -1149,6 +1201,10 @@ export type Database = {
           p_task: string;
           p_user: string;
         };
+        Returns: number;
+      };
+      set_member_task_share: {
+        Args: { p_target: number; p_task: string; p_user: string };
         Returns: number;
       };
       set_reminder: {
