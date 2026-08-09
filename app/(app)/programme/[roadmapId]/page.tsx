@@ -14,9 +14,13 @@ import {
 import { RewardLadder } from "@/components/app/roadmap-rewards";
 import { RoadmapCover } from "@/components/app/roadmap-cover";
 import { ItemEditor } from "./item-editor";
+import { ProgrammeAdmin } from "./programme-admin";
+import { ItemFormButton } from "./item-form";
+import { RewardsEditor } from "./rewards-editor";
 import {
   CATEGORY_LABEL,
   categoriesAt,
+  itemsAt,
   itemsIn,
   isSafeItemUrl,
   levelsOf,
@@ -64,7 +68,7 @@ export default async function ProgrammeCataloguePage({
         "catalogue.roadmap",
         supabase
           .from("roadmaps")
-          .select("id, name, starts_on, ends_on")
+          .select("id, name, starts_on, ends_on, published")
           .eq("id", roadmapId)
           .maybeSingle(),
       ),
@@ -73,7 +77,7 @@ export default async function ProgrammeCataloguePage({
         supabase
           .from("roadmap_items")
           .select(
-            "id, level, category, title, source, url, unit, target, compulsory, description, image_url",
+            "id, level, category, title, source, url, unit, target, compulsory, description, image_url, sort_order",
           )
           .eq("roadmap_id", roadmapId)
           .order("level")
@@ -138,6 +142,23 @@ export default async function ProgrammeCataloguePage({
     done: 0,
   }));
 
+  // Which items anyone has RECORDED against (0030). It decides what the
+  // authoring controls will let an organiser touch: the fields completion is
+  // computed from freeze per item, and an item nobody has worked on can still
+  // be removed outright. Read straight from `roadmap_progress`, which RLS
+  // already scopes — an organiser reads every row, so their answer is the same
+  // one the RPC will give when the form is submitted.
+  const { data: recordedRows } = await q(
+    "catalogue.recorded items (authoring locks)",
+    supabase
+      .from("roadmap_progress")
+      .select("item_id, done, roadmap_items!inner(roadmap_id)")
+      .eq("roadmap_items.roadmap_id", roadmapId)
+      .gt("done", 0),
+  );
+  const recorded = new Set((recordedRows ?? []).map((r) => r.item_id));
+  const sortOrderOf = new Map((rows ?? []).map((i) => [i.id, i.sort_order]));
+
   const requirements: LevelRequirement[] = (reqs ?? []).map((r) => ({
     level: r.level,
     category: r.category as RoadmapCategory,
@@ -175,6 +196,21 @@ export default async function ProgrammeCataloguePage({
         </p>
       </div>
 
+      {/* The organiser's controls for the programme itself (D59): publish or
+          withdraw it, rename it, move its window, delete it while nobody has
+          worked on it. Above the reward ladder because publishing is the thing
+          that decides whether any of what follows is visible at all. */}
+      {canEdit && (
+        <ProgrammeAdmin
+          roadmapId={roadmapId}
+          name={roadmap.name}
+          startsOn={roadmap.starts_on}
+          endsOn={roadmap.ends_on}
+          published={roadmap.published}
+          recorded={recorded.size > 0}
+        />
+      )}
+
       {/* The OTHER reading of this same programme, at the same id: this screen
           says what it asks for, that one says who has done it (D59). Offered to
           every reader rather than only an organiser — the report is RLS-scoped,
@@ -192,7 +228,24 @@ export default async function ProgrammeCataloguePage({
         Members&rsquo; progress
       </Link>
 
-      {rewards && rewards.length > 0 && (
+      {canEdit && (
+        <RewardsEditor
+          roadmapId={roadmapId}
+          rewards={(rewards ?? []).map((r) => ({
+            id: r.id,
+            threshold: r.threshold,
+            label: r.label,
+            description: r.description,
+          }))}
+          recorded={recorded.size > 0}
+        />
+      )}
+
+      {/* The read-only ladder is for whoever is NOT editing. An organiser has
+          the editor above, which lists the same label, level and promise —
+          rendering both put two "Rewards" headings on the screen, one of them
+          a control and one of them a picture of the same three rows. */}
+      {!canEdit && rewards && rewards.length > 0 && (
         <section>
           <SectionHeading>Rewards</SectionHeading>
           <Card padding="md">
@@ -210,14 +263,38 @@ export default async function ProgrammeCataloguePage({
 
       {levels.length === 0 ? (
         <Card padding="md">
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            This programme has no work on it yet.
-          </p>
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              This programme has no work on it yet.
+            </p>
+            {/* The first item has no level section to hang off, so the button
+                lives here instead — without it a newly created programme is a
+                dead end on the very screen that made it. */}
+            {canEdit && (
+              <ItemFormButton
+                roadmapId={roadmapId}
+                level={1}
+                nextSortOrder={1}
+              />
+            )}
+          </div>
         </Card>
       ) : (
         levels.map((level) => (
           <section key={level}>
-            <SectionHeading>Level {level}</SectionHeading>
+            <SectionHeading
+              action={
+                canEdit ? (
+                  <ItemFormButton
+                    roadmapId={roadmapId}
+                    level={level}
+                    nextSortOrder={itemsAt(items, level).length + 1}
+                  />
+                ) : undefined
+              }
+            >
+              Level {level}
+            </SectionHeading>
             <div className="flex flex-col gap-3">
               {categoriesAt(items, level).map((category) => {
                 const group = itemsIn(items, level, category);
@@ -290,15 +367,36 @@ export default async function ProgrammeCataloguePage({
                               {i.target === 1 ? "" : `${i.target} ${i.unit}`}
                             </p>
                             {canEdit && (
-                              <ItemEditor
-                                item={{
-                                  id: i.id,
-                                  title: i.title,
-                                  url: i.url,
-                                  description: i.description,
-                                  imageUrl: i.imageUrl,
-                                }}
-                              />
+                              // Horizontal, and only TWO controls: three
+                              // stacked buttons made every row 150px tall on a
+                              // list of forty-six. Removal lives inside the
+                              // shape dialog, where the item is already named.
+                              <div className="flex shrink-0 items-center gap-1">
+                                <ItemEditor
+                                  item={{
+                                    id: i.id,
+                                    title: i.title,
+                                    url: i.url,
+                                    description: i.description,
+                                    imageUrl: i.imageUrl,
+                                  }}
+                                />
+                                <ItemFormButton
+                                  roadmapId={roadmapId}
+                                  item={{
+                                    id: i.id,
+                                    level: i.level,
+                                    category: i.category,
+                                    title: i.title,
+                                    source: i.source,
+                                    unit: i.unit,
+                                    target: i.target,
+                                    compulsory: i.compulsory,
+                                    sortOrder: sortOrderOf.get(i.id) ?? 0,
+                                    recorded: recorded.has(i.id),
+                                  }}
+                                />
+                              </div>
                             )}
                           </div>
                         </li>

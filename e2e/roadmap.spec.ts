@@ -18,8 +18,16 @@ const OWNER = `e2e-roadmap-${STAMP}@example.com`;
 const OUTSIDER = `e2e-roadmap-out-${STAMP}@example.com`;
 // The administration's reader: in NO circle, which is the whole point of them.
 const ORGANISER = `e2e-roadmap-org-${STAMP}@example.com`;
-/** A second published programme, so "follows several" has something to follow. */
-const SECOND_PROGRAMME = "Ramadan Programme (example)";
+/**
+ * A second published programme, so "follows several" has something to follow.
+ *
+ * It used to be a SEED FIXTURE ("Ramadan Programme (example)"), because content
+ * was authored by migration (D55) and `service_role` holds no write grant on
+ * `roadmaps` — there was no path for a test to create one. 0030 gave organisers
+ * that path, so the fixture came out of the seed at the owner's request and the
+ * suite makes its own. Stamped, because this one really is created per run.
+ */
+const SECOND_PROGRAMME = `Second Programme ${STAMP}`;
 /**
  * The booklet's own programme, from the seed. Named because the report is now
  * PER PROGRAMME (D59) — every route to it carries an id, so the specs need the
@@ -566,6 +574,66 @@ test("a member walks the timeline: stations, then categories, then items", async
   await expect(page.getByText("Locked")).toHaveCount(0);
 });
 
+test("an organiser builds a programme: create, add work, publish, delete", async ({
+  page,
+}) => {
+  // D59/0030. Everything the administration used to need an engineer for — a
+  // new programme, the work inside it, a cover — now happens in the app, with
+  // the database refusing anything that would re-judge work already recorded.
+  await signIn(page, ORGANISER);
+  await makeSuperAdmin(ORGANISER);
+
+  await page.goto("/programme");
+  await page.getByRole("button", { name: "New programme" }).click();
+  await page.getByLabel("Name").fill(SECOND_PROGRAMME);
+  await page.getByRole("button", { name: "Create" }).click();
+
+  // It REDIRECTS into the new programme: it is born empty and unpublished, and
+  // the next thing to do is add the work, which lives on this screen.
+  await page.waitForURL(/\/programme\/[0-9a-f-]+$/);
+  const createdUrl = page.url();
+  await expect(page.getByText("only you can see it")).toBeVisible();
+
+  // A DRAFT IS INVISIBLE TO EVERYONE ELSE, which is the point of being born
+  // unpublished — `roadmaps_select_published` (0025) is what enforces it.
+  await signIn(page, OUTSIDER);
+  await page.goto("/programme");
+  await expect(page.getByText(SECOND_PROGRAMME)).toHaveCount(0);
+
+  await signIn(page, ORGANISER);
+  await page.goto(createdUrl);
+
+  // ADDING WORK. The empty state carries its own button, because the per-level
+  // one does not exist until there is a level.
+  await page.getByRole("button", { name: "Add work" }).click();
+  // Scoped to the dialog: the rewards card behind it has its own "Add", and an
+  // unscoped locator matches both — the strict-mode violation this suite keeps
+  // re-learning.
+  const addWork = page.getByRole("dialog");
+  await addWork.getByLabel("Title").fill("Nightly reminder series");
+  await addWork.getByLabel("Unit").fill("minutes");
+  await addWork.getByLabel("Target").fill("300");
+  await addWork.getByRole("button", { name: "Add", exact: true }).click();
+
+  await expect(page.getByText("Nightly reminder series")).toBeVisible();
+  await expect(page.getByText("300 minutes")).toBeVisible();
+
+  // NOTHING IS RECORDED AGAINST IT YET, so the shape is fully editable and the
+  // item can still be removed — the two things that freeze the moment a member
+  // does any of it (pgTAP 017 pins both sides).
+  await page
+    .getByRole("button", { name: "Edit the shape of Nightly reminder series" })
+    .click();
+  const shape = page.getByRole("dialog");
+  await expect(shape.getByLabel("Target")).toBeEnabled();
+  await expect(shape.getByRole("button", { name: "Remove" })).toBeVisible();
+  await shape.getByRole("button", { name: "Cancel" }).click();
+
+  // PUBLISHING is what makes it real for circles — the next spec follows it.
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByText("every circle can follow it")).toBeVisible();
+});
+
 test("a circle follows TWO programmes, and the roadmap switches between them", async ({
   page,
 }) => {
@@ -579,10 +647,6 @@ test("a circle follows TWO programmes, and the roadmap switches between them", a
     .click();
   await page.waitForURL("**/today");
   const groupId = page.url().match(/\/g\/([^/]+)\//)![1];
-
-  // The SECOND programme comes from the seed, not from this spec: content is
-  // authored by migration (D55) and `service_role` holds no write grant on
-  // `roadmaps`, so there is deliberately no path for a test to create one.
 
   await page.goto(`/g/${groupId}/group/manage`);
   const second = page.getByRole("checkbox", { name: SECOND_PROGRAMME });
@@ -616,8 +680,8 @@ test("a circle follows TWO programmes, and the roadmap switches between them", a
   await expect(
     page.getByRole("link", { name: "Islamic Development Program" }),
   ).toHaveAttribute("aria-current", "page");
-  // And the content really did change: the Ramadan fixture's only book is gone.
-  await expect(page.getByText("A Ramadan Reader")).toHaveCount(0);
+  // And the content really did change: the second programme's only item is gone.
+  await expect(page.getByText("Nightly reminder")).toHaveCount(0);
 
   await page.reload();
   await expect(

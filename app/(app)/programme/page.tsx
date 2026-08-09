@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { FlagIcon, UsersIcon } from "@/components/app/icons";
 import { levelsOf } from "@/lib/roadmap";
+import { NewProgrammeButton } from "./new-programme";
 
 /**
  * The roadmap hub — the administration's programmes, and the way in to both
@@ -42,7 +43,7 @@ export default async function ProgrammeHubPage() {
         // `level` alone — this screen counts the shape of a programme, it never
         // renders an item. Pulling titles and cover art here would be a page of
         // data for a line of text.
-        .select("id, name, starts_on, ends_on, roadmap_items(level)")
+        .select("id, name, starts_on, ends_on, published, roadmap_items(level)")
         .order("starts_on", { ascending: false }),
     ),
     // WHICH READER this is, for the empty state and the footer — never as a
@@ -66,6 +67,7 @@ export default async function ProgrammeHubPage() {
       name: r.name,
       startsOn: r.starts_on,
       endsOn: r.ends_on,
+      published: r.published,
       // `levelsOf` rather than a max: a programme with levels 1 and 3 has two
       // levels, and this is the same function the report and the member's own
       // screen count with.
@@ -88,6 +90,7 @@ export default async function ProgrammeHubPage() {
       <PageHeader
         title="Roadmap"
         subtitle="The programmes the administration sets, and how everyone is getting on with them."
+        action={isSuperAdmin ? <NewProgrammeButton /> : undefined}
       />
 
       {/* NO screen-level "Members' progress" button, and that is the owner's
@@ -136,6 +139,11 @@ export default async function ProgrammeHubPage() {
                       {p.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
+                      {!p.published && (
+                        <span className="font-medium text-foreground">
+                          Draft ·{" "}
+                        </span>
+                      )}
                       {p.levels} {p.levels === 1 ? "level" : "levels"} ·{" "}
                       {p.items} {p.items === 1 ? "item" : "items"} ·{" "}
                       {p.startsOn.slice(0, 4)}

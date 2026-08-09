@@ -1060,6 +1060,27 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      create_roadmap: {
+        Args: { p_ends_on: string; p_name: string; p_starts_on: string };
+        Returns: string;
+      };
+      create_roadmap_item: {
+        Args: {
+          p_category: string;
+          p_compulsory: boolean;
+          p_level: number;
+          p_roadmap: string;
+          p_sort_order: number;
+          p_source: string;
+          p_target: number;
+          p_title: string;
+          p_unit: string;
+        };
+        Returns: string;
+      };
+      delete_roadmap: { Args: { p_roadmap: string }; Returns: undefined };
+      delete_roadmap_item: { Args: { p_item: string }; Returns: undefined };
+      delete_roadmap_reward: { Args: { p_reward: string }; Returns: undefined };
       grant_super_admin: {
         Args: { p_email: string };
         Returns: {
@@ -1143,9 +1164,36 @@ export type Database = {
         };
         Returns: undefined;
       };
+      set_roadmap_item_shape: {
+        Args: {
+          p_category: string;
+          p_compulsory: boolean;
+          p_item: string;
+          p_level: number;
+          p_sort_order: number;
+          p_source: string;
+          p_target: number;
+          p_title: string;
+          p_unit: string;
+        };
+        Returns: undefined;
+      };
+      set_roadmap_level_requirement: {
+        Args: {
+          p_category: string;
+          p_level: number;
+          p_min_total: number;
+          p_roadmap: string;
+        };
+        Returns: undefined;
+      };
       set_roadmap_progress: {
         Args: { p_done: number; p_item: string };
         Returns: number;
+      };
+      set_roadmap_published: {
+        Args: { p_published: boolean; p_roadmap: string };
+        Returns: undefined;
       };
       set_task_assignees: {
         Args: { p_task: string; p_user_ids: string[] };
@@ -1167,6 +1215,25 @@ export type Database = {
       transfer_ownership: {
         Args: { p_group: string; p_new_owner: string };
         Returns: undefined;
+      };
+      update_roadmap: {
+        Args: {
+          p_ends_on: string;
+          p_name: string;
+          p_roadmap: string;
+          p_starts_on: string;
+        };
+        Returns: undefined;
+      };
+      upsert_roadmap_reward: {
+        Args: {
+          p_description: string;
+          p_label: string;
+          p_reward?: string;
+          p_roadmap: string;
+          p_threshold: number;
+        };
+        Returns: string;
       };
     };
     Enums: {

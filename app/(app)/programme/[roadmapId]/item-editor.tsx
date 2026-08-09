@@ -5,6 +5,7 @@ import { Button, Dialog, Field, Input } from "@/components/ui";
 import { PencilIcon } from "@/components/app/icons";
 import { useAction } from "@/lib/use-action";
 import { setRoadmapItemContent } from "./actions";
+import { CoverUpload } from "./cover-upload";
 
 export type EditableItem = {
   id: string;
@@ -123,7 +124,7 @@ export function ItemEditor({ item }: { item: EditableItem }) {
           <Field
             label="Picture"
             htmlFor={`img-${item.id}`}
-            hint="A link to an image, or a path like /roadmap/cover.png. Blank shows the category's icon."
+            hint="Upload one, or paste a link / a path like /roadmap/cover.png. Blank shows the category's icon."
           >
             <Input
               id={`img-${item.id}`}
@@ -133,6 +134,19 @@ export function ItemEditor({ item }: { item: EditableItem }) {
               onChange={(e) => setImageUrl(e.target.value)}
             />
           </Field>
+
+          {/* THE UPLOAD (0031). Until now a cover had to already exist
+              somewhere — in the repo, behind a deploy, or on a host the
+              organiser happened to control — which made the picture the one
+              part of an item they could not actually provide. The file goes to
+              the `roadmap` bucket and its public URL lands in the field above,
+              so paste and upload end in exactly the same place and the field
+              stays the single source of what will be rendered. */}
+          <CoverUpload
+            itemId={item.id}
+            onUploaded={setImageUrl}
+            disabled={act.pending}
+          />
 
           {/* Shown as it will appear, because a pasted URL that 404s is
               otherwise indistinguishable from one that works until a member
