@@ -139,6 +139,45 @@ export async function logForGroup(
 }
 
 /**
+ * D61: set one member's SHARE of a task — the circle's ask of them, not their
+ * own stretch (that is `setTaskGoal`, and it stays theirs alone).
+ *
+ * Thin, like the two above: all authority lives in `set_member_task_share`
+ * (migration 0032) — admin-only, the member must be in the circle, the share
+ * must clear the circle's target and the D36a cap, and the write closes one
+ * interval and opens another so no past day's verdict can change. `null` clears
+ * the share and puts them back on the circle's number.
+ *
+ * Returns the member's EFFECTIVE target after the change, so the caller
+ * reconciles from the write itself rather than a refetch (D45).
+ */
+export async function setMemberShare(
+  groupId: string,
+  taskId: string,
+  userId: string,
+  target: number | null,
+): Promise<{ target: number | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data, error } = await q(
+    `rpc.set_member_task_share (=${target ?? "circle"})`,
+    // `p_target` is nullable in SQL (NULL clears), but the generated types
+    // render every RPC arg as non-null, so the null case needs the cast. The
+    // behaviour is pinned in pgTAP 018, not assumed here. (`setTaskGoal` in
+    // today/actions.ts carries the same cast for the same reason.)
+    supabase.rpc("set_member_task_share", {
+      p_task: taskId,
+      p_user: userId,
+      p_target: target as number,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { target: null, error: error.message };
+
+  revalidateGroup(groupId);
+  return { target: data, error: null };
+}
+
+/**
  * Leave a circle (CET-27 follow-up — `/privacy` has always promised this).
  *
  * Authority is the `memberships_delete_self` policy (0001): you may delete your

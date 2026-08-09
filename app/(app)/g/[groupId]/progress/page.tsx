@@ -5,6 +5,7 @@ import { localDateISO, isoDaysAgo, timestampDateISO } from "@/lib/local-date";
 import { q } from "@/lib/db-log";
 import { assignedOn, visibleOn, toAssignments } from "@/lib/assignments";
 import { toConfigVersions, targetOn, frequencyOn } from "@/lib/task-config";
+import { toShares, shareOn, effectiveTarget } from "@/lib/shares";
 import { isDueOn } from "@/lib/goals";
 import type { GridRow } from "@/components/app/task-grid";
 import type { EarnedBadge } from "@/components/app/badges";
@@ -75,6 +76,7 @@ export default async function ProgressPage({
     { data: dc30 },
     { data: assignmentRows },
     { data: versionRows },
+    { data: shareRows },
   ] = await Promise.all([
     q(
       "progress.logs (my 14d)",
@@ -119,10 +121,31 @@ export default async function ProgressPage({
         )
         .in("task_id", taskIds.length ? taskIds : [ZERO_UUID]),
     ),
+    // And how much of each was asked of ME (0032). Same argument again: the
+    // circle may split a task unequally, and a cell is a record of a day.
+    q(
+      "progress.member_task_shares (all intervals)",
+      supabase
+        .from("member_task_shares")
+        .select("task_id, user_id, target_count, effective_from, effective_to")
+        .eq("user_id", me)
+        .in("task_id", taskIds.length ? taskIds : [ZERO_UUID]),
+    ),
   ]);
 
   const assignments = toAssignments(assignmentRows);
   const versions = toConfigVersions(versionRows);
+  const shares = toShares(shareRows);
+
+  /** What I owed for this task on this day — mirrors `private.effective_target`. */
+  const targetFor = (
+    task: { id: string; target_count: number },
+    date: string,
+  ) =>
+    effectiveTarget(
+      shareOn(shares, task.id, me, date, tz),
+      targetOn(versions, task.id, date, tz, task.target_count),
+    );
 
   // Band = % of the last 30 completed days that were fully done (all rings).
   // A full day rolls up to exactly 100; missing/partial days aren't counted.
@@ -164,7 +187,7 @@ export default async function ProgressPage({
       // The target THAT DAY asked for (0024), not the one it asks for now: a
       // cell is a record of a day, and an admin moving the number cannot
       // redraw a fortnight of them.
-      const target = targetOn(versions, t.id, date, tz, t.target_count);
+      const target = targetFor(t, date);
       // `visibleOn`, not `assignedOn`: a task assigned to me today must stay
       // editable across the fortnight so a past day can still be repaired
       // (D48). `daysFull` below judges strictly — that one is a score.
@@ -213,11 +236,7 @@ export default async function ProgressPage({
         // truth `every()` would otherwise hand out (mirrors is_day_complete).
         return (
           owedThatDay.length > 0 &&
-          owedThatDay.every(
-            (t) =>
-              countOf(t.id, d) >=
-              targetOn(versions, t.id, d, tz, t.target_count),
-          )
+          owedThatDay.every((t) => countOf(t.id, d) >= targetFor(t, d))
         );
       }).length
     : 0;

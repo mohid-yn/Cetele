@@ -3,14 +3,29 @@
 /**
  * Task × day completion grid (real, M5). Rows are the group's tasks; each row
  * has one cell per day (oldest → today) coloured by how much of that task's
- * target was hit, with a ✓ on a fully-closed ring. Tap any cell for the exact
- * count. Forgiveness-framed (D8): a missed day is a calm neutral cell, never red.
+ * target was hit, with a ✓ on a fully-closed ring. Forgiveness-framed (D8): a
+ * missed day is a calm neutral cell, never red.
+ *
+ * THE GRID REVIEWS A FORTNIGHT; THE EDITOR BELOW WORKS A DAY (D61)
+ *
+ * Selecting picks a DAY, not a single task's cell, and the editor lists every
+ * task that day asked for — filled in, saved together, with one button that
+ * closes the whole day.
+ *
+ * That split is the point. The old editor was per cell: an admin logging a
+ * member's day at a halaqah had to find today's column in a horizontally
+ * scrolling fortnight, tap one square, type, press Save, and repeat for every
+ * task — four round trips through a review instrument to record one sitting.
+ * The grid is the right shape for "how has this member been doing" and the wrong
+ * shape for "write down what just happened", and it had been carrying both jobs.
+ * So the fortnight stays exactly as it was and the day gets its own controls,
+ * opened on TODAY because that is the day being written almost every time.
  *
  * Data arrives as props (the server did the `logs` range scan under RLS); this
- * leaf only handles picking a cell and — when `editable` (D29 proxy-log by an
- * admin, or a member self-correcting) — writing via the `setCount` action. The
- * RPC owns the bounds/window/attribution; on success we `router.refresh()` so
- * the grid re-reads authoritative data.
+ * leaf only picks a day and — when `editable` (D29 proxy-log by an admin, or a
+ * member self-correcting) — writes via the `setCount` action. The RPC owns the
+ * bounds/window/attribution; on success we `router.refresh()` so the grid
+ * re-reads authoritative data.
  */
 
 import * as React from "react";
@@ -20,12 +35,15 @@ import { DURATION, easeBrand } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { Button, Input } from "@/components/ui";
 import { setCount } from "@/app/(app)/g/[groupId]/group/actions";
-import { CheckIcon } from "@/components/app/icons";
+import { CheckIcon, ChevronRightIcon } from "@/components/app/icons";
 import { InlineAlert } from "@/components/app/inline-alert";
+import { usePropState } from "@/lib/use-prop-state";
 
 export type GridCell = {
   date: string;
   count: number;
+  /** What THIS member was asked for on THIS day (0024 + 0032) — never the live
+   *  circle target, and never another member's share. */
   target: number;
   pct: number;
   full: boolean;
@@ -69,16 +87,6 @@ function fmtFull(date: string): string {
   });
 }
 
-interface Picked {
-  taskId: string;
-  taskLabel: string;
-  date: string;
-  count: number;
-  target: number;
-  pct: number;
-  loggedBy: string | null;
-}
-
 export function TaskGrid({
   userId,
   viewerId,
@@ -100,14 +108,40 @@ export function TaskGrid({
   const router = useRouter();
   // The grid always renders under /g/[groupId]/… (group Members, own Progress).
   const groupId = String(useParams().groupId ?? "");
-  const [picked, setPicked] = React.useState<Picked | null>(null);
-  const [draft, setDraft] = React.useState("");
+
+  // A local copy of the server's rows, so a saved count shows immediately
+  // instead of after the refresh lands — and re-seeded whenever a genuine
+  // refetch delivers new ones, which is what stops the optimistic value from
+  // outliving the truth it was guessing at.
+  const [liveRows, setLiveRows] = usePropState(rows);
+
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
-  // The grid now scrolls horizontally (cells are a real 44px tap target rather
-  // than a ~15px square you can't thumb), so open it scrolled to TODAY — the
+  // Every date in the window, oldest → newest. Taken from the rows rather than
+  // recomputed from `days`: the server builds them on the MEMBER's calendar
+  // (D34), and a second derivation here could disagree with it by a day.
+  const dates = React.useMemo(() => {
+    const seen = new Set<string>();
+    for (const r of liveRows) for (const c of r.cells) seen.add(c.date);
+    return [...seen].sort();
+  }, [liveRows]);
+  const todayISO = dates[dates.length - 1];
+
+  // Open on TODAY. Adjusted during render rather than in an effect — the
+  // pattern `lib/use-prop-state.ts` documents and the one this repo lints for.
+  // Keyed on the last date, so it re-seeds when the day actually rolls over and
+  // NOT on every refresh, which would throw away a day the admin had picked.
+  const [picked, setPicked] = React.useState<string | null>(null);
+  const [seededFor, setSeededFor] = React.useState<string | undefined>();
+  if (todayISO && seededFor !== todayISO) {
+    setSeededFor(todayISO);
+    setPicked(todayISO);
+  }
+
+  // The grid scrolls horizontally (cells are a real 44px tap target rather than
+  // a ~15px square you can't thumb), so open it scrolled to TODAY — the
   // rightmost, most-logged day — instead of a fortnight ago.
   React.useEffect(() => {
     const el = scrollRef.current;
@@ -121,52 +155,164 @@ export function TaskGrid({
   // scrolls) and lets a desktop spend the space it actually has.
   const cellCols = `repeat(${days}, minmax(2.75rem, 1fr))`;
 
-  function pick(taskId: string, taskLabel: string, c: GridCell) {
-    setError(null);
-    setPicked({
-      taskId,
-      taskLabel,
-      date: c.date,
-      count: c.count,
-      target: c.target,
-      pct: c.pct,
-      loggedBy: c.loggedBy,
+  // What this day actually asked of them. A task they did not carry that day is
+  // dropped rather than shown disabled: the editor is a list of things to write
+  // down, and a row you cannot write to is noise in it. The grid above still
+  // shows the absence, which is where that fact belongs.
+  const dayRows = React.useMemo(() => {
+    if (!picked) return [];
+    return liveRows.flatMap((row) => {
+      const cell = row.cells.find((c) => c.date === picked);
+      return cell && cell.owed ? [{ row, cell }] : [];
     });
-    setDraft(String(c.count));
+  }, [liveRows, picked]);
+
+  // Drafts, re-seeded each time the day changes so an abandoned edit is
+  // genuinely abandoned rather than waiting behind the next day. Adjusted during
+  // render for the reason above; it cannot key on `dayRows`, which is a fresh
+  // identity whenever the parent re-renders.
+  const [draft, setDraft] = React.useState<Record<string, string>>({});
+  const [draftFor, setDraftFor] = React.useState<string | null>(null);
+  if (picked !== draftFor) {
+    setDraftFor(picked);
+    setDraft(
+      Object.fromEntries(
+        dayRows.map(({ row, cell }) => [row.taskId, String(cell.count)]),
+      ),
+    );
+    setError(null);
   }
 
-  async function save() {
+  const dirty = dayRows.some(
+    ({ row, cell }) =>
+      (draft[row.taskId] ?? String(cell.count)) !== String(cell.count),
+  );
+
+  function pick(date: string) {
+    setError(null);
+    setPicked(date);
+  }
+
+  function step(delta: number) {
     if (!picked) return;
-    const value = Math.max(0, Math.round(Number(draft) || 0));
+    const i = dates.indexOf(picked);
+    const next = dates[i + delta];
+    if (next) pick(next);
+  }
+
+  /** Write the given counts, then reconcile. Only rows that actually MOVED are
+   *  sent — a save that re-writes every task would stamp the admin's name on
+   *  days they never touched (`logs.logged_by`). */
+  async function commit(next: Record<string, number>) {
+    const changes = dayRows.filter(
+      ({ row, cell }) =>
+        next[row.taskId] !== undefined && next[row.taskId] !== cell.count,
+    );
+    if (changes.length === 0 || !picked) return;
+
     setSaving(true);
     setError(null);
-    const res = await setCount(
-      groupId,
-      userId,
-      picked.taskId,
-      picked.date,
-      value,
-    );
-    setSaving(false);
-    if (!res) return; // the action redirected (stale session) — let it navigate
-    if (res.error) {
-      setError(res.error);
+    const failed: string[] = [];
+    const applied: Record<string, number> = {};
+
+    // try/finally, not a bare await: `saving` disables every control here, so a
+    // throw would leave the editor stuck on "Saving…" with no way out — the
+    // failure `goals-dialog.tsx` records as the worst one a modal can have.
+    try {
+      // Serialized on purpose: a handful of writes against one member's rows,
+      // and a failure has to name the task it belongs to.
+      for (const { row, cell } of changes) {
+        const value = next[row.taskId];
+        const res = await setCount(
+          groupId,
+          userId,
+          row.taskId,
+          cell.date,
+          value,
+        );
+        // `res` is typed non-null, but the action redirects on a stale session
+        // (lib/stale-session.ts), which resolves the call to nothing.
+        if (!res || res.error) failed.push(row.label);
+        else applied[row.taskId] = value;
+      }
+    } catch {
+      for (const { row } of changes) {
+        if (applied[row.taskId] === undefined && !failed.includes(row.label))
+          failed.push(row.label);
+      }
+    } finally {
+      setSaving(false);
+    }
+
+    // Reflect what LANDED, including on a partial failure — the rows that saved
+    // are real and the grid must not keep showing the old numbers.
+    if (Object.keys(applied).length > 0) {
+      const selfEdit = userId === viewerId;
+      setLiveRows((prev) =>
+        prev.map((r) => {
+          const value = applied[r.taskId];
+          if (value === undefined) return r;
+          return {
+            ...r,
+            cells: r.cells.map((c) =>
+              c.date === picked
+                ? {
+                    ...c,
+                    count: value,
+                    pct: c.target ? Math.min(1, value / c.target) : 0,
+                    full: value >= c.target,
+                    loggedBy: value > 0 && !selfEdit ? viewerId : null,
+                  }
+                : c,
+            ),
+          };
+        }),
+      );
+      setDraft((d) => ({
+        ...d,
+        ...Object.fromEntries(
+          Object.entries(applied).map(([id, v]) => [id, String(v)]),
+        ),
+      }));
+    }
+
+    if (failed.length > 0) {
+      setError(`Couldn't save ${failed.join(", ")} — try again in a moment.`);
       return;
     }
-    // Reflect the change in the open panel immediately; the grid cells reconcile
-    // when the refreshed server props arrive.
-    const selfEdit = userId === viewerId;
-    setPicked({
-      ...picked,
-      count: value,
-      pct: picked.target ? Math.min(1, value / picked.target) : 0,
-      loggedBy: value > 0 && !selfEdit ? viewerId : null,
-    });
     router.refresh();
   }
 
-  const loggedByName = picked?.loggedBy ? names[picked.loggedBy] : undefined;
-  const dirty = picked != null && draft !== String(picked.count);
+  function save() {
+    const next: Record<string, number> = {};
+    for (const { row, cell } of dayRows) {
+      const raw = (draft[row.taskId] ?? "").trim();
+      next[row.taskId] =
+        raw === "" ? cell.count : Math.max(0, Math.round(Number(raw) || 0));
+    }
+    void commit(next);
+  }
+
+  /** Close every ring this day asked for, in one action.
+   *
+   *  Tops up; never trims. `setCount` is an exact-set, so writing the target
+   *  over a member who had counted PAST it would erase the extra — and extra
+   *  dhikr is explicitly welcome (0008's sanity-cap comment). This is the same
+   *  rule `logForGroup` learned the hard way for the whole circle, applied to
+   *  one member's day. */
+  function markDayDone() {
+    const next: Record<string, number> = {};
+    for (const { row, cell } of dayRows) {
+      next[row.taskId] = Math.max(cell.count, cell.target);
+    }
+    void commit(next);
+  }
+
+  const dayComplete =
+    dayRows.length > 0 &&
+    dayRows.every(({ cell }) => cell.count >= cell.target);
+
+  const pickedIndex = picked ? dates.indexOf(picked) : -1;
 
   return (
     <div className="flex flex-col gap-4">
@@ -178,7 +324,7 @@ export function TaskGrid({
           grow with the viewport. */}
       <div className="flex gap-2">
         <div className="flex shrink-0 flex-col gap-1.5">
-          {rows.map((row) => (
+          {liveRows.map((row) => (
             <div
               key={row.taskId}
               className="flex h-11 max-w-[7.5rem] items-center pr-1 lg:h-14 2xl:h-16"
@@ -202,24 +348,24 @@ export function TaskGrid({
               ultrawide, where a full-width row is its own readability problem —
               the same reasoning as the --container-page ladder. */}
           <div className="flex w-full max-w-[88rem] min-w-max flex-col gap-1.5">
-            {rows.map((row) => (
+            {liveRows.map((row) => (
               <div
                 key={row.taskId}
                 className="grid h-11 items-center gap-1 lg:h-14 2xl:h-16"
                 style={{ gridTemplateColumns: cellCols }}
               >
                 {row.cells.map((c) => {
-                  const isPicked =
-                    picked?.taskId === row.taskId && picked?.date === c.date;
+                  const isPicked = picked === c.date;
                   return (
                     <button
                       key={c.date}
                       type="button"
-                      // A day the task was not theirs is inert: there is nothing
-                      // to correct, and offering the editor would invite an
-                      // admin to log against an obligation that never existed.
-                      disabled={!c.owed}
-                      onClick={() => pick(row.taskId, row.label, c)}
+                      // Every cell selects its DAY, including one the task was
+                      // not theirs on: the day is still a day, and disabling the
+                      // square would put holes in the column you are trying to
+                      // click. What it was not owed shows in the fill, and the
+                      // editor simply does not list it.
+                      onClick={() => pick(c.date)}
                       title={
                         c.owed
                           ? `${fmtFull(c.date)} — ${c.count.toLocaleString()} / ${c.target.toLocaleString()}`
@@ -230,13 +376,15 @@ export function TaskGrid({
                           ? `${row.label}, ${fmtFull(c.date)}: ${c.count} of ${c.target}`
                           : `${row.label}, ${fmtFull(c.date)}: not assigned`
                       }
+                      aria-pressed={isPicked}
                       className={cn(
                         // Height comes from the ROW, width from the track — an
                         // `aspect-square` here would make a widened desktop cell
                         // as TALL as it is wide and burst the row.
-                        "grid h-full w-full place-items-center rounded-md transition-transform",
-                        c.owed && "hover:scale-105",
+                        "grid h-full w-full place-items-center rounded-md transition-transform hover:scale-105",
                         cellClass(c.pct, c.count, c.owed),
+                        // The whole COLUMN wears the selection now, so the ring
+                        // reads as "this day" rather than "this square".
                         isPicked &&
                           "ring-2 ring-accent ring-offset-1 ring-offset-card",
                       )}
@@ -262,82 +410,145 @@ export function TaskGrid({
         </div>
       </div>
 
-      {/* Picked-cell detail (+ editor when editable). Only the CONTENTS
-          crossfade when you pick another day — the box itself stays put, so
-          picking a cell doesn't make the page jump under your thumb. */}
+      {/* The picked DAY (+ editor when editable). Only the CONTENTS crossfade
+          when you move to another day — the box itself stays put, so changing
+          day doesn't make the page jump under your thumb. */}
       <div className="rounded-xl border border-border bg-muted/40 px-3 py-2.5 text-sm">
         <AnimatePresence mode="wait" initial={false}>
           {picked ? (
             <motion.div
-              key={`${picked.taskId}-${picked.date}`}
+              key={picked}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={easeBrand(DURATION.fast)}
-              className="flex flex-col gap-2.5"
+              className="flex flex-col gap-3"
             >
-              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              {/* Day header — the date, how it stands, and a step either way. */}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="font-medium text-foreground">
-                  {fmtFull(picked.date)}
+                  {fmtFull(picked)}
                 </span>
-                <span className="text-muted-foreground">
-                  · {picked.taskLabel}
-                </span>
-                {loggedByName && (
-                  <span className="text-xs text-muted-foreground">
-                    · logged by {loggedByName}
+                {picked === todayISO && (
+                  <span className="text-xs text-muted-foreground">today</span>
+                )}
+                {dayComplete && dayRows.length > 0 && (
+                  <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
+                    <CheckIcon className="size-3.5" />
+                    complete
                   </span>
                 )}
-                <span className="ml-auto font-display font-semibold text-foreground tabular-nums">
-                  {picked.count.toLocaleString()} /{" "}
-                  {picked.target.toLocaleString()}
-                  {picked.pct >= 1 ? (
-                    <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-semibold text-success">
-                      <CheckIcon className="size-3.5" />
-                      done
-                    </span>
-                  ) : (
-                    <span className="ml-1.5 text-xs font-medium text-muted-foreground">
-                      {Math.round(picked.pct * 100)}%
-                    </span>
-                  )}
-                </span>
-              </p>
-
-              {editable && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    aria-label="Count for this day"
-                    className="h-9 w-24"
-                  />
+                <div className="ml-auto flex items-center gap-1">
                   <Button
                     variant="ghost"
-                    size="sm"
-                    onClick={() => setDraft(String(picked.target))}
+                    size="icon-sm"
+                    aria-label="Previous day"
+                    disabled={saving || pickedIndex <= 0}
+                    onClick={() => step(-1)}
                   >
-                    Mark done
+                    {/* The mirror of the forward chevron. Rotated rather than
+                        drawn again, so the two directions cannot drift apart. */}
+                    <ChevronRightIcon className="size-4 rotate-180" />
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    onClick={() => setDraft("0")}
+                    size="icon-sm"
+                    aria-label="Next day"
+                    disabled={saving || pickedIndex >= dates.length - 1}
+                    onClick={() => step(1)}
                   >
-                    Clear
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={save}
-                    disabled={!dirty || saving}
-                    className="ml-auto"
-                  >
-                    {saving ? "Saving…" : "Save"}
+                    <ChevronRightIcon className="size-4" />
                   </Button>
                 </div>
+              </div>
+
+              {dayRows.length === 0 ? (
+                <p className="text-muted-foreground">
+                  Nothing was asked of them on this day.
+                </p>
+              ) : (
+                <>
+                  <ul className="flex flex-col divide-y divide-border border-y border-border">
+                    {dayRows.map(({ row, cell }) => {
+                      const inputId = `count-${row.taskId}`;
+                      const loggedByName = cell.loggedBy
+                        ? names[cell.loggedBy]
+                        : undefined;
+                      const met = cell.count >= cell.target;
+                      return (
+                        <li
+                          key={row.taskId}
+                          className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2"
+                        >
+                          <label
+                            htmlFor={editable ? inputId : undefined}
+                            className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
+                          >
+                            {row.label}
+                            {loggedByName && (
+                              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                                · logged by {loggedByName}
+                              </span>
+                            )}
+                          </label>
+                          {editable ? (
+                            <Input
+                              id={inputId}
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              disabled={saving}
+                              value={draft[row.taskId] ?? ""}
+                              onChange={(e) =>
+                                setDraft((d) => ({
+                                  ...d,
+                                  [row.taskId]: e.target.value,
+                                }))
+                              }
+                              aria-label={`Count for ${row.label}`}
+                              className="h-9 w-24 tabular-nums"
+                            />
+                          ) : (
+                            <span className="font-display font-semibold text-foreground tabular-nums">
+                              {cell.count.toLocaleString()}
+                            </span>
+                          )}
+                          <span className="w-20 shrink-0 text-xs text-muted-foreground tabular-nums">
+                            / {cell.target.toLocaleString()}
+                            {met && (
+                              <CheckIcon className="ml-1 inline size-3.5 text-success" />
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  {editable && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* One tap for the case this screen exists for: the admin
+                          sat in a halaqah, the whole day is done. Fills and
+                          SAVES — the old "Mark done" only filled the input, so
+                          the common act still needed a second, findable tap. */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={saving || dayComplete}
+                        onClick={markDayDone}
+                      >
+                        {dayComplete ? "Day complete" : "Mark day done"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={save}
+                        disabled={!dirty || saving}
+                        className="ml-auto"
+                      >
+                        {saving ? "Saving…" : "Save"}
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
               <InlineAlert>{error}</InlineAlert>
             </motion.div>
@@ -350,7 +561,7 @@ export function TaskGrid({
               transition={easeBrand(DURATION.fast)}
               className="text-muted-foreground"
             >
-              Tap any square to see that day&apos;s exact count
+              Tap any square to see that day
               {editable ? " — or to log it" : ""}.
             </motion.p>
           )}

@@ -16,6 +16,12 @@ import {
   currentAssignees,
   toAssignments,
 } from "@/lib/assignments";
+import {
+  toShares,
+  shareOn,
+  effectiveTarget,
+  currentShares,
+} from "@/lib/shares";
 import { GroupLive } from "./group-live";
 import {
   GroupClient,
@@ -128,6 +134,40 @@ export default async function GroupPage({
   );
   const versions = toConfigVersions(versionRows);
 
+  // And how much of each task was asked of each MEMBER (0032). Same argument a
+  // third time: a circle that splits a task unequally must draw every past day
+  // against the share in force that day, or an admin raising somebody this
+  // morning would re-draw their whole fortnight as a fortnight of shortfalls.
+  // ALL intervals, for the reason the assignments read gives.
+  const { data: shareRows } = await q(
+    "group.member_task_shares (all intervals)",
+    supabase
+      .from("member_task_shares")
+      .select("task_id, user_id, target_count, effective_from, effective_to")
+      .in("task_id", taskIds.length ? taskIds : [ZERO_UUID]),
+  );
+  const shares = toShares(shareRows);
+
+  /**
+   * What this member owed for this task on this day — the page's single
+   * expression of it, mirroring `private.effective_target`.
+   *
+   * Every figure below that compares a count to a bar goes through here: the
+   * collective goal, the grid's cells, and the breakdown's `daysFull` score.
+   * They used to read `targetOn` directly, and three copies of a two-layer
+   * as-of rule is exactly how a mirror drifts from its original.
+   */
+  const targetFor = (
+    userId: string,
+    task: { id: string; target_count: number },
+    date: string,
+    zone: string,
+  ) =>
+    effectiveTarget(
+      shareOn(shares, task.id, userId, date, zone),
+      targetOn(versions, task.id, date, zone, task.target_count),
+    );
+
   // Admin oversight needs peer streaks (RLS: self + members of groups I admin).
   const streakMap = new Map<string, number>();
   if (canManage && memberIds.length) {
@@ -164,16 +204,19 @@ export default async function GroupPage({
   // taps. The admin breakdown below already resolved each member by their own
   // clock; the collective, per-member today, and the weekly window now match.
   const memberToday = new Map<string, string>();
+  const memberTz = new Map<string, string>();
   const memberLast7 = new Map<string, Set<string>>();
   for (const m of memberList) {
     const mToday = localDateISO(m.profiles?.timezone ?? "UTC");
     memberToday.set(m.user_id, mToday);
+    memberTz.set(m.user_id, m.profiles?.timezone ?? "UTC");
     memberLast7.set(
       m.user_id,
       new Set(Array.from({ length: 7 }, (_, i) => isoDaysAgo(mToday, i))),
     );
   }
   const todayOf = (u: string) => memberToday.get(u) ?? todayISO;
+  const tzOf = (u: string) => memberTz.get(u) ?? tz;
 
   // Overview — collective per-task total today vs (target × members). Each
   // member counts on their own today, so a cross-timezone circle still sums.
@@ -190,7 +233,14 @@ export default async function GroupPage({
       label: t.label,
       assignees: who,
       total: carriers.reduce((s, u) => s + countOf(u, t.id, todayOf(u)), 0),
-      goal: collectiveGoal(t.target_count, who, memberList.length),
+      // The SUM of what each carrier is actually asked for (0032), not
+      // `target × carriers`. Once a circle splits a task unequally the product
+      // is simply the wrong number — a circle of three where one member carries
+      // 500 and two carry 100 owes 700, and a bar drawn at 300 would read as
+      // over-full while a bar at 1500 could never be closed at all.
+      goal: collectiveGoal(who, memberIds, (u) =>
+        targetFor(u, t, todayOf(u), tzOf(u)),
+      ),
     };
   });
 
@@ -264,9 +314,9 @@ export default async function GroupPage({
         cells: mDates.map((date) => {
           const cell = index.get(`${m.user_id}|${t.id}|${date}`);
           const count = cell?.count ?? 0;
-          // The target THAT DAY asked for (0024) — a record of a day, not a
-          // reading of the current setting.
-          const target = targetOn(versions, t.id, date, mTz, t.target_count);
+          // What THIS MEMBER was asked for THAT DAY (0024 + 0032) — a record of
+          // a day, not a reading of the current setting.
+          const target = targetFor(m.user_id, t, date, mTz);
           // Permissive, like the member's own grid: an admin proxy-logging a
           // repair (D29 + D48) must not be blocked on a day that fell before
           // the assignment. `daysFull` below stays strict — that one is scored.
@@ -321,9 +371,7 @@ export default async function GroupPage({
       const owedDays = mDates.filter((d) => owedOn(d).length > 0);
       const daysFull = owedDays.filter((d) =>
         owedOn(d).every(
-          (t) =>
-            countOf(m.user_id, t.id, d) >=
-            targetOn(versions, t.id, d, mTz, t.target_count),
+          (t) => countOf(m.user_id, t.id, d) >= targetFor(m.user_id, t, d, mTz),
         ),
       ).length;
       breakdowns[m.user_id] = {
@@ -339,6 +387,19 @@ export default async function GroupPage({
         daysFull,
         streak: streakMap.get(m.user_id) ?? 0,
         rows,
+        // What the circle currently asks of them, per task — the editor's
+        // subject (D61). Every task they carry TODAY, not the union across the
+        // fortnight `theirTasks` uses: a share is a forward-looking decision,
+        // so offering the control on a task they were taken off last week would
+        // write an obligation nobody will ever be asked to meet.
+        shares: taskList
+          .filter((t) => assignedOn(assignments, t.id, m.user_id, mToday, mTz))
+          .map((t) => ({
+            taskId: t.id,
+            label: t.label,
+            circleTarget: t.target_count,
+            share: currentShares(shares, t.id)[m.user_id] ?? null,
+          })),
       };
     }
   }

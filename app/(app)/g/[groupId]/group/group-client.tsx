@@ -621,6 +621,7 @@ export function GroupClient({
         <MemberBreakdownDialog
           key={breakdownUserId ?? "none"}
           member={breakdownUserId ? breakdowns[breakdownUserId] : null}
+          groupId={groupId}
           days={days}
           viewerId={viewerId}
           names={names}

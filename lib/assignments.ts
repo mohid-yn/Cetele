@@ -172,17 +172,25 @@ export function assigneeLabel(
 }
 
 /**
- * The circle's collective goal for a task: its target times the number of
- * people who actually carry it.
+ * The circle's collective goal for a task: the SUM of what each person who
+ * carries it is actually asked for.
  *
- * Scoping the denominator is not cosmetic — a task two of eight members carry
- * could never be closed against a goal of `target × 8`, so the circle would
+ * Scoping to the carriers is not cosmetic — a task two of eight members carry
+ * could never be closed against a goal covering all eight, so the circle would
  * show a bar it is structurally unable to fill.
+ *
+ * It is a sum rather than `target × carriers` because a share is per member
+ * now (0032, D61). A circle of three where one carries 500 and two carry 100
+ * owes 700: the product would draw the bar at 300, which fills past full the
+ * moment the big share is met, or at 1500, which can never be closed. The
+ * uniform case still falls straight out — every carrier returns the same
+ * number and the sum is the old product.
  */
 export function collectiveGoal(
-  target: number,
   assignees: string[] | null,
-  memberCount: number,
+  memberIds: string[],
+  targetFor: (userId: string) => number,
 ): number {
-  return target * (assignees === null ? memberCount : assignees.length);
+  const carriers = assignees === null ? memberIds : assignees;
+  return carriers.reduce((sum, id) => sum + targetFor(id), 0);
 }

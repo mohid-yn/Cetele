@@ -19,6 +19,14 @@ import { groupHref } from "@/lib/group-href";
 import { useLocalToday } from "@/lib/use-local-today";
 import { goalCap } from "@/lib/goals";
 import { targetOn, type ConfigVersion } from "@/lib/task-config";
+// Aliased: this file's own `shareOn` is "what the circle asked of me that day",
+// which is the COMPOSED answer — the member share folded over the circle's
+// as-of target. The import is only the first half of it.
+import {
+  shareOn as memberShareOn,
+  effectiveTarget,
+  type Share,
+} from "@/lib/shares";
 import { langOf } from "@/lib/text-direction";
 import { incrementCount } from "../../today/actions";
 import { setCount } from "../../group/actions";
@@ -86,6 +94,7 @@ export function CountClient({
   initialDate,
   initialCounts,
   versions,
+  shares,
 }: {
   groupId: string;
   /** The viewer — set_count's target, so a correction is always a self-edit. */
@@ -109,6 +118,9 @@ export function CountClient({
   /** Every target/cycle this task has run under (0024) — the day-strip marks a
    *  fortnight, and each day is judged against the target IT asked for. */
   versions: ConfigVersion[];
+  /** Every share this task has asked of ME (0032), as intervals — the day-strip
+   *  measures each past day against the one in force that day. */
+  shares: Share[];
 }) {
   const router = useRouter();
   const { celebrate } = useCelebration();
@@ -131,8 +143,12 @@ export function CountClient({
   // `private.obligations` does. Reading the live target here would let a raise
   // un-tick every day already kept while the streak still counted them.
   const shareOn = React.useCallback(
-    (d: string) => targetOn(versions, task.id, d, timeZone, task.target),
-    [versions, task.id, timeZone, task.target],
+    (d: string) =>
+      effectiveTarget(
+        memberShareOn(shares, task.id, userId, d, timeZone),
+        targetOn(versions, task.id, d, timeZone, task.target),
+      ),
+    [shares, versions, task.id, userId, timeZone, task.target],
   );
   // My own raised bar, recovered from the goal the server already resolved:
   // `effectiveGoal` is `greatest(target, override)`, so anything above the live

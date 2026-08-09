@@ -121,20 +121,20 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
   await expect(pageA.getByText("full days")).toBeVisible();
 
   // Proxy-edit (D29): correct B's Tasbih today from 10 → 5 via set_count.
-  await pageA.getByRole("button", { name: /Tasbih.*10 of 10/ }).click();
-  await pageA.getByLabel("Count for this day").fill("5");
+  // The editor opens on TODAY (D61), so there is no cell to hunt for first —
+  // every task the day asked for is already listed with its own input.
+  await expect(pageA.getByLabel("Count for Tasbih")).toHaveValue("10");
+  await pageA.getByLabel("Count for Tasbih").fill("5");
   await pageA.getByRole("button", { name: "Save" }).click();
-  await expect(pageA.getByText(/5 \/ 10/)).toBeVisible();
   await expect(pageA.getByText(/logged by/)).toBeVisible();
 
-  // Persisted — reload, reopen, the cell reads 5 of 10 from the DB.
+  // Persisted — reload, reopen, the day reads 5 from the DB.
   await pageA.goto("/group");
   await pageA.getByRole("tab", { name: "Members" }).click();
   await pageA
     .getByRole("button", { name: `See ${bName}'s last 14 days` })
     .click();
-  await pageA.getByRole("button", { name: /Tasbih.*5 of 10/ }).click();
-  await expect(pageA.getByLabel("Count for this day")).toHaveValue("5");
+  await expect(pageA.getByLabel("Count for Tasbih")).toHaveValue("5");
 
   await ctxA.close();
   await ctxB.close();

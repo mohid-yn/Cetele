@@ -35,6 +35,7 @@ import { GoalsDialog } from "./goals-dialog";
 import { isDueOn, daysUntilDue, dueLabel, frequencyLabel } from "@/lib/goals";
 import { visibleOn, assignedOn, type Assignment } from "@/lib/assignments";
 import { targetOn, frequencyOn, type ConfigVersion } from "@/lib/task-config";
+import { shareOn, effectiveTarget, type Share } from "@/lib/shares";
 import type { Landmark } from "@/lib/retention";
 import { langOf } from "@/lib/text-direction";
 import {
@@ -56,8 +57,9 @@ export type TodayTask = {
   id: string;
   label: string;
   subtitle: string | null;
-  /** The circle's share — what "done" means for the day, the streak and every
-   *  rollup. Never replaced by the personal goal. */
+  /** MY share — what "done" means for the day, the streak and every rollup.
+   *  The circle's default unless an admin raised me (D61). Never replaced by
+   *  the personal goal. */
   target: number;
   /** What I am aiming at (D51). Equal to `target` unless I raised it. */
   goal: number;
@@ -94,6 +96,7 @@ export function TodayClient({
   landmark,
   welcome,
   me,
+  shares,
   assignments,
   versions,
   tasks: allTasks,
@@ -120,6 +123,12 @@ export function TodayClient({
    * WHICH DAY, and the strip renders a fortnight of them.
    */
   versions: ConfigVersion[];
+  /**
+   * Every share this circle has asked of its members (0032). Intervals for the
+   * same reason again: what I owed on a day depends on the share in force THAT
+   * day, so an admin raising me this morning must not re-mark my fortnight.
+   */
+  shares: Share[];
   /** date → taskId → my count (last 14 days) */
   counts: Record<string, Record<string, number>>;
   circle: CircleMember[];
@@ -185,11 +194,14 @@ export function TodayClient({
     usePropState<Record<string, number>>(freqSeed);
 
   const countOn = (taskId: string, d: string) => counts[d]?.[taskId] ?? 0;
-  // What the circle asked of me for this task on this day (0024). An admin may
-  // have moved the target or the cycle since; a past day is judged by what IT
-  // asked for, exactly as `private.obligations` does.
-  const shareOn = (t: TodayTask, d: string) =>
-    targetOn(versions, t.id, d, timeZone, t.target);
+  // What the circle asked of ME for this task on this day (0024 + 0032) — my
+  // share folded over the circle's as-of target. An admin may have moved either
+  // since; a past day is judged by what IT asked for, as `obligations` does.
+  const targetOnDay = (t: TodayTask, d: string) =>
+    effectiveTarget(
+      shareOn(shares, t.id, me, d, timeZone),
+      targetOn(versions, t.id, d, timeZone, t.target),
+    );
   // The schedule this task ran under on that day. `mine` decides whether the
   // member's own denser cycle is folded in: it is an AIM, so it belongs to what
   // the screen offers and never to what the screen scores. `private.obligations`
@@ -223,7 +235,8 @@ export function TodayClient({
         isDueOn(schedOn(t, d, false), d),
     );
     return (
-      owed.length > 0 && owed.every((t) => countOn(t.id, d) >= shareOn(t, d))
+      owed.length > 0 &&
+      owed.every((t) => countOn(t.id, d) >= targetOnDay(t, d))
     );
   };
 
@@ -237,7 +250,7 @@ export function TodayClient({
     // from the resolved goal — `effectiveGoal` is `greatest()`, so anything
     // above the live target is the override — and then floored at that day's
     // share, so a back-filled day aims at what it actually asked for.
-    const share = shareOn(t, date);
+    const share = targetOnDay(t, date);
     const myBar = goalOf(t) > t.target ? goalOf(t) : 0;
     const goal = Math.max(share, myBar);
     const sched = schedOn(t, date, true);

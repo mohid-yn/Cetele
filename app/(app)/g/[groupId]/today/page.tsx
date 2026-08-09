@@ -9,7 +9,8 @@ import {
   currentAssignees,
   toAssignments,
 } from "@/lib/assignments";
-import { toConfigVersions } from "@/lib/task-config";
+import { toConfigVersions, targetOn } from "@/lib/task-config";
+import { toShares, shareOn, effectiveTarget } from "@/lib/shares";
 import { q } from "@/lib/db-log";
 import {
   REACTIONS,
@@ -107,6 +108,7 @@ export default async function TodayPage({
     { data: myGoals },
     { data: assignmentRows },
     { data: versionRows },
+    { data: shareRows },
   ] = await q(
     "today.logs (my 14d + circle today + reactions + my goals)",
     Promise.all([
@@ -183,11 +185,37 @@ export default async function TodayPage({
           "task_id",
           taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
         ),
+      // How much of each task is asked of each MEMBER (0032). The whole
+      // circle's rows, like the assignments above and for the same reason: the
+      // roster below scores every member, and the collective goal is the SUM of
+      // what each carrier is asked for. ALL intervals, so the day-strip measures
+      // a past day against the share in force that day.
+      supabase
+        .from("member_task_shares")
+        .select("task_id, user_id, target_count, effective_from, effective_to")
+        .in(
+          "task_id",
+          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+        ),
     ]),
   );
 
   const assignments = toAssignments(assignmentRows);
   const versions = toConfigVersions(versionRows);
+  const shares = toShares(shareRows);
+
+  /** What this member owes for this task on this day — the page's single
+   *  expression of it, mirroring `private.effective_target`. */
+  const targetFor = (
+    userId: string,
+    task: { id: string; target_count: number },
+    date: string,
+    zone: string,
+  ) =>
+    effectiveTarget(
+      shareOn(shares, task.id, userId, date, zone),
+      targetOn(versions, task.id, date, zone, task.target_count),
+    );
 
   // taskId → my raised bar, where I have one (D51)
   const goalByTask = new Map(
@@ -254,8 +282,13 @@ export default async function TodayPage({
           tzOf(m.user_id),
         ),
       );
+      // Against THEIR share, not the circle's default (0032) — a member
+      // carrying 500 has not closed the ring at 100, and one carrying the
+      // circle's number is unaffected.
       const closed = theirs.filter(
-        (t) => (mine?.get(t.id) ?? 0) >= t.target_count,
+        (t) =>
+          (mine?.get(t.id) ?? 0) >=
+          targetFor(m.user_id, t, todayOf(m.user_id), tzOf(m.user_id)),
       ).length;
       const total = theirs.length;
       return {
@@ -310,10 +343,11 @@ export default async function TodayPage({
   const goal = (tasks ?? []).reduce(
     (s, t) =>
       s +
-      collectiveGoal(
-        t.target_count,
-        currentAssignees(assignments, t.id),
-        members?.length ?? 0,
+      // The SUM of each carrier's own share (0032), not `target × carriers`:
+      // once a circle splits a task unequally the product is simply the wrong
+      // number, and the bar would either overfill or never close.
+      collectiveGoal(currentAssignees(assignments, t.id), [...memberIds], (u) =>
+        targetFor(u, t, todayOf(u), tzOf(u)),
       ),
     0,
   );
@@ -381,8 +415,14 @@ export default async function TodayPage({
           // circle's share — the only one the streak, the rollup, the circle
           // list and the collective above ever read — and `goal` is what this
           // member is aiming at.
-          target: t.target_count,
-          goal: effectiveGoal(t.target_count, goalByTask.get(t.id)),
+          // `target` is what the circle asks of ME (0032) — my share if I
+          // have one, else the circle's default. It is the only number the
+          // streak, the rollup, the circle list and the collective read.
+          target: targetFor(me, t, todayISO, tz),
+          goal: effectiveGoal(
+            targetFor(me, t, todayISO, tz),
+            goalByTask.get(t.id),
+          ),
           // The schedule (0021). The client resolves "due today?" and "how many
           // days until it comes round" from these, so the answer follows the
           // member's OWN midnight (D34) rather than the server's.
@@ -396,6 +436,7 @@ export default async function TodayPage({
         me={me}
         assignments={assignments}
         versions={versions}
+        shares={shares}
         counts={counts}
         circle={circle}
         collectivePct={collectivePct}

@@ -3,16 +3,29 @@
 /**
  * Member task-breakdown (admin oversight, real — M5). When an owner/co-admin
  * taps a member on the Group → Members roster, this shows that member's
- * per-task completion for the last fortnight so they can follow up about
- * *specific days* ("you missed Salawat Tue–Thu — everything ok?").
+ * per-task record for the last fortnight so they can follow up about *specific
+ * days* ("you missed Salawat Tue–Thu — everything ok?"), log on their behalf
+ * (D29), and set what the circle asks of them (D61).
  * Forgiveness-framed (D8): a missed day is a calm neutral cell, never red.
  *
- * Data is fetched server-side (one `logs` range scan under RLS) and handed in;
- * for an admin the grid is editable (D29 proxy-log via the `setCount` action).
+ * TWO JOBS, TWO TABS
+ *
+ * Logging a day and deciding a share are different acts on different clocks: one
+ * is "write down what happened", done often and quickly; the other is "change
+ * what we ask of this person", done rarely and deliberately. Stacking them in
+ * one scroll would put a control that rewrites the member's obligation directly
+ * under the numeric inputs an admin taps through every week — and the roadmap
+ * hub (D59) is this repo's own record of what happens when one screen carries
+ * two jobs: the one you reach for gets buried under the one you don't.
+ *
+ * Data is fetched server-side (one `logs` range scan under RLS) and handed in.
  */
 
+import * as React from "react";
 import { Dialog, Badge } from "@/components/ui";
 import { TaskGrid, type GridRow } from "./task-grid";
+import { MemberShares, type MemberShare } from "./member-shares";
+import { Segmented } from "./segmented";
 import { FlameIcon } from "@/components/app/icons";
 
 export type BreakdownMember = {
@@ -23,10 +36,15 @@ export type BreakdownMember = {
   daysFull: number;
   streak: number;
   rows: GridRow[];
+  /** What the circle asks of them per task, for the Share tab (D61). */
+  shares: MemberShare[];
 };
+
+type Tab = "record" | "share";
 
 export function MemberBreakdownDialog({
   member,
+  groupId,
   days,
   viewerId,
   names,
@@ -35,6 +53,7 @@ export function MemberBreakdownDialog({
   onClose,
 }: {
   member: BreakdownMember | null;
+  groupId: string;
   days: number;
   viewerId: string;
   names: Record<string, string>;
@@ -42,6 +61,8 @@ export function MemberBreakdownDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const [tab, setTab] = React.useState<Tab>("record");
+
   if (!member) return null;
 
   return (
@@ -51,7 +72,7 @@ export function MemberBreakdownDialog({
       title={member.name}
       description={
         editable
-          ? `Last ${days} days · tap a square to view or log that day`
+          ? `Last ${days} days · tap a square to open that day`
           : `Last ${days} days · tap a square for that day's detail`
       }
       // Full-width on phones, but grow on larger screens so the grid is
@@ -83,16 +104,38 @@ export function MemberBreakdownDialog({
           </span>
         </div>
 
-        {/* The readable task × day grid (shared with the personal Progress view);
-            editable for admins so they can tally for a member (D29). */}
-        <TaskGrid
-          userId={member.id}
-          viewerId={viewerId}
-          rows={member.rows}
-          names={names}
-          days={days}
-          editable={editable}
-        />
+        {/* Only an admin can change a share, so a plain viewer gets the record
+            alone rather than a tab strip with one inert half. */}
+        {editable && (
+          <Segmented<Tab>
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: "record", label: "Record" },
+              { value: "share", label: "Their share" },
+            ]}
+          />
+        )}
+
+        {tab === "record" || !editable ? (
+          /* The readable task × day grid (shared with the personal Progress
+             view); editable for admins so they can tally for a member (D29). */
+          <TaskGrid
+            userId={member.id}
+            viewerId={viewerId}
+            rows={member.rows}
+            names={names}
+            days={days}
+            editable={editable}
+          />
+        ) : (
+          <MemberShares
+            groupId={groupId}
+            userId={member.id}
+            memberName={member.name}
+            shares={member.shares}
+          />
+        )}
       </div>
     </Dialog>
   );
