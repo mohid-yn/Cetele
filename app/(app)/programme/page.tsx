@@ -5,7 +5,7 @@ import { q } from "@/lib/db-log";
 import { Card, Screen, buttonVariants } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
-import { ChevronRightIcon, FlagIcon, UsersIcon } from "@/components/app/icons";
+import { FlagIcon, UsersIcon } from "@/components/app/icons";
 import { levelsOf } from "@/lib/roadmap";
 
 /**
@@ -90,27 +90,12 @@ export default async function ProgrammeHubPage() {
         subtitle="The programmes the administration sets, and how everyone is getting on with them."
       />
 
-      {/* The one primary action on this screen (accent = earned action, and
-          exactly one per view). It is NOT gated on a programme existing:
-          checking would cost a query, and the report answers "nothing recorded
-          yet" honestly — an entry that vanishes leaves nowhere to go. */}
-      <Link
-        href="/programme/progress"
-        className={buttonVariants({
-          variant: "accent",
-          // Full width on a phone, natural width above it — the same rule the
-          // roadmap screen's strip follows, so a rose bar does not run the
-          // whole way across a desktop column.
-          className: "w-full justify-between sm:w-auto sm:self-start",
-        })}
-      >
-        <span className="inline-flex items-center gap-2">
-          <UsersIcon aria-hidden className="size-5" />
-          Members&rsquo; progress
-        </span>
-        <ChevronRightIcon aria-hidden className="size-5" />
-      </Link>
-
+      {/* NO screen-level "Members' progress" button, and that is the owner's
+          correction (D59): a cohort belongs to a programme. Levels, rewards and
+          the contribution are all per programme (D55), so a single report
+          stacking every one of them invited a comparison that means nothing —
+          and left the reader to work out which roster they were looking at.
+          Each row below carries its own instead. */}
       <section>
         <SectionHeading>Programmes</SectionHeading>
         {programmes.length === 0 ? (
@@ -158,10 +143,21 @@ export default async function ProgrammeHubPage() {
                         `–${p.endsOn.slice(0, 4)}`}
                     </p>
                   </div>
-                  <ChevronRightIcon
-                    aria-hidden
-                    className="size-5 shrink-0 text-muted-foreground"
-                  />
+                </Link>
+                {/* This programme's cohort, beside this programme's name —
+                    the same arrangement /groups uses for Manage: the card
+                    opens the thing, the button does the other job on it. */}
+                <Link
+                  href={`/programme/${p.id}/progress`}
+                  aria-label={`Members' progress on ${p.name}`}
+                  className={buttonVariants({
+                    variant: "outline",
+                    size: "sm",
+                    className: "mr-1.5",
+                  })}
+                >
+                  <UsersIcon aria-hidden className="size-4" />
+                  Progress
                 </Link>
               </Card>
             ))}

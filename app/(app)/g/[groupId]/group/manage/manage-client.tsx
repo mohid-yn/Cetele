@@ -844,8 +844,16 @@ export function ManageClient({
               and members are exactly where they left off.
             </p>
             {followed.length > 0 && (
+              // A cohort belongs to ONE programme now (D59). Following a single
+              // one goes straight to its report; following several goes to the
+              // list, because this button cannot pick for them — and a report
+              // stacking both is the screen the owner asked us to take apart.
               <Link
-                href="/programme/progress"
+                href={
+                  followed.length === 1
+                    ? `/programme/${followed[0]}/progress`
+                    : "/programme"
+                }
                 className={buttonVariants({
                   variant: "outline",
                   className: "mt-3 w-full",

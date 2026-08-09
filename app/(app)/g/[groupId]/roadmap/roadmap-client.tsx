@@ -72,7 +72,7 @@ export function RoadmapClient({
   programmes: { id: string; name: string }[];
   /**
    * Owner or co-admin of THIS circle — they get the strip below (D59). Not a
-   * permission: `/programme/progress` is scoped by RLS and the item editor
+   * permission: the report is scoped by RLS and the item editor
    * refuses a non-organiser regardless. Hiding the links from a plain member is
    * so the screen says what it is for, not so it is safe.
    */
@@ -228,8 +228,12 @@ export function RoadmapClient({
           progress is the screen, this is the margin. */}
       {canAdminister && (
         <div className="flex flex-wrap gap-2">
+          {/* THIS programme's cohort, not every programme's (D59). The screen
+              already knows which one is being shown — a circle may follow
+              several (0028) — so the link carries that id rather than landing
+              on a report the admin would have to disambiguate. */}
           <Link
-            href="/programme/progress"
+            href={`/programme/${roadmap.id}/progress`}
             className={buttonVariants({
               variant: "outline",
               size: "sm",

@@ -20,6 +20,12 @@ const OUTSIDER = `e2e-roadmap-out-${STAMP}@example.com`;
 const ORGANISER = `e2e-roadmap-org-${STAMP}@example.com`;
 /** A second published programme, so "follows several" has something to follow. */
 const SECOND_PROGRAMME = "Ramadan Programme (example)";
+/**
+ * The booklet's own programme, from the seed. Named because the report is now
+ * PER PROGRAMME (D59) — every route to it carries an id, so the specs need the
+ * one the seed guarantees rather than whichever happens to come back first.
+ */
+const IDP = "00000000-0000-0000-0000-0000000000f1";
 
 test.describe.configure({ mode: "serial" });
 
@@ -84,7 +90,7 @@ test("a circle follows a programme, and its members can record against it", asyn
   // admin most needs to notice is the one who has not started. The roster comes
   // from membership (`roadmap_roster`), carrying the same three readers as the
   // progress policy.
-  await page.goto("/programme/progress");
+  await page.goto(`/programme/${IDP}/progress`);
   await expect(page.getByText("Nothing recorded yet")).toHaveCount(0);
   await expect(page.getByText("0 of 3 levels")).toBeVisible();
 
@@ -114,7 +120,7 @@ test("a circle follows a programme, and its members can record against it", asyn
   // elsewhere in this file (the organiser's walk below).
   await expect(
     page.getByRole("link", { name: /Members’ progress/ }),
-  ).toHaveAttribute("href", "/programme/progress");
+  ).toHaveAttribute("href", `/programme/${IDP}/progress`);
   await expect(
     page.getByRole("link", { name: /Open programme/ }),
   ).toHaveAttribute("href", /^\/programme\/[0-9a-f-]+$/);
@@ -260,7 +266,7 @@ test("an outsider's circle sees no programme, and the report shows them nobody",
   // The report is scoped by RLS, not by app code: this admin leads a circle
   // that follows nothing, so there is nobody they are entitled to see — least
   // of all the owner above, who is on the same programme in another circle.
-  await page.goto("/programme/progress");
+  await page.goto(`/programme/${IDP}/progress`);
   await expect(page.getByText("Nothing recorded yet")).toBeVisible();
 
   // And the hub above it is empty for the same reason, in the other direction:
@@ -313,23 +319,29 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
     page.getByRole("heading", { level: 1, name: "Roadmap" }),
   ).toBeVisible();
 
-  // The hub forks: the programmes are the content, and the report is one tap
-  // away. It used to BE this address, which is why the catalogue — and the
-  // editor on it — was behind a section heading that happened to be a link.
-  await page.getByRole("link", { name: /Members’ progress/ }).click();
-  await page.waitForURL("**/programme/progress");
+  // The hub lists the programmes, and the cohort hangs off the ONE you pick
+  // (D59) — there is no screen-level report any more, because levels, rewards
+  // and the contribution are all per programme and stacking two of them
+  // invited a comparison that means nothing. `aria-label` carries the
+  // programme's name, so this proves the right row's button was pressed.
+  await page
+    .getByRole("link", { name: "Members' progress on Islamic Development" })
+    .click();
+  await page.waitForURL(`**/programme/${IDP}/progress`);
 
   // Across circles they are in none of — the whole point of the reader. The
   // OWNER above is on the programme through their own circle.
   await expect(page.getByText("Nothing recorded yet")).toHaveCount(0);
   await expect(page.getByText("0 of 3 levels").first()).toBeVisible();
 
-  // The cohort shape, and it is TEXT — colour alone never carries a reading
-  // (§5). Everyone the organiser can see is at zero, so one bucket holds them
-  // all and the empty buckets are not drawn.
-  // `.first()` — the seed carries TWO programmes now (0028), so the organiser
-  // sees a cohort strip per programme and this legend appears once each.
-  await expect(page.getByText("not started").first()).toBeVisible();
+  // ONE cohort on the screen, named. The report used to stack every programme
+  // the reader could see, and the strip below appeared once per section with
+  // nothing but position to say which was which.
+  await expect(page.getByText("not started")).toBeVisible();
+  await expect(
+    page.getByText("Islamic Development Program", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(SECOND_PROGRAMME)).toHaveCount(0);
 
   // And the footer names THIS reader. It used to describe exactly one of the
   // three — "your own circles' members if you lead one" — so an organiser who
@@ -339,14 +351,13 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   // THE PROGRAMME ITSELF, which an organiser could not reach at all: the
   // member's roadmap is at /g/[groupId]/roadmap and is membership-gated, and an
   // organiser is deliberately in no circle. They could read that Zayd had
-  // finished level 2 and not what level 2 asks for. It is now a card on the
-  // hub — the screen the tab lands on — rather than a heading on the report.
-  // `exact`, or this also matches the footer's "Back to the programmes" — the
-  // strict-mode violation this suite keeps re-learning.
+  // finished level 2 and not what level 2 asks for.
+  //
+  // Back goes UP to the programme, not out to the list: the report is nested
+  // under the id it reports on, so "what it asks for" and "who has done it" are
+  // one thing read two ways.
   await page.getByRole("link", { name: "Back", exact: true }).click();
-  await page.waitForURL("**/programme");
-  await page.getByRole("link", { name: /Islamic Development Program/ }).click();
-  await page.waitForURL(/\/programme\/[0-9a-f-]+$/);
+  await page.waitForURL(`**/programme/${IDP}`);
 
   await expect(
     page.getByRole("heading", { name: "Islamic Development Program" }),
@@ -418,7 +429,7 @@ test("an organiser appoints another, and can stand them down", async ({
   // The person just appointed really is one: they can now read the report,
   // which was gated against them a moment ago (spec above asserts that half).
   await signIn(page, OUTSIDER);
-  await page.goto("/programme/progress");
+  await page.goto(`/programme/${IDP}/progress`);
   await expect(page.getByText(/You are an organiser/)).toBeVisible();
 
   // Standing down, through the confirm step, and the row goes.
@@ -434,7 +445,7 @@ test("an organiser appoints another, and can stand them down", async ({
 
   // And the role really is gone, not just the row.
   await signIn(page, OUTSIDER);
-  await page.goto("/programme/progress");
+  await page.goto(`/programme/${IDP}/progress`);
   await expect(page.getByText(/You are an organiser/)).toHaveCount(0);
 });
 
@@ -446,7 +457,7 @@ test("the timeline, its pictures, and an organiser editing an item", async ({
 
   // The catalogue carries the booklet's own descriptions and cover artwork
   // (0027). Before this, an item was a title and a target and nothing else.
-  await page.goto("/programme/00000000-0000-0000-0000-0000000000f1");
+  await page.goto(`/programme/${IDP}`);
   await expect(
     page.getByRole("heading", { name: "Islamic Development Program" }),
   ).toBeVisible();

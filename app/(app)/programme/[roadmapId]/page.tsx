@@ -2,13 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
-import { Badge, Card, Screen } from "@/components/ui";
+import { Badge, buttonVariants, Card, Screen } from "@/components/ui";
 import { SectionHeading } from "@/components/app/section-heading";
 import {
   ArrowLeftIcon,
   BookIcon,
   PlayIcon,
   FlagIcon,
+  UsersIcon,
 } from "@/components/app/icons";
 import { RewardLadder } from "@/components/app/roadmap-rewards";
 import { RoadmapCover } from "@/components/app/roadmap-cover";
@@ -173,6 +174,23 @@ export default async function ProgrammeCataloguePage({
           programme asks for
         </p>
       </div>
+
+      {/* The OTHER reading of this same programme, at the same id: this screen
+          says what it asks for, that one says who has done it (D59). Offered to
+          every reader rather than only an organiser — the report is RLS-scoped,
+          so a circle's admin sees their members and a plain member sees
+          themselves, which is exactly what each is entitled to. */}
+      <Link
+        href={`/programme/${roadmapId}/progress`}
+        className={buttonVariants({
+          variant: "outline",
+          size: "sm",
+          className: "self-start",
+        })}
+      >
+        <UsersIcon aria-hidden className="size-4" />
+        Members&rsquo; progress
+      </Link>
 
       {rewards && rewards.length > 0 && (
         <section>
