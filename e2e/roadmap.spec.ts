@@ -84,7 +84,7 @@ test("a circle follows a programme, and its members can record against it", asyn
   // admin most needs to notice is the one who has not started. The roster comes
   // from membership (`roadmap_roster`), carrying the same three readers as the
   // progress policy.
-  await page.goto("/programme");
+  await page.goto("/programme/progress");
   await expect(page.getByText("Nothing recorded yet")).toHaveCount(0);
   await expect(page.getByText("0 of 3 levels")).toBeVisible();
 
@@ -101,6 +101,23 @@ test("a circle follows a programme, and its members can record against it", asyn
   await expect(
     page.getByRole("heading", { level: 1, name: "Roadmap" }),
   ).toBeVisible();
+
+  // THE ADMIN STRIP (D59). This owner leads the circle, so the two jobs that
+  // live OFF this screen are on it: how everyone is getting on, and the
+  // programme's own content — which is where an organiser edits an item. Before
+  // this they were a link at the foot of Manage and a section heading on the
+  // report that happened to be a link.
+  // The HREFs rather than a click-and-come-back: this test goes on to record
+  // taps on this very screen, and a round trip through another route re-mounts
+  // the accordions mid-spec — the "clicked before hydration" false negative
+  // this suite keeps re-learning. Both destinations are opened for real
+  // elsewhere in this file (the organiser's walk below).
+  await expect(
+    page.getByRole("link", { name: /Members’ progress/ }),
+  ).toHaveAttribute("href", "/programme/progress");
+  await expect(
+    page.getByRole("link", { name: /Open programme/ }),
+  ).toHaveAttribute("href", /^\/programme\/[0-9a-f-]+$/);
 
   // A fresh member starts at LEVEL 1 and has finished nothing. Everyone begins
   // there and logs their way up — there is no level to pick and none to assign.
@@ -243,8 +260,17 @@ test("an outsider's circle sees no programme, and the report shows them nobody",
   // The report is scoped by RLS, not by app code: this admin leads a circle
   // that follows nothing, so there is nobody they are entitled to see — least
   // of all the owner above, who is on the same programme in another circle.
-  await page.goto("/programme");
+  await page.goto("/programme/progress");
   await expect(page.getByText("Nothing recorded yet")).toBeVisible();
+
+  // And the hub above it is empty for the same reason, in the other direction:
+  // `roadmaps` is readable to anyone once published, but the ITEMS are gated on
+  // following it (0025) — so a programme this circle does not follow would list
+  // as "0 levels · 0 items", a broken programme rather than someone else's. The
+  // hub drops it and says why (D59).
+  await page.goto("/programme");
+  await expect(page.getByText("No programme to show")).toBeVisible();
+  await expect(page.getByText(/an admin chooses it in Manage/)).toBeVisible();
 });
 
 test("a super admin has a way in, and reads the cohort across circles", async ({
@@ -271,8 +297,27 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   // "Start your first circle" is the app mistaking an administrator for a new
   // member — being in none is the role, not a step they have skipped.
   await expect(page.getByText("Start your first circle")).toHaveCount(0);
-  await page.getByRole("link", { name: /^Programme/ }).click();
+
+  // THE NAV TAB (D59). The card below is still a way in, but an organiser is in
+  // no circle by role, so every group-scoped tab is closed to them and the app
+  // had nothing permanent to offer: the programme was reachable from one card
+  // on one screen. Now the Roadmap tab is in the bar wherever they are, and it
+  // lands on the hub rather than on a list of people.
+  const orgTab = page
+    .getByRole("link", { name: "Roadmap", exact: true })
+    .first();
+  await expect(orgTab).toBeVisible();
+  await orgTab.click();
   await page.waitForURL("**/programme");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Roadmap" }),
+  ).toBeVisible();
+
+  // The hub forks: the programmes are the content, and the report is one tap
+  // away. It used to BE this address, which is why the catalogue — and the
+  // editor on it — was behind a section heading that happened to be a link.
+  await page.getByRole("link", { name: /Members’ progress/ }).click();
+  await page.waitForURL("**/programme/progress");
 
   // Across circles they are in none of — the whole point of the reader. The
   // OWNER above is on the programme through their own circle.
@@ -294,8 +339,13 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   // THE PROGRAMME ITSELF, which an organiser could not reach at all: the
   // member's roadmap is at /g/[groupId]/roadmap and is membership-gated, and an
   // organiser is deliberately in no circle. They could read that Zayd had
-  // finished level 2 and not what level 2 asks for.
-  await page.getByRole("link", { name: "Islamic Development Program" }).click();
+  // finished level 2 and not what level 2 asks for. It is now a card on the
+  // hub — the screen the tab lands on — rather than a heading on the report.
+  // `exact`, or this also matches the footer's "Back to the programmes" — the
+  // strict-mode violation this suite keeps re-learning.
+  await page.getByRole("link", { name: "Back", exact: true }).click();
+  await page.waitForURL("**/programme");
+  await page.getByRole("link", { name: /Islamic Development Program/ }).click();
   await page.waitForURL(/\/programme\/[0-9a-f-]+$/);
 
   await expect(
@@ -320,8 +370,8 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   // member's own roadmap is the one place a `done` is read or written.
   await expect(page.getByRole("button", { name: "Mark done" })).toHaveCount(0);
 
-  // And there is a way back out — this route is in no nav tab, so without it
-  // the only exit was the browser's own back button.
+  // And there is a way back out — to the hub the Roadmap tab lands on, which
+  // is where the card that opened this screen lives.
   await page.getByRole("link", { name: "Back" }).click();
   await page.waitForURL("**/programme");
 });
@@ -368,7 +418,7 @@ test("an organiser appoints another, and can stand them down", async ({
   // The person just appointed really is one: they can now read the report,
   // which was gated against them a moment ago (spec above asserts that half).
   await signIn(page, OUTSIDER);
-  await page.goto("/programme");
+  await page.goto("/programme/progress");
   await expect(page.getByText(/You are an organiser/)).toBeVisible();
 
   // Standing down, through the confirm step, and the row goes.
@@ -384,7 +434,7 @@ test("an organiser appoints another, and can stand them down", async ({
 
   // And the role really is gone, not just the row.
   await signIn(page, OUTSIDER);
-  await page.goto("/programme");
+  await page.goto("/programme/progress");
   await expect(page.getByText(/You are an organiser/)).toHaveCount(0);
 });
 

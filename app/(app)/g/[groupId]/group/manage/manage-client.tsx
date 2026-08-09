@@ -845,7 +845,7 @@ export function ManageClient({
             </p>
             {followed.length > 0 && (
               <Link
-                href="/programme"
+                href="/programme/progress"
                 className={buttonVariants({
                   variant: "outline",
                   className: "mt-3 w-full",

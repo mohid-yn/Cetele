@@ -17,15 +17,18 @@ import { Organisers, type Organiser } from "./organisers";
  * invite links live there (D34/D35 — per-invite codes, not a group code).
  */
 /**
- * The programme report — the only screen a super admin is the audience for, and
- * until now the only one with no way in. Its single link lived inside a circle's
- * Manage screen, gated on leading a circle that follows a programme: precisely
- * the thing a super admin does not do.
+ * The roadmap hub, from the app's front door.
+ *
+ * KEPT even though an organiser now has a permanent Roadmap tab (D59). The tab
+ * is the answer to "how do I get there from anywhere"; this card is the answer
+ * to "what is on this screen" — /groups is where an organiser lands, and a
+ * front door that lists only circles tells someone who is in none by role that
+ * the app has nothing for them.
  *
  * It is NOT gated on a programme existing. Checking would cost a query on a
- * screen that runs for every member on every visit, and the report already says
- * "Nothing recorded yet" honestly — an entry that leads to an empty state is
- * better than one that vanishes and leaves nowhere to go.
+ * screen that runs for every member on every visit, and the hub already says so
+ * honestly — an entry that leads to an empty state is better than one that
+ * vanishes and leaves nowhere to go.
  */
 function ProgrammeEntry() {
   return (
@@ -40,7 +43,7 @@ function ProgrammeEntry() {
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-foreground">Programme</p>
           <p className="text-xs text-muted-foreground">
-            How far everyone has got, across every circle
+            What the programmes ask for, and how far everyone has got
           </p>
         </div>
       </Link>

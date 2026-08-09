@@ -52,12 +52,44 @@ export const ROADMAP_NAV_ITEM: ScopedItem = {
   Icon: FlagIcon,
 };
 
-/** NAV_ITEMS with Roadmap spliced in before Profile, when the circle has one. */
+/**
+ * The SAME tab for an organiser, pointing at the programme hub instead of a
+ * circle's copy of it (D59).
+ *
+ * An organiser is deliberately in no circle (D27), so every group-scoped route
+ * is closed to them and the tab above can never appear — which left the one
+ * screen they are the audience for reachable from a card on /groups and
+ * nowhere else. It is a FlatItem for the same reason the report is not
+ * group-scoped: a programme is one thing however many circles follow it (D55).
+ */
+export const PROGRAMME_NAV_ITEM: FlatItem = {
+  href: "/programme",
+  label: "Roadmap",
+  shortLabel: "Roadmap",
+  Icon: FlagIcon,
+};
+
+/**
+ * NAV_ITEMS with Roadmap spliced in before Profile.
+ *
+ * NEVER TWICE, and that is the whole subtlety: an organiser who also owns a
+ * circle that follows a programme (the ordinary case for the person who set
+ * both up) would otherwise get two tabs called Roadmap and a six-tab bottom
+ * bar. The circle's own copy wins when there is one — it is where their
+ * progress is recorded — and the hub is one tap away from it, on the button
+ * that screen now carries for anyone who administers the programme.
+ */
 export function navItemsWithRoadmap(
   hasRoadmap: boolean,
+  isOrganiser = false,
 ): readonly (ScopedItem | FlatItem)[] {
-  if (!hasRoadmap) return NAV_ITEMS;
-  return [...NAV_ITEMS.slice(0, -1), ROADMAP_NAV_ITEM, NAV_ITEMS.at(-1)!];
+  const roadmap = hasRoadmap
+    ? ROADMAP_NAV_ITEM
+    : isOrganiser
+      ? PROGRAMME_NAV_ITEM
+      : null;
+  if (!roadmap) return NAV_ITEMS;
+  return [...NAV_ITEMS.slice(0, -1), roadmap, NAV_ITEMS.at(-1)!];
 }
 
 /**
@@ -69,6 +101,22 @@ export const NO_GROUP_NAV_ITEMS: readonly FlatItem[] = [
   { href: "/groups", label: "Groups", shortLabel: "Groups", Icon: GridIcon },
   { href: "/profile", label: "Profile", shortLabel: "Profile", Icon: UserIcon },
 ] as const;
+
+/**
+ * The same front door for an organiser, who is in no circle BY ROLE rather than
+ * by not having started one yet (D27) — so this is their permanent navigation,
+ * not a temporary state they are expected to leave.
+ */
+export function noGroupNavItems(
+  isOrganiser: boolean,
+): readonly (ScopedItem | FlatItem)[] {
+  if (!isOrganiser) return NO_GROUP_NAV_ITEMS;
+  return [
+    NO_GROUP_NAV_ITEMS[0],
+    PROGRAMME_NAV_ITEM,
+    NO_GROUP_NAV_ITEMS.at(-1)!,
+  ];
+}
 
 /**
  * Resolve a nav item to a concrete href + active state for the current path.

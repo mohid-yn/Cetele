@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Badge,
+  buttonVariants,
   Card,
   HeroCard,
   HeroChip,
@@ -11,7 +13,12 @@ import {
 } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
-import { CheckIcon, ChevronDownIcon, FlagIcon } from "@/components/app/icons";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  FlagIcon,
+  UsersIcon,
+} from "@/components/app/icons";
 import { RewardLadder } from "@/components/app/roadmap-rewards";
 import { RoadmapItemCard } from "@/components/app/roadmap-item-card";
 import { RoadmapSwitcher } from "@/components/app/roadmap-switcher";
@@ -55,6 +62,7 @@ export function RoadmapClient({
   todayISO,
   groupId,
   programmes,
+  canAdminister,
 }: {
   roadmap: Roadmap;
   /** The member's own today (D34) — the window is counted on their calendar. */
@@ -62,6 +70,13 @@ export function RoadmapClient({
   groupId: string;
   /** Everything this circle follows (0028). One is the ordinary case. */
   programmes: { id: string; name: string }[];
+  /**
+   * Owner or co-admin of THIS circle — they get the strip below (D59). Not a
+   * permission: `/programme/progress` is scoped by RLS and the item editor
+   * refuses a non-organiser regardless. Hiding the links from a plain member is
+   * so the screen says what it is for, not so it is safe.
+   */
+  canAdminister: boolean;
 }) {
   // Optimistic display, re-seeded whenever the server delivers a new list.
   const [items, setItems] = usePropState(roadmap.items);
@@ -201,6 +216,48 @@ export function RoadmapClient({
         programmes={programmes}
         currentId={roadmap.id}
       />
+
+      {/* THE ADMIN STRIP (D59) — for whoever leads this circle, and nobody
+          else. Two jobs live off this screen and both used to be a scavenger
+          hunt: "how is everyone getting on" was a link at the foot of Manage,
+          and the programme's own content — the item editor with it — was behind
+          a section heading on the report that happened to be a link.
+
+          QUIET on purpose. The accent is reserved for the member's own earned
+          action (§ design system), and an admin is a member here too: their
+          progress is the screen, this is the margin. */}
+      {canAdminister && (
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/programme/progress"
+            className={buttonVariants({
+              variant: "outline",
+              size: "sm",
+              // Split the width on a phone, natural width above it — two
+              // 470px buttons carrying three words each is what `flex-1`
+              // alone does on a desktop column.
+              className: "flex-1 sm:flex-none",
+            })}
+          >
+            <UsersIcon aria-hidden className="size-4" />
+            Members&rsquo; progress
+          </Link>
+          <Link
+            href={`/programme/${roadmap.id}`}
+            className={buttonVariants({
+              variant: "outline",
+              size: "sm",
+              // Split the width on a phone, natural width above it — two
+              // 470px buttons carrying three words each is what `flex-1`
+              // alone does on a desktop column.
+              className: "flex-1 sm:flex-none",
+            })}
+          >
+            <FlagIcon aria-hidden className="size-4" />
+            Open programme
+          </Link>
+        </div>
+      )}
 
       {/* The screen's ONE hero, and it reports the LEVEL — the unit the
           programme is built in and rewarded on. A single percentage across all

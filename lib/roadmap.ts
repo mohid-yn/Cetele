@@ -130,8 +130,16 @@ export const cappedDone = (i: RoadmapItem) => Math.min(i.done, i.target);
 
 export const isItemComplete = (i: RoadmapItem) => i.done >= i.target;
 
-/** Every distinct level in the programme, ascending. */
-export function levelsOf(items: RoadmapItem[]): number[] {
+/**
+ * Every distinct level in the programme, ascending.
+ *
+ * Takes the LEVEL alone rather than a whole item: the hub counts a programme's
+ * levels from a two-column select, and widening the parameter is what keeps
+ * that screen counting with this function instead of growing its own `new Set`
+ * — a second definition of "how many levels" is exactly how the client and the
+ * database drift apart.
+ */
+export function levelsOf(items: Pick<RoadmapItem, "level">[]): number[] {
   return [...new Set(items.map((i) => i.level))].sort((a, b) => a - b);
 }
 

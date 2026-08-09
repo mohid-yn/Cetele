@@ -7,8 +7,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { springGlide } from "@/lib/motion";
 import {
-  NO_GROUP_NAV_ITEMS,
   navItemsWithRoadmap,
+  noGroupNavItems,
   resolveNavItem,
 } from "./nav-items";
 import { navItemVariants } from "./nav-item-variants";
@@ -18,6 +18,7 @@ import { WebAppLogo } from "@/components/ui/logo";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
 import { useGroupHasRoadmap } from "@/lib/use-group-roadmap";
+import { useIsSuperAdmin } from "@/lib/viewer-store";
 import { groupHref } from "@/lib/group-href";
 
 /** Persistent left nav for desktop (≥lg). Mirrors the mobile bottom bar. */
@@ -35,9 +36,12 @@ export function Sidebar({
   // but it must agree with the bottom bar, or the same circle has two different
   // navigations depending on viewport width.
   const hasRoadmap = useGroupHasRoadmap(groupId);
+  // An organiser keeps a Roadmap tab wherever they are, circle or none (D59) —
+  // the flag is fetched client-side because the shell does no server work (§4).
+  const isOrganiser = useIsSuperAdmin();
   const items = hasGroups
-    ? navItemsWithRoadmap(hasRoadmap)
-    : NO_GROUP_NAV_ITEMS;
+    ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
+    : noGroupNavItems(isOrganiser);
 
   return (
     // `bg-chrome` — same reason as the bottom nav: the sidebar is the frame.

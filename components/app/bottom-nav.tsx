@@ -7,14 +7,15 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { springGlide } from "@/lib/motion";
 import {
-  NO_GROUP_NAV_ITEMS,
   navItemsWithRoadmap,
+  noGroupNavItems,
   resolveNavItem,
 } from "./nav-items";
 import { navItemVariants } from "./nav-item-variants";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
 import { useGroupHasRoadmap } from "@/lib/use-group-roadmap";
+import { useIsSuperAdmin } from "@/lib/viewer-store";
 
 /** Mobile tab bar pinned to the bottom of the app column (hidden on desktop). */
 export function BottomNav({
@@ -33,9 +34,13 @@ export function BottomNav({
   // still holds the old one, and inheriting its answer is how a Roadmap tab
   // appears on a circle that has no programme.
   const hasRoadmap = useGroupHasRoadmap(groupId);
+  // An organiser is in no circle by role (D27), so their Roadmap tab is the one
+  // permanent thing in this bar that no group page can publish — it comes from
+  // the client-side viewer store instead (D59).
+  const isOrganiser = useIsSuperAdmin();
   const items = hasGroups
-    ? navItemsWithRoadmap(hasRoadmap)
-    : NO_GROUP_NAV_ITEMS;
+    ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
+    : noGroupNavItems(isOrganiser);
 
   return (
     <nav
@@ -57,7 +62,9 @@ export function BottomNav({
             ? "grid-cols-5"
             : items.length === 4
               ? "grid-cols-4"
-              : "grid-cols-2",
+              : items.length === 3
+                ? "grid-cols-3"
+                : "grid-cols-2",
         )}
       >
         {items.map((item) => {

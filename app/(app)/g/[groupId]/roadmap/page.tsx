@@ -179,6 +179,7 @@ export default async function RoadmapPage({
       todayISO={todayISO}
       groupId={groupId}
       programmes={followed.map((f) => ({ id: f.id, name: f.name }))}
+      canAdminister={active.role !== "member"}
     />
   );
 }
