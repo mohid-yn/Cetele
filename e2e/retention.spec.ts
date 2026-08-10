@@ -167,6 +167,18 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   // The rule is stated, so a changed name next month is explainable.
   await expect(pageA.getByText(/pairs everyone up each month/)).toBeVisible();
 
+  // The week's total is shown AGAINST what the week asked for — a bare "1" says
+  // nothing about whether that is a good week. The task was made today at a
+  // target of 3, so exactly one day is owed and the bar is 3 for both members:
+  // A tapped once (1/3, two short) and B closed their rings (3/3, nothing to
+  // say). Both sides are asserted because the shortfall line is CONDITIONAL —
+  // it must never appear for someone who is level or ahead (D28: this ranking
+  // is for fun, so it reports a gap and never a surplus).
+  await expect(pageA.getByText("1 / 3")).toBeVisible();
+  await expect(pageA.getByText("2 short this week")).toBeVisible();
+  await expect(pageA.getByText("3 / 3")).toBeVisible();
+  await expect(pageA.getByText("0 short this week")).toHaveCount(0);
+
   // ---- CET-20 badges ---------------------------------------------------------
   await pageA.goto("/progress");
   await pageA.waitForURL(/\/g\/.*\/progress/);

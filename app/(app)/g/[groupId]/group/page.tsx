@@ -168,6 +168,37 @@ export default async function GroupPage({
       targetOn(versions, task.id, date, zone, task.target_count),
     );
 
+  /**
+   * Which of this circle's tasks this member actually OWED on this day — theirs
+   * that day (0023) and due that day (frequency, anchored on their calendar).
+   *
+   * Hoisted for the same reason `targetFor` was: the breakdown's `daysFull` and
+   * Standings' expected total are the same three-bound question, and a second
+   * inline copy of it is how the two drift apart. Mirrors `is_day_complete`'s
+   * bounds — the score an admin reads has to be the verdict the streak reached.
+   */
+  const owedOn = (userId: string, date: string, zone: string) =>
+    taskList.filter(
+      (t) =>
+        assignedOn(assignments, t.id, userId, date, zone) &&
+        isDueOn(
+          {
+            frequencyDays: frequencyOn(
+              versions,
+              t.id,
+              date,
+              zone,
+              t.frequency_days,
+            ),
+            myFrequencyDays: null,
+            // The anchor on THEIR calendar too — `private.obligations`
+            // resolves `tasks.created_at` through `user_date`.
+            createdOn: timestampDateISO(zone, t.created_at),
+          },
+          date,
+        ),
+    );
+
   // Admin oversight needs peer streaks (RLS: self + members of groups I admin).
   const streakMap = new Map<string, number>();
   if (canManage && memberIds.length) {
@@ -276,12 +307,24 @@ export default async function GroupPage({
           }
         }
       }
+      // What the week actually ASKED of them — the sum of each day's owed
+      // targets, per member and per day rather than `target × 7`. Both layers
+      // matter: a task is only counted on the days it was theirs and due, and
+      // its bar is the one in force THAT day (0024) raised by their own share
+      // (0032). A member on a 500 share is behind at 2,000 where a member on
+      // the circle's 100 is ahead — which is the whole point of showing it.
+      const mTz = tzOf(m.user_id);
+      let expected = 0;
+      for (const d of mLast7)
+        for (const t of owedOn(m.user_id, d, mTz))
+          expected += targetFor(m.user_id, t, d, mTz);
       return {
         userId: m.user_id,
         name: names[m.user_id],
         isMe: m.user_id === me,
         daysActive: activeDates.size,
         total,
+        expected,
       };
     })
     .sort((a, b) => b.daysActive - a.daysActive || b.total - a.total);
@@ -347,30 +390,11 @@ export default async function GroupPage({
       // that day asked for). This is a score an admin reads about a member, so
       // it has to be the same verdict the streak reached — not an approximation
       // of it that drifts every time a task is edited.
-      const owedOn = (d: string) =>
-        taskList.filter(
-          (t) =>
-            assignedOn(assignments, t.id, m.user_id, d, mTz) &&
-            isDueOn(
-              {
-                frequencyDays: frequencyOn(
-                  versions,
-                  t.id,
-                  d,
-                  mTz,
-                  t.frequency_days,
-                ),
-                myFrequencyDays: null,
-                // The anchor on THEIR calendar too — `private.obligations`
-                // resolves `tasks.created_at` through `user_date`.
-                createdOn: timestampDateISO(mTz, t.created_at),
-              },
-              d,
-            ),
-        );
-      const owedDays = mDates.filter((d) => owedOn(d).length > 0);
+      const owedDays = mDates.filter(
+        (d) => owedOn(m.user_id, d, mTz).length > 0,
+      );
       const daysFull = owedDays.filter((d) =>
-        owedOn(d).every(
+        owedOn(m.user_id, d, mTz).every(
           (t) => countOf(m.user_id, t.id, d) >= targetFor(m.user_id, t, d, mTz),
         ),
       ).length;

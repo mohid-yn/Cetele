@@ -82,6 +82,8 @@ export type Standing = {
   isMe: boolean;
   daysActive: number;
   total: number;
+  /** What the week owed them: each owed day's target, summed (0 = nothing due). */
+  expected: number;
 };
 export type Steadfast = {
   userId: string;
@@ -445,9 +447,31 @@ export function GroupClient({
                         <div className="text-right">
                           <p className="font-display text-base font-bold text-foreground tabular-nums">
                             {row.total.toLocaleString()}
+                            {/* The bar the week set, beside the number rather
+                                than under it: "12,340" alone says nothing about
+                                whether that is a good week, and the answer is
+                                per member now that shares split the cetele
+                                unevenly (D61). Muted and lighter, so the rank
+                                still reads off the bold figure. Written as one
+                                expression — a text run broken across JSX lines
+                                loses its space (e94aa0b). */}
+                            {row.expected > 0 && (
+                              <span className="font-sans text-sm font-normal text-muted-foreground">
+                                {` / ${row.expected.toLocaleString()}`}
+                              </span>
+                            )}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            counts
+                            {/* Only ever how far SHORT, never how far over:
+                                exceeding the bar is welcome and needs no
+                                commentary, and this ranking is explicitly for
+                                fun (D28) — a circle-visible "+4,000 ahead"
+                                turns a shortfall into a public deficit for the
+                                bottom half, which is the thing the pair goal
+                                above exists to avoid. */}
+                            {row.expected > row.total
+                              ? `${(row.expected - row.total).toLocaleString()} short this week`
+                              : "counts"}
                           </p>
                         </div>
                       }
