@@ -13,7 +13,8 @@
 --   * intervals: unassign closes, re-assign opens a NEW one, the gap stays a gap
 --   * anchor preservation: re-saving a set does not move an existing assignee's
 --     start date
---   * reminders are bounded by assignment too (0019's bug, one step along)
+--   * reminders are NO LONGER bounded by assignment — 0019's guard went away
+--     with its subject when 0033 cut reminders loose from tasks (D62)
 --   * RLS + grants: readable by the circle, writable by nobody except the RPC
 -- ============================================================================
 
@@ -312,31 +313,25 @@ select throws_ok($$select public.set_task_assignees(
 select pg_temp.reset_role();
 
 -- ----------------------------------------------------------------------------
--- 9. Reminders are bounded by assignment too (0019, one step along)
+-- 9. Reminders are NO LONGER bounded by assignment (0019 -> D62)
 -- ----------------------------------------------------------------------------
--- Without this a member taken off a task keeps being pushed about it forever,
--- with no control anywhere in the app — /profile builds its rows from the tasks
--- in circles you are IN, so the row would be invisible there.
-
-insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
-values ('a2000000-0000-0000-0000-00000000000b', 'https://push.test/b', 'k', 'a');
-
-insert into public.reminders (user_id, task_id, time_of_day, enabled)
-values ('a2000000-0000-0000-0000-00000000000b', 'a2000000-0000-0000-0000-00000000e001',
-        (now() at time zone 'UTC')::time, true);
-
-select is((select count(*) from private.due_reminders()
-            where user_id = 'a2000000-0000-0000-0000-00000000000b'), 1::bigint,
-  'while the task is everyone''s, B is due a reminder');
-
-select pg_temp.impersonate('a2000000-0000-0000-0000-00000000000a');
-select public.set_task_assignees('a2000000-0000-0000-0000-00000000e001',
-    array['a2000000-0000-0000-0000-00000000000c']::uuid[]);
-select pg_temp.reset_role();
-
-select is((select count(*) from private.due_reminders()
-            where user_id = 'a2000000-0000-0000-0000-00000000000b'), 0::bigint,
-  '...and once taken off it, B is not pushed about it again');
+-- This section used to assert that taking B off a task stopped B being pushed
+-- about it. 0019's bug was real, but its cause was that a reminder pointed at a
+-- task the member could no longer see or control: /profile built its rows from
+-- the tasks in circles you were IN, so once you were off the task the row was
+-- invisible and there was no way to switch it off.
+--
+-- 0033 removed the pointer instead of guarding it. A reminder is the member's
+-- own name and time, listed on /profile unconditionally and deletable there, so
+-- there is nothing left for an assignment change to silence — and silencing it
+-- would now mean the app editing a setting nobody asked it to touch.
+select ok(
+  not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'reminders'
+      and column_name = 'task_id'
+  ),
+  'assignment cannot bound a reminder, because a reminder names no task (D62)');
 
 -- ----------------------------------------------------------------------------
 -- 10. RLS + grants

@@ -2,7 +2,6 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { configureWebPush, sendToDevices } from "@/lib/push/send";
-import { groupHref } from "@/lib/group-href";
 
 /**
  * The reminder sender (M8 / CET-11).
@@ -24,11 +23,7 @@ export const dynamic = "force-dynamic";
 type DueReminder = {
   reminder_id: string;
   user_id: string;
-  group_id: string;
-  task_id: string;
-  task_label: string;
-  target_count: number;
-  current_count: number;
+  label: string;
   endpoint: string;
   p256dh: string;
   auth: string;
@@ -63,18 +58,22 @@ export async function POST(request: Request) {
   // One reminder can target several devices; each row is already (reminder ×
   // device), so send them independently and collect the dead endpoints.
   const results = await Promise.all(
-    due.map(async (r) => {
-      const remaining = Math.max(0, r.target_count - r.current_count);
-      return sendToDevices([r], {
-        title: r.task_label,
-        body:
-          r.current_count > 0
-            ? `${remaining.toLocaleString()} to go — pick up where you left off.`
-            : `Time for your ${r.task_label.toLowerCase()}.`,
-        url: groupHref(r.group_id, `/count/${r.task_id}`),
+    due.map(async (r) =>
+      // The member's own words are the whole notification (D62). There is no
+      // count to report and no task to deep-link: a standalone reminder knows
+      // only its name, so anything else here would be invented. The body says
+      // where it came from rather than restating the title — a notification
+      // whose two lines are the same string reads as a bug.
+      sendToDevices([r], {
+        title: r.label,
+        body: "A reminder you set in Cetele.",
+        // Today is the one screen that is right for every reminder, whatever
+        // the member meant by it, and it is group-aware on its own (it opens
+        // the active circle) — which is why this no longer needs a group id.
+        url: "/today",
         tag: `reminder-${r.reminder_id}`,
-      });
-    }),
+      }),
+    ),
   );
 
   const sent = results.reduce((n, r) => n + r.sent, 0);

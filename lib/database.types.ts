@@ -625,8 +625,8 @@ export type Database = {
           created_at: string;
           enabled: boolean;
           id: string;
+          label: string;
           last_sent_on: string | null;
-          task_id: string;
           time_of_day: string;
           user_id: string;
         };
@@ -634,8 +634,8 @@ export type Database = {
           created_at?: string;
           enabled?: boolean;
           id?: string;
+          label: string;
           last_sent_on?: string | null;
-          task_id: string;
           time_of_day: string;
           user_id: string;
         };
@@ -643,19 +643,12 @@ export type Database = {
           created_at?: string;
           enabled?: boolean;
           id?: string;
+          label?: string;
           last_sent_on?: string | null;
-          task_id?: string;
           time_of_day?: string;
           user_id?: string;
         };
         Relationships: [
-          {
-            foreignKeyName: "reminders_task_id_fkey";
-            columns: ["task_id"];
-            isOneToOne: false;
-            referencedRelation: "tasks";
-            referencedColumns: ["id"];
-          },
           {
             foreignKeyName: "reminders_user_id_fkey";
             columns: ["user_id"];
@@ -1085,14 +1078,10 @@ export type Database = {
         Args: never;
         Returns: {
           auth: string;
-          current_count: number;
           endpoint: string;
-          group_id: string;
+          label: string;
           p256dh: string;
           reminder_id: string;
-          target_count: number;
-          task_id: string;
-          task_label: string;
           user_id: string;
         }[];
       };
@@ -1208,8 +1197,13 @@ export type Database = {
         Returns: number;
       };
       set_reminder: {
-        Args: { p_enabled: boolean; p_task: string; p_time: string };
-        Returns: undefined;
+        Args: {
+          p_enabled: boolean;
+          p_id: string;
+          p_label: string;
+          p_time: string;
+        };
+        Returns: string;
       };
       set_roadmap_item_content: {
         Args: {

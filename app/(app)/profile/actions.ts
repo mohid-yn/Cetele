@@ -183,32 +183,63 @@ export async function sendTestPush(): Promise<
 }
 
 /**
- * Set (or update) the reminder for one task — D30: a plain clock time the member
- * chooses, in their own timezone, plus on/off. Upserted on (user_id, task_id),
- * so the row is created on first use without a separate "add reminder" step.
+ * Create or update one of the member's own reminders — D62: a name they write
+ * and a clock time they pick, in their own timezone, plus on/off. `id` null
+ * creates; an id updates that row and only if it is theirs.
+ *
+ * It is no longer keyed on a task. A reminder used to be upserted on
+ * (user_id, task_id), which made the circle's admin the author of how many
+ * reminders you had — fifteen of them for a member of three circles.
  *
  * `last_sent_on` is deliberately not writable here (it isn't granted to clients)
  * — only the dispatcher stamps it, so no one can re-arm a send.
  */
 export async function setReminder(
-  taskId: string,
+  id: string | null,
+  label: string,
   time: string,
   enabled: boolean,
-): Promise<Result> {
+): Promise<Result & { id?: string }> {
   const { supabase, uid } = await me();
   if (!uid) return { error: "You are signed out." };
 
-  // One atomic RPC (ON CONFLICT DO UPDATE), not a client-side read-then-write:
-  // the UI saves on every interaction, so two saves can be in flight at once and
-  // an interleaved insert/update lets the LOSER's value win. The RPC also holds
-  // the membership guard (you can't set a reminder on a task you can't see).
-  const { error } = await q(
-    `rpc.set_reminder (${time}, ${enabled ? "on" : "off"})`,
+  // One atomic RPC, not a client-side read-then-write: the UI saves on every
+  // interaction, so two saves can be in flight at once and an interleaved pair
+  // lets the LOSER's value win. The RPC also holds the name rule, the
+  // per-account cap and the ownership check.
+  const { data, error } = await q(
+    `rpc.set_reminder (${id ? "update" : "create"} ${time}, ${enabled ? "on" : "off"})`,
     supabase.rpc("set_reminder", {
-      p_task: taskId,
+      // `p_id` is nullable in SQL (null creates), but the generated types render
+      // every RPC arg as non-null, so the null case needs the cast — the same
+      // cast `setMemberShare` and `setTaskGoal` carry, for the same reason.
+      p_id: id as string,
+      p_label: label,
       p_time: time,
       p_enabled: enabled,
     }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+
+  revalidatePath("/profile");
+  // The new row's id, so the client can go on editing what it just created
+  // without a refetch (D45) — a second save would otherwise create a duplicate.
+  return { error: null, id: data ?? undefined };
+}
+
+/**
+ * Delete one of the member's reminders. A direct DELETE rather than an RPC:
+ * RLS's `reminders_delete_self` is the whole rule, and there is nothing to make
+ * atomic — unlike the write path, which carries a cap and a name check.
+ */
+export async function deleteReminder(id: string): Promise<Result> {
+  const { supabase, uid } = await me();
+  if (!uid) return { error: "You are signed out." };
+
+  const { error } = await q(
+    "reminders.delete (own)",
+    supabase.from("reminders").delete().eq("id", id),
   );
   await signOutIfStaleSession(error);
   if (error) return { error: error.message };

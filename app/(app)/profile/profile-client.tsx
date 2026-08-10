@@ -34,14 +34,15 @@ import {
   savePushSubscription,
   removePushSubscription,
   setReminder,
+  deleteReminder,
   sendTestPush,
   updateName,
 } from "./actions";
 
-export type ReminderTask = {
-  taskId: string;
+export type Reminder = {
+  id: string;
+  /** The member's own words — rendered as the push notification's title. */
   label: string;
-  groupName: string;
   time: string; // "HH:MM"
   enabled: boolean;
 };
@@ -59,7 +60,7 @@ export function ProfileClient({
   role,
   groupName,
   streak,
-  tasks,
+  reminders,
   deviceCount,
   vapidPublicKey,
 }: {
@@ -67,7 +68,7 @@ export function ProfileClient({
   role: string | null;
   groupName: string | null;
   streak: number;
-  tasks: ReminderTask[];
+  reminders: Reminder[];
   /** How many of THIS MEMBER's devices are subscribed to push, across all of them. */
   deviceCount: number;
   vapidPublicKey: string;
@@ -92,6 +93,11 @@ export function ProfileClient({
   // control first and corrected itself afterwards, which on a slow first paint
   // is indistinguishable from a control that works.
   const [env, setEnv] = React.useState<PushEnvironment | null>(null);
+
+  // Is a blank reminder being typed right now? Local and deliberately not a
+  // route or a dialog — the draft is worth nothing until it is saved, so it
+  // should cost nothing to abandon.
+  const [adding, setAdding] = React.useState(false);
 
   React.useEffect(() => {
     // Mount-time capability catch-up. None of this exists during SSR (no
@@ -257,44 +263,82 @@ export function ProfileClient({
             can lock the screen and see it arrive the way a reminder would. */}
         {subscribed && <TestPushCard />}
 
-        {tasks.length === 0 ? (
-          <p className="mt-2 rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-            No tasks yet — reminders appear once your circle has some.
+        {/* Gated on REACHABILITY, not on this device: a time is stored on your
+            account and dispatched to whichever devices are subscribed (D42), so
+            a laptop tab may legitimately set times for a phone that is already
+            installed. What must not happen is offering to turn a reminder on
+            when NOTHING can deliver it — which is the contradiction of showing
+            live switches under an install card.
+
+            Above the empty/list split rather than inside the list, because it
+            is the explanation for a DISABLED "Add a reminder" too: a member with
+            no reminders and no device would otherwise meet a dead button and no
+            reason for it, which is the same contradiction one level up. */}
+        {!remindersReachable ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            No device can receive reminders yet, so these are switched off until
+            one can. Finish the steps above, open Cetele from your Home Screen,
+            and turn reminders on there — your times are kept.
           </p>
         ) : (
+          env !== null &&
+          !canReceiveHere && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              These times are saved to your account, not to this browser —
+              they&apos;ll arrive on the{" "}
+              {devices === 1 ? "device" : `${devices} devices`} where
+              you&apos;ve turned reminders on.
+            </p>
+          )
+        )}
+
+        {reminders.length === 0 && !adding ? (
+          <div className="mt-2 rounded-xl border border-dashed border-border px-3 py-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              No reminders yet. Add one and name it whatever you&apos;ll
+              recognise at a glance — &ldquo;Evening dhikr&rdquo;.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              disabled={!remindersReachable}
+              onClick={() => setAdding(true)}
+            >
+              Add a reminder
+            </Button>
+          </div>
+        ) : (
           <>
-            {/* Gated on REACHABILITY, not on this device: a time is stored on
-                your account and dispatched to whichever devices are subscribed
-                (D42), so a laptop tab may legitimately set times for a phone
-                that is already installed. What must not happen is offering to
-                turn a reminder on when NOTHING can deliver it — which is the
-                contradiction of showing live switches under an install card. */}
-            {!remindersReachable ? (
-              <p className="mt-2 text-xs text-muted-foreground">
-                No device can receive reminders yet, so these are switched off
-                until one can. Finish the steps above, open Cetele from your
-                Home Screen, and turn reminders on there — your times are kept.
-              </p>
-            ) : (
-              env !== null &&
-              !canReceiveHere && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  These times are saved to your account, not to this browser —
-                  they&apos;ll arrive on the{" "}
-                  {devices === 1 ? "device" : `${devices} devices`} where
-                  you&apos;ve turned reminders on.
-                </p>
-              )
-            )}
             <ul className="mt-2 flex flex-col gap-1.5">
-              {tasks.map((t) => (
+              {reminders.map((r) => (
                 <ReminderRow
-                  key={t.taskId}
-                  task={t}
+                  key={r.id}
+                  reminder={r}
                   disabled={!remindersReachable}
                 />
               ))}
+              {/* The draft row is a list item like any other, so adding one
+                  doesn't move the list or open a dialog over it — you type in
+                  the place the reminder will live. */}
+              {adding && (
+                <NewReminderRow
+                  onDone={() => setAdding(false)}
+                  onCancel={() => setAdding(false)}
+                />
+              )}
             </ul>
+            {!adding && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                disabled={!remindersReachable}
+                onClick={() => setAdding(true)}
+              >
+                Add a reminder
+              </Button>
+            )}
           </>
         )}
       </section>
@@ -485,41 +529,119 @@ function TestPushCard() {
 }
 
 /**
- * One task's reminder: a clock time the member picks, plus on/off (D30).
+ * The controls shared by a saved reminder and a draft one: the name, the clock
+ * time, and (for a saved row) the on/off switch.
  *
  * `disabled` is for the case where no device of the member's can receive a push
- * at all — the control is inert rather than hidden, because the task and its
+ * at all — the controls are inert rather than hidden, because a reminder and its
  * time are still information worth seeing, and hiding them would make the whole
  * section vanish on an iPhone that hasn't installed the app yet.
  */
+function ReminderFields({
+  label,
+  time,
+  onLabel,
+  onLabelBlur,
+  onTime,
+  disabled,
+  labelId,
+  autoFocus = false,
+}: {
+  label: string;
+  time: string;
+  onLabel: (v: string) => void;
+  /** Saved-row only: the draft has an explicit Save button instead. */
+  onLabelBlur?: () => void;
+  onTime: (v: string) => void;
+  disabled: boolean;
+  labelId: string;
+  autoFocus?: boolean;
+}) {
+  return (
+    <>
+      <Input
+        value={label}
+        disabled={disabled}
+        // 60 is the DB's constraint (0033). Enforced here too so the limit is
+        // felt as the field refusing the 61st character rather than as an error
+        // message after a save — the check constraint stays the authority.
+        maxLength={60}
+        autoFocus={autoFocus}
+        aria-label="Reminder name"
+        id={labelId}
+        placeholder="Evening dhikr"
+        onChange={(e) => onLabel(e.target.value)}
+        onBlur={onLabelBlur}
+        // Enter commits the same way leaving the field does, so the name can be
+        // saved without reaching for anything — and the blur it triggers is what
+        // actually performs the save, rather than a second path to keep in step.
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
+        className="h-9"
+      />
+      <input
+        type="time"
+        value={time}
+        disabled={disabled}
+        aria-label="Reminder time"
+        onChange={(e) => onTime(e.target.value)}
+        // The controls carry their own disabled treatment — token pair,
+        // matching Input — because the row recedes by SURFACE, not opacity.
+        className="h-9 shrink-0 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground tabular-nums disabled:cursor-not-allowed disabled:border-border disabled:bg-disabled-fill disabled:text-disabled-foreground"
+      />
+    </>
+  );
+}
+
+/**
+ * One of the member's own reminders: a name they wrote, a clock time, on/off,
+ * and a way to delete it (D62).
+ *
+ * The name is saved on BLUR, not on every keystroke: it is free text, so a
+ * per-character save would send a write for "E", "Ev", "Eve"… and the last one
+ * to land wins. The time and the toggle still save immediately — they are
+ * single-gesture controls with nothing to debounce.
+ */
 function ReminderRow({
-  task,
+  reminder,
   disabled = false,
 }: {
-  task: ReminderTask;
+  reminder: Reminder;
   disabled?: boolean;
 }) {
   const act = useAction();
+  const del = useAction();
   // Prop-seeded (not a one-shot useState): useAction's post-save router.refresh
   // delivers the server's truth back through the prop, and re-seeding from it is
-  // what reconciles a mixed-outcome pair of saves (time change failed, toggle
+  // what reconciles a mixed-outcome pair of saves (name change failed, toggle
   // landed) — a plain useState would keep showing the rolled-back guess forever.
-  const [time, setTime] = usePropState(task.time);
-  const [enabled, setEnabled] = usePropState(task.enabled);
-  // Saves are serialised per row: picking a time and flipping the toggle fire
+  const [label, setLabel] = usePropState(reminder.label);
+  const [time, setTime] = usePropState(reminder.time);
+  const [enabled, setEnabled] = usePropState(reminder.enabled);
+  // Saves are serialised per row: editing the name and flipping the toggle fire
   // two writes in quick succession, and if they overlap on the wire the older
   // one can land last and undo the newer. Chaining keeps last-write-wins true.
   const queue = React.useRef<Promise<unknown>>(Promise.resolve());
 
-  function save(nextTime: string, nextEnabled: boolean) {
-    const prev = { time, enabled };
-    // Optimistic — a time picker that lags behind your typing feels broken.
+  function save(nextLabel: string, nextTime: string, nextEnabled: boolean) {
+    const trimmed = nextLabel.trim();
+    const prev = { label, time, enabled };
+    // An empty name is the one thing the server refuses outright, so it is
+    // caught here as a REVERT rather than sent and rendered as an error: the
+    // member has emptied a field, not asked for anything.
+    if (!trimmed) {
+      setLabel(prev.label);
+      return;
+    }
+    // Optimistic — a control that lags behind your typing feels broken.
+    setLabel(trimmed);
     setTime(nextTime);
     setEnabled(nextEnabled);
     act.run(
       () => {
         const next = queue.current.then(() =>
-          setReminder(task.taskId, nextTime, nextEnabled),
+          setReminder(reminder.id, trimmed, nextTime, nextEnabled),
         );
         queue.current = next.catch(() => {});
         return next;
@@ -527,6 +649,7 @@ function ReminderRow({
       undefined,
       () => {
         // …but never leave a refused write looking applied.
+        setLabel(prev.label);
         setTime(prev.time);
         setEnabled(prev.enabled);
       },
@@ -536,58 +659,31 @@ function ReminderRow({
   return (
     <li
       className={cn(
-        "flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2.5",
-        // The row recedes by SURFACE, not by opacity. It used to be
-        // `opacity-60` on this element, under a comment claiming "the label
-        // stays at full strength" — which container-level opacity makes
-        // impossible: it fades every descendant, the label and the "needs a
-        // device that can receive" explanation included. That explanation is
-        // the one thing a member must be able to read here, since it is the
-        // only place the app says why the controls are inert.
+        "rounded-xl border border-border bg-card px-3 py-2.5",
+        // The row recedes by SURFACE, not by opacity: container-level opacity
+        // fades every descendant, the explanation of WHY the controls are inert
+        // included — and that explanation is the one thing a member must be
+        // able to read here.
         disabled && "bg-muted/60",
       )}
     >
-      <div className="min-w-0">
-        <p
-          className={cn(
-            "truncate text-sm font-medium",
-            disabled ? "text-muted-foreground" : "text-foreground",
-          )}
-        >
-          {task.label}
-        </p>
-        <p className="truncate text-xs text-muted-foreground">
-          {task.groupName} ·{" "}
-          {disabled
-            ? "needs a device that can receive"
-            : enabled
-              ? to12h(time)
-              : "off"}
-        </p>
-        {act.error && (
-          <p role="alert" className="mt-0.5 text-xs text-danger">
-            {act.error}
-          </p>
-        )}
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <input
-          type="time"
-          value={time}
+      <div className="flex items-center gap-2">
+        <ReminderFields
+          label={label}
+          time={time}
+          onLabel={setLabel}
+          onLabelBlur={() => save(label, time, enabled)}
+          onTime={(v) => save(label, v, enabled)}
           disabled={disabled}
-          aria-label={`Reminder time for ${task.label}`}
-          onChange={(e) => save(e.target.value, enabled)}
-          // The container no longer fades, so the inert controls carry their
-          // own disabled treatment — token pair, matching Input.
-          className="h-9 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground tabular-nums disabled:cursor-not-allowed disabled:border-border disabled:bg-disabled-fill disabled:text-disabled-foreground"
+          labelId={`reminder-name-${reminder.id}`}
         />
         <button
           type="button"
           role="switch"
           aria-checked={enabled}
-          aria-label={`Reminder for ${task.label}`}
+          aria-label={`Reminder ${label}`}
           disabled={disabled}
-          onClick={() => save(time, !enabled)}
+          onClick={() => save(label, time, !enabled)}
           className={cn(
             "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed",
             enabled ? "bg-primary" : "bg-muted",
@@ -601,6 +697,92 @@ function ReminderRow({
           />
         </button>
       </div>
+      <div className="mt-1 flex items-center justify-between gap-3">
+        <p className="truncate text-xs text-muted-foreground">
+          {disabled
+            ? "needs a device that can receive"
+            : enabled
+              ? to12h(time)
+              : "off"}
+        </p>
+        <button
+          type="button"
+          disabled={del.pending}
+          onClick={() => del.run(() => deleteReminder(reminder.id))}
+          className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-danger disabled:cursor-not-allowed"
+        >
+          {del.pending ? "Removing…" : "Remove"}
+        </button>
+      </div>
+      {(act.error || del.error) && (
+        <p role="alert" className="mt-0.5 text-xs text-danger">
+          {act.error ?? del.error}
+        </p>
+      )}
+    </li>
+  );
+}
+
+/**
+ * The draft row — a reminder being typed, not yet saved. Separate from
+ * `ReminderRow` because it has no id, nothing to toggle and nothing to delete:
+ * modelling it as an "empty reminder" would have meant a row that is sometimes
+ * real and sometimes not, checked in every handler.
+ */
+function NewReminderRow({
+  onDone,
+  onCancel,
+}: {
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const act = useAction();
+  const [label, setLabel] = React.useState("");
+  const [time, setTime] = React.useState("07:00");
+
+  const trimmed = label.trim();
+
+  return (
+    <li className="rounded-xl border border-primary bg-card px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        <ReminderFields
+          label={label}
+          time={time}
+          onLabel={setLabel}
+          onTime={setTime}
+          disabled={act.pending}
+          labelId="reminder-name-new"
+          autoFocus
+        />
+      </div>
+      <div className="mt-2 flex items-center justify-end gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={act.pending}
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          // Guarded rather than left to fail: the server refuses a blank name
+          // out loud (0033), but a button that can only ever produce an error
+          // is a worse teacher than one that plainly isn't ready yet.
+          disabled={act.pending || trimmed.length === 0}
+          onClick={() =>
+            act.run(() => setReminder(null, trimmed, time, true), onDone)
+          }
+        >
+          {act.pending ? "Saving…" : "Save"}
+        </Button>
+      </div>
+      {act.error && (
+        <p role="alert" className="mt-0.5 text-xs text-danger">
+          {act.error}
+        </p>
+      )}
     </li>
   );
 }

@@ -271,7 +271,7 @@ export function GoalsDialog({
           <p className="text-sm text-muted-foreground">
             Your circle&rsquo;s share is the floor — you can aim{" "}
             <span className="font-medium text-foreground">above</span> it, never
-            below. Your goal moves your ring and your reminder; never your
+            below. Your goal moves your ring and your celebration; never your
             streak, your consistency, or what the circle counts.
           </p>
 

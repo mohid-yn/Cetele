@@ -2,8 +2,10 @@ import { test, expect } from "@playwright/test";
 import { signIn } from "./helpers";
 
 /**
- * Reminder settings (M8 / CET-11 / D30): a member sets a per-task clock time and
- * an on/off toggle, and it persists.
+ * Reminder settings (M8 / CET-11 / D30, rewritten for D62): a member writes a
+ * reminder's NAME and picks its time. It belongs to them, not to a task or a
+ * circle — which is the whole point: a member of three circles used to meet one
+ * row per task, fifteen of them, none of which they had named.
  *
  * Push DELIVERY is not driven here — it needs a real push service and an OS
  * permission grant, neither of which Playwright can grant meaningfully. The
@@ -15,60 +17,139 @@ const USER = `e2e-rem-${STAMP}@example.com`;
 
 test.describe.configure({ mode: "serial" });
 
-test("a member sets a per-task reminder time, and it persists", async ({
-  page,
-}) => {
+/**
+ * Await the WRITE, not just the click. Every control here saves through a server
+ * action, and `page.reload()` fired straight after one aborts it mid-flight —
+ * which is exactly how this spec first went flaky: the toggle looked switched,
+ * the reload raced the POST, and the reminder came back still enabled. Set the
+ * promise up BEFORE the action so the response cannot land in between.
+ */
+const saved = (page: import("@playwright/test").Page) =>
+  page.waitForResponse(
+    (res) =>
+      res.request().method() === "POST" &&
+      res.url().includes("/profile") &&
+      res.status() === 200,
+  );
+
+test("a member names their own reminder, and it persists", async ({ page }) => {
   await signIn(page, USER);
 
-  // a circle with one task
-  await page.goto("/groups");
-  await page.click('button:has-text("New group")');
-  await page.fill("#new-group-name", `Reminder Circle ${STAMP}`);
-  await page.click('button:has-text("Create group")');
-  await page.waitForURL("**/group/manage");
-  await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill("Salawat");
-  await page.getByPlaceholder("Target").fill("100");
-  await page.getByRole("button", { name: "Add task" }).click();
-  await expect(page.getByText("Salawat")).toBeVisible();
-
-  // Profile → the task shows up with a reminder row, off by default
+  // NO CIRCLE IS CREATED, deliberately. Under the old model this screen had
+  // nothing to show until an admin had made a task; a reminder is now the
+  // member's own, so it must work for somebody who has joined nothing.
   await page.goto("/profile");
-  const toggle = page.getByRole("switch", { name: "Reminder for Salawat" });
-  await expect(toggle).toHaveAttribute("aria-checked", "false");
+  await expect(page.getByText("No reminders yet")).toBeVisible();
 
-  // The row saves optimistically on EVERY interaction, so setting a time and
-  // flipping the toggle are two separate writes. Await each one: waiting for
-  // "a POST" after both would match the first and let the reload abort the
-  // second mid-flight.
-  const savedAction = () =>
-    page.waitForResponse(
-      (res) =>
-        res.request().method() === "POST" &&
-        res.url().includes("/profile") &&
-        res.status() === 200,
-    );
+  await page.getByRole("button", { name: "Add a reminder" }).click();
+  await page.getByLabel("Reminder name").fill("Evening dhikr");
+  await page.getByLabel("Reminder time").fill("21:30");
+  const created = saved(page);
+  await page.getByRole("button", { name: "Save" }).click();
+  await created;
 
-  const timeSaved = savedAction();
-  await page.getByLabel("Reminder time for Salawat").fill("07:45");
-  await timeSaved;
-
-  const toggleSaved = savedAction();
-  await toggle.click();
-  await toggleSaved;
-
-  await expect(toggle).toHaveAttribute("aria-checked", "true");
   // stored 24h, shown 12h (D30)
-  await expect(page.getByText("7:45 AM")).toBeVisible();
+  await expect(page.getByText("9:30 PM")).toBeVisible();
+  await expect(page.getByText("No reminders yet")).toHaveCount(0);
 
   // …and it survives a reload (it's in Postgres, not component state)
   await page.reload();
+  await expect(page.getByLabel("Reminder name")).toHaveValue("Evening dhikr");
+  await expect(page.getByLabel("Reminder time")).toHaveValue("21:30");
   await expect(
-    page.getByRole("switch", { name: "Reminder for Salawat" }),
+    page.getByRole("switch", { name: "Reminder Evening dhikr" }),
   ).toHaveAttribute("aria-checked", "true");
-  await expect(page.getByText("7:45 AM")).toBeVisible();
-  await expect(page.getByLabel("Reminder time for Salawat")).toHaveValue(
-    "07:45",
+});
+
+test("a second reminder, renamed and toggled, then removed", async ({
+  page,
+}) => {
+  await signIn(page, USER);
+  await page.goto("/profile");
+
+  // THE SCALING CLAIM, made concrete: two reminders on one account, neither of
+  // them belonging to any circle. This is what the old model could not express
+  // at all — it could only ever have as many reminders as an admin had made
+  // tasks, named whatever the admin had named them.
+  await page.getByRole("button", { name: "Add a reminder" }).click();
+  await page.getByLabel("Reminder name").last().fill("Morning wird");
+  await page.getByLabel("Reminder time").last().fill("06:15");
+  const created = saved(page);
+  await page.getByRole("button", { name: "Save" }).click();
+  await created;
+  await expect(page.getByText("6:15 AM")).toBeVisible();
+
+  // A row is addressed by its SWITCH, never by position: the list is ordered by
+  // clock time, so after a reload 06:15 sorts above 21:30 and `.last()` would
+  // quietly act on the other reminder. (It did, first time out — this test
+  // renamed "Evening dhikr" and then failed hunting for it.) The name lives in
+  // an input VALUE, so `hasText` cannot see it either.
+  const rowFor = (label: string) =>
+    page
+      .locator("li")
+      .filter({ has: page.getByRole("switch", { name: `Reminder ${label}` }) });
+
+  // Renaming saves on blur, not per keystroke — a per-character write would
+  // send one save for "M", "Mo", "Mor"… and let the last to land win.
+  await rowFor("Morning wird").getByLabel("Reminder name").fill("Fajr wird");
+  // Committed with the KEYBOARD, which acts on whatever has focus. A second
+  // action through `rowFor("Morning wird")` would re-resolve the locator, and
+  // by now it matches nothing: the typing already moved the row's own switch to
+  // "Reminder Fajr wird". Enter is also the real gesture — it blurs the field,
+  // and the blur is what saves.
+  const renamed = saved(page);
+  await page.keyboard.press("Enter");
+  await renamed;
+  await page.reload();
+  await expect(rowFor("Fajr wird").getByLabel("Reminder name")).toHaveValue(
+    "Fajr wird",
   );
+
+  // Switching one off leaves the other alone — they are independent rows, not
+  // two views of one setting.
+  const toggled = saved(page);
+  await rowFor("Fajr wird").getByRole("switch").click();
+  await toggled;
+  await page.reload();
+  await expect(rowFor("Fajr wird").getByRole("switch")).toHaveAttribute(
+    "aria-checked",
+    "false",
+  );
+  await expect(rowFor("Evening dhikr").getByRole("switch")).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+
+  // Removing is the member's own, and it is the only way one goes away.
+  const removed = saved(page);
+  await rowFor("Fajr wird").getByRole("button", { name: "Remove" }).click();
+  await removed;
+  await expect(rowFor("Fajr wird")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByLabel("Reminder name")).toHaveValue("Evening dhikr");
+});
+
+test("a reminder needs a name — Save is not offered for a blank one", async ({
+  page,
+}) => {
+  await signIn(page, USER);
+  await page.goto("/profile");
+
+  await page.getByRole("button", { name: "Add a reminder" }).click();
+  // Guarded rather than left to fail: the RPC refuses a blank name out loud
+  // (pgTAP 007), but a button whose only possible outcome is an error teaches
+  // less than one that plainly isn't ready.
+  await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+  await page.getByLabel("Reminder name").last().fill("   ");
+  await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+  await page.getByLabel("Reminder name").last().fill("Witr");
+  await expect(page.getByRole("button", { name: "Save" })).toBeEnabled();
+  // Cancel abandons the draft. Asserted by the Save button going away rather
+  // than by the text "Witr", which never was text — it is an input VALUE, so a
+  // getByText check here would have passed whether or not the draft survived.
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0);
+  await expect(page.getByLabel("Reminder name")).toHaveValue("Evening dhikr");
 });
 
 /**
@@ -105,13 +186,13 @@ test("iOS in a browser tab is coached to install, not shown a dead push toggle",
   await expect(page.getByRole("button", { name: /^Turn on$/ })).toHaveCount(0);
   await expect(page.getByText("Reminders on this device")).toHaveCount(0);
 
-  // The rows stay VISIBLE (the task and its time are still information) but are
-  // inert, because this member has no subscribed device anywhere — a switch that
-  // saves a time nothing can deliver is the contradiction the install card is
-  // already warning about.
-  await expect(page.getByLabel("Reminder time for Salawat")).toBeDisabled();
+  // The rows stay VISIBLE (a reminder and its time are still information) but
+  // are inert, because this member has no subscribed device anywhere — a switch
+  // that saves a time nothing can deliver is the contradiction the install card
+  // is already warning about.
+  await expect(page.getByLabel("Reminder time")).toBeDisabled();
   await expect(
-    page.getByRole("switch", { name: "Reminder for Salawat" }),
+    page.getByRole("switch", { name: "Reminder Evening dhikr" }),
   ).toBeDisabled();
   await expect(
     page.getByText("No device can receive reminders yet"),
@@ -135,8 +216,11 @@ test("a push-capable browser still gets the reminder toggle and live rows", asyn
   await expect(
     page.getByText("Add Cetele to your Home Screen first"),
   ).toHaveCount(0);
-  await expect(page.getByLabel("Reminder time for Salawat")).toBeEnabled();
+  await expect(page.getByLabel("Reminder time")).toBeEnabled();
   await expect(
-    page.getByRole("switch", { name: "Reminder for Salawat" }),
+    page.getByRole("switch", { name: "Reminder Evening dhikr" }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Add a reminder" }),
   ).toBeEnabled();
 });

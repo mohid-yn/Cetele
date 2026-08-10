@@ -200,32 +200,26 @@ select is((select completion_pct from public.daily_completion
               and date = (now() at time zone 'UTC')::date - 1),
   100.00, 'yesterday rolled up as a FULL day at the group target, 3x goal and all');
 
--- ...while the reminder, the one mechanism the stretch is allowed to drive,
--- keeps nudging toward the personal goal.
-insert into public.reminders (user_id, task_id, time_of_day, enabled) values
-  ('d1000000-0000-0000-0000-00000000000a', 'd1000000-0000-0000-0000-00000000e001',
-   (now() at time zone 'UTC')::time, true);
-select pg_temp.impersonate('d1000000-0000-0000-0000-00000000000a');
-select lives_ok(
-  $$select public.save_push_subscription('https://push.test/d51','p256','authkey','iPhone')$$,
-  'register a device so there is something to send to');
-reset role;
-
--- Claimed ONCE into a temp table: the claim stamps last_sent_on, so a second
--- call would (correctly) return nothing and the payload assertion below would
--- be testing an empty set.
-create temp table d51_claim on commit drop as
-  select * from public.claim_due_reminders();
-
-select is((select count(*) from d51_claim
-            where user_id = 'd1000000-0000-0000-0000-00000000000a'), 1::bigint,
-  'at the group target but under my own goal, the reminder still fires');
-select is((select target_count from d51_claim
-            where user_id = 'd1000000-0000-0000-0000-00000000000a'), 300,
-  '...and the push payload names MY goal, not the circle''s share');
-select is((select current_count from d51_claim
-            where user_id = 'd1000000-0000-0000-0000-00000000000a'), 100,
-  '...against the count I have actually reached');
+-- ...and NOTHING ELSE is driven by the stretch any more (D51 -> D62).
+-- D51 gave the stretch goal exactly three effects: the ring, the celebration,
+-- and the reminder. The reminder was the only one of the three with a database
+-- half, and 0033 cut it loose — a reminder is now a name and a time the member
+-- wrote, with no task to read a target from. So the assertions that used to
+-- stand here (the push payload naming MY goal rather than the circle's) no
+-- longer have a subject.
+--
+-- The stretch goal itself is untouched and still private, still raise-only,
+-- still floored at the member's share (0032) — but its reach is now entirely
+-- client-side. That is the trade D62 accepted, and it is recorded here rather
+-- than silently deleted so nobody re-derives the old behaviour from an
+-- unexplained gap.
+select ok(
+  not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'reminders'
+      and column_name = 'task_id'
+  ),
+  'a reminder no longer points at a task, so it cannot read a stretch goal (D62)');
 
 select * from finish();
 rollback;

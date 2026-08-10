@@ -2,15 +2,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveActiveGroup } from "@/lib/active-group";
 import { q } from "@/lib/db-log";
-import { ProfileClient, type ReminderTask } from "./profile-client";
+import { ProfileClient, type Reminder } from "./profile-client";
 
 /**
  * Profile — the last screen off the mock (M8/M9). Identity + reminders (D30) +
  * push (D10) + appearance + account.
  *
- * Reminders are per TASK and span every circle the member belongs to (a reminder
- * is a personal setting, not a group one), so the tasks are read across all
- * their memberships under RLS.
+ * Reminders belong to the MEMBER, not to a task or a circle (D62) — a name they
+ * wrote and a time they picked — so this screen reads their own list and needs
+ * nothing about their memberships to render it.
  */
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -34,52 +34,36 @@ export default async function ProfilePage() {
     ]),
   );
 
-  const groupIds = (memberships ?? []).map((m) => m.group_id);
-
-  // Tasks across every circle I'm in, plus my reminder for each (RLS: reminders
-  // are self-only, so this can only ever return mine).
+  // My own reminders (D62) — no longer one per task, so this reads the member's
+  // list and nothing about any circle. RLS is self-only, so it can only ever
+  // return mine.
   //
   // The device count is what lets the reminder rows tell the truth: a time with
   // no subscribed device anywhere is a setting that cannot fire. `head: true` so
   // this is a COUNT, not a fetch of every row — and RLS scopes it to me, so it
   // can only ever count my own devices.
-  const [{ data: tasks }, { data: reminders }, { count: deviceCount }] =
-    await q(
-      "profile.reads (tasks+reminders+devices)",
-      Promise.all([
-        supabase
-          .from("tasks")
-          .select("id, label, group_id")
-          .in("group_id", groupIds.length ? groupIds : [ZERO_UUID])
-          .order("sort_order"),
-        supabase
-          .from("reminders")
-          .select("task_id, time_of_day, enabled")
-          .eq("user_id", me),
-        supabase
-          .from("push_subscriptions")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", me),
-      ]),
-    );
-
-  const byTask = new Map(
-    (reminders ?? []).map((r) => [
-      r.task_id,
-      { time: (r.time_of_day as string).slice(0, 5), enabled: r.enabled },
+  const [{ data: reminders }, { count: deviceCount }] = await q(
+    "profile.reads (reminders+devices)",
+    Promise.all([
+      supabase
+        .from("reminders")
+        .select("id, label, time_of_day, enabled")
+        // By clock time, which is the order the member experiences them in —
+        // a list sorted by creation would scatter the morning through the day.
+        .order("time_of_day")
+        .eq("user_id", me),
+      supabase
+        .from("push_subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", me),
     ]),
   );
-  const groupNames = new Map(
-    (memberships ?? []).map((m) => [m.group_id, m.groups?.name ?? "Circle"]),
-  );
 
-  const reminderTasks: ReminderTask[] = (tasks ?? []).map((t) => ({
-    taskId: t.id,
-    label: t.label,
-    groupName: groupNames.get(t.group_id) ?? "Circle",
-    // Default to a sensible morning time until the member picks one.
-    time: byTask.get(t.id)?.time ?? "07:00",
-    enabled: byTask.get(t.id)?.enabled ?? false,
+  const myReminders: Reminder[] = (reminders ?? []).map((r) => ({
+    id: r.id,
+    label: r.label,
+    time: (r.time_of_day as string).slice(0, 5),
+    enabled: r.enabled,
   }));
 
   // The identity pill reflects the group you're actually in — the active /
@@ -97,11 +81,9 @@ export default async function ProfilePage() {
       role={primary?.role ?? null}
       groupName={primary ? (primary.groups?.name ?? null) : null}
       streak={streak?.current ?? 0}
-      tasks={reminderTasks}
+      reminders={myReminders}
       deviceCount={deviceCount ?? 0}
       vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""}
     />
   );
 }
-
-const ZERO_UUID = "00000000-0000-0000-0000-000000000000";

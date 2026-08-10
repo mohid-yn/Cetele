@@ -291,21 +291,21 @@ select is((select count(*) from private.obligations(
 -- ----------------------------------------------------------------------------
 -- 8. What deliberately did NOT move
 -- ----------------------------------------------------------------------------
--- A reminder is about the day it FIRES on, which is always today, and the
--- version in force today is the live row. The D36a sanity cap is a bound on
--- what may be written now, not a verdict on a past day — pinning it to a
--- lowered historical target would refuse a member their correction window.
+-- The D36a sanity cap is a bound on what may be written now, not a verdict on a
+-- past day — pinning it to a lowered historical target would refuse a member
+-- their correction window.
 
-insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
-values ('c4000000-0000-0000-0000-00000000000a', 'https://push.test/a', 'k', 'a');
-
-insert into public.reminders (user_id, task_id, time_of_day, enabled)
-values ('c4000000-0000-0000-0000-00000000000a', 'c4000000-0000-0000-0000-00000000e003',
-        (now() at time zone 'UTC')::time, true);
-
-select is((select count(*) from private.due_reminders()
-            where user_id = 'c4000000-0000-0000-0000-00000000000a'), 1::bigint,
-  'a reminder still fires off the LIVE target — today''s version is the live row');
+-- The reminder half of this section is gone with its subject: since 0033 a
+-- reminder reads no target at all, live or historical (D62). What remains true
+-- — and is asserted throughout section 7 above — is that the D36a sanity cap is
+-- a bound on what may be written NOW, not a verdict on a past day.
+select ok(
+  not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'reminders'
+      and column_name = 'task_id'
+  ),
+  'a reminder reads no target, live or historical, because it names no task (D62)');
 
 -- ----------------------------------------------------------------------------
 -- 9. THE MEMBER'S CALENDAR, not the database's
