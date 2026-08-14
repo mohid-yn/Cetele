@@ -7,6 +7,7 @@ import type { BreakdownMember } from "@/components/app/member-breakdown";
 import type { GridRow } from "@/components/app/task-grid";
 import type { Pair } from "@/components/app/pair-goal";
 import { gardenStage, pickBuddy, monthKey, PAIR_TARGET } from "@/lib/retention";
+import { compareByRings } from "@/lib/rings";
 import { toConfigVersions, targetOn, frequencyOn } from "@/lib/task-config";
 import { isDueOn } from "@/lib/goals";
 import {
@@ -26,6 +27,7 @@ import { GroupLive } from "./group-live";
 import {
   GroupClient,
   type Contribution,
+  type RingRow,
   type Standing,
   type Steadfast,
   type TaskTotal,
@@ -275,19 +277,45 @@ export default async function GroupPage({
     };
   });
 
-  // Members — today's total contribution per member (sorted desc).
+  // Members — today's rings per member, with the raw total behind it.
+  //
+  // RINGS, not the raw count, is the headline figure. A total is unreadable
+  // across a circle that splits unevenly (D61): since a member's obligation is
+  // `greatest(their share, the circle's target)`, "300" is a closed day for
+  // someone on the circle's 100 and a shortfall for someone carrying 500 —
+  // and the old sort ranked by that total, so carrying a BIGGER share made you
+  // look better for doing proportionally less. Rings ask the only question the
+  // screen can answer fairly: of what today asked of you, how much is done.
+  //
+  // Measured against the OBLIGATION, never a stretch goal (D51). A member who
+  // raised their own bar to 300 against a 100 share has closed their ring at
+  // 100 — scoring them against the goal they volunteered for would punish the
+  // ambition the feature exists to invite, and is the one direction that
+  // invariant exists to forbid.
+  //
+  // Both bounds come from the hoisted `owedOn`/`targetFor`, so this figure, the
+  // breakdown's `daysFull` and Standings' `expected` are three readings of ONE
+  // expression rather than three copies that drift.
   const contributions: Contribution[] = memberList
-    .map((m) => ({
-      userId: m.user_id,
-      name: names[m.user_id],
-      role: m.role as Contribution["role"],
-      isMe: m.user_id === me,
-      today: taskList.reduce(
-        (s, t) => s + countOf(m.user_id, t.id, todayOf(m.user_id)),
-        0,
-      ),
-    }))
-    .sort((a, b) => b.today - a.today);
+    .map((m) => {
+      const d = todayOf(m.user_id);
+      const z = tzOf(m.user_id);
+      const owed = owedOn(m.user_id, d, z);
+      return {
+        userId: m.user_id,
+        name: names[m.user_id],
+        role: m.role as Contribution["role"],
+        isMe: m.user_id === me,
+        today: taskList.reduce((s, t) => s + countOf(m.user_id, t.id, d), 0),
+        ringsOwed: owed.length,
+        ringsClosed: owed.filter(
+          (t) => countOf(m.user_id, t.id, d) >= targetFor(m.user_id, t, d, z),
+        ).length,
+      };
+    })
+    // By PROPORTION closed — `lib/rings.ts` carries the rule and the argument
+    // for it, and `lib/rings.test.ts` is its only check (it has no SQL twin).
+    .sort(compareByRings);
 
   // Standings — weekly ranking: days-active (any count) then total, over each
   // member's OWN last 7 days (same per-member-clock reasoning as the collective).
@@ -335,6 +363,20 @@ export default async function GroupPage({
   // clock, so a viewer-timezone grid handed an admin a "today" cell the RPC
   // refused for any member whose day boundary sits behind theirs.
   const breakdowns: Record<string, BreakdownMember> = {};
+  // The same fortnight, read across the circle instead of one member at a time.
+  // The breakdown answers "how has THIS member been doing" and is reached by
+  // tapping a name, so seeing the circle meant opening every member in turn and
+  // holding fourteen days each in your head. A member × day matrix is the same
+  // data with the axes swapped, and it makes the two things a roster cannot show
+  // legible at a glance: one person quietly fading over a week, and a day the
+  // whole circle dropped (which is a fact about the day, not about the people).
+  //
+  // Admin-only, like the breakdown it is derived from — RLS draws that line, not
+  // the UI. A fortnight is where a bad week becomes a pattern, and a pattern
+  // rendered to the whole circle is the shame mechanic D8/D28 rule out; today's
+  // rings are the version everyone sees, because a single day is recoverable and
+  // reads as presence rather than as a record.
+  const ringRows: RingRow[] = [];
   if (canManage) {
     for (const m of memberList) {
       const mTz = m.profiles?.timezone ?? "UTC";
@@ -342,6 +384,14 @@ export default async function GroupPage({
       const mDates = Array.from({ length: DAYS }, (_, i) =>
         isoDaysAgo(mToday, DAYS - 1 - i),
       );
+      // What each day asked of them, resolved ONCE. `owedDays` and `daysFull`
+      // each used to call `owedOn` per date, so the fortnight was resolved twice
+      // per member before the matrix wanted it a third time — and it is the
+      // expensive expression on this page (two interval lookups per task per
+      // day). One pass, three readers.
+      const owedByDate = new Map<string, typeof taskList>();
+      for (const d of mDates) owedByDate.set(d, owedOn(m.user_id, d, mTz));
+      const owedFor = (d: string) => owedByDate.get(d) ?? [];
       // This member's OWN list (0023), resolved per day — a task they were
       // never given must not appear as fourteen empty cells against their name,
       // and one they were taken off mid-window must still show the days they
@@ -390,14 +440,35 @@ export default async function GroupPage({
       // that day asked for). This is a score an admin reads about a member, so
       // it has to be the same verdict the streak reached — not an approximation
       // of it that drifts every time a task is edited.
-      const owedDays = mDates.filter(
-        (d) => owedOn(m.user_id, d, mTz).length > 0,
-      );
-      const daysFull = owedDays.filter((d) =>
-        owedOn(m.user_id, d, mTz).every(
+      const owedDays = mDates.filter((d) => owedFor(d).length > 0);
+      const closedOn = (d: string) =>
+        owedFor(d).filter(
           (t) => countOf(m.user_id, t.id, d) >= targetFor(m.user_id, t, d, mTz),
-        ),
+        ).length;
+      const daysFull = owedDays.filter(
+        (d) => closedOn(d) === owedFor(d).length,
       ).length;
+
+      ringRows.push({
+        userId: m.user_id,
+        name: names[m.user_id],
+        isMe: m.user_id === me,
+        cells: mDates.map((date) => ({
+          date,
+          owed: owedFor(date).length,
+          closed: closedOn(date),
+          // Any effort at all that day, over the tasks that were actually
+          // theirs. It is what separates "tried and fell short" from "nothing",
+          // and the two must not be drawn alike: without it a member at 99% on
+          // every task wears the same empty cell as one who never opened the
+          // app. Scoped to the owed tasks so a stray log on something they no
+          // longer carry cannot light up a day they owed nothing on.
+          activity: owedFor(date).reduce(
+            (s, t) => s + countOf(m.user_id, t.id, date),
+            0,
+          ),
+        })),
+      });
       breakdowns[m.user_id] = {
         id: m.user_id,
         name: names[m.user_id],
@@ -426,6 +497,13 @@ export default async function GroupPage({
           })),
       };
     }
+    // Alphabetical, deliberately — NOT by how the fortnight went. A matrix is
+    // something an admin returns to, and rows that reorder themselves as people
+    // have good and bad weeks make it unreadable across visits: you cannot spot
+    // a row fading if the row moved. It also keeps the matrix from becoming a
+    // second ranking of the circle, which Standings already is and which D28
+    // caps at one, within-group and resetting.
+    ringRows.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   // M6 — the group's 90-day collective consistency (the North Star, PRD §9).
@@ -548,6 +626,7 @@ export default async function GroupPage({
         contributions={contributions}
         standings={standings}
         breakdowns={breakdowns}
+        ringRows={ringRows}
         groupConsistency90={groupConsistency90 ?? 0}
         steadfastness={steadfastness}
         steadfastBar={STEADFAST_BAR}

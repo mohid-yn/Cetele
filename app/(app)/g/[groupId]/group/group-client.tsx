@@ -31,6 +31,11 @@ import {
   type BreakdownMember,
 } from "@/components/app/member-breakdown";
 import { GroupSwitcher } from "@/components/app/group-switcher";
+import {
+  RingDots,
+  RingsMatrix,
+  type RingRow,
+} from "@/components/app/rings-matrix";
 import { SteadfastnessBoard } from "@/components/app/steadfastness-board";
 import { groupHref } from "@/lib/group-href";
 import { useAction } from "@/lib/use-action";
@@ -69,12 +74,17 @@ export type TaskTotal = {
    */
   assignees: string[] | null;
 };
+export type { RingRow };
 export type Contribution = {
   userId: string;
   name: string;
   role: Role;
   today: number;
   isMe: boolean;
+  /** Rings today asked of them (0023 + frequency). 0 = nothing due today. */
+  ringsOwed: number;
+  /** Of those, how many closed — against their obligation (D61), not a goal. */
+  ringsClosed: number;
 };
 export type Standing = {
   userId: string;
@@ -106,6 +116,7 @@ export function GroupClient({
   contributions,
   standings,
   breakdowns,
+  ringRows,
   groupConsistency90,
   steadfastness,
   steadfastBar,
@@ -126,6 +137,8 @@ export function GroupClient({
   standings: Standing[];
   /** Per-member fortnight breakdown, admin-only ({} otherwise). */
   breakdowns: Record<string, BreakdownMember>;
+  /** The circle's fortnight as member × day rings, admin-only ([] otherwise). */
+  ringRows: RingRow[];
   /** The group's 90-day collective consistency (North Star, PRD §9). */
   groupConsistency90: number;
   /** Admin-only steadfastness board ([] for plain members). */
@@ -521,21 +534,53 @@ export function GroupClient({
               )}
               <ul className="flex flex-col gap-1.5">
                 {contributions.map((m) => {
+                  const complete =
+                    m.ringsOwed > 0 && m.ringsClosed >= m.ringsOwed;
                   const row = (
                     <MemberRow
                       name={m.name}
                       role={m.role}
                       you={m.isMe}
+                      // The raw total moves DOWN here, to a caption. It is still
+                      // worth showing — it is the only figure that says somebody
+                      // carried on past what was asked — but it is the wrong
+                      // headline for a circle that splits unevenly (D61), where
+                      // the same number is a closed day for one member and a
+                      // shortfall for another.
+                      status={
+                        m.today > 0
+                          ? `${m.today.toLocaleString()} today`
+                          : undefined
+                      }
                       trailing={
                         <div className="flex items-center gap-2">
-                          <div className="text-right">
-                            <p className="font-display text-sm font-bold text-foreground tabular-nums">
-                              {m.today.toLocaleString()}
-                            </p>
+                          {m.ringsOwed === 0 ? (
+                            // Not a zero. A member owed nothing today has not
+                            // fallen short of anything, and "0 of 0" beside
+                            // their name says they did — the roster's version of
+                            // the absent-obligation rule the grid already keeps.
                             <p className="text-xs text-muted-foreground">
-                              today
+                              nothing due
                             </p>
-                          </div>
+                          ) : (
+                            <>
+                              <RingDots
+                                closed={m.ringsClosed}
+                                owed={m.ringsOwed}
+                              />
+                              <div className="text-right">
+                                <p className="flex items-center justify-end gap-1 font-display text-sm font-bold text-foreground tabular-nums">
+                                  {m.ringsClosed} of {m.ringsOwed}
+                                  {complete && (
+                                    <CheckIcon className="size-3.5 text-success" />
+                                  )}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  rings
+                                </p>
+                              </div>
+                            </>
+                          )}
                           {canManage && (
                             <ChevronRightIcon className="size-4 text-muted-foreground" />
                           )}
@@ -573,6 +618,25 @@ export function GroupClient({
                     Manage
                   </Link>{" "}
                   — share an invite link or code.
+                </div>
+              )}
+
+              {/* The circle's fortnight, admin-only. Filed AFTER the roster and
+                  before steadfastness so the Members tab reads outward in time:
+                  today (the roster's rings) → the last {days} days (this) → the
+                  90-day recognition board. Each answers a longer question than
+                  the one above it, and an admin arriving to check on somebody
+                  today should not have to scroll past a fortnight to do it. */}
+              {canManage && ringRows.length > 0 && (
+                <div className="mt-6">
+                  <SectionHeading>Last {days} days</SectionHeading>
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Each square is one member&apos;s day — how many of the rings
+                    it asked of them closed.
+                  </p>
+                  <div className={cardVariants({ padding: "md" })}>
+                    <RingsMatrix rows={ringRows} days={days} />
+                  </div>
                 </div>
               )}
 

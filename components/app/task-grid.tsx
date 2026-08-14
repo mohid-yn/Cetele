@@ -33,6 +33,7 @@ import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { DURATION, easeBrand } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { dayCellClass } from "@/lib/grid-scale";
 import { Button, Input } from "@/components/ui";
 import { setCount } from "@/app/(app)/g/[groupId]/group/actions";
 import { CheckIcon, ChevronRightIcon } from "@/components/app/icons";
@@ -55,29 +56,6 @@ export type GridCell = {
   owed: boolean;
 };
 export type GridRow = { taskId: string; label: string; cells: GridCell[] };
-
-/** Emerald intensity by share of the task's target hit that day (green = growth);
- *  no activity reads as a neutral cell, never red (D8).
- *
- *  The empty cell is OUTLINED, not darkened. `bg-muted` alone measured 1.2:1 on
- *  the card, so the grid's shape was invisible — but filling it with the
- *  --progress-track tone would make a missed day visually HEAVIER than a barely-
- *  touched one (`bg-primary/20`), inverting the ramp and reading as punishment,
- *  which D8 rules out. A hairline at track strength makes the slot unmistakable
- *  while its fill stays the lightest rung of the scale. */
-function cellClass(pct: number, count: number, owed = true): string {
-  // Not theirs that day (0023): no fill AND no outline. The empty-day hairline
-  // means "a slot you could have filled", so wearing it here would say the
-  // member missed something that was never asked of them — the same punishment
-  // read the hairline itself exists to avoid, one step along. Absence is the
-  // honest mark for an absent obligation.
-  if (!owed) return "bg-transparent";
-  if (count <= 0) return "bg-muted ring-1 ring-inset ring-progress-track";
-  if (pct >= 1) return "bg-primary";
-  if (pct >= 0.66) return "bg-primary/70";
-  if (pct >= 0.33) return "bg-primary/45";
-  return "bg-primary/20";
-}
 
 function fmtFull(date: string): string {
   return new Date(date + "T00:00:00").toLocaleDateString(undefined, {
@@ -382,7 +360,7 @@ export function TaskGrid({
                         // `aspect-square` here would make a widened desktop cell
                         // as TALL as it is wide and burst the row.
                         "grid h-full w-full place-items-center rounded-md transition-transform hover:scale-105",
-                        cellClass(c.pct, c.count, c.owed),
+                        dayCellClass(c.pct, c.count, c.owed),
                         // The whole COLUMN wears the selection now, so the ring
                         // reads as "this day" rather than "this square".
                         isPicked &&
