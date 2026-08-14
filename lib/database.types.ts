@@ -412,6 +412,42 @@ export type Database = {
           },
         ];
       };
+      member_task_links: {
+        Row: {
+          cluster_id: string;
+          created_at: string;
+          task_id: string;
+          user_id: string;
+        };
+        Insert: {
+          cluster_id?: string;
+          created_at?: string;
+          task_id: string;
+          user_id: string;
+        };
+        Update: {
+          cluster_id?: string;
+          created_at?: string;
+          task_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "member_task_links_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "member_task_links_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       member_task_shares: {
         Row: {
           effective_from: string;
@@ -1137,6 +1173,10 @@ export type Database = {
         Args: { p_date: string; p_delta: number; p_task: string };
         Returns: number;
       };
+      link_tasks: {
+        Args: { p_task_a: string; p_task_b: string };
+        Returns: string;
+      };
       list_super_admins: {
         Args: never;
         Returns: {
@@ -1266,6 +1306,7 @@ export type Database = {
         Args: { p_group: string; p_new_owner: string };
         Returns: undefined;
       };
+      unlink_task: { Args: { p_task: string }; Returns: undefined };
       update_roadmap: {
         Args: {
           p_ends_on: string;
