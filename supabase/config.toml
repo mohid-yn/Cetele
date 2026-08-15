@@ -156,7 +156,17 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+#
+# LOCALHOST, NOT 127.0.0.1, and the difference is a sign-in loop (2026-08-15).
+# They are two hosts to a browser, so they hold two separate cookie jars — and
+# Next normalises `request.nextUrl` to `localhost`, so `/auth/confirm` reached on
+# 127.0.0.1:3000 sets the session cookie for 127.0.0.1 and then redirects to
+# localhost:3000, where that cookie does not exist. The member lands back on the
+# login page, signs in again, and goes round again: "login doesn't stay
+# persistent". Pointing site_url at localhost means nothing sends anyone to the
+# other host in the first place. `playwright.config.ts` already made this choice
+# for the same reason; this is the half that was left behind.
+site_url = "http://localhost:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.

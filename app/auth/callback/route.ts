@@ -1,6 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { AUTH_NEXT_COOKIE, sanitizeNextPath } from "@/lib/auth-next";
+import { redirectSameOrigin } from "@/lib/auth-redirect";
 import { TZ_COOKIE, applyStashedTimeZone } from "@/lib/timezone";
 
 /**
@@ -14,10 +15,6 @@ export async function GET(request: NextRequest) {
   const next =
     sanitizeNextPath(request.cookies.get(AUTH_NEXT_COOKIE)?.value) ?? "/today";
 
-  const redirectTo = request.nextUrl.clone();
-  redirectTo.pathname = next;
-  redirectTo.search = "";
-
   if (code) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
@@ -30,14 +27,14 @@ export async function GET(request: NextRequest) {
         data.user?.id,
         request.cookies.get(TZ_COOKIE)?.value,
       );
-      const res = NextResponse.redirect(redirectTo);
+      // Relative, so the browser stays on the host that just received the
+      // session cookie (lib/auth-redirect.ts — the 127.0.0.1/localhost loop).
+      const res = redirectSameOrigin(next);
       res.cookies.delete(AUTH_NEXT_COOKIE);
       res.cookies.delete(TZ_COOKIE);
       return res;
     }
   }
 
-  redirectTo.pathname = "/";
-  redirectTo.search = "?auth-error=1";
-  return NextResponse.redirect(redirectTo);
+  return redirectSameOrigin("/?auth-error=1");
 }
