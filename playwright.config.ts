@@ -45,7 +45,16 @@ export default defineConfig({
   // varied run to run, which is exactly why it read as an intermittent flake.
   // Four keeps every test near its isolated time with comfortable margin. CI's
   // small runner already lands near this via core count, so leave it default.
-  workers: process.env.CI ? undefined : 4,
+  //
+  // LOWERED TO TWO, 2026-08-15, after the host machine locked up twice.
+  // The measurement above still holds for CPU; what it did not account for is
+  // MEMORY. This VM has ~6.7 GB and no `.wslconfig`, so WSL also helps itself
+  // to all 16 cores — and four Chromium workers alongside `next start`, eleven
+  // Supabase containers and Docker Desktop's own VM drove the box into swap
+  // hard enough to take Docker down with it (twice: `/usr/bin/docker` came back
+  // EIO both times). A suite that finishes in 53s at two workers and bricks the
+  // machine at four is not faster.
+  workers: process.env.CI ? undefined : 2,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
