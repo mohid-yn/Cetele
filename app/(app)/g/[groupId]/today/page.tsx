@@ -553,6 +553,8 @@ export default async function TodayPage({
           // Linked tasks (D64), as the goals dialog draws them (D66): what this
           // act already covers, and the one circle worth offering next.
           links: siblingsOf(t.id),
+          // The unprompted hint on the row. The FULL menu goes down separately
+          // as `linkCandidates` — the row suggests, the pane offers everything.
           linkSuggestion: suggestFor(
             {
               taskId: t.id,
@@ -568,6 +570,10 @@ export default async function TodayPage({
         assignments={assignments}
         versions={versions}
         shares={shares}
+        // Already computed above for the row hints, and already scoped to what
+        // is MINE today — so the link pane's full menu costs this page nothing
+        // beyond passing it down.
+        linkCandidates={linkCandidates}
         counts={counts}
         circle={circle}
         collectivePct={collectivePct}

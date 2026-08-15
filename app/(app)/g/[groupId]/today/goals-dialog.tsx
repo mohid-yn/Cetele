@@ -2,12 +2,22 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Button, Dialog, Input } from "@/components/ui";
+import { Badge, Button, Dialog, Input } from "@/components/ui";
 import { goalCap, frequencyLabel } from "@/lib/goals";
 import { FrequencyPicker } from "@/components/app/frequency-picker";
-import { LinkIcon } from "@/components/app/icons";
+import {
+  ArrowLeftIcon,
+  ChevronRightIcon,
+  LinkIcon,
+} from "@/components/app/icons";
+import { cn } from "@/lib/utils";
 import { langOf } from "@/lib/text-direction";
-import type { LinkableTask, LinkedSibling } from "@/lib/task-links";
+import {
+  MAX_CLUSTER_SIZE,
+  rankCandidates,
+  type LinkableTask,
+  type LinkedSibling,
+} from "@/lib/task-links";
 import {
   setTaskGoal,
   setTaskFrequency,
@@ -54,6 +64,7 @@ export function GoalsDialog({
   groupId,
   groupName,
   tasks,
+  linkCandidates,
   onSaved,
   onFrequencySaved,
 }: {
@@ -62,6 +73,15 @@ export function GoalsDialog({
   groupId: string;
   groupName: string;
   tasks: GoalRow[];
+  /**
+   * Every task this member carries in their OTHER circles — the full menu the
+   * link pane offers, not just what the matcher guessed.
+   *
+   * One list serves every row, because every task in this dialog is in THIS
+   * circle and every candidate is in another one, so the cross-circle rule can
+   * never disqualify a pair here.
+   */
+  linkCandidates: LinkableTask[];
   /** Effective goals as the SERVER returned them, per task (D45). */
   onSaved: (goals: Record<string, number>) => void;
   /** Effective frequencies as the SERVER returned them, per task (D45). */
@@ -72,6 +92,7 @@ export function GoalsDialog({
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [linkFor, setLinkFor] = React.useState<string | null>(null);
 
   // Re-seed each time the dialog OPENS, so an abandoned edit is genuinely
   // abandoned rather than waiting behind the next open.
@@ -94,9 +115,27 @@ export function GoalsDialog({
     );
     setErrors({});
     setFormError(null);
+    // Back to the goals list. Reset on OPEN rather than on close: the card
+    // animates OUT over `DURATION.base`, so clearing it on close would flip the
+    // pane back under the member while they watch it go.
+    setLinkFor(null);
   } else if (!open && seeded) {
     setSeeded(false);
   }
+
+  /**
+   * The task whose links are being managed — the dialog's second pane (D66's
+   * offer, grown into a screen).
+   *
+   * A modal that opens another modal is the wrong shape on a phone: two
+   * backdrops, two dismiss gestures and no way back to the first except through
+   * the second. Held as an ID and resolved from `tasks` on every render, so the
+   * pane picks up a fresh `links` array after `router.refresh()` rather than
+   * rendering a snapshot taken when it opened.
+   */
+  const linkTask = linkFor
+    ? (tasks.find((t) => t.id === linkFor) ?? null)
+    : null;
 
   const setRow = (id: string, value: string) => {
     setDraft((d) => ({ ...d, [id]: value }));
@@ -254,23 +293,51 @@ export function GoalsDialog({
       // so there is nothing to protect by trapping the member behind a slow
       // network.
       onClose={onClose}
-      title="My goals"
-      description={`${groupName} · only you can see these`}
+      title={linkTask ? "One act, many circles" : "My goals"}
+      description={
+        linkTask
+          ? `${linkTask.label} · only you can see this`
+          : `${groupName} · only you can see these`
+      }
+      // A pane swap is a new view, so it starts at its own top.
+      scrollKey={linkFor ?? "goals"}
       footer={
-        <>
-          <Button variant="ghost" disabled={saving} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            disabled={saving || tasks.length === 0}
-            onClick={() => void save()}
-          >
-            {saving ? "Saving…" : "Save"}
-          </Button>
-        </>
+        linkTask ? (
+          // Nothing to commit here — a link writes immediately — so the pair is
+          // "go back" and "leave", not "cancel" and "save".
+          <>
+            <Button
+              variant="ghost"
+              leadingIcon={<ArrowLeftIcon />}
+              onClick={() => setLinkFor(null)}
+            >
+              My goals
+            </Button>
+            <Button onClick={onClose}>Done</Button>
+          </>
+        ) : (
+          <>
+            <Button variant="ghost" disabled={saving} onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              disabled={saving || tasks.length === 0}
+              onClick={() => void save()}
+            >
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </>
+        )
       }
     >
-      {tasks.length === 0 ? (
+      {linkTask ? (
+        <LinkPane
+          task={linkTask}
+          groupId={groupId}
+          groupName={groupName}
+          candidates={linkCandidates}
+        />
+      ) : tasks.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           This circle has no tasks yet. Once an admin adds one, you can aim
           higher than the share it sets.
@@ -310,7 +377,12 @@ export function GoalsDialog({
                         size="inline"
                         disabled={saving}
                         onClick={() => setRow(t.id, String(t.target))}
-                        className="shrink-0 text-xs font-medium underline"
+                        // `size="inline"` carries no tap target by design —
+                        // right for a word inside a sentence, wrong for this,
+                        // which is a standalone control at the end of a row.
+                        // The utility is a pseudo-element, so the 44px costs no
+                        // layout and the baseline alignment above survives.
+                        className="tap-area-44 shrink-0 text-xs font-medium underline"
                       >
                         Back to the circle&rsquo;s
                       </Button>
@@ -386,7 +458,12 @@ export function GoalsDialog({
                   {/* One act, many circles (D64) — on the task's own row (D66),
                       because "is this the same thing I do for my other circle?"
                       is a question about THIS task, asked while looking at it. */}
-                  <TaskLinkRow task={t} disabled={saving} />
+                  <TaskLinkSummary
+                    task={t}
+                    hasCandidates={linkCandidates.length > 0}
+                    disabled={saving}
+                    onOpen={() => setLinkFor(t.id)}
+                  />
                 </li>
               );
             })}
@@ -404,9 +481,149 @@ export function GoalsDialog({
 }
 
 /**
- * One task's linked-tasks line inside "My goals" (D64, placed here by D66).
+ * The link control on a task's row in "My goals" — a DOORWAY, not the controls.
  *
- * WHAT THIS ROW MUST KEEP STRAIGHT, because the migration is careful about it
+ * D66 put this on the task row and was right about the place and wrong about
+ * the size. What shipped was a single fuzzy suggestion, an unpadded 12px
+ * "Remove" (a ~16px tap target against this repo's own 44px floor), and a
+ * truncated "Circle · Task" that on a 360px phone had about twenty characters
+ * to spend and ellipsised away the circle name the line exists to say. A member
+ * with two links got two of those 16px targets six pixels apart, both
+ * destructive.
+ *
+ * So the row now carries the one fact a member scans for — how many circles
+ * this act already counts in — and everything else moved into a pane with room
+ * for it.
+ *
+ * SHOWN EVEN WITH NOTHING LINKED AND NOTHING SUGGESTED, whenever the member has
+ * another circle at all. That is the discoverability half: the old row returned
+ * null unless the matcher happened to guess, so two circles calling one act
+ * "Salawat" and "Durood Shareef" left the member no way in — and no way to know
+ * there was one.
+ */
+function TaskLinkSummary({
+  task,
+  hasCandidates,
+  disabled,
+  onOpen,
+}: {
+  task: GoalRow;
+  hasCandidates: boolean;
+  disabled: boolean;
+  onOpen: () => void;
+}) {
+  const circles = task.links.length + 1; // this circle, plus the far side(s)
+  const linked = task.links.length > 0;
+
+  // A door onto an empty room is worse than no door: a member in one circle,
+  // with nothing linked, has nothing this pane could offer.
+  if (!linked && !hasCandidates) return null;
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onOpen}
+      // `min-h-11` and real padding, rather than a `tap-area-44` overlay: this
+      // is a box in its own right, so the 44px IS the control.
+      aria-label={
+        linked
+          ? `${task.label} — counts in ${circles} circles, manage`
+          : `${task.label} — link to another circle`
+      }
+      className={cn(
+        "mt-3 flex min-h-11 w-full items-center gap-2 rounded-lg border px-3 py-2 text-left",
+        "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-brand)]",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "disabled:pointer-events-none disabled:text-disabled-foreground",
+        linked
+          ? "border-primary-200 bg-primary-50 hover:bg-primary-100"
+          : "border-outline hover:bg-surface-hover",
+      )}
+    >
+      <LinkIcon
+        className={cn(
+          "size-4 shrink-0",
+          linked ? "text-primary" : "text-muted-foreground",
+        )}
+      />
+      <span className="min-w-0 flex-1 truncate text-xs">
+        {linked ? (
+          <span className="font-medium text-foreground">
+            Counts in {circles} circles
+          </span>
+        ) : task.linkSuggestion ? (
+          <span className="text-muted-foreground">
+            Also done in{" "}
+            <span className="font-medium text-foreground">
+              {task.linkSuggestion.groupName}
+            </span>
+            ?
+          </span>
+        ) : (
+          <span className="text-muted-foreground">
+            Also done in another circle?
+          </span>
+        )}
+      </span>
+      {!linked && task.linkSuggestion && (
+        <Badge variant="primary" size="sm" className="shrink-0">
+          Match
+        </Badge>
+      )}
+      <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
+
+/** One circle in the link pane — its NAME on one line, the task under it. */
+function CircleRow({
+  name,
+  label,
+  badge,
+  action,
+  dim = false,
+}: {
+  name: string;
+  label: string;
+  badge?: React.ReactNode;
+  action: React.ReactNode;
+  dim?: boolean;
+}) {
+  return (
+    // Two lines, not one. The old single line spent its width on "also counts
+    // in " and then truncated the circle and the task together; stacked, each
+    // gets the full column, which is what makes this readable on a phone.
+    <li className="flex items-center justify-between gap-3 py-2.5">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p
+            className={cn(
+              "min-w-0 truncate text-sm font-medium",
+              dim ? "text-muted-foreground" : "text-foreground",
+            )}
+          >
+            {name}
+          </p>
+          {badge}
+        </div>
+        <p
+          className="truncate text-xs text-muted-foreground"
+          dir="auto"
+          lang={langOf(label)}
+        >
+          {label}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center">{action}</div>
+    </li>
+  );
+}
+
+/**
+ * Everything one act's links can be, on one pane (D64/D66).
+ *
+ * WHAT THIS PANE MUST KEEP STRAIGHT, because the migration is careful about it
  * and a screen that blurred it would make the feature a lie:
  *
  *   * the RAW COUNT travels, the COMPLETION does not. Circle A asks 1 and circle
@@ -414,8 +631,18 @@ export function GoalsDialog({
  *   * each circle goes on judging its own task by its own target and its own
  *     share. Linking changes what a TAP does, never what a circle asks for.
  *
- * NOTHING IS EVER LINKED AUTOMATICALLY. `lib/task-links.ts` decides which single
- * cross-circle task is worth offering; the member decides whether it is true.
+ * NOTHING IS EVER LINKED AUTOMATICALLY, and the MATCHER DECIDES NOTHING. It sets
+ * the ORDER of the list and puts a "Match" badge on the pairs it likes; every
+ * cross-circle task the member carries is offered regardless of what it is
+ * called. That is the difference from D66, where the single fuzzy guess was the
+ * only link that could ever be made — and a member whose circles disagreed
+ * about the name had no way in and no way to know there was one.
+ *
+ * SEVERAL CIRCLES IS THE NORMAL CASE, not an edge one, and the pane is built to
+ * say so: a "Counts in N circles" heading over a list that grows, and an "Add a
+ * circle" section that stays open until the cluster is full. The old row's
+ * one-suggestion-at-a-time reveal was reachable for a third circle but never
+ * announced it — you found out by linking a second and noticing.
  *
  * It writes IMMEDIATELY, unlike every other control in this dialog — the goals
  * and cycles here are a set of numbers committed together on Save, but a link is
@@ -424,7 +651,17 @@ export function GoalsDialog({
  * pending state, its own error, and `router.refresh()` via the action's
  * revalidate brings the new state back.
  */
-function TaskLinkRow({ task, disabled }: { task: GoalRow; disabled: boolean }) {
+function LinkPane({
+  task,
+  groupId,
+  groupName,
+  candidates,
+}: {
+  task: GoalRow;
+  groupId: string;
+  groupName: string;
+  candidates: LinkableTask[];
+}) {
   const router = useRouter();
   const [pending, setPending] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -443,7 +680,7 @@ function TaskLinkRow({ task, disabled }: { task: GoalRow; disabled: boolean }) {
       // The action's `revalidatePath` is NOT enough on its own to reach a
       // client that stays mounted — `lib/use-action.ts` records that as racy
       // under load, and this dialog is the case it describes: it does not
-      // unmount, so without an explicit refresh the row goes on claiming the
+      // unmount, so without an explicit refresh the pane goes on claiming the
       // link it just removed. Measured: the e2e unlink assertion failed on
       // exactly that stale row.
       router.refresh();
@@ -454,93 +691,155 @@ function TaskLinkRow({ task, disabled }: { task: GoalRow; disabled: boolean }) {
     }
   }
 
-  if (task.links.length === 0 && !task.linkSuggestion) return null;
+  const circles = task.links.length + 1;
+  // The migration refuses the eleventh regardless; stopping the OFFER here is
+  // what turns that refusal into a sentence instead of a failed button.
+  const atCap = circles >= MAX_CLUSTER_SIZE;
+  const ranked = rankCandidates(
+    { taskId: task.id, label: task.label, groupId, groupName },
+    candidates,
+    task.links.map((l) => l.taskId),
+  );
+  const busy = pending !== null;
 
   return (
-    <div className="mt-3 flex flex-col gap-1.5">
-      {task.links.map((sibling) => (
-        <div
-          key={sibling.taskId}
-          className="flex items-center justify-between gap-3"
-        >
-          <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            <LinkIcon className="size-3.5 shrink-0" />
-            {sibling.dormant ? (
-              // The name is not withheld — it is unknown. `tasks_select_member`
-              // hides a task in a circle the member has left, which is exactly
-              // the state 0019's keep-the-row rule creates.
-              <span className="truncate">
-                also counted in a circle you&rsquo;ve left
-              </span>
-            ) : (
-              <span
-                className="truncate"
-                dir="auto"
-                lang={langOf(sibling.label ?? "")}
-              >
-                also counts in{" "}
-                <span className="font-medium text-foreground">
-                  {sibling.groupName} · {sibling.label}
-                </span>
-              </span>
-            )}
-          </p>
-          <button
-            type="button"
-            // Out of the row's context — a screen reader running the controls of
-            // a dialog with several tasks — "Remove" alone says nothing about
-            // WHICH link is about to go.
-            aria-label={
-              sibling.label
-                ? `Unlink ${task.label} from ${sibling.label}`
-                : `Unlink ${task.label} from a circle you have left`
-            }
-            disabled={disabled || pending !== null}
-            onClick={() =>
-              void run(sibling.taskId, () => unlinkTask(sibling.taskId))
-            }
-            className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-danger disabled:cursor-not-allowed"
-          >
-            {pending === sibling.taskId ? "Removing…" : "Remove"}
-          </button>
-        </div>
-      ))}
+    <div className="flex flex-col gap-5">
+      {/* The rule before the controls. Both halves are load-bearing and the
+          migration is careful about them: the raw count travels and the
+          COMPLETION does not, so a circle asking more shows you part-way rather
+          than done — and each circle goes on judging its own task by its own
+          target and share. Linking changes what a TAP does, never what a circle
+          asks for. */}
+      <p className="text-sm text-muted-foreground">
+        Do it once, count it everywhere. Tapping this in any of these circles
+        records the same number in all of them — each circle keeps its own
+        target, so one that asks for more just shows you part-way there.
+      </p>
 
-      {task.linkSuggestion && (
-        <div className="flex items-center justify-between gap-3">
-          <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            <LinkIcon className="size-3.5 shrink-0" />
-            <span
-              className="truncate"
-              dir="auto"
-              lang={langOf(task.linkSuggestion.label)}
-            >
-              same as{" "}
-              <span className="font-medium text-foreground">
-                {task.linkSuggestion.groupName} · {task.linkSuggestion.label}
-              </span>
-              ?
-            </span>
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0"
-            aria-label={`Link ${task.label} with ${task.linkSuggestion.label}`}
-            disabled={disabled || pending !== null}
-            onClick={() =>
-              void run("link", () =>
-                linkTasks(task.id, task.linkSuggestion!.taskId),
-              )
+      <section>
+        <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          Counts in {circles} {circles === 1 ? "circle" : "circles"}
+        </h3>
+        <ul className="mt-2 divide-y divide-border border-y border-border">
+          <CircleRow
+            name={groupName}
+            label={task.label}
+            action={
+              <Badge variant="neutral" size="sm">
+                This circle
+              </Badge>
             }
-          >
-            {pending === "link" ? "Linking…" : "Link"}
-          </Button>
-        </div>
-      )}
+          />
+          {task.links.map((sibling) => (
+            <CircleRow
+              key={sibling.taskId}
+              // The name is not withheld — it is UNKNOWN.
+              // `tasks_select_member` hides a task in a circle the member has
+              // left, which is exactly the state 0019's keep-the-row rule
+              // creates, so inventing a placeholder would be the screen
+              // claiming to know something it does not.
+              dim={sibling.dormant}
+              name={sibling.groupName ?? "A circle you've left"}
+              label={sibling.label ?? "Its name isn't visible to you here"}
+              badge={
+                sibling.dormant ? (
+                  <Badge variant="outline" size="sm" className="shrink-0">
+                    Dormant
+                  </Badge>
+                ) : undefined
+              }
+              action={
+                <Button
+                  variant="destructive-outline"
+                  size="sm"
+                  // Out of the row's context — a screen reader running the
+                  // controls of a pane with several circles — "Remove" alone
+                  // says nothing about WHICH link is about to go.
+                  aria-label={
+                    sibling.groupName
+                      ? `Stop counting ${task.label} in ${sibling.groupName}`
+                      : `Stop counting ${task.label} in a circle you have left`
+                  }
+                  disabled={busy}
+                  onClick={() =>
+                    void run(sibling.taskId, () => unlinkTask(sibling.taskId))
+                  }
+                >
+                  {pending === sibling.taskId ? "Removing…" : "Remove"}
+                </Button>
+              }
+            />
+          ))}
+        </ul>
+        {task.links.some((s) => s.dormant) && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            A dormant circle is one you&rsquo;ve left. Nothing is counted there
+            any more — you can clear it whenever you like.
+          </p>
+        )}
+      </section>
+
+      <section>
+        <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          Add a circle
+        </h3>
+        {atCap ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            One act can cover up to {MAX_CLUSTER_SIZE} circles, and this one is
+            full. Remove a circle above to add a different one.
+          </p>
+        ) : ranked.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {candidates.length === 0
+              ? "You're only in one circle right now, so there's nothing to link this to."
+              : "Every other circle you're in already counts this act."}
+          </p>
+        ) : (
+          <>
+            {/* Named as a hint, not a verdict. The matcher only ORDERS this
+                list — every cross-circle task the member carries is here,
+                whatever it is called, which is the whole point of the pane. */}
+            <ul className="mt-2 divide-y divide-border border-y border-border">
+              {ranked.map((c) => (
+                <CircleRow
+                  key={c.task.taskId}
+                  name={c.task.groupName}
+                  label={c.task.label}
+                  badge={
+                    c.suggested ? (
+                      <Badge variant="primary" size="sm" className="shrink-0">
+                        Match
+                      </Badge>
+                    ) : undefined
+                  }
+                  action={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-label={`Also count ${task.label} in ${c.task.groupName} as ${c.task.label}`}
+                      disabled={busy}
+                      onClick={() =>
+                        void run(c.task.taskId, () =>
+                          linkTasks(task.id, c.task.taskId),
+                        )
+                      }
+                    >
+                      {pending === c.task.taskId ? "Linking…" : "Link"}
+                    </Button>
+                  }
+                />
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Only you can see this, and you can link as many circles as you
+              genuinely do this in — up to {MAX_CLUSTER_SIZE}.
+            </p>
+          </>
+        )}
+      </section>
 
       {error && (
-        <p role="alert" className="text-xs text-danger">
+        <p role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}

@@ -106,10 +106,16 @@ export function TodayClient({
   shares,
   assignments,
   versions,
+  linkCandidates,
   tasks: allTasks,
 }: {
   groupId: string;
   groupName: string;
+  /**
+   * Every task I carry in my OTHER circles (D64) — the menu the link pane in
+   * "My goals" offers. Empty for a member in one circle, which is most of them.
+   */
+  linkCandidates: LinkableTask[];
   firstName: string;
   /** The member's day boundary (profiles.timezone, D34). */
   timeZone: string;
@@ -732,6 +738,7 @@ export function TodayClient({
         onClose={() => setGoalsOpen(false)}
         groupId={groupId}
         groupName={groupName}
+        linkCandidates={linkCandidates}
         tasks={tasks.map((t) => ({
           id: t.id,
           label: t.label,

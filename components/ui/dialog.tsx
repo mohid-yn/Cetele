@@ -15,6 +15,17 @@ export interface DialogProps {
   children?: React.ReactNode;
   /** Right-aligned action row (Buttons). */
   footer?: React.ReactNode;
+  /**
+   * Changes whenever `children` becomes a DIFFERENT view, so the body scrolls
+   * back to the top.
+   *
+   * For a dialog that swaps panes rather than just re-rendering one. The scroll
+   * container is this component's, so resetting it is this component's job — a
+   * caller cannot reach it. Without this, opening a sub-view from the bottom of
+   * a long list lands the member part-way down a shorter one, at whatever
+   * offset the browser clamps the old scrollTop to.
+   */
+  scrollKey?: string | number;
   className?: string;
 }
 
@@ -30,9 +41,11 @@ export function Dialog({
   description,
   children,
   footer,
+  scrollKey,
   className,
 }: DialogProps) {
   const cardRef = React.useRef<HTMLDivElement>(null);
+  const bodyRef = React.useRef<HTMLDivElement>(null);
   // Read onClose through a ref so the effect below depends only on `open` —
   // an inline `onClose={() => …}` prop changes identity every parent render,
   // and re-running the effect would steal focus from whatever the user is
@@ -55,6 +68,12 @@ export function Dialog({
     }
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
+
+  // A new pane starts at its top. Keyed on `scrollKey` alone, so an ordinary
+  // re-render of the SAME view never yanks the member's scroll position.
+  React.useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  }, [scrollKey]);
 
   if (typeof document === "undefined") return null;
 
@@ -122,7 +141,10 @@ export function Dialog({
                 auto` refuses to shrink below its content, so the scroll
                 container would never engage and the cap would do nothing. */}
             {children && (
-              <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <div
+                ref={bodyRef}
+                className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain"
+              >
                 {children}
               </div>
             )}

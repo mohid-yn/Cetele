@@ -15,9 +15,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  MAX_CLUSTER_SIZE,
   SUGGEST_THRESHOLD,
   labelSimilarity,
   normaliseLabel,
+  rankCandidates,
   suggestFor,
   tokenSimilarity,
   tokenise,
@@ -250,5 +252,91 @@ describe("suggestFor", () => {
   it("ignores the task itself when it appears among the candidates", () => {
     // The caller passes every task the member carries, this one included.
     assert.equal(suggestFor(fajrSalawat, [fajrSalawat]), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// rankCandidates — the whole menu, best first
+// ---------------------------------------------------------------------------
+// The suggestion decides ORDER here, never possibility. D66 shipped the fuzzy
+// guess as the only way to link anything, so two circles calling one act
+// "Salawat" and "Durood Shareef" could not be linked at all — through a UI
+// whose RPC would have accepted the pair without complaint.
+
+describe("rankCandidates", () => {
+  const all = [
+    fajrSalawat,
+    asrSalawat,
+    ishaSalawat,
+    fajrIstighfar,
+    asrSubhanallah,
+  ];
+  const ids = (task: LinkableTask, cands: LinkableTask[], linked?: string[]) =>
+    rankCandidates(task, cands, linked).map((c) => c.task.taskId);
+
+  it("offers a cross-circle task NOTHING resembles — the D66 gap", () => {
+    // The point of the whole change: `suggestFor` says no, the list says yes.
+    const durood = task("t9", "Durood Shareef", "g2", "Asr Circle");
+    assert.equal(suggestFor(fajrSalawat, [durood]), null);
+    assert.deepEqual(ids(fajrSalawat, [durood]), ["t9"]);
+  });
+
+  it("still NEVER offers a task in the same circle", () => {
+    // 0034 refuses this outright — a single act counted twice inside one
+    // circle's own collective total.
+    assert.deepEqual(ids(fajrSalawat, [fajrIstighfar]), []);
+  });
+
+  it("drops the task itself and anything already in its cluster", () => {
+    assert.deepEqual(ids(fajrSalawat, all, ["t2"]), ["t3", "t5"]);
+  });
+
+  it("ranks likely matches above the rest, exact name first of all", () => {
+    // t2 "Salawat ×100" normalises to "salawat" exactly; t3 "Salawaat" is a
+    // fuzzy match scoring the same 1.0; t5 resembles nothing.
+    assert.deepEqual(ids(fajrSalawat, all), ["t2", "t3", "t5"]);
+  });
+
+  it("flags only the ones over the threshold", () => {
+    const flags = rankCandidates(fajrSalawat, all).map((c) => c.suggested);
+    assert.deepEqual(flags, [true, true, false]);
+    const weak = rankCandidates(fajrSalawat, [asrSubhanallah])[0];
+    assert.ok(weak.score < SUGGEST_THRESHOLD);
+  });
+
+  it("is TOTALLY ordered — the same set lists the same way, whatever the input order", () => {
+    // A list that reshuffles between renders moves a Link button under the
+    // thumb reaching for it. Two circles can hold identically named tasks, so
+    // score and label both leave real ties; the task id breaks the last one.
+    const twinA = task("t7", "Salawat", "g2", "Asr Circle");
+    const twinB = task("t8", "Salawat", "g3", "Isha Circle");
+    assert.deepEqual(ids(fajrSalawat, [twinA, twinB]), ["t7", "t8"]);
+    assert.deepEqual(ids(fajrSalawat, [twinB, twinA]), ["t7", "t8"]);
+  });
+
+  it("does not call two bare counts the same act", () => {
+    // Both labels reduce to "" under normaliseLabel; an exactness test on an
+    // empty reduction would rank them as the same name.
+    const a = task("t10", "100", "g2", "Asr Circle");
+    const b = task("t11", "×3", "g3", "Isha Circle");
+    const out = rankCandidates(a, [b]);
+    assert.equal(out[0].suggested, false);
+    assert.equal(out[0].score, 0);
+  });
+
+  it("agrees with suggestFor about which candidate is best", () => {
+    // Two rankings that could disagree would put a different circle behind the
+    // row's hint than at the top of the list that hint opens.
+    const best = rankCandidates(fajrSalawat, all)[0];
+    assert.equal(suggestFor(fajrSalawat, all)?.taskId, best.task.taskId);
+  });
+});
+
+describe("MAX_CLUSTER_SIZE", () => {
+  it("mirrors the cap in migration 0034's link_tasks", () => {
+    // The migration is the authority and refuses the eleventh regardless; this
+    // constant only decides when the screen stops OFFERING, so the member meets
+    // the ceiling as a sentence rather than as a failed button.
+    assert.equal(MAX_CLUSTER_SIZE, 10);
   });
 });

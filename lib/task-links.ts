@@ -17,8 +17,17 @@
  * `lib/shares.ts`, which is pinned case-for-case against pgTAP 018.
  */
 
-/** Dice coefficient a pair must reach to be offered at all. */
+/** Dice coefficient a pair must reach to be called a likely match. */
 export const SUGGEST_THRESHOLD = 0.6;
+
+/**
+ * How many tasks one act can cover — a MIRROR of `link_tasks`' cap (0034).
+ *
+ * The migration is the authority and refuses the eleventh regardless; this only
+ * decides when the screen stops OFFERING, so the member meets the ceiling as a
+ * sentence rather than as a failed button.
+ */
+export const MAX_CLUSTER_SIZE = 10;
 
 /**
  * Below this many characters a token must match EXACTLY.
@@ -193,29 +202,92 @@ export function labelSimilarity(a: string, b: string): number {
   return tokenSimilarity(tokenise(a), tokenise(b));
 }
 
+/** A cross-circle task this one COULD be linked to, and how alike the names are. */
+export type RankedCandidate = {
+  task: LinkableTask;
+  /** Label similarity, 0–1. */
+  score: number;
+  /** At or above `SUGGEST_THRESHOLD` — worth calling out as a likely match. */
+  suggested: boolean;
+};
+
 /**
- * The ONE task worth offering to link this one to, or null.
+ * EVERY task this one could be linked to, best first.
  *
- * Per task rather than a list of pairs, because that is how the member meets it
- * (D66): the offer sits on the task's own row in "My goals", beside the goal
- * they are already thinking about, rather than in a separate cross-circle list
- * they had to go and find.
+ * The list, not the pick. D66 shipped `suggestFor` alone, which made the single
+ * fuzzy match the ONLY way to link anything: two circles that call one act
+ * "Salawat" and "Durood Shareef" score 0, so the member had no path to a link
+ * the RPC would happily have accepted, and a member whose labels never matched
+ * never learned the feature existed. Ranking is now advice about ORDER; it
+ * decides nothing about what is possible.
  *
- * CROSS-CIRCLE ONLY, which is the RPC's rule reproduced here so the member never
- * meets a button that exists to be refused: two tasks in one circle sharing a
- * fan-out would count a single act twice inside that circle's own collective
- * total. `link_tasks` remains the authority — this is only the offer.
+ * CROSS-CIRCLE ONLY, which is `link_tasks`' rule reproduced here so the member
+ * never meets a button that exists to be refused: two tasks in one circle
+ * sharing a fan-out would count a single act twice inside that circle's own
+ * collective total. The RPC remains the authority — this is only the offer.
  *
- * A candidate already in this task's cluster is skipped, because they are
- * already one act. A candidate in a DIFFERENT cluster is still offered: linking
- * them is the merge that makes clusters worth having.
+ * Already-linked tasks are dropped (they are the same act already). A candidate
+ * in a DIFFERENT cluster stays: linking them is the merge that makes clusters
+ * worth having.
  *
- * Ties break on the label, so the offer does not change between renders — a
- * suggestion that swaps target under a member about to press it is worse than
- * no suggestion at all.
+ * TOTALLY ORDERED, down to the task id. A list that reshuffles between renders
+ * moves a button under the thumb reaching for it, and `score` alone leaves real
+ * ties — two circles can hold identically named tasks.
  *
- * @param task           the task whose row is being drawn
- * @param candidates     the member's live tasks in EVERY circle (this one's included; same-circle entries are skipped)
+ * @param task           the task being linked FROM
+ * @param candidates     the member's live tasks in every OTHER circle
+ * @param linkedTaskIds  tasks already in this one's cluster
+ */
+export function rankCandidates(
+  task: LinkableTask,
+  candidates: LinkableTask[],
+  linkedTaskIds: readonly string[] = [],
+): RankedCandidate[] {
+  const already = new Set(linkedTaskIds);
+  const normalised = normaliseLabel(task.label);
+
+  return candidates
+    .filter(
+      (c) =>
+        c.taskId !== task.taskId &&
+        c.groupId !== task.groupId &&
+        !already.has(c.taskId),
+    )
+    .map((c) => {
+      const score = labelSimilarity(task.label, c.label);
+      return {
+        task: c,
+        score,
+        suggested: score >= SUGGEST_THRESHOLD,
+        // AN EXACT NAME BEATS A NEAR ONE, and it needs saying separately
+        // because the score cannot express it: `tokenSimilarity` counts a fuzzy
+        // token match as a whole match, so "Salawaat" and "Salawat ×100" both
+        // score a perfect 1.0 against "Salawat". Guarded on a non-empty
+        // reduction so two labels that are nothing but a count ("100", "×3")
+        // are not declared the same act.
+        exact: normalised !== "" && normaliseLabel(c.label) === normalised,
+      };
+    })
+    .sort(
+      (a, b) =>
+        Number(b.exact) - Number(a.exact) ||
+        b.score - a.score ||
+        a.task.label.localeCompare(b.task.label) ||
+        a.task.taskId.localeCompare(b.task.taskId),
+    )
+    .map(({ task: t, score, suggested }) => ({ task: t, score, suggested }));
+}
+
+/**
+ * The ONE task worth OFFERING unprompted, or null — the hint on the task's row
+ * in "My goals" (D66), before the member has opened the link screen.
+ *
+ * Strictly the head of `rankCandidates`, and only when it clears the threshold:
+ * an unprompted offer has to be good enough that pressing it is usually right,
+ * whereas the full list is something the member went looking for. Two rankings
+ * that could disagree about "best" would put a different circle behind the hint
+ * than at the top of the list it opens.
+ *
  * @param clusterByTask  taskId → the cluster it is already in, if any
  */
 export function suggestFor(
@@ -224,42 +296,12 @@ export function suggestFor(
   clusterByTask: Record<string, string> = {},
 ): LinkableTask | null {
   const own = clusterByTask[task.taskId];
-  const normalised = normaliseLabel(task.label);
-  let best: LinkableTask | null = null;
-  let bestRank: [number, number, string] | null = null;
+  const linked = own
+    ? candidates
+        .filter((c) => clusterByTask[c.taskId] === own)
+        .map((c) => c.taskId)
+    : [];
 
-  for (const other of candidates) {
-    if (other.groupId === task.groupId) continue;
-    if (own && clusterByTask[other.taskId] === own) continue; // already one act
-
-    const score = labelSimilarity(task.label, other.label);
-    if (score < SUGGEST_THRESHOLD) continue;
-
-    // AN EXACT NAME BEATS A NEAR ONE, and it needs saying separately because
-    // the score cannot express it: `tokenSimilarity` counts a fuzzy token match
-    // as a whole match, so "Salawaat" and "Salawat ×100" both score a perfect
-    // 1.0 against "Salawat". Without this, which of the two circles gets
-    // offered comes down to a tie-break on the label — i.e. to nothing.
-    const rank: [number, number, string] = [
-      normaliseLabel(other.label) === normalised ? 1 : 0,
-      score,
-      other.label,
-    ];
-
-    if (
-      bestRank === null ||
-      rank[0] > bestRank[0] ||
-      (rank[0] === bestRank[0] &&
-        (rank[1] > bestRank[1] ||
-          // Last resort, and only so the offer is the same on every render: a
-          // suggestion that swaps target under a member about to press it is
-          // worse than no suggestion at all.
-          (rank[1] === bestRank[1] && rank[2] < bestRank[2])))
-    ) {
-      best = other;
-      bestRank = rank;
-    }
-  }
-
-  return best;
+  const best = rankCandidates(task, candidates, linked)[0];
+  return best && best.suggested ? best.task : null;
 }
