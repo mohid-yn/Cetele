@@ -32,7 +32,15 @@ export default async function CountPage({
   const [{ data: task }, { data: profile }] = await Promise.all([
     supabase
       .from("tasks")
-      .select("id, label, subtitle, target_count")
+      // The embedded link is how this screen learns it is part of one act (0034,
+      // D64) WITHOUT a query of its own. `member_task_links` is own-row under
+      // RLS, so the embed can only ever return the viewer's — and for the member
+      // who has no links, which is nearly all of them, the whole feature costs
+      // this page nothing. A separate parallel read here measurably slowed the
+      // hottest screen in the app.
+      .select(
+        "id, label, subtitle, target_count, member_task_links(cluster_id)",
+      )
       .eq("id", taskId)
       // Pin the task to the group in the URL, so /g/<other>/count/<task> can't
       // render a task under a group it doesn't belong to. RLS already limits
@@ -108,6 +116,30 @@ export default async function CountPage({
 
   const versions = toConfigVersions(versionRows);
   const shares = toShares(shareRows);
+
+  // Where else this tap lands (D64). The member said these tasks are one act, so
+  // logging here writes the same raw count into each of them — and a screen that
+  // moved numbers in a circle the member was not looking at without saying so is
+  // exactly what D51/D61 rule out.
+  //
+  // `tasks!inner` does the dormancy filter for free: a sibling in a circle the
+  // member has LEFT is not readable under `tasks_select_member`, the inner join
+  // drops it, and that is the same answer `private.linked_tasks` gives the
+  // fan-out itself (0019's rule). What is not named here is not written either.
+  const myCluster = task.member_task_links[0]?.cluster_id;
+  const { data: siblingRows } = myCluster
+    ? await supabase
+        .from("member_task_links")
+        .select("task_id, tasks!inner(label, groups(name))")
+        .eq("user_id", me)
+        .eq("cluster_id", myCluster)
+        .neq("task_id", task.id)
+    : { data: null };
+
+  const alsoCounts = (siblingRows ?? []).map((s) => ({
+    label: s.tasks.label,
+    groupName: s.tasks.groups?.name ?? "another circle",
+  }));
   // What the circle asks of ME for this task today — my share if I have one,
   // else its default. `goal` then stacks my own private stretch on top.
   const myTarget = effectiveTarget(
@@ -145,6 +177,7 @@ export default async function CountPage({
       initialCounts={counts}
       versions={versions}
       shares={shares}
+      alsoCounts={alsoCounts}
     />
   );
 }

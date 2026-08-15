@@ -95,6 +95,7 @@ export function CountClient({
   initialCounts,
   versions,
   shares,
+  alsoCounts,
 }: {
   groupId: string;
   /** The viewer — set_count's target, so a correction is always a self-edit. */
@@ -121,6 +122,9 @@ export function CountClient({
   /** Every share this task has asked of ME (0032), as intervals — the day-strip
    *  measures each past day against the one in force that day. */
   shares: Share[];
+  /** The other tasks I have called the same act (D64) — already filtered to the
+   *  circles I am still in, which is where the fan-out will actually land. */
+  alsoCounts: { label: string; groupName: string }[];
 }) {
   const router = useRouter();
   const { celebrate } = useCelebration();
@@ -468,6 +472,23 @@ export function CountClient({
             lang={langOf(task.subtitle)}
           >
             {task.subtitle}
+          </p>
+        )}
+        {/* Numbers must never move in a circle the member was not looking at
+            without the screen saying so (D51/D61's standing rule). The count
+            travels; what each of those circles ASKS for is its own, which is why
+            this names the circles and not a target. */}
+        {alsoCounts.length > 0 && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Also counts toward{" "}
+            {alsoCounts.map((s, i) => (
+              <React.Fragment key={`${s.groupName}:${s.label}`}>
+                {i > 0 && ", "}
+                <span className="font-medium text-foreground">
+                  {s.groupName} · {s.label}
+                </span>
+              </React.Fragment>
+            ))}
           </p>
         )}
       </div>

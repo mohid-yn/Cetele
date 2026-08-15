@@ -291,6 +291,14 @@ export const ExternalLinkIcon = (p: IconProps) => (
   </svg>
 );
 
+/** Two links of a chain — one act, carried by more than one circle (D64). */
+export const LinkIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M10.5 13.5a3.6 3.6 0 0 0 5.2 0l3-3a3.7 3.7 0 0 0-5.2-5.2l-1.6 1.6" />
+    <path d="M13.5 10.5a3.6 3.6 0 0 0-5.2 0l-3 3a3.7 3.7 0 0 0 5.2 5.2l1.6-1.6" />
+  </svg>
+);
+
 /** Edit — the organiser's pencil on a roadmap item (D57). */
 export const PencilIcon = (p: IconProps) => (
   <svg {...base(p)}>
