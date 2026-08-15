@@ -42,55 +42,32 @@ review_ — is **met**.
 | Perf         | CWV baseline measured 2026-07-26 — all thresholds pass except the count screen's FIRST tap; numbers + two open questions in §2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Review 08-14 | **The three-feature stack was reviewed and is SOUND — no correctness bug found.** Gates re-run from scratch: tsc/lint/format/unit green, pgTAP **693/693**, e2e **64/64 on a clean DB** (a first run on a DB carrying that run's own sediment failed `realtime` only, passing in isolation — the documented flake, not a regression). Verified by hand: `lib/shares.ts` really does mirror `private.effective_target` (bounds, half-open upper, `desc` tie-break), `owedOn` mirrors `obligations`' three bounds including `myFrequencyDays: null`, the `dayCellClass` extraction is threshold-identical to the ramp it replaced, and 0033's drops are safe (no FK/view depends on `reminders`; plpgsql late-binds, so `dispatch_reminders` survives `due_reminders` changing signature). **Three small things, all unfixed and none blocking:** `components/app/member-shares.tsx:57` seeds its draft from `s.share ?? s.circleTarget` while `current()` uses `Math.max(...)`, so a stale share under a since-raised circle target opens showing the stale number and Save is refused; `obligations` now calls `effective_target` in all four positions (2 sub-queries each, ~2× the old constant, same complexity); and `set_reminder` still never clears `last_sent_on`, so moving a reminder later the same day after it fired waits until tomorrow (pre-existing — 0013 did the same). |
 | 0033 on prod | **MEASURED, not hypothetical: prod holds 15 reminders, 7 enabled, across 5 members, and one fired on 2026-08-14.** 0033 drops the table, so those five people lose live reminders with no notice and must set new ones up. **There is also no clean deploy order** — old code reads `reminders.task_id` + `claim_due_reminders().task_label`, new code reads `reminders.label` + `set_reminder(p_id, p_label, …)`. Either order leaves Profile listing nothing for one deploy (it degrades quietly — `q()` does not throw on a PostgREST error, so the list falls back to empty) and can push a notification with an undefined title. Deploy-first is the marginally safer half.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Working tree | **ON `staging`, and the four-feature stack is ON IT** (fast-forwarded `c91aec7..c273b62`, pushed 2026-08-15; all four feature branches deleted, local + remote, per §3). `staging` is **14 commits ahead of `main`**. Carries D61 shares (**0032**), D62 reminders (**0033**), D63 rings, D64 links (**0034**), D66 the move of links into "My goals", the sign-in host fix, and the two defect fixes. Green on it: build + lint + tsc + format:check, unit **82**, pgTAP **730**, e2e **68 specs** (see the §7 flake note — two consecutive full runs came in at 67/68 with a DIFFERENT test each time, each passing in isolation). **A production dump is taken**: `~/cetele-backups/prod-20260815-143439-{schema,data}.sql`, verified to contain all 15 reminder rows with their times and enabled state. **The three migrations are STILL LOCAL ONLY and still need the owner's go-ahead**, and 0033 REPLACES `public.reminders`.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Working tree | **CLEAN — everything is ON PRODUCTION (2026-08-15).** `main` fast-forwarded `c91aec7..fed9fe9` and pushed with `ALLOW_MAIN_PUSH=1`; **all 34 migrations applied to prod**, including 0032/0033/0034; all feature branches deleted. `main`, `staging` and local are level. Shipped in this promotion: D61 shares, D62 reminders, D63 rings, D64 links, D66 (links moved into "My goals", nav collapses on the picker), the sign-in host fix, and two defect fixes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
-### RESUMING? READ THIS FIRST (2026-08-15) — THE STACK IS ON `staging`; PRODUCTION WAITS ON THE OWNER
+### RESUMING? READ THIS FIRST (2026-08-15) — SIX FEATURES ARE LIVE ON PRODUCTION
 
-**Linked tasks (D64) is complete, both halves, and seen working in a browser.** Branch
-`mohidkhanzada/task-links`, cut off `mohidkhanzada/member-rings` — the **FOURTH** stacked feature, and
-still nothing in the stack has reached `staging`. 0034 needs 0032/0033's numbering, which is why it
-could not be cut off `staging` instead.
+**D61–D64 and D66 all shipped to production on 2026-08-15**, owner's call ("push everything to prod ill
+review there"). `main` is at `fed9fe9`; migrations **0032, 0033, 0034** are applied; nothing is pending.
 
-**The client half, written 2026-08-15:**
+**VERIFIED ON PROD AFTER THE PUSH:** `member_task_shares` and `member_task_links` exist · `reminders` has
+`label` and no `task_id` · `link_tasks` / `unlink_task` / `set_member_task_share` / `set_reminder` all
+present with the right signatures and executable by `authenticated` · `private.dispatch_reminders()`
+resolves and runs clean (the plpgsql late-binding risk from 0033's signature change) ·
+`private.effective_target` returns the circle's number for members with no share, which is 0032's
+behavioural-no-op guarantee · advisors show nothing new · the site serves 200.
 
-|                                                |                                                                                                                                                                                                                                                    |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lib/task-links.ts` + `lib/task-links.test.ts` | The name matcher — normalise (case, Unicode marks, trailing counts), **Dice** over token sets with an edit-distance fallback, exact match required under 4 characters. Unit **83** (was 54). No SQL twin, so the test file is its entire coverage. |
-| `app/(app)/profile/actions.ts`                 | `linkTasks` / `unlinkTask` — thin wrappers over the two RPCs, server messages passed through unchanged, `revalidatePath("/", "layout")` because a link changes what a TAP does on screens in other circles.                                        |
-| `components/app/task-links.tsx` + `/profile`   | The links screen: clusters with a per-task Remove, suggestions with Link, and the **dormant** row (a circle the member has left) which cannot show a name at all — `tasks_select_member` hides it, so the row says so rather than guessing.        |
-| count screen                                   | "Also counts toward Asr Circle · Salawat ×300", read through an **embed** on the task query so a member with no links pays nothing for the feature.                                                                                                |
-| `e2e/task-links.spec.ts`                       | e2e **68** (was 64). The assertion that carries it: one tap in circle A, and circle B's ring has moved without the member ever opening it.                                                                                                         |
-| `supabase/seed.sql`                            | A **second circle** (Asr, Yusuf owner, Ahmad member) carrying "Salawat ×300", so the cross-circle half of the app renders locally at all — and the seeded accounts made **signable-in** (see the gotcha in §7).                                    |
+**0033 DESTROYED 15 REMINDERS, as designed and as warned.** Five members lose them and must set new ones
+up — **AliG loses five live ones**, the whole day mapped out. The record is at
+`~/cetele-backups/reminders-before-0033.md` (who, what, when, on/off), with the restorable row-level dump
+beside it at `prod-20260815-143439-{schema,data}.sql`. **Those people have not been told.**
 
-**Deliberately deferred, and worth a decision when it comes up:** there is no MANUAL link picker — only
-suggestions can create a link, so two tasks with genuinely dissimilar names ("Car" / "Vehicle") cannot be
-linked at all yet.
+**STILL UNVERIFIED, and it is the one that matters:** `/auth/callback` was rewritten this session to issue
+a RELATIVE redirect, and **100% of production users (54/54) sign in with Google** with no password
+fallback. It has never been exercised against a real Google round-trip — the agent cannot (Vercel SSO, CLI
+account on `mohidkz05s-projects` not `university-services`). **If Google sign-in is broken, everyone is
+locked out**; the revert is `git revert 95ee665` for the two auth routes, or re-deploy `c91aec7`.
 
-**Measured, so nobody re-debugs it:** while finishing this, the full e2e suite failed 2–3 tests per run,
-never the same ones, all passing in isolation — the documented §7 flake, and it reads exactly like a
-regression this branch caused. It is not. Run for run, `core-loop` alone fails **2 of 16** on the
-BASELINE (`main`) and **1 of 8** on this branch: the same ~12% rate, and the spec's own comment at
-`e2e/core-loop.spec.ts:104` already names that test the suite's most-blamed flake. A single clean
-baseline run is not evidence of anything; the branch is 68/68 on a reset DB.
-
-**Not tracked in Linear.** The MCP needs re-auth — run `/mcp` and pick "claude.ai Linear". D61, D62, D63
-and D64 all lack issues for the same reason.
-
-**WHAT IT NEEDS FROM THE OWNER — three things, in this order:**
-
-1. **Look at the staging URL** (`cetele-git-staging-university-services.vercel.app`). The agent still cannot
-   — Vercel SSO, and the CLI account is on `mohidkz05s-projects` rather than `university-services`. Adding
-   that account to the team is the fix and it has now cost four promotions. **Sign in with GOOGLE while you
-   are there**: `/auth/callback` was rewritten this session (relative redirect) and 100% of production users
-   — 54 of 54 — authenticate that way, with no password fallback. It is the one change that has never been
-   exercised against a real Google round-trip.
-2. **Go-ahead for `supabase db push`** of **0032**, **0034** (both additive; behavioural no-ops on circles
-   with no shares or links) and **0033**, which is the one with teeth: it DROPS `public.reminders`, and prod
-   holds **15 reminders across 5 members, 7 enabled**. The dump above is the safety net — prod is on the
-   FREE plan, so there is no PITR and no daily backup behind it. **0033 also has no clean deploy order**
-   (old code reads `reminders.task_id`, new code reads `reminders.label`); deploy-first is the marginally
-   safer half, and Profile lists nothing for one deploy either way.
-3. **The promotion**: `git checkout main && git merge --ff-only staging && ALLOW_MAIN_PUSH=1 git push origin main`.
+**Not tracked in Linear.** D61–D66 have no issues; the MCP still needs re-auth (`/mcp`).
 
 ---
 
