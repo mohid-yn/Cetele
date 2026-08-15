@@ -131,10 +131,32 @@ begin
     -- postgres and bypasses RLS, so the select policy above protects nothing
     -- here — this WHERE clause is the only thing standing between a guessed id
     -- and somebody else's reminder.
+    -- MOVING THE TIME RE-ARMS TODAY, and this is a fix, not a nicety.
+    --
+    -- `claim_due_reminders` only fires when `last_sent_on <> today` (see it
+    -- below), and nothing here used to clear that stamp — inherited from 0013,
+    -- which had the same hole. So a reminder that fired at 07:00 and was then
+    -- moved to 20:00 sat silent until tomorrow, and from the outside that is
+    -- indistinguishable from a dropped invocation. It is the in-app twin of
+    -- "the platform skipped an execution" and cost a real investigation.
+    --
+    -- Cleared only when the new time has NOT yet passed on the MEMBER's own
+    -- clock (D34). Clearing unconditionally would make a move from 07:00 to
+    -- 06:00 — both already gone — fire within the minute, which is a nag the
+    -- member did not ask for and precisely what D8 rules out. A rename or a
+    -- toggle never re-arms: neither changes the moment being asked for.
     update public.reminders
        set label       = v_label,
            time_of_day = p_time,
-           enabled     = coalesce(p_enabled, enabled)
+           enabled     = coalesce(p_enabled, enabled),
+           last_sent_on = case
+             when p_time is distinct from time_of_day
+              and p_time > (now() at time zone coalesce(
+                    (select timezone from public.profiles where id = v_uid),
+                    'UTC'))::time
+             then null
+             else last_sent_on
+           end
      where id = p_id and user_id = v_uid
     returning id into v_id;
 

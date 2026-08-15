@@ -283,6 +283,53 @@ select ok(exists (select 1 from private.due_reminders()),
 select is((select count(*) from public.claim_due_reminders()), 1::bigint,
   '...and it is still delivered — the member owns it, not the circle');
 
+-- ----------------------------------------------------------------------------
+-- MOVING THE TIME RE-ARMS TODAY — the fix for the bug that impersonated a
+-- dropped platform invocation.
+-- ----------------------------------------------------------------------------
+-- `claim_due_reminders` only fires when `last_sent_on <> today`, and
+-- `set_reminder` used never to clear it (inherited from 0013). So a reminder
+-- that had already fired and was then moved to a later time sat silent until
+-- tomorrow, which from the outside is indistinguishable from "the function
+-- skipped". Asserted here so it cannot come back quietly.
+-- The stamp is written here as the JOB, not as the member: clients have no
+-- update grant on `reminders` at all, which is exactly the design this suite
+-- asserts further up.
+update public.reminders
+   set last_sent_on = private.user_today('c8000000-0000-0000-0000-00000000000a')
+ where id = 'c8000000-0000-0000-0000-0000000f0001';
+
+select pg_temp.impersonate('c8000000-0000-0000-0000-00000000000a');
+select public.set_reminder('c8000000-0000-0000-0000-0000000f0001', 'Evening dhikr',
+  ((now() at time zone 'UTC')::time + interval '2 hours')::time, true);
+reset role;
+select is((select last_sent_on from public.reminders
+            where id = 'c8000000-0000-0000-0000-0000000f0001'), null::date,
+  'moving a reminder FORWARD clears last_sent_on, so it fires again today');
+
+-- …but a time already gone by does NOT re-arm: that would nag within the
+-- minute for a moment the member has just moved past (D8).
+update public.reminders
+   set last_sent_on = private.user_today('c8000000-0000-0000-0000-00000000000a')
+ where id = 'c8000000-0000-0000-0000-0000000f0001';
+
+select pg_temp.impersonate('c8000000-0000-0000-0000-00000000000a');
+select public.set_reminder('c8000000-0000-0000-0000-0000000f0001', 'Evening dhikr',
+  ((now() at time zone 'UTC')::time - interval '2 hours')::time, true);
+reset role;
+select isnt((select last_sent_on from public.reminders
+              where id = 'c8000000-0000-0000-0000-0000000f0001'), null::date,
+  '...but moving it BACKWARD past the current moment does not re-arm it');
+
+-- And a RENAME re-arms nothing at all — the moment being asked for is unchanged.
+select pg_temp.impersonate('c8000000-0000-0000-0000-00000000000a');
+select public.set_reminder('c8000000-0000-0000-0000-0000000f0001', 'Renamed only',
+  ((now() at time zone 'UTC')::time - interval '2 hours')::time, true);
+reset role;
+select isnt((select last_sent_on from public.reminders
+              where id = 'c8000000-0000-0000-0000-0000000f0001'), null::date,
+  '...and renaming alone never re-arms it');
+
 -- Deleting is the member's own, and it is the ONLY way one goes away.
 select pg_temp.impersonate('c8000000-0000-0000-0000-00000000000a');
 select lives_ok(

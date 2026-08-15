@@ -28,6 +28,7 @@
 import * as React from "react";
 import { Button, Input } from "@/components/ui";
 import { goalCap } from "@/lib/goals";
+import { effectiveTarget } from "@/lib/shares";
 import { setMemberShare } from "@/app/(app)/g/[groupId]/group/actions";
 
 export type MemberShare = {
@@ -38,6 +39,17 @@ export type MemberShare = {
   /** Their own share, or `null` when they are on the circle's number. */
   share: number | null;
 };
+
+/**
+ * What the circle actually asks of this member for this task.
+ *
+ * `effectiveTarget` rather than a `Math.max` written out here: it is the client
+ * mirror of `private.effective_target` (D61), it is pinned against the SQL
+ * case-for-case by pgTAP 018, and a second copy of `greatest(share, target)` in
+ * this file is precisely the mirror-drift this repo keeps paying for. Two
+ * expressions of it disagreeing is what put the stale number in the draft below.
+ */
+const asked = (s: MemberShare) => effectiveTarget(s.share, s.circleTarget);
 
 export function MemberShares({
   groupId,
@@ -52,18 +64,24 @@ export function MemberShares({
 }) {
   // Seeded once per member — the dialog is keyed on the member id, so a fresh
   // mount per person is what re-seeds this.
+  //
+  // Seeded from `asked`, NOT from `share` — and they are different numbers the
+  // moment a circle-wide raise overtakes a standing share. `greatest(share,
+  // circle target)` is what the member actually owes (D61), so a share of 50
+  // under a circle since raised to 100 must open showing 100. Seeding from the
+  // stale 50 opened the row dirty, on a number the RPC's floor check then
+  // refused out loud — a control that greets an admin with an error they did
+  // not cause. The two expressions disagreeing is what caused it, so there is
+  // now only one.
   const [draft, setDraft] = React.useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      shares.map((s) => [s.taskId, String(s.share ?? s.circleTarget)]),
-    ),
+    Object.fromEntries(shares.map((s) => [s.taskId, String(asked(s))])),
   );
   const [saved, setSaved] = React.useState<Record<string, number>>({});
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState<string | null>(null);
 
   /** What they are asked for right now, allowing for a save this session. */
-  const current = (s: MemberShare) =>
-    saved[s.taskId] ?? Math.max(s.share ?? 0, s.circleTarget);
+  const current = (s: MemberShare) => saved[s.taskId] ?? asked(s);
 
   async function commit(s: MemberShare) {
     const raw = (draft[s.taskId] ?? "").trim();
