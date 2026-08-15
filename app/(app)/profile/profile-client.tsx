@@ -20,11 +20,9 @@ import {
   UnsupportedBrowserNote,
   PushUnconfiguredNote,
 } from "@/components/app/install-guide";
-import { TaskLinks, type LinkCluster } from "@/components/app/task-links";
 import { useAction } from "@/lib/use-action";
 import { usePropState } from "@/lib/use-prop-state";
 import { MAX_NAME_LENGTH } from "@/lib/profile";
-import type { Suggestion } from "@/lib/task-links";
 import {
   pushEnvironment,
   type PushEnvironment,
@@ -63,9 +61,6 @@ export function ProfileClient({
   groupName,
   streak,
   reminders,
-  linkClusters,
-  linkSuggestions,
-  multiCircle,
   deviceCount,
   vapidPublicKey,
 }: {
@@ -74,12 +69,6 @@ export function ProfileClient({
   groupName: string | null;
   streak: number;
   reminders: Reminder[];
-  /** The member's linked tasks, one entry per act (D64). */
-  linkClusters: LinkCluster[];
-  /** Cross-circle pairs worth offering — never linked automatically. */
-  linkSuggestions: Suggestion[];
-  /** Is the member in more than one circle? A link always spans two. */
-  multiCircle: boolean;
   /** How many of THIS MEMBER's devices are subscribed to push, across all of them. */
   deviceCount: number;
   vapidPublicKey: string;
@@ -353,14 +342,6 @@ export function ProfileClient({
           </>
         )}
       </section>
-
-      {/* Linked tasks (D64) — the member's other cross-circle setting, next to
-          reminders because both belong to the person rather than to a circle. */}
-      <TaskLinks
-        clusters={linkClusters}
-        suggestions={linkSuggestions}
-        multiCircle={multiCircle}
-      />
 
       {/* Appearance */}
       <section>

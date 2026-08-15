@@ -93,6 +93,25 @@ export function navItemsWithRoadmap(
 }
 
 /**
+ * Is the viewer standing on the circle PICKER — "no group selected"?
+ *
+ * The nav collapses here for the same reason it collapses for someone with no
+ * circle at all: `/groups` is the screen whose entire job is to choose one, and
+ * a bar of circle-scoped tabs on it is a claim that a choice has already been
+ * made. Worse, the tabs are not even honest — they point at whatever circle was
+ * last active, so the picker offers a way into a circle the member is in the
+ * middle of navigating away from.
+ *
+ * Keyed on the ROUTE rather than on "is an active group resolved", because the
+ * active-group cookie usually still holds the last circle while you are here —
+ * so asking whether one is selected would answer "yes" on the very screen where
+ * the member is saying otherwise.
+ */
+export function isGroupPicker(pathname: string): boolean {
+  return pathname === "/groups" || pathname.startsWith("/groups/");
+}
+
+/**
  * The nav for someone with NO circle yet (a group-only app has nothing to show
  * on the group tabs). Collapses to the front door + you — Today/Group/Progress
  * would just be dead links to /groups otherwise.

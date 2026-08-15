@@ -153,3 +153,70 @@ export async function setTaskGoal(
   for (const sub of GROUP_WRITE_PATHS) revalidatePath(groupHref(groupId, sub));
   return { goal: data, error: null };
 }
+
+/**
+ * Declare two of my tasks to be ONE ACT (D64) — the same dhikr, asked for by two
+ * circles, done once and logged once.
+ *
+ * Lives beside `setTaskGoal` because that is where the member meets it (D66):
+ * the offer and the link both sit on a task's own row in "My goals", so the
+ * action belongs to the same screen rather than to /profile, which no longer
+ * carries the feature.
+ *
+ * A thin wrapper over `link_tasks`: the RPC is the only write path into
+ * `member_task_links` and holds every rule worth holding — membership of both
+ * circles, the same-circle refusal, the cluster merge and the ten-task ceiling.
+ * None of that could be enforced by a direct insert, which is why the table is
+ * select-only to clients.
+ *
+ * The server's messages are passed through UNCHANGED. "those two tasks are in
+ * the same circle" is already the sentence a member needs, and rewording it here
+ * would put a second copy of the rule in a file that does not own it.
+ */
+export async function linkTasks(
+  taskA: string,
+  taskB: string,
+): Promise<{ error: string | null; clusterId?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await q(
+    "rpc.link_tasks",
+    supabase.rpc("link_tasks", { p_task_a: taskA, p_task_b: taskB }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+
+  // The whole tree, not this circle's paths. A link changes what a TAP does in
+  // ANOTHER circle — the count screen there names it, and Today's numbers move
+  // in a circle the member may not be looking at. `GROUP_WRITE_PATHS` for the
+  // circle in hand would leave the far circle stale until something else
+  // happened to bust it. Linking is a once-in-a-while write, so the wide
+  // revalidate costs essentially nothing (`updateName`'s argument).
+  revalidatePath("/", "layout");
+  return { error: null, clusterId: data ?? undefined };
+}
+
+/**
+ * Take one task back out of its cluster — and dissolve the cluster if that
+ * leaves a single task in it (the RPC's rule, not this one's).
+ *
+ * Deliberately usable on a task in a circle the member has LEFT. That link is
+ * dormant, not deleted — 0019's rule, which `private.linked_tasks` implements by
+ * simply not returning it — and the control that clears it has to outlive the
+ * membership too, or the member is left with a row they can see and cannot
+ * remove. They reach it from the row of whichever task in the cluster they can
+ * still open.
+ */
+export async function unlinkTask(
+  taskId: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await q(
+    "rpc.unlink_task",
+    supabase.rpc("unlink_task", { p_task: taskId }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+
+  revalidatePath("/", "layout");
+  return { error: null };
+}

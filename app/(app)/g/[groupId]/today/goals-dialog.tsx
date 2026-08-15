@@ -1,10 +1,19 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Button, Dialog, Input } from "@/components/ui";
 import { goalCap, frequencyLabel } from "@/lib/goals";
 import { FrequencyPicker } from "@/components/app/frequency-picker";
-import { setTaskGoal, setTaskFrequency } from "./actions";
+import { LinkIcon } from "@/components/app/icons";
+import { langOf } from "@/lib/text-direction";
+import type { LinkableTask, LinkedSibling } from "@/lib/task-links";
+import {
+  setTaskGoal,
+  setTaskFrequency,
+  linkTasks,
+  unlinkTask,
+} from "./actions";
 
 /**
  * Every goal I aim at in ONE circle, edited together (D51).
@@ -33,6 +42,10 @@ export type GoalRow = {
   frequencyDays: number;
   /** My own denser cycle, if I set one. */
   myFrequencyDays: number | null;
+  /** Tasks in OTHER circles I have called the same act (D64). */
+  links: LinkedSibling[];
+  /** The one cross-circle task worth offering to link this to, or null. */
+  linkSuggestion: LinkableTask | null;
 };
 
 export function GoalsDialog({
@@ -370,6 +383,10 @@ export function GoalsDialog({
                       {err}
                     </p>
                   )}
+                  {/* One act, many circles (D64) — on the task's own row (D66),
+                      because "is this the same thing I do for my other circle?"
+                      is a question about THIS task, asked while looking at it. */}
+                  <TaskLinkRow task={t} disabled={saving} />
                 </li>
               );
             })}
@@ -383,5 +400,150 @@ export function GoalsDialog({
         </>
       )}
     </Dialog>
+  );
+}
+
+/**
+ * One task's linked-tasks line inside "My goals" (D64, placed here by D66).
+ *
+ * WHAT THIS ROW MUST KEEP STRAIGHT, because the migration is careful about it
+ * and a screen that blurred it would make the feature a lie:
+ *
+ *   * the RAW COUNT travels, the COMPLETION does not. Circle A asks 1 and circle
+ *     B asks 500; logging 1 closes A and leaves B at 1-of-500, which is true.
+ *   * each circle goes on judging its own task by its own target and its own
+ *     share. Linking changes what a TAP does, never what a circle asks for.
+ *
+ * NOTHING IS EVER LINKED AUTOMATICALLY. `lib/task-links.ts` decides which single
+ * cross-circle task is worth offering; the member decides whether it is true.
+ *
+ * It writes IMMEDIATELY, unlike every other control in this dialog — the goals
+ * and cycles here are a set of numbers committed together on Save, but a link is
+ * one irreversible-feeling claim about the member's own life, and burying it in
+ * a batch would make "Cancel" ambiguous about whether the link happened. Its own
+ * pending state, its own error, and `router.refresh()` via the action's
+ * revalidate brings the new state back.
+ */
+function TaskLinkRow({ task, disabled }: { task: GoalRow; disabled: boolean }) {
+  const router = useRouter();
+  const [pending, setPending] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function run(key: string, fn: () => Promise<{ error: string | null }>) {
+    setError(null);
+    setPending(key);
+    try {
+      const res = await fn();
+      // `res` is typed non-null but the action redirects on a stale session,
+      // which resolves the call to nothing — this dialog's standing guard.
+      if (!res || res.error) {
+        setError(res?.error ?? "Couldn't do that — try again in a moment.");
+        return;
+      }
+      // The action's `revalidatePath` is NOT enough on its own to reach a
+      // client that stays mounted — `lib/use-action.ts` records that as racy
+      // under load, and this dialog is the case it describes: it does not
+      // unmount, so without an explicit refresh the row goes on claiming the
+      // link it just removed. Measured: the e2e unlink assertion failed on
+      // exactly that stale row.
+      router.refresh();
+    } catch {
+      setError("Couldn't do that — try again in a moment.");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  if (task.links.length === 0 && !task.linkSuggestion) return null;
+
+  return (
+    <div className="mt-3 flex flex-col gap-1.5">
+      {task.links.map((sibling) => (
+        <div
+          key={sibling.taskId}
+          className="flex items-center justify-between gap-3"
+        >
+          <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            <LinkIcon className="size-3.5 shrink-0" />
+            {sibling.dormant ? (
+              // The name is not withheld — it is unknown. `tasks_select_member`
+              // hides a task in a circle the member has left, which is exactly
+              // the state 0019's keep-the-row rule creates.
+              <span className="truncate">
+                also counted in a circle you&rsquo;ve left
+              </span>
+            ) : (
+              <span
+                className="truncate"
+                dir="auto"
+                lang={langOf(sibling.label ?? "")}
+              >
+                also counts in{" "}
+                <span className="font-medium text-foreground">
+                  {sibling.groupName} · {sibling.label}
+                </span>
+              </span>
+            )}
+          </p>
+          <button
+            type="button"
+            // Out of the row's context — a screen reader running the controls of
+            // a dialog with several tasks — "Remove" alone says nothing about
+            // WHICH link is about to go.
+            aria-label={
+              sibling.label
+                ? `Unlink ${task.label} from ${sibling.label}`
+                : `Unlink ${task.label} from a circle you have left`
+            }
+            disabled={disabled || pending !== null}
+            onClick={() =>
+              void run(sibling.taskId, () => unlinkTask(sibling.taskId))
+            }
+            className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-danger disabled:cursor-not-allowed"
+          >
+            {pending === sibling.taskId ? "Removing…" : "Remove"}
+          </button>
+        </div>
+      ))}
+
+      {task.linkSuggestion && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            <LinkIcon className="size-3.5 shrink-0" />
+            <span
+              className="truncate"
+              dir="auto"
+              lang={langOf(task.linkSuggestion.label)}
+            >
+              same as{" "}
+              <span className="font-medium text-foreground">
+                {task.linkSuggestion.groupName} · {task.linkSuggestion.label}
+              </span>
+              ?
+            </span>
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            aria-label={`Link ${task.label} with ${task.linkSuggestion.label}`}
+            disabled={disabled || pending !== null}
+            onClick={() =>
+              void run("link", () =>
+                linkTasks(task.id, task.linkSuggestion!.taskId),
+              )
+            }
+          >
+            {pending === "link" ? "Linking…" : "Link"}
+          </Button>
+        </div>
+      )}
+
+      {error && (
+        <p role="alert" className="text-xs text-danger">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

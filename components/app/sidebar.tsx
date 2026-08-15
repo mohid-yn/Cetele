@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { springGlide } from "@/lib/motion";
 import {
+  isGroupPicker,
   navItemsWithRoadmap,
   noGroupNavItems,
   resolveNavItem,
@@ -39,9 +40,11 @@ export function Sidebar({
   // An organiser keeps a Roadmap tab wherever they are, circle or none (D59) —
   // the flag is fetched client-side because the shell does no server work (§4).
   const isOrganiser = useIsSuperAdmin();
-  const items = hasGroups
-    ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
-    : noGroupNavItems(isOrganiser);
+  // …and the same collapse on the picker itself, where no circle is selected.
+  const items =
+    hasGroups && !isGroupPicker(pathname)
+      ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
+      : noGroupNavItems(isOrganiser);
 
   return (
     // `bg-chrome` — same reason as the bottom nav: the sidebar is the frame.

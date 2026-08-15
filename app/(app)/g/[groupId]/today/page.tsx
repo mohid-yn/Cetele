@@ -11,6 +11,11 @@ import {
 } from "@/lib/assignments";
 import { toConfigVersions, targetOn } from "@/lib/task-config";
 import { toShares, shareOn, effectiveTarget } from "@/lib/shares";
+import {
+  suggestFor,
+  type LinkableTask,
+  type LinkedSibling,
+} from "@/lib/task-links";
 import { q } from "@/lib/db-log";
 import {
   REACTIONS,
@@ -57,8 +62,10 @@ export default async function TodayPage({
     { data: streak },
     { data: members },
     { data: myMembership },
+    { data: myMemberships },
+    { data: linkRows },
   ] = await q(
-    "today.reads (group+profile+tasks+streak+members+membership)",
+    "today.reads (group+profile+tasks+streak+members+membership+links)",
     Promise.all([
       supabase
         .from("groups")
@@ -94,6 +101,18 @@ export default async function TodayPage({
         .eq("group_id", active.groupId)
         .eq("user_id", me)
         .maybeSingle(),
+      // Every circle I am in — for the linked-task offers in "My goals" (D66),
+      // which are cross-circle by definition. Own-row and indexed, so it costs
+      // this batch nothing; whether it returns more than one decides whether
+      // the heavier read below runs at all.
+      supabase.from("memberships").select("group_id").eq("user_id", me),
+      // My links (0034, D64). Own-row RLS and invisible to admins by design, so
+      // this can only ever return mine — including rows pointing at circles I
+      // have LEFT, which is how a dormant link is still offered a Remove.
+      supabase
+        .from("member_task_links")
+        .select("task_id, cluster_id")
+        .eq("user_id", me),
     ]),
   );
 
@@ -101,108 +120,207 @@ export default async function TodayPage({
   const todayISO = localDateISO(tz);
   const taskIds = (tasks ?? []).map((t) => t.id);
 
+  // ---- What the linked-task offers need (D64/D66) ---------------------------
+  // Both inputs come from the batch ABOVE, so these reads join the batch below
+  // rather than forming a third round trip. That is not a micro-optimisation:
+  // as a waterfall it made Today slower for exactly the members who have more
+  // than one circle — the population this feature exists for, and the one that
+  // grows — on the hottest screen in the app.
+  const otherGroupIds = (myMemberships ?? [])
+    .map((m) => m.group_id)
+    .filter((id) => id !== active.groupId);
+  // A link always spans two circles, so a member in this one alone has nothing
+  // to be offered; and with no links either, these reads can only come back
+  // empty. Most members are in one circle and now pay nothing for the feature.
+  const anyLinkWork = otherGroupIds.length > 0 || (linkRows ?? []).length > 0;
+  const otherGroupFilter = otherGroupIds.length
+    ? otherGroupIds
+    : ["00000000-0000-0000-0000-000000000000"];
+
   const [
-    { data: myLogs },
-    { data: todayLogs },
-    { data: reactions },
-    { data: myGoals },
-    { data: assignmentRows },
-    { data: versionRows },
-    { data: shareRows },
-  ] = await q(
-    "today.logs (my 14d + circle today + reactions + my goals)",
-    Promise.all([
-      // my last fortnight (rings for the selected day + DayStrip done-marks)
-      supabase
-        .from("logs")
-        .select("task_id, date, count")
-        .eq("user_id", me)
-        .in(
-          "task_id",
-          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+    [
+      { data: myLogs },
+      { data: todayLogs },
+      { data: reactions },
+      { data: myGoals },
+      { data: assignmentRows },
+      { data: versionRows },
+      { data: shareRows },
+    ],
+    [{ data: otherTaskRows }, { data: otherAssignmentRows }],
+  ] = await Promise.all([
+    q(
+      "today.logs (my 14d + circle today + reactions + my goals)",
+      Promise.all([
+        // my last fortnight (rings for the selected day + DayStrip done-marks)
+        supabase
+          .from("logs")
+          .select("task_id, date, count")
+          .eq("user_id", me)
+          .in(
+            "task_id",
+            taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+          )
+          .gte("date", isoDaysAgo(todayISO, 13)),
+        // The whole circle's today (collective line + circle list) — a RANGE, not
+        // the viewer's single date. A member's "today" is their own (D34), so
+        // when viewer and member straddle midnight the member's real
+        // contribution lands on a date the viewer's calendar has not reached.
+        // Pinning `.eq("date", todayISO)` dropped it: "the circle today" read 0
+        // while that member's own Today showed the taps. Exactly the bug fixed on
+        // the group hub on 2026-07-25 (§4) — this screen was left on the old
+        // shape. One day either side covers every real offset (UTC-12…UTC+14);
+        // each row is then matched against its own member's date below, so the
+        // slack is inert.
+        supabase
+          .from("logs")
+          .select("user_id, task_id, count, date")
+          .gte("date", isoDaysAgo(todayISO, 1))
+          .lte("date", isoDaysAgo(todayISO, -1))
+          .in(
+            "task_id",
+            taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+          ),
+        // today's encouragements in this circle (CET-18) — RLS already scopes
+        // these to circles I'm in, so the group filter is for precision, not safety.
+        supabase
+          .from("reactions")
+          .select("from_user_id, to_user_id, kind")
+          .eq("group_id", active.groupId)
+          .eq("date", todayISO),
+        // My own raised bars for this circle's tasks (D51). RLS is own-row, so
+        // this can only ever return mine — a peer's goal is not readable here,
+        // which is also what keeps it out of the collective figures below.
+        supabase
+          .from("member_task_goals")
+          .select("task_id, target_count, frequency_days")
+          .eq("user_id", me)
+          .in(
+            "task_id",
+            taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+          ),
+        // Who each of this circle's tasks belongs to (0023). ALL intervals, not
+        // just the open ones: the day-strip renders a fortnight, and a closed
+        // interval is what says "this was mine last Tuesday". RLS scopes these to
+        // circles I'm in; the whole circle's rows are read because the roster
+        // below has to score each member against THEIR OWN list.
+        supabase
+          .from("task_assignments")
+          .select("task_id, user_id, assigned_at, unassigned_at")
+          .in(
+            "task_id",
+            taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+          ),
+        // What each task has asked for over time (0024). ALL intervals, for the
+        // same reason as the assignments above: the day-strip marks a fortnight
+        // of past days done, and each one is measured against the target IT
+        // asked for. Reading the live target would let an admin's raise un-tick
+        // every day already kept, while the streak went on counting them.
+        supabase
+          .from("task_config_versions")
+          .select(
+            "task_id, target_count, frequency_days, effective_from, effective_to",
+          )
+          .in(
+            "task_id",
+            taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+          ),
+        // How much of each task is asked of each MEMBER (0032). The whole
+        // circle's rows, like the assignments above and for the same reason: the
+        // roster below scores every member, and the collective goal is the SUM of
+        // what each carrier is asked for. ALL intervals, so the day-strip measures
+        // a past day against the share in force that day.
+        supabase
+          .from("member_task_shares")
+          .select(
+            "task_id, user_id, target_count, effective_from, effective_to",
+          )
+          .in(
+            "task_id",
+            taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
+          ),
+      ]),
+    ),
+    anyLinkWork
+      ? q(
+          "today.reads (my other circles' tasks + assignments)",
+          Promise.all([
+            // What a linked sibling is CALLED, and which cross-circle task is
+            // worth offering. Scoped to circles I am STILL in, so a link into
+            // one I have left simply does not resolve — which is how a dormant
+            // row is detected, and the same answer `private.linked_tasks` gives
+            // the fan-out itself (0019's rule).
+            supabase
+              .from("tasks")
+              .select("id, label, group_id, groups(name)")
+              .in("group_id", otherGroupFilter),
+            // Read SEPARATELY from this circle's assignments, and that is not a
+            // duplicate: `assignmentRows` is filtered to THIS circle's task ids,
+            // so a cross-circle candidate has no row in it at all and
+            // `assignedOn` answers false for every one of them. Offers vanished
+            // entirely until this was added. Bounded through the embedded task,
+            // since `task_assignments` has no group of its own.
+            supabase
+              .from("task_assignments")
+              .select(
+                "task_id, user_id, assigned_at, unassigned_at, tasks!inner()",
+              )
+              .in("tasks.group_id", otherGroupFilter),
+          ]),
         )
-        .gte("date", isoDaysAgo(todayISO, 13)),
-      // The whole circle's today (collective line + circle list) — a RANGE, not
-      // the viewer's single date. A member's "today" is their own (D34), so
-      // when viewer and member straddle midnight the member's real
-      // contribution lands on a date the viewer's calendar has not reached.
-      // Pinning `.eq("date", todayISO)` dropped it: "the circle today" read 0
-      // while that member's own Today showed the taps. Exactly the bug fixed on
-      // the group hub on 2026-07-25 (§4) — this screen was left on the old
-      // shape. One day either side covers every real offset (UTC-12…UTC+14);
-      // each row is then matched against its own member's date below, so the
-      // slack is inert.
-      supabase
-        .from("logs")
-        .select("user_id, task_id, count, date")
-        .gte("date", isoDaysAgo(todayISO, 1))
-        .lte("date", isoDaysAgo(todayISO, -1))
-        .in(
-          "task_id",
-          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
-        ),
-      // today's encouragements in this circle (CET-18) — RLS already scopes
-      // these to circles I'm in, so the group filter is for precision, not safety.
-      supabase
-        .from("reactions")
-        .select("from_user_id, to_user_id, kind")
-        .eq("group_id", active.groupId)
-        .eq("date", todayISO),
-      // My own raised bars for this circle's tasks (D51). RLS is own-row, so
-      // this can only ever return mine — a peer's goal is not readable here,
-      // which is also what keeps it out of the collective figures below.
-      supabase
-        .from("member_task_goals")
-        .select("task_id, target_count, frequency_days")
-        .eq("user_id", me)
-        .in(
-          "task_id",
-          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
-        ),
-      // Who each of this circle's tasks belongs to (0023). ALL intervals, not
-      // just the open ones: the day-strip renders a fortnight, and a closed
-      // interval is what says "this was mine last Tuesday". RLS scopes these to
-      // circles I'm in; the whole circle's rows are read because the roster
-      // below has to score each member against THEIR OWN list.
-      supabase
-        .from("task_assignments")
-        .select("task_id, user_id, assigned_at, unassigned_at")
-        .in(
-          "task_id",
-          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
-        ),
-      // What each task has asked for over time (0024). ALL intervals, for the
-      // same reason as the assignments above: the day-strip marks a fortnight
-      // of past days done, and each one is measured against the target IT
-      // asked for. Reading the live target would let an admin's raise un-tick
-      // every day already kept, while the streak went on counting them.
-      supabase
-        .from("task_config_versions")
-        .select(
-          "task_id, target_count, frequency_days, effective_from, effective_to",
-        )
-        .in(
-          "task_id",
-          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
-        ),
-      // How much of each task is asked of each MEMBER (0032). The whole
-      // circle's rows, like the assignments above and for the same reason: the
-      // roster below scores every member, and the collective goal is the SUM of
-      // what each carrier is asked for. ALL intervals, so the day-strip measures
-      // a past day against the share in force that day.
-      supabase
-        .from("member_task_shares")
-        .select("task_id, user_id, target_count, effective_from, effective_to")
-        .in(
-          "task_id",
-          taskIds.length ? taskIds : ["00000000-0000-0000-0000-000000000000"],
-        ),
-    ]),
-  );
+      : ([{ data: null }, { data: null }] as const),
+  ]);
 
   const assignments = toAssignments(assignmentRows);
   const versions = toConfigVersions(versionRows);
   const shares = toShares(shareRows);
+
+  // ---- Linked tasks, for the offers in "My goals" (D64/D66) -----------------
+  // taskId → the cluster it is already in.
+  const clusterByTask: Record<string, string> = {};
+  for (const l of linkRows ?? []) clusterByTask[l.task_id] = l.cluster_id;
+
+  const otherAssignments = toAssignments(otherAssignmentRows);
+
+  // Candidates for an offer: only tasks that are MINE today. One assigned to
+  // other members (D54) is not mine to link — the fan-out would write counts
+  // into a circle that is not asking me for them.
+  const linkCandidates: LinkableTask[] = (otherTaskRows ?? [])
+    .filter((t) => assignedOn(otherAssignments, t.id, me, todayISO, tz))
+    .map((t) => ({
+      taskId: t.id,
+      label: t.label,
+      groupId: t.group_id,
+      groupName: t.groups?.name ?? "another circle",
+    }));
+
+  // taskId → its name and circle, for naming a sibling already linked.
+  const knownTask = new Map(
+    (otherTaskRows ?? []).map((t) => [
+      t.id,
+      { label: t.label, groupName: t.groups?.name ?? "another circle" },
+    ]),
+  );
+
+  /** The tasks already in this one's cluster — dormant ones included. */
+  const siblingsOf = (taskId: string): LinkedSibling[] => {
+    const cluster = clusterByTask[taskId];
+    if (!cluster) return [];
+    return (linkRows ?? [])
+      .filter((l) => l.cluster_id === cluster && l.task_id !== taskId)
+      .map((l) => {
+        const known = knownTask.get(l.task_id);
+        return {
+          taskId: l.task_id,
+          // Null rather than a placeholder invented here: a task in a circle I
+          // have left is not readable under `tasks_select_member`, so its name
+          // is something this screen genuinely does not know.
+          label: known?.label ?? null,
+          groupName: known?.groupName ?? null,
+          dormant: !known,
+        };
+      });
+  };
 
   /** What this member owes for this task on this day — the page's single
    *  expression of it, mirroring `private.effective_target`. */
@@ -432,6 +550,19 @@ export default async function TodayPage({
           // slicing the string takes the date in whatever offset PostgREST
           // happened to render, which is the UTC reduction this replaced.
           createdOn: timestampDateISO(tz, t.created_at),
+          // Linked tasks (D64), as the goals dialog draws them (D66): what this
+          // act already covers, and the one circle worth offering next.
+          links: siblingsOf(t.id),
+          linkSuggestion: suggestFor(
+            {
+              taskId: t.id,
+              label: t.label,
+              groupId: active.groupId,
+              groupName: group?.name ?? "this circle",
+            },
+            linkCandidates,
+            clusterByTask,
+          ),
         }))}
         me={me}
         assignments={assignments}

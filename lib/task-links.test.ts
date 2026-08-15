@@ -15,11 +15,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  MAX_SUGGESTIONS,
   SUGGEST_THRESHOLD,
   labelSimilarity,
   normaliseLabel,
-  suggestLinks,
+  suggestFor,
   tokenSimilarity,
   tokenise,
   tokensMatch,
@@ -179,77 +178,77 @@ describe("tokenSimilarity", () => {
 });
 
 // ---------------------------------------------------------------------------
-// suggestLinks — offers only, cross-circle only
+// suggestFor — one offer per task row, cross-circle only
 // ---------------------------------------------------------------------------
 
-describe("suggestLinks", () => {
-  it("offers the same act across two circles", () => {
-    const out = suggestLinks([fajrSalawat, asrSalawat]);
-    assert.equal(out.length, 1);
-    assert.equal(out[0].a.taskId, "t1");
-    assert.equal(out[0].b.taskId, "t2");
-    assert.equal(out[0].score, 1);
+describe("suggestFor", () => {
+  const all = [
+    fajrSalawat,
+    asrSalawat,
+    ishaSalawat,
+    fajrIstighfar,
+    asrSubhanallah,
+  ];
+
+  it("offers the same act from another circle", () => {
+    const out = suggestFor(fajrSalawat, all);
+    assert.equal(out?.taskId, "t2"); // Asr's "Salawat ×100" — an exact match
   });
 
-  it("NEVER offers two tasks in the same circle", () => {
+  it("NEVER offers a task in the SAME circle", () => {
     // 0034 refuses this outright — a single act counted twice inside one
-    // circle's own collective total. The offer list must not lead a member to a
-    // button that exists to be refused.
+    // circle's own collective total. The row must not offer a button that
+    // exists to be refused.
     const twin = task("t9", "Salawat", "g1", "Fajr Circle");
-    assert.deepEqual(suggestLinks([fajrSalawat, twin]), []);
+    assert.equal(suggestFor(fajrSalawat, [twin]), null);
   });
 
-  it("skips a pair that is already one act", () => {
+  it("skips a candidate that is already one act with this task", () => {
     const cluster = { t1: "c1", t2: "c1" };
-    assert.deepEqual(suggestLinks([fajrSalawat, asrSalawat], cluster), []);
+    assert.equal(suggestFor(fajrSalawat, [asrSalawat], cluster), null);
   });
 
-  it("still offers a pair in two DIFFERENT clusters — that is the merge", () => {
+  it("still offers a candidate in a DIFFERENT cluster — that is the merge", () => {
     const cluster = { t1: "c1", t2: "c2" };
-    const out = suggestLinks([fajrSalawat, asrSalawat], cluster);
-    assert.equal(out.length, 1);
+    assert.equal(suggestFor(fajrSalawat, [asrSalawat], cluster)?.taskId, "t2");
   });
 
-  it("offers all three pairs when three circles ask for one act", () => {
-    const out = suggestLinks([fajrSalawat, asrSalawat, ishaSalawat]);
-    assert.equal(out.length, 3);
-    // Clusters mean the member only ever has to accept two of them — the third
-    // becomes "already one act" the moment the first two are linked.
-  });
-
-  it("leaves unrelated tasks alone", () => {
-    const out = suggestLinks([fajrIstighfar, asrSubhanallah]);
-    assert.deepEqual(out, []);
-  });
-
-  it("orders by score, best first", () => {
-    const out = suggestLinks([fajrSalawat, asrSalawat, ishaSalawat]);
-    assert.ok(out[0].score >= out[1].score);
-    assert.ok(out[1].score >= out[2].score);
-    // The exact pair beats the near-miss one.
-    assert.equal(out[0].score, 1);
-  });
-
-  it("is stable — the same input gives the same order", () => {
-    const once = suggestLinks([fajrSalawat, asrSalawat, ishaSalawat]);
-    const twice = suggestLinks([fajrSalawat, asrSalawat, ishaSalawat]);
-    assert.deepEqual(
-      once.map((s) => [s.a.taskId, s.b.taskId]),
-      twice.map((s) => [s.a.taskId, s.b.taskId]),
+  it("prefers an EXACT name over a near one, which the score cannot express", () => {
+    // Both candidates score a perfect 1.0 against "Salawat": Asr's
+    // "Salawat ×100" normalises to the same string, and Isha's "Salawaat" is a
+    // fuzzy token match, which `tokenSimilarity` counts as a whole match. So
+    // the score alone cannot separate them and `suggestFor` ranks exactness
+    // first. Order is reversed in the second call to prove it is not luck.
+    assert.equal(labelSimilarity(fajrSalawat.label, ishaSalawat.label), 1);
+    assert.equal(labelSimilarity(fajrSalawat.label, asrSalawat.label), 1);
+    assert.equal(
+      suggestFor(fajrSalawat, [ishaSalawat, asrSalawat])?.taskId,
+      "t2",
+    );
+    assert.equal(
+      suggestFor(fajrSalawat, [asrSalawat, ishaSalawat])?.taskId,
+      "t2",
     );
   });
 
-  it("caps the offer list", () => {
-    // Twelve circles each carrying salawat — 66 pairs, none of which anybody
-    // will read past the first handful.
-    const many = Array.from({ length: 12 }, (_, i) =>
-      task(`t${i}`, "Salawat", `g${i}`, `Circle ${i}`),
-    );
-    assert.equal(suggestLinks(many).length, MAX_SUGGESTIONS);
-    assert.equal(suggestLinks(many, {}, 3).length, 3);
+  it("offers nothing for a task nothing resembles", () => {
+    assert.equal(suggestFor(fajrIstighfar, all), null);
+  });
+
+  it("is stable — the same inputs give the same offer", () => {
+    // A suggestion that swaps target between renders is worse than none: the
+    // member is about to press it.
+    const once = suggestFor(fajrSalawat, all)?.taskId;
+    const twice = suggestFor(fajrSalawat, [...all].reverse())?.taskId;
+    assert.equal(once, twice);
   });
 
   it("has nothing to offer a member in one circle", () => {
-    assert.deepEqual(suggestLinks([fajrSalawat, fajrIstighfar]), []);
+    assert.equal(suggestFor(fajrSalawat, [fajrIstighfar]), null);
+  });
+
+  it("ignores the task itself when it appears among the candidates", () => {
+    // The caller passes every task the member carries, this one included.
+    assert.equal(suggestFor(fajrSalawat, [fajrSalawat]), null);
   });
 });

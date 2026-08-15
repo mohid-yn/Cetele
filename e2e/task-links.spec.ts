@@ -10,8 +10,12 @@ import { signIn } from "./helpers";
  * THE ASSERTION THAT CARRIES IT is the third test: one tap in circle A, and
  * circle B's ring has moved without the member ever opening it. Everything
  * before it could pass against a build that stored the link faithfully and then
- * never fanned anything out — the suggestion would appear, the cluster would
- * render, and the member would still be logging the same sitting twice.
+ * never fanned anything out — the offer would appear, the row would render, and
+ * the member would still be logging the same sitting twice.
+ *
+ * The offer and the link live on the task's own row in "My goals" (D66), not on
+ * /profile: "is this the same thing I already do for my other circle?" is a
+ * question about a TASK, asked while looking at it.
  *
  * The two labels differ by a COUNT ("Salawat" / "Salawat ×100"), because that is
  * both the case the matcher exists for and the case D64 is about: the same act,
@@ -52,27 +56,35 @@ async function createCircle(
   return groupId!;
 }
 
+/** Open "My goals" for a circle — where a link is offered and made (D66). */
+async function openGoals(page: Page, groupId: string) {
+  await page.goto(`/g/${groupId}/today`);
+  await page.getByRole("button", { name: "My goals" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+}
+
 test("two circles, both asking for salawat", async ({ page }) => {
   await signIn(page, USER);
   alpha = await createCircle(page, `Link Alpha ${STAMP}`, "Salawat");
   beta = await createCircle(page, `Link Beta ${STAMP}`, "Salawat ×100");
 });
 
-test("the pair is offered, and linking it takes the offer away", async ({
+test("the pair is offered on the task's own row, and linking takes the offer away", async ({
   page,
 }) => {
   await signIn(page, USER);
-  await page.goto("/profile");
+  await openGoals(page, alpha);
 
   // Offered, never automatic — the link does not exist until this is pressed.
-  await expect(page.getByText("These look like the same thing")).toBeVisible();
+  await expect(page.getByText(/same as .*Salawat ×100/)).toBeVisible();
   await page
     .getByRole("button", { name: "Link Salawat with Salawat ×100" })
     .click();
 
-  await expect(page.getByText("One act, two circles")).toBeVisible();
-  // And the pair stops being offered, because it is already one act.
-  await expect(page.getByText("These look like the same thing")).toHaveCount(0);
+  // The row now states where else the act counts…
+  await expect(page.getByText(/also counts in .*Salawat ×100/)).toBeVisible();
+  // …and stops offering, because the two are already one act.
+  await expect(page.getByText(/same as .*Salawat ×100/)).toHaveCount(0);
 });
 
 test("THE ONE THAT CARRIES IT: one tap, both circles", async ({ page }) => {
@@ -114,14 +126,16 @@ test("THE ONE THAT CARRIES IT: one tap, both circles", async ({ page }) => {
 
 test("unlinking stops the fan-out", async ({ page }) => {
   await signIn(page, USER);
-  await page.goto("/profile");
+  await openGoals(page, alpha);
 
   // Removing either side of a pair dissolves the whole cluster (the RPC's
   // rule — a cluster of one fans out to nothing).
-  await page.getByRole("button", { name: "Unlink Salawat ×100" }).click();
-  await expect(page.getByText("One act, two circles")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Unlink Salawat from Salawat ×100" })
+    .click();
+  await expect(page.getByText(/also counts in .*Salawat ×100/)).toHaveCount(0);
   // …and the pair is offered again, because it is no longer one act.
-  await expect(page.getByText("These look like the same thing")).toBeVisible();
+  await expect(page.getByText(/same as .*Salawat ×100/)).toBeVisible();
 
   await page.goto(`/g/${alpha}/today`);
   await page.click('a:has-text("Continue Salawat")');

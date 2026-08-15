@@ -34,12 +34,7 @@ export const MIN_FUZZY_TOKEN = 4;
  *  is 0.875 and matches; "istighfar"/"astaghfar" is 0.67 and does not. */
 export const FUZZY_RATIO = 0.8;
 
-/** A ceiling on the offer list, not on how many links a member may have. Ten
- *  pairs is already more than anyone will read; the cluster cap (10 tasks) is
- *  the real limit and it lives in the RPC. */
-export const MAX_SUGGESTIONS = 10;
-
-/** One of the member's tasks, as the links screen knows it. */
+/** One of the member's tasks, as the goals dialog knows it. */
 export type LinkableTask = {
   taskId: string;
   label: string;
@@ -47,12 +42,20 @@ export type LinkableTask = {
   groupName: string;
 };
 
-/** A pair worth offering, with the score that got it there. */
-export type Suggestion = {
-  a: LinkableTask;
-  b: LinkableTask;
-  /** 0–1. Rendered nowhere — it exists to order the list. */
-  score: number;
+/**
+ * A task already in this one's cluster.
+ *
+ * `label`/`groupName` are NULL when the member has LEFT that circle:
+ * `tasks_select_member` will not show them a task there, so the name is
+ * something the screen genuinely does not know rather than something it is
+ * withholding. That is the visible face of 0019's dormancy rule — the row
+ * survives, the fan-out ignores it, and the member keeps a control to clear it.
+ */
+export type LinkedSibling = {
+  taskId: string;
+  label: string | null;
+  groupName: string | null;
+  dormant: boolean;
 };
 
 /**
@@ -191,52 +194,72 @@ export function labelSimilarity(a: string, b: string): number {
 }
 
 /**
- * The pairs worth offering, best first.
+ * The ONE task worth offering to link this one to, or null.
+ *
+ * Per task rather than a list of pairs, because that is how the member meets it
+ * (D66): the offer sits on the task's own row in "My goals", beside the goal
+ * they are already thinking about, rather than in a separate cross-circle list
+ * they had to go and find.
  *
  * CROSS-CIRCLE ONLY, which is the RPC's rule reproduced here so the member never
  * meets a button that exists to be refused: two tasks in one circle sharing a
  * fan-out would count a single act twice inside that circle's own collective
- * total. `link_tasks` still refuses it — this is the offer, not the authority.
+ * total. `link_tasks` remains the authority — this is only the offer.
  *
- * Pairs already in the same cluster are dropped, because they are already one
- * act; a pair spanning two DIFFERENT clusters is still offered, since linking
+ * A candidate already in this task's cluster is skipped, because they are
+ * already one act. A candidate in a DIFFERENT cluster is still offered: linking
  * them is the merge that makes clusters worth having.
  *
- * @param tasks             the member's live tasks, across every circle
- * @param clusterByTask     taskId → the cluster it is already in, if any
- * @param limit             how many offers to return
+ * Ties break on the label, so the offer does not change between renders — a
+ * suggestion that swaps target under a member about to press it is worse than
+ * no suggestion at all.
+ *
+ * @param task           the task whose row is being drawn
+ * @param candidates     the member's live tasks in EVERY circle (this one's included; same-circle entries are skipped)
+ * @param clusterByTask  taskId → the cluster it is already in, if any
  */
-export function suggestLinks(
-  tasks: LinkableTask[],
+export function suggestFor(
+  task: LinkableTask,
+  candidates: LinkableTask[],
   clusterByTask: Record<string, string> = {},
-  limit: number = MAX_SUGGESTIONS,
-): Suggestion[] {
-  const out: Suggestion[] = [];
+): LinkableTask | null {
+  const own = clusterByTask[task.taskId];
+  const normalised = normaliseLabel(task.label);
+  let best: LinkableTask | null = null;
+  let bestRank: [number, number, string] | null = null;
 
-  for (let i = 0; i < tasks.length; i++) {
-    for (let j = i + 1; j < tasks.length; j++) {
-      const a = tasks[i];
-      const b = tasks[j];
-      if (a.groupId === b.groupId) continue;
+  for (const other of candidates) {
+    if (other.groupId === task.groupId) continue;
+    if (own && clusterByTask[other.taskId] === own) continue; // already one act
 
-      const clusterA = clusterByTask[a.taskId];
-      const clusterB = clusterByTask[b.taskId];
-      if (clusterA && clusterA === clusterB) continue; // already one act
+    const score = labelSimilarity(task.label, other.label);
+    if (score < SUGGEST_THRESHOLD) continue;
 
-      const score = labelSimilarity(a.label, b.label);
-      if (score >= SUGGEST_THRESHOLD) out.push({ a, b, score });
+    // AN EXACT NAME BEATS A NEAR ONE, and it needs saying separately because
+    // the score cannot express it: `tokenSimilarity` counts a fuzzy token match
+    // as a whole match, so "Salawaat" and "Salawat ×100" both score a perfect
+    // 1.0 against "Salawat". Without this, which of the two circles gets
+    // offered comes down to a tie-break on the label — i.e. to nothing.
+    const rank: [number, number, string] = [
+      normaliseLabel(other.label) === normalised ? 1 : 0,
+      score,
+      other.label,
+    ];
+
+    if (
+      bestRank === null ||
+      rank[0] > bestRank[0] ||
+      (rank[0] === bestRank[0] &&
+        (rank[1] > bestRank[1] ||
+          // Last resort, and only so the offer is the same on every render: a
+          // suggestion that swaps target under a member about to press it is
+          // worse than no suggestion at all.
+          (rank[1] === bestRank[1] && rank[2] < bestRank[2])))
+    ) {
+      best = other;
+      bestRank = rank;
     }
   }
 
-  // Score first, then the labels — a stable order matters more than it looks:
-  // this list is re-rendered on every save, and offers that reshuffle under a
-  // member who is halfway down them is the same complaint D63 makes about a
-  // roster that reorders between visits.
-  out.sort(
-    (x, y) =>
-      y.score - x.score ||
-      x.a.label.localeCompare(y.a.label) ||
-      x.b.label.localeCompare(y.b.label),
-  );
-  return out.slice(0, limit);
+  return best;
 }

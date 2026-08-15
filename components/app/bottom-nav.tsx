@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { springGlide } from "@/lib/motion";
 import {
+  isGroupPicker,
   navItemsWithRoadmap,
   noGroupNavItems,
   resolveNavItem,
@@ -38,9 +39,11 @@ export function BottomNav({
   // permanent thing in this bar that no group page can publish — it comes from
   // the client-side viewer store instead (D59).
   const isOrganiser = useIsSuperAdmin();
-  const items = hasGroups
-    ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
-    : noGroupNavItems(isOrganiser);
+  // …and the same collapse on the picker itself, where no circle is selected.
+  const items =
+    hasGroups && !isGroupPicker(pathname)
+      ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
+      : noGroupNavItems(isOrganiser);
 
   return (
     <nav

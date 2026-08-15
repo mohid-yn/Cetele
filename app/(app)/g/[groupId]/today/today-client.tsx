@@ -32,6 +32,7 @@ import { groupHref } from "@/lib/group-href";
 import { useLocalToday } from "@/lib/use-local-today";
 import { usePropState } from "@/lib/use-prop-state";
 import { GoalsDialog } from "./goals-dialog";
+import type { LinkableTask, LinkedSibling } from "@/lib/task-links";
 import { isDueOn, daysUntilDue, dueLabel, frequencyLabel } from "@/lib/goals";
 import { visibleOn, assignedOn, type Assignment } from "@/lib/assignments";
 import { targetOn, frequencyOn, type ConfigVersion } from "@/lib/task-config";
@@ -69,6 +70,12 @@ export type TodayTask = {
   myFrequencyDays: number | null;
   /** The day the cycle counts from (`tasks.created_at`). */
   createdOn: string;
+  /** Tasks in OTHER circles I have called the same act (D64). Dormant entries
+   *  (a circle I have left) are included — they are the only place the member
+   *  can still clear them. */
+  links: LinkedSibling[];
+  /** The one cross-circle task worth offering to link this to, or null. */
+  linkSuggestion: LinkableTask | null;
 };
 
 export type CircleMember = {
@@ -732,6 +739,8 @@ export function TodayClient({
           goal: goalOf(t),
           frequencyDays: t.frequencyDays,
           myFrequencyDays: freqById[t.id] ?? t.myFrequencyDays,
+          links: t.links,
+          linkSuggestion: t.linkSuggestion,
         }))}
         onSaved={(saved) => setGoalById((g) => ({ ...g, ...saved }))}
         onFrequencySaved={(saved) => setFreqById((f) => ({ ...f, ...saved }))}
