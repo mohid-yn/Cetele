@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { langOf } from "@/lib/text-direction";
 import {
   MAX_CLUSTER_SIZE,
+  clusterSize,
+  liveCircleCount,
   rankCandidates,
   type LinkableTask,
   type LinkedSibling,
@@ -495,6 +497,12 @@ export function GoalsDialog({
  * this act already counts in — and everything else moved into a pane with room
  * for it.
  *
+ * THAT FACT IS THE LIVE COUNT, never the cluster's size. A link into a circle
+ * the member has left survives as a row and fans out to nothing, so counting it
+ * here would have the row promise a write the app does not make. A cluster that
+ * is ENTIRELY dormant says so instead of claiming "counts in 1 circle", which
+ * is true of every task in the app and therefore tells the member nothing.
+ *
  * SHOWN EVEN WITH NOTHING LINKED AND NOTHING SUGGESTED, whenever the member has
  * another circle at all. That is the discoverability half: the old row returned
  * null unless the matcher happened to guess, so two circles calling one act
@@ -512,12 +520,16 @@ function TaskLinkSummary({
   disabled: boolean;
   onOpen: () => void;
 }) {
-  const circles = task.links.length + 1; // this circle, plus the far side(s)
-  const linked = task.links.length > 0;
+  // The live count and the cluster's size are different numbers whenever a
+  // circle has been left, and this row states the LIVE one — it is the number
+  // of circles a tap actually reaches.
+  const circles = liveCircleCount(task.links);
+  const counting = circles > 1;
+  const dormant = task.links.length - (circles - 1);
 
   // A door onto an empty room is worse than no door: a member in one circle,
   // with nothing linked, has nothing this pane could offer.
-  if (!linked && !hasCandidates) return null;
+  if (task.links.length === 0 && !hasCandidates) return null;
 
   return (
     <button
@@ -527,16 +539,21 @@ function TaskLinkSummary({
       // `min-h-11` and real padding, rather than a `tap-area-44` overlay: this
       // is a box in its own right, so the 44px IS the control.
       aria-label={
-        linked
+        counting
           ? `${task.label} — counts in ${circles} circles, manage`
-          : `${task.label} — link to another circle`
+          : dormant > 0
+            ? `${task.label} — linked to ${dormant === 1 ? "a circle" : `${dormant} circles`} you have left, manage`
+            : `${task.label} — link to another circle`
       }
       className={cn(
         "mt-3 flex min-h-11 w-full items-center gap-2 rounded-lg border px-3 py-2 text-left",
         "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-brand)]",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         "disabled:pointer-events-none disabled:text-disabled-foreground",
-        linked
+        // The tinted state means "this act is live in more than one circle".
+        // A dormant-only cluster takes the plain treatment, because nothing is
+        // being counted anywhere but here.
+        counting
           ? "border-primary-200 bg-primary-50 hover:bg-primary-100"
           : "border-outline hover:bg-surface-hover",
       )}
@@ -544,13 +561,22 @@ function TaskLinkSummary({
       <LinkIcon
         className={cn(
           "size-4 shrink-0",
-          linked ? "text-primary" : "text-muted-foreground",
+          counting ? "text-primary" : "text-muted-foreground",
         )}
       />
       <span className="min-w-0 flex-1 truncate text-xs">
-        {linked ? (
+        {counting ? (
           <span className="font-medium text-foreground">
             Counts in {circles} circles
+          </span>
+        ) : dormant > 0 ? (
+          // Stated ahead of any suggestion: a standing link the member may want
+          // to clear is a fact about their account, while a suggestion is only
+          // an offer — and the pane carries the offer, badge and all, one tap
+          // away.
+          <span className="text-muted-foreground">
+            Linked to {dormant === 1 ? "a circle" : `${dormant} circles`}{" "}
+            you&rsquo;ve left
           </span>
         ) : task.linkSuggestion ? (
           <span className="text-muted-foreground">
@@ -566,7 +592,10 @@ function TaskLinkSummary({
           </span>
         )}
       </span>
-      {!linked && task.linkSuggestion && (
+      {/* Only beside the branch that names the suggested circle — a badge over
+          any other sentence would be labelling something the row is not
+          saying. */}
+      {!counting && dormant === 0 && task.linkSuggestion && (
         <Badge variant="primary" size="sm" className="shrink-0">
           Match
         </Badge>
@@ -691,10 +720,15 @@ function LinkPane({
     }
   }
 
-  const circles = task.links.length + 1;
+  // Two counts, deliberately: the heading states where a tap actually LANDS,
+  // while the cap is about how many rows the cluster holds. A circle the member
+  // has left is not counted in the first and very much occupies a slot in the
+  // second — `link_tasks`' `count(*)` never asks about membership, so offering
+  // on the live count would offer an eleventh the RPC refuses.
+  const circles = liveCircleCount(task.links);
   // The migration refuses the eleventh regardless; stopping the OFFER here is
   // what turns that refusal into a sentence instead of a failed button.
-  const atCap = circles >= MAX_CLUSTER_SIZE;
+  const atCap = clusterSize(task.links) >= MAX_CLUSTER_SIZE;
   const ranked = rankCandidates(
     { taskId: task.id, label: task.label, groupId, groupName },
     candidates,
@@ -774,7 +808,8 @@ function LinkPane({
         {task.links.some((s) => s.dormant) && (
           <p className="mt-2 text-xs text-muted-foreground">
             A dormant circle is one you&rsquo;ve left. Nothing is counted there
-            any more — you can clear it whenever you like.
+            any more, so it isn&rsquo;t in the count above — the link is kept in
+            case you rejoin, and you can clear it whenever you like.
           </p>
         )}
       </section>

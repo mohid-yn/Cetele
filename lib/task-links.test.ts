@@ -17,7 +17,9 @@ import { describe, it } from "node:test";
 import {
   MAX_CLUSTER_SIZE,
   SUGGEST_THRESHOLD,
+  clusterSize,
   labelSimilarity,
+  liveCircleCount,
   normaliseLabel,
   rankCandidates,
   suggestFor,
@@ -25,6 +27,7 @@ import {
   tokenise,
   tokensMatch,
   type LinkableTask,
+  type LinkedSibling,
 } from "./task-links.ts";
 
 // ---------------------------------------------------------------------------
@@ -338,5 +341,55 @@ describe("MAX_CLUSTER_SIZE", () => {
     // constant only decides when the screen stops OFFERING, so the member meets
     // the ceiling as a sentence rather than as a failed button.
     assert.equal(MAX_CLUSTER_SIZE, 10);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// liveCircleCount / clusterSize — the two counts a dormant link separates
+// ---------------------------------------------------------------------------
+// The fan-out gates on live membership at write time, so a link into a circle
+// the member has LEFT writes nothing. One number is what the member is told,
+// the other is what the migration's cap counts, and they are equal only while
+// nobody has left anything.
+
+const sibling = (taskId: string, dormant: boolean): LinkedSibling =>
+  dormant
+    ? { taskId, label: null, groupName: null, dormant: true }
+    : { taskId, label: "Salawat", groupName: "Asr Circle", dormant: false };
+
+describe("liveCircleCount", () => {
+  it("counts this circle plus every LIVE sibling", () => {
+    assert.equal(liveCircleCount([]), 1);
+    assert.equal(liveCircleCount([sibling("t2", false)]), 2);
+    assert.equal(
+      liveCircleCount([sibling("t2", false), sibling("t3", false)]),
+      3,
+    );
+  });
+
+  it("never counts a circle the member has left", () => {
+    // The row would otherwise promise a write the app does not make: "counts in
+    // 3 circles" while a tap reaches two.
+    assert.equal(
+      liveCircleCount([sibling("t2", false), sibling("t3", true)]),
+      2,
+    );
+    // A cluster that is entirely dormant counts nowhere but here.
+    assert.equal(
+      liveCircleCount([sibling("t2", true), sibling("t3", true)]),
+      1,
+    );
+  });
+});
+
+describe("clusterSize", () => {
+  it("counts DORMANT rows too — link_tasks' count(*) does not ask about membership", () => {
+    // This is the number the cap is checked against. Offering on the live count
+    // instead would offer an eleventh the RPC refuses.
+    assert.equal(clusterSize([sibling("t2", true), sibling("t3", true)]), 3);
+    assert.equal(
+      clusterSize([sibling("t2", false), sibling("t3", true)]),
+      liveCircleCount([sibling("t2", false), sibling("t3", true)]) + 1,
+    );
   });
 });

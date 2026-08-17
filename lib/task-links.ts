@@ -68,6 +68,35 @@ export type LinkedSibling = {
 };
 
 /**
+ * How many circles this act ACTUALLY counts in — the ones a tap still reaches.
+ *
+ * A dormant sibling is a link into a circle the member has left. The row
+ * survives (0019's rule, D64's third application) and the fan-out gates on live
+ * membership at write time, so nothing is written there — which makes "counts
+ * in 3 circles" a claim the app does not honour the moment one of them is
+ * dormant. Counting the live ones is the same arithmetic the fan-out does.
+ *
+ * NOT the same number as `clusterSize`, and the difference is the whole point:
+ * one is what the member is told, the other is what the migration's cap counts.
+ */
+export function liveCircleCount(links: readonly LinkedSibling[]): number {
+  return 1 + links.filter((l) => !l.dormant).length;
+}
+
+/**
+ * How many tasks are in this one's cluster — a MIRROR of what `link_tasks`
+ * counts when it checks `MAX_CLUSTER_SIZE`.
+ *
+ * DORMANT ROWS OCCUPY A SLOT. The migration's `count(*)` over the cluster does
+ * not know or care whether the member still belongs to those circles, so a
+ * screen that stopped offering on the live count alone would go on offering an
+ * eleventh the RPC refuses.
+ */
+export function clusterSize(links: readonly LinkedSibling[]): number {
+  return 1 + links.length;
+}
+
+/**
  * A trailing count, stripped before anything is compared.
  *
  * "Salawat ×100" and "Salawat 500" are the same act asked for in different
