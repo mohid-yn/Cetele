@@ -39,14 +39,17 @@ ownership and sharing.
 **co-admin can claim ownership** of a group whose owner is **dormant** (no
 activity ≥ 14 days) or gone. Forgiveness-framed, not a power grab.
 
-**Super-admin (D27, backend-only).** One out-of-band role exists for
-maintainability + safety: `users.is_super_admin`, grantable **only directly in
-Supabase** (no in-app UI; cannot be self-escalated). Its powers are limited to
-**recovery** (reassign a dead group's owner) and **moderation** (act on abuse
-reports) — **not** a browse-all-content god view, so the privacy promise above
-holds. Every super-admin action is written to an `audit_log`. This keeps the
-project maintainable without the original operator (hand the flag to a successor
-in Supabase).
+**Super-admin / "organiser" (D27, widened by D56).** One out-of-band role exists
+for maintainability + safety: `profiles.is_super_admin`. Its powers are
+**recovery** (reassign a dead group's owner), **moderation** (act on abuse
+reports) and — since the programme shipped — **authoring the administration's
+roadmap** (§4). It is **not** a browse-all-content god view, so the privacy
+promise above holds; every super-admin action is written to an `audit_log`. **The
+first organiser is granted by hand in Supabase**; after that an organiser may
+appoint another **in the app**, and stand them down. There is no self-escalation
+path at any point, and no in-app bootstrap — so a project with no organiser needs
+someone with database access, by design (hand the flag to a successor in
+Supabase).
 
 ---
 
@@ -71,6 +74,7 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 - **Admin-set dhikr list** — admin defines items + daily target counts per group (e.g. _Allahu Akbar ×100_, _Astaghfirullah ×1000_)
 - **Per-member shares** — the circle's goal is **split** between its members, and an admin may ask **more** of one of them than the circle's default, per task (D61). A cetele is a shared goal divided among people and the division is not always equal: somebody who can carry 500 takes 500. Unlike a stretch goal this is an **obligation** — it is what "done" means for that member, what their streak is judged at, and what the circle counts on them for, so the collective goal is the **sum** of each carrier's share rather than target × members. Raise-only, and a past day is always judged by the share in force **that** day, so raising somebody today can never un-keep a day they already kept. Lowering a member below the circle's number is deliberately not offered
 - **Personal stretch goals** — a member may raise their **own** daily bar above **their** share, per task (D51). Raise-only: their share is the floor, so nobody can quietly owe the group less, and an admin raising the target or their share above someone's goal simply wins. It changes only what that member **aims** at — the ring and the celebration. Everything shared or judged (day-completion, streak, consistency, steadfastness, the garden, the circle's collective goal) still counts from their **share**, so aiming higher can only ever add
+- **One act, many circles** — a member in three circles that all ask for salawat does the dhikr **once**; the app lets them say so, and one tap then counts in all of them (D64, refined by D66/D67). A **link** is the member's own claim that circle A's task and circle B's task are the same act — never inferred, never automatic. It **fans out on write**: tapping records the same raw number against each linked task, so each circle goes on judging its own task by its own target and its own share. The **raw count travels, the completion does not** — circle A asking 1 and circle B asking 500 means logging 1 makes the day in A and leaves B at 1-of-500, which is true. Clusters, not pairs (up to 10 tasks), so three circles need no chain of links; two tasks in the **same** circle can never be linked, because that would count one act twice in that circle's own total. The link is **private to the member** — an admin cannot declare it — and offered on each task's row in "My goals", where every cross-circle task is listed and similar names only sort the list. **Leaving a circle makes a link dormant, not deleted**: nothing is counted there while you are out, the member can clear it themselves, and it revives if they rejoin
 - **Tap counter** — tasbih-style: tap to count, haptics + subtle sound, number animation
 - **Progress rings** — Apple-Watch-style ring per item, fills toward target, closes on completion
 - **Live collective counter** — real-time group total ("41,300 / 100,000 today") via Supabase Realtime
@@ -83,6 +87,26 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
   - **Steadfastness recognition** _(admin-only, optional; backend-era; D31)_ — an owner/admin-only view ranking members by **recent consistency** — _average daily completion % over a **sliding** 90-day window_ (a **rate**, never cumulative volume or tenure; partial credit per day; ≥14 logged days to qualify) — so a group can recognise/reward its most steadfast members. Eligibility is a **bar** (e.g. ≥85%), not a single winner; **private to admins** (no member-facing board → no riya'); any reward happens **outside the app**. Deliberately **rejects** XP / levels / cumulative points (rich-get-richer + riya'; D28). Derived from the daily-completion rollup — no stored score.
   - _Distinct from streaks (current momentum) and the leaderboard (this-week ranking): this is the **pattern over time**. Derived from `logs` vs targets — no streak/FOMO pressure, framed by **forgiveness** (a single missed day is a lighter cell, never an alarm)._
 - **Variable-reward milestones** — occasional surprise animation / du'a at random milestones
+
+### ✅ The annual programme — "roadmap" (D55–D59, live)
+
+A halaqah's year does not fit in a daily tally. An **administration** publishes a **programme** — the booklet
+made live — and a circle follows it alongside its daily dhikr. The two never touch: a programme item is ticked
+off, it is not counted, so nothing here reaches `logs`, streaks, rings or the collective goal.
+
+- **A programme is levels × categories × items.** An item is a book to read, a khatm target, a surah range, a
+  tajweed text or a lecture with a minute budget and a link to watch it — each with its own unit, target and
+  cover image, and each either compulsory or chosen. A **level requirement** sets the minimum a member must
+  total in a category to clear that level, so a level is a bar rather than a checklist
+- **A circle opts in from Manage, and may follow several programmes at once** (D58) — a yearly programme and a
+  Ramadan one need not be two circles. Progress is keyed on the **member and the item**, so following a second
+  programme adds work rather than splitting what is already recorded
+- **Rewards are informational and out-of-app** (D31's shape): a threshold and a wording an organiser can
+  correct on a live programme (D60). The app never handles fulfilment
+- **The organiser role authors it in-app** — create a programme, add and edit items, publish, appoint another
+  organiser. The **first** organiser is still set by hand in Supabase; there is deliberately no in-app bootstrap
+- **An organiser reads the cohort, not just their own circle**: a progress report per programme, across every
+  circle following it
 
 ### 🔜 v1.1 (fast-follow)
 
@@ -103,7 +127,11 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 ### 💡 Later / maybe
 
-- Multiple groups per user · weekly group goals · history/stats charts · ramadan mode · audio dhikr · levels/XP · avatar & theme customisation
+- Weekly group goals · history/stats charts · ramadan mode · audio dhikr · levels/XP · avatar & theme customisation
+
+> **Multiple groups per user shipped** and is now load-bearing rather than a maybe: a member switches circles
+> from Today, carries a separate share and stretch goal in each, and links one act across them (§4). A streak
+> still spans **all** of a member's circles.
 
 ---
 
@@ -128,17 +156,25 @@ Open app  →  see group + own progress (rings unfilled, "Day 12 streak")
 
 ## 6. Data model (sketch)
 
-- **users** — id, name, avatar, timezone (each member's day closes at their own midnight — D34) (Supabase Auth). No app-level admin flag; one out-of-band `is_super_admin` (D27, granted only in Supabase — recovery + moderation)
+- **profiles** — id, name, avatar_url, timezone (each member's day closes at their own midnight — D34), mirroring `auth.users` (Supabase Auth). No app-level admin flag; one out-of-band `is_super_admin` (D27/D56 — the first granted only in Supabase, thereafter organiser-to-organiser in-app; recovery + moderation + authoring the programme)
 - **groups** — id, name, `created_by` = **the owner** (authoritative; updated on transfer / succession). No group-level invite code — joining goes through `invites` only (D35)
 - **memberships** — user_id, group_id, role (`owner` | `admin` | `member`); exactly one `owner` row per group
 - **invites** — id, group*id, email (optional — locks the invite to a verified sign-in email, enforced without sending anything), role (`admin` | `member`), code (DB-generated) — **shareable link/code invites** (`/join/<code>`; admin shares the link themselves; accept → a membership). **Open invites (no email) are reusable until revoked** — one link serves a whole halaqah; **email-locked invites are single-use** (deleted on accept) (D35). Email \_delivery* of invites = later nice-to-have (needs Resend + a domain)
-- **tasks** — id, group_id, label, subtitle, target_count, order
+- **tasks** — id, group_id, label, subtitle, target_count, sort_order, `frequency_days` (a cycle: daily, or every N days)
+- **task_assignments** — id, task_id, user_id, `assigned_at`/`unassigned_at` — which members carry a task, as **intervals**. A task with no assignment rows is everyone's; unassigning closes a row rather than deleting it, so a past day still knows who owed it
+- **task_config_versions** — id, task_id, target_count, frequency_days, `effective_from`/`effective_to` — the task's target and cycle **over time**. A past day is judged by the configuration that day had, so an admin raising a target today can never un-keep a day already kept
 - **member_task_shares** — task_id, user_id, target_count, effective_from/to — what the circle asks of **one member** for one task, over time (D61). One row per interval, never deleted: a change closes one and opens the next, so `private.obligations` judges a past day by the share in force that day. Readable by the whole circle (the split is not a secret — the collective goal is its sum), written only through `set_member_task_share` (admin-only). Applied everywhere as `greatest(share, tasks.target_count)`, so a later circle-wide raise still wins
 - **member_task_goals** — user_id, task_id, target_count — a member's optional **raised** bar for one task (D51). Private to its owner (own-row RLS: not peers, not admins), written only through `set_task_goal`, and applied everywhere as `greatest(their share, override)` so it can never lower what the circle asked. Read by the member's own rings; deliberately **not** by day-completion, the rollup, or any collective figure — nor, since D62, by the reminder dispatcher, which no longer knows about tasks at all
+- **member_task_links** — user_id, task_id, cluster_id — the member's claim that tasks in **different** circles are one act (D64). A cluster, not a pair: every task sharing a `cluster_id` is the same act, up to 10. Private to its owner (own-row RLS — an admin cannot link on your behalf), written only through `link_tasks` / `unlink_task`, which refuse two tasks in one circle. Counting **fans out on write** (a second `logs` row per linked task, the same raw delta), so no reader anywhere else changes. The row survives leaving a circle — the fan-out simply skips a circle you are no longer in
 - **logs** — id, user_id, task_id, count, date, `logged_by` (nullable — the admin who logged it on the member's behalf; null = self; D29)
 - **reminders** — user_id, label, time (`HH:MM`), enabled — the member's **own** reminders (D62): a name they wrote and a time they picked, capped at 20 per account. Points at no task and belongs to no circle, so it survives leaving one and needs no membership to exist. Private to its owner (own-row RLS), written only through `set_reminder`; `last_sent_on` is the dispatcher's alone, so no client can re-arm a send
 - **streaks** — user_id, current, longest, freezes_left, last_active
 - **daily_completion** _(rollup)_ — user_id, group_id, date, completion% — **one small row per member per day**, kept **90 days**; powers the 30-day band, the 90-day rollup, and the **steadfastness** metric (D31). Lets raw `logs` be pruned at **14 days** (amends D28)
+- **reactions** — id, from_user_id, to_user_id, group_id, kind, date — one-tap peer encouragement (§4 v2), one per sender/receiver/kind/day
+- **badges** / **badge_awards** — the catalogue (glyph, label, kind, threshold, window) and what each member has **earned** (user_id, group_id, badge_id, earned_on). Append-only and granted to nobody for INSERT: an earned badge is permanent, never re-derived from a live window and never revoked on a dip
+- **roadmaps** / **roadmap_items** / **roadmap_level_requirements** / **roadmap_rewards** — the programme (§4): a named year with a window and a `published` flag; its items (level, category, title, source, url, unit, target, compulsory, cover image); the minimum total a level asks for in a category; and the reward wording at each threshold
+- **group_roadmaps** — group_id, roadmap_id — which circles follow which programmes. A **row**, not a column, so a circle can follow several at once (D58) and next year's enrolment need not destroy this year's
+- **roadmap_progress** — user_id, item_id, done — keyed on the **member and the item**, never on the circle, so following a second programme adds work rather than partitioning what is recorded. Survives leaving a circle, like a link does
 - **push_subscriptions** — user_id, endpoint, keys (for Web Push; see §4 v1.1)
 - **reports** — id, reporter_id, group_id/target, reason, status (D27 moderation queue)
 - **audit_log** — id, actor_id, action, target, at — every super-admin action is recorded (D27)
