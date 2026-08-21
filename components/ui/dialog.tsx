@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { EASE_BRAND, DURATION } from "@/lib/motion";
 import { Button } from "./button";
+import { CloseIcon } from "@/components/app/icons";
 
 export interface DialogProps {
   open: boolean;
@@ -30,9 +31,14 @@ export interface DialogProps {
 }
 
 /**
- * Lightweight accessible modal — backdrop + centred card, ESC and click-outside
- * to dismiss, `role="dialog"` + `aria-modal`. Replaces native `confirm()` so
- * destructive admin actions get a real, on-brand confirmation surface.
+ * Lightweight accessible modal — backdrop + centred card, `role="dialog"` +
+ * `aria-modal`. Replaces native `confirm()` so destructive admin actions get a
+ * real, on-brand confirmation surface.
+ *
+ * THREE ways out, and only one of them works on a phone: ESC (keyboard),
+ * click-outside (a sliver of backdrop once the card is full-height), and the
+ * header's close button — which is why that button is unconditional and is not
+ * the caller's to opt into.
  */
 export function Dialog({
   open,
@@ -127,16 +133,40 @@ export function Dialog({
             exit={{ opacity: 0, scale: 0.96, y: 6 }}
             transition={{ duration: DURATION.base, ease: EASE_BRAND }}
           >
-            {title && (
-              <h2 className="shrink-0 font-display text-lg font-bold text-foreground">
-                {title}
-              </h2>
-            )}
-            {description && (
-              <p className="mt-1 shrink-0 text-sm text-muted-foreground">
-                {description}
-              </p>
-            )}
+            {/* The header ALWAYS carries a close button, whether or not this
+                dialog has a title or a footer. It is the only way out that a
+                phone actually has: ESC needs a hardware keyboard, and the
+                backdrop is not a target — the card is `max-h-calc(100dvh-2rem)`
+                inside a `p-4` container, so on a full-height dialog the whole
+                dismissible backdrop is a ~16px sliver at the top and bottom,
+                under this repo's own 44px floor and easy to mistake for a
+                scroll. The member breakdown (the admin logger) and "Log for the
+                group" pass no footer at all, so before this they had NO exit on
+                a phone once opened. `shrink-0`, and outside the scroll
+                container, so it stays on screen however long the body gets. */}
+            <div className="flex shrink-0 items-start gap-3">
+              <div className="min-w-0 flex-1">
+                {title && (
+                  <h2 className="font-display text-lg font-bold text-foreground">
+                    {title}
+                  </h2>
+                )}
+                {description && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {description}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Close"
+                onClick={onClose}
+                className="-mt-1 -mr-1 text-muted-foreground"
+              >
+                <CloseIcon aria-hidden />
+              </Button>
+            </div>
             {/* `min-h-0` is load-bearing: a flex child's default `min-height:
                 auto` refuses to shrink below its content, so the scroll
                 container would never engage and the cap would do nothing. */}

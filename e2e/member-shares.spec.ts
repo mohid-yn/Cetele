@@ -149,3 +149,27 @@ test("THE SECOND NEGATIVE: the collective bar is the SUM, not the product", asyn
   // nobody in it is being asked for.
   await expect(page.getByText("0 of 60 toward today’s goal")).toBeVisible();
 });
+
+test("THE WAY OUT: the breakdown closes on a phone, with no keyboard and no backdrop", async ({
+  page,
+}) => {
+  // Reported from an iPhone: "cant exit once in the admin logger on phone."
+  // This dialog passes no footer, so its only exits were ESC — a hardware
+  // keyboard — and the backdrop, which a full-height card reduces to a ~16px
+  // sliver at the top and bottom of the screen. A phone viewport is the whole
+  // point of the test: on a desktop the card is short and the backdrop is
+  // enormous, which is why this was invisible for so long.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openBreakdown(page);
+
+  const close = page.getByRole("dialog").getByRole("button", { name: "Close" });
+  await expect(close).toBeVisible();
+
+  // Clicked BELOW the painted 36px button, inside its 44px `tap-area-44-box`
+  // overhang — one click that proves both that the control is there and that
+  // it is a real thumb target, not a 36px square.
+  const box = (await close.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height + 2);
+
+  await expect(page.getByRole("dialog")).toBeHidden();
+});
