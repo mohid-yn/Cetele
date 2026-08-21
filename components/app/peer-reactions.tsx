@@ -3,9 +3,13 @@
 /**
  * One-tap peer reactions (CET-18) — the social spark Cetele had no version of.
  *
- * When a peer closes every ring, anyone in the circle can send a one-tap dua,
- * "mashaAllah", heart or flame — near-zero effort, manufacturing relatedness
- * (the digital nod across the room; Strava's kudos run on exactly this).
+ * When a peer closes every ring, anyone in the circle can send a one-tap 🤲 /
+ * ✨ / ❤️ / 🔥 — near-zero effort, manufacturing relatedness (the digital nod
+ * across the room; Strava's kudos run on exactly this).
+ *
+ * THE GLYPHS ARE REAL EMOJI, and this file is the only place in the app that is
+ * (D68). See the note on `REACTIONS` in `lib/retention.ts` for why the app-wide
+ * "no emoji, ever" rule has this one exception — do not "fix" it back.
  *
  * Optimistic: a tap flips the pill immediately, then reconciles against the
  * RPC's authoritative answer (`toggle_reaction` returns whether MY reaction now
@@ -32,26 +36,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { REACTIONS, type ReactionKind } from "@/lib/retention";
-import {
-  FlameIcon,
-  HandsIcon,
-  HeartIcon,
-  SparkIcon,
-} from "@/components/app/icons";
 import { toggleReaction } from "@/app/(app)/g/[groupId]/today/actions";
-
-/** kind → the drawn mark. Lives here and not beside REACTIONS because that is
- *  a `.ts` module and these are components. Typed by `Record<ReactionKind, …>`,
- *  so adding a kind to the union fails the build here until it has a mark. */
-const REACTION_ICONS: Record<
-  ReactionKind,
-  (p: React.SVGProps<SVGSVGElement>) => React.ReactElement
-> = {
-  dua: HandsIcon,
-  mashaAllah: SparkIcon,
-  heart: HeartIcon,
-  fire: FlameIcon,
-};
 
 /** Reaction tallies for one peer: kind → total sent, and whether I sent one. */
 export type ReactionTally = Record<
@@ -122,7 +107,6 @@ export function PeerReactions({
       {REACTIONS.map((r) => {
         const isMine = mine[r.kind];
         const count = peersOnly(tally, r.kind) + (isMine ? 1 : 0);
-        const Icon = REACTION_ICONS[r.kind];
         return (
           <button
             key={r.kind}
@@ -138,7 +122,13 @@ export function PeerReactions({
                 : "border-border bg-card text-muted-foreground hover:bg-muted",
             )}
           >
-            <Icon aria-hidden className="size-4" />
+            {/* `leading-none` because an emoji's line box is taller than a
+                Latin one and would otherwise push the pill off the count's
+                baseline. Hidden from screen readers — the button's aria-label
+                already names the reaction and its recipient. */}
+            <span aria-hidden className="text-base leading-none">
+              {r.glyph}
+            </span>
             {count > 0 && (
               <span className="text-xs font-semibold tabular-nums">
                 {count}

@@ -173,17 +173,27 @@ export const PAIR_TARGET = 10;
 export type ReactionKind = "dua" | "mashaAllah" | "heart" | "fire";
 
 /**
- * The reaction set, in display order. It carries no glyph: the mark for each
- * kind is a drawn icon, mapped in `peer-reactions.tsx`, because this is a `.ts`
- * module and the icon is a component. The `label` is the accessible name and
- * the only text a screen reader gets, so it has to stand alone.
+ * The reaction set, in display order.
+ *
+ * A REACTION IS THE ONE PLACE IN THIS APP THAT CARRIES A REAL EMOJI (D68) — the
+ * app-wide rule is "no emoji in the UI, ever", and this is its single, named
+ * exception. Everywhere else an emoji is decoration standing in for a mark we
+ * should have drawn, and it cannot honour a token. A reaction is not decoration:
+ * it IS the message, in the vocabulary every messaging app already taught
+ * people. `def9314` swapped these four for `HandsIcon`/`SparkIcon`/`HeartIcon`/
+ * `FlameIcon` as part of a sweep, and the owner's verdict on the result was
+ * "weird icons" — a drawn outline heart reads as a button, not as a heart sent.
+ *
+ * `label` is the accessible name and the only thing a screen reader gets (the
+ * glyph is `aria-hidden`), so it still has to stand alone.
  */
-export const REACTIONS: { kind: ReactionKind; label: string }[] = [
-  { kind: "dua", label: "Dua" },
-  { kind: "mashaAllah", label: "MashaAllah" },
-  { kind: "heart", label: "Heart" },
-  { kind: "fire", label: "On fire" },
-];
+export const REACTIONS: { kind: ReactionKind; glyph: string; label: string }[] =
+  [
+    { kind: "dua", glyph: "🤲", label: "Dua" },
+    { kind: "mashaAllah", glyph: "✨", label: "MashaAllah" },
+    { kind: "heart", glyph: "❤️", label: "Heart" },
+    { kind: "fire", glyph: "🔥", label: "On fire" },
+  ];
 
 // ---------------------------------------------------------------------------
 // CET-19 — fresh-start re-engagement

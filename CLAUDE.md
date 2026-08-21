@@ -49,11 +49,16 @@ colors/spacing or fork primitives.
 - **Components:** `components/ui/` (Button, Card, Badge, Input/Field, Avatar,
   ProgressRing, Stat, Spinner) — import from `@/components/ui`. Pattern: `cva` +
   `cn` (`lib/utils.ts`), always spread `className`/`...props`.
-- **No emoji in the UI — ever.** Every mark is a drawn icon from
+- **No emoji in the UI, with ONE named exception.** Every mark is a drawn icon from
   `components/app/icons.tsx` (24×24, 2px round caps, `currentColor`). An emoji is rendered by
   the OS in its own font and colours, so it cannot honour a token, and it is the owner's
   standing objection ("emojis look tacky"). Missing a mark? Draw it there. The gallery on
   `/designsystem` is derived from that module's exports, so a new icon appears automatically.
+  **The exception is PEER REACTIONS** (🤲 ✨ ❤️ 🔥 — `REACTIONS` in `lib/retention.ts`, rendered
+  in `components/app/peer-reactions.tsx`), where the emoji **is** the message rather than
+  decoration standing in for a mark (D68). It is the only one; don't grow it, and **don't
+  sweep it back into icons** — that already happened once (`def9314`) and the owner's verdict
+  on the result was "weird icons".
 - **Living reference:** route `/designsystem`. **Guidelines:** `docs/DESIGN_SYSTEM.md`.
 - Accent (rose) = one primary action per view. PWA icons: `node scripts/gen-icons.mjs`;
   iOS launch/splash images: `node scripts/gen-splash.mjs` (regenerate after editing

@@ -86,6 +86,12 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   await expect(bRow).toBeVisible();
 
   const dua = bRow.getByRole("button", { name: /^Dua for / });
+  // The glyph is a REAL EMOJI and this is the only place in the app that is
+  // (D68). Asserted here because the rule that protects it is prose in
+  // CLAUDE.md, and prose did not stop `def9314` sweeping these four into
+  // outline icons — the owner's verdict on that was "weird icons". A future
+  // sweep now breaks a test instead of shipping.
+  await expect(dua).toContainText("🤲");
   await expect(dua).toHaveAttribute("aria-pressed", "false");
   await dua.click();
   await expect(dua).toHaveAttribute("aria-pressed", "true");
