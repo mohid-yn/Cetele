@@ -183,6 +183,9 @@ type NewTask = {
   target_count: number;
   frequency_days: number;
   sort_order: number;
+  /** Always null from here (0036, D70): a task added on THIS screen is one the
+   *  circle asks of people. A member's own comes from `add_personal_task`. */
+  personal_for: string | null;
 };
 
 export async function addTask(
@@ -220,7 +223,7 @@ export async function addTask(
       sort_order: (last?.sort_order ?? -1) + 1,
     })
     .select(
-      "id, label, subtitle, target_count, frequency_days, created_at, sort_order",
+      "id, label, subtitle, target_count, frequency_days, created_at, sort_order, personal_for",
     )
     .single();
   if (error) return fail(error.message);

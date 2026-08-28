@@ -55,6 +55,14 @@ export type ManageTask = {
   subtitle: string | null;
   target_count: number;
   sort_order: number;
+  /**
+   * The member who added this one for themselves (0036, D70), or null for one
+   * the circle asks of people. An admin keeps full reach over it — this is
+   * their circle's task list — with one exception: it cannot be reassigned,
+   * because `personal_for` names its one carrier by construction and
+   * `set_task_assignees` refuses.
+   */
+  personal_for: string | null;
 };
 /**
  * A ONE-OFF invite, locked to an email and consumed on accept. The circle's
@@ -216,6 +224,13 @@ function TaskRow({
     (id) => members.find((m) => m.userId === id)?.name,
   );
 
+  // A member's own task (D70). Named rather than left to read as an ordinary
+  // one-person assignment, because the two look identical on this row and only
+  // one of them can be handed to somebody else.
+  const ownerName = task.personal_for
+    ? (members.find((m) => m.userId === task.personal_for)?.name ?? "a member")
+    : null;
+
   return (
     <li className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm">
       <div className="min-w-0 flex-1">
@@ -242,16 +257,29 @@ function TaskRow({
             carries a SETTING rather than an action, and it has to read as
             something you can open. The accessible name names the task, because
             "Everyone" repeated down a list says nothing about which row it
-            belongs to. */}
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-2"
-          aria-label={`Who is ${task.label} for? Currently ${whoFor}`}
-          onClick={() => setPickingWho(true)}
-        >
-          {whoFor}
-        </Button>
+            belongs to.
+
+            A PERSONAL task gets a statement instead of a control (D70). Its
+            carrier is not a setting: `set_task_assignees` refuses it outright,
+            so offering the dialog would be a button whose only outcome is an
+            error. It still says whose it is, which is the thing an admin
+            scanning this list needs to know. */}
+        {ownerName ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {ownerName}&rsquo;s own task &middot; not part of the circle&rsquo;s
+            total
+          </p>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-2"
+            aria-label={`Who is ${task.label} for? Currently ${whoFor}`}
+            onClick={() => setPickingWho(true)}
+          >
+            {whoFor}
+          </Button>
+        )}
       </div>
       <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
         Edit

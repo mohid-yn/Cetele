@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Dialog, Input } from "@/components/ui";
-import { goalCap, frequencyLabel } from "@/lib/goals";
+import { Badge, Button, Dialog, Field, Input } from "@/components/ui";
+import { goalCap, frequencyLabel, MAX_FREQUENCY_DAYS } from "@/lib/goals";
 import { FrequencyPicker } from "@/components/app/frequency-picker";
 import {
   ArrowLeftIcon,
   ChevronRightIcon,
   LinkIcon,
+  PlusIcon,
 } from "@/components/app/icons";
 import { cn } from "@/lib/utils";
 import { langOf } from "@/lib/text-direction";
@@ -25,6 +26,9 @@ import {
   setTaskFrequency,
   linkTasks,
   unlinkTask,
+  addPersonalTask,
+  updatePersonalTask,
+  deletePersonalTask,
 } from "./actions";
 
 /**
@@ -58,6 +62,12 @@ export type GoalRow = {
   links: LinkedSibling[];
   /** The one cross-circle task worth offering to link this to, or null. */
   linkSuggestion: LinkableTask | null;
+  /** I added this one for myself (D70) — mine to change and mine to remove,
+   *  and the circle's collective bar does not count it. */
+  personal: boolean;
+  /** The task's own note. Only ever edited on a personal task, where the
+   *  member wrote it; on a circle task it is the admin's and read-only here. */
+  subtitle: string | null;
 };
 
 export function GoalsDialog({
@@ -95,6 +105,27 @@ export function GoalsDialog({
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [linkFor, setLinkFor] = React.useState<string | null>(null);
+  const router = useRouter();
+
+  /**
+   * THE THIRD PANE (D70) — a task of the member's own, being added or changed.
+   *
+   * `null` = not in it. `{ taskId: null }` = adding. `{ taskId }` = changing
+   * that one. A pane rather than another dialog, for D67's reason exactly:
+   * nested modals on a phone are two backdrops, two dismiss gestures and no way
+   * back to the first except through the second.
+   *
+   * It is a form and not a row of inline inputs because adding a task is a set
+   * of four decisions committed together, and half of one sitting in the goals
+   * list would be indistinguishable from a goal being edited.
+   */
+  const [own, setOwn] = React.useState<{ taskId: string | null } | null>(null);
+  const [ownDraft, setOwnDraft] = React.useState<OwnDraft>(EMPTY_OWN);
+  const [ownError, setOwnError] = React.useState<string | null>(null);
+  const [ownSaving, setOwnSaving] = React.useState(false);
+  /** Two-tap remove. A confirm DIALOG inside a dialog is the nesting this pane
+   *  exists to avoid, so the button asks for itself twice instead. */
+  const [confirmRemove, setConfirmRemove] = React.useState(false);
 
   // Re-seed each time the dialog OPENS, so an abandoned edit is genuinely
   // abandoned rather than waiting behind the next open.
@@ -121,6 +152,9 @@ export function GoalsDialog({
     // animates OUT over `DURATION.base`, so clearing it on close would flip the
     // pane back under the member while they watch it go.
     setLinkFor(null);
+    setOwn(null);
+    setOwnError(null);
+    setConfirmRemove(false);
   } else if (!open && seeded) {
     setSeeded(false);
   }
@@ -138,6 +172,120 @@ export function GoalsDialog({
   const linkTask = linkFor
     ? (tasks.find((t) => t.id === linkFor) ?? null)
     : null;
+
+  /** The task being CHANGED, if the own-pane is open on one. Resolved from
+   *  `tasks` every render, like `linkTask`, so it picks up a refreshed row. */
+  const ownTask = own?.taskId
+    ? (tasks.find((t) => t.id === own.taskId) ?? null)
+    : null;
+
+  /** Open the own-pane — on an existing task of mine, or empty to add one. */
+  const openOwn = (task: GoalRow | null) => {
+    setOwn({ taskId: task?.id ?? null });
+    setOwnDraft(
+      task
+        ? {
+            label: task.label,
+            subtitle: task.subtitle ?? "",
+            // A personal task has no circle share to sit above, so this IS the
+            // task's own target — the number being edited, not a goal over it.
+            target: String(task.target),
+            frequency: String(task.frequencyDays),
+          }
+        : EMPTY_OWN,
+    );
+    setOwnError(null);
+    setConfirmRemove(false);
+  };
+
+  /**
+   * Add or change it. Writes IMMEDIATELY and on its own, unlike the goals
+   * behind it: those are a set of numbers committed together on Save, and this
+   * is one whole task — batching it would make "Cancel" ambiguous about whether
+   * a task now exists.
+   *
+   * The bounds mirror `add_personal_task`'s so the member reads a sentence
+   * rather than a constraint violation; the RPC refuses regardless, which is
+   * what actually holds.
+   */
+  async function saveOwn() {
+    const label = ownDraft.label.trim();
+    if (!label) {
+      setOwnError("Give it a name.");
+      return;
+    }
+    const target = Math.round(Number(ownDraft.target));
+    if (!Number.isFinite(target) || target < 1) {
+      setOwnError("How many? At least 1.");
+      return;
+    }
+    const frequency = Number(ownDraft.frequency);
+    if (
+      !Number.isFinite(frequency) ||
+      frequency < 1 ||
+      frequency > MAX_FREQUENCY_DAYS
+    ) {
+      setOwnError(
+        `How often must be between 1 and ${MAX_FREQUENCY_DAYS} days.`,
+      );
+      return;
+    }
+
+    setOwnError(null);
+    setOwnSaving(true);
+    try {
+      const input = {
+        label,
+        subtitle: ownDraft.subtitle,
+        target,
+        frequency,
+      };
+      const res = own?.taskId
+        ? await updatePersonalTask(groupId, own.taskId, input)
+        : await addPersonalTask(groupId, input);
+      // `res` is typed non-null but the action redirects on a stale session,
+      // which resolves the call to nothing — this dialog's standing guard.
+      if (!res || res.error) {
+        setOwnError(
+          res?.error ?? "Couldn't save that — try again in a moment.",
+        );
+        return;
+      }
+      // `revalidatePath` alone does not reach a client that stays mounted
+      // (`lib/use-action.ts`, and the LinkPane below records the measurement).
+      // This dialog does not unmount, so without it the new task would not
+      // appear in the list it just returned to.
+      router.refresh();
+      setOwn(null);
+    } catch {
+      setOwnError("Couldn't save that — try again in a moment.");
+    } finally {
+      setOwnSaving(false);
+    }
+  }
+
+  /** Remove it. Second tap only — the first arms the button. */
+  async function removeOwn() {
+    if (!own?.taskId) return;
+    setOwnError(null);
+    setOwnSaving(true);
+    try {
+      const res = await deletePersonalTask(groupId, own.taskId);
+      if (!res || res.error) {
+        setOwnError(
+          res?.error ?? "Couldn't remove that — try again in a moment.",
+        );
+        return;
+      }
+      router.refresh();
+      setOwn(null);
+    } catch {
+      setOwnError("Couldn't remove that — try again in a moment.");
+    } finally {
+      setOwnSaving(false);
+      setConfirmRemove(false);
+    }
+  }
 
   const setRow = (id: string, value: string) => {
     setDraft((d) => ({ ...d, [id]: value }));
@@ -295,16 +443,43 @@ export function GoalsDialog({
       // so there is nothing to protect by trapping the member behind a slow
       // network.
       onClose={onClose}
-      title={linkTask ? "One act, many circles" : "My goals"}
+      title={
+        linkTask
+          ? "One act, many circles"
+          : own
+            ? ownTask
+              ? "Your own task"
+              : "Add a task for yourself"
+            : "My goals"
+      }
       description={
         linkTask
           ? `${linkTask.label} · only you can see this`
-          : `${groupName} · only you can see these`
+          : own
+            ? // Said plainly, and it is the whole rule (D70): the circle can
+              // SEE it, so this is not a private tracker — but nothing about it
+              // touches what the circle is measured on.
+              `${groupName} · yours to do, and it won't change the circle's total`
+            : `${groupName} · only you can see these`
       }
       // A pane swap is a new view, so it starts at its own top.
-      scrollKey={linkFor ?? "goals"}
+      scrollKey={linkFor ?? (own ? `own:${own.taskId ?? "new"}` : "goals")}
       footer={
-        linkTask ? (
+        own ? (
+          <>
+            <Button
+              variant="ghost"
+              leadingIcon={<ArrowLeftIcon />}
+              disabled={ownSaving}
+              onClick={() => setOwn(null)}
+            >
+              My goals
+            </Button>
+            <Button disabled={ownSaving} onClick={() => void saveOwn()}>
+              {ownSaving ? "Saving…" : ownTask ? "Save" : "Add it"}
+            </Button>
+          </>
+        ) : linkTask ? (
           // Nothing to commit here — a link writes immediately — so the pair is
           // "go back" and "leave", not "cancel" and "save".
           <>
@@ -332,7 +507,21 @@ export function GoalsDialog({
         )
       }
     >
-      {linkTask ? (
+      {own ? (
+        <OwnTaskPane
+          draft={ownDraft}
+          onChange={(patch) => {
+            setOwnDraft((d) => ({ ...d, ...patch }));
+            setOwnError(null);
+          }}
+          disabled={ownSaving}
+          error={ownError}
+          existing={ownTask}
+          confirmRemove={confirmRemove}
+          onArmRemove={() => setConfirmRemove(true)}
+          onRemove={() => void removeOwn()}
+        />
+      ) : linkTask ? (
         <LinkPane
           task={linkTask}
           groupId={groupId}
@@ -340,10 +529,14 @@ export function GoalsDialog({
           candidates={linkCandidates}
         />
       ) : tasks.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          This circle has no tasks yet. Once an admin adds one, you can aim
-          higher than the share it sets.
-        </p>
+        <>
+          <p className="text-sm text-muted-foreground">
+            This circle has no tasks yet. Once an admin adds one, you can aim
+            higher than the share it sets — and you can already add one of your
+            own.
+          </p>
+          <AddOwnButton disabled={saving} onClick={() => openOwn(null)} />
+        </>
       ) : (
         <>
           {/* The rule first, then what it costs you. Stated here as well as in
@@ -373,6 +566,23 @@ export function GoalsDialog({
                     >
                       {t.label}
                     </label>
+                    {/* MINE, not the circle's (D70). Said in a word rather than
+                        by colour alone (§5), and it is also the door: a task I
+                        added is the only one in this list whose name, target
+                        and cycle are mine to change, so the badge that marks it
+                        is the control that opens it. */}
+                    {t.personal && (
+                      <Button
+                        variant="link"
+                        size="inline"
+                        disabled={saving}
+                        onClick={() => openOwn(t)}
+                        aria-label={`${t.label} — your own task, edit it`}
+                        className="tap-area-44 shrink-0 text-xs font-medium underline"
+                      >
+                        Yours &middot; edit
+                      </Button>
+                    )}
                     {stretched && (
                       <Button
                         variant="link"
@@ -471,6 +681,13 @@ export function GoalsDialog({
             })}
           </ul>
 
+          {/* THE MEMBER'S OWN AXIS, third entry (D70). Beside "aim higher" and
+              "come round more often" rather than under them: those two change
+              how you meet what the circle asked, and this adds something it
+              never asked for. It sits AFTER the list because the circle's work
+              is what the member came here for. */}
+          <AddOwnButton disabled={saving} onClick={() => openOwn(null)} />
+
           {formError && (
             <p className="mt-3 text-sm text-danger" role="alert">
               {formError}
@@ -479,6 +696,194 @@ export function GoalsDialog({
         </>
       )}
     </Dialog>
+  );
+}
+
+/** The draft the own-pane edits. Strings throughout — these are inputs. */
+type OwnDraft = {
+  label: string;
+  subtitle: string;
+  target: string;
+  frequency: string;
+};
+
+/** A new one starts at "once a day, once through" — the commonest shape a
+ *  member tracks for themselves, and the least presumptuous default. */
+const EMPTY_OWN: OwnDraft = {
+  label: "",
+  subtitle: "",
+  target: "1",
+  frequency: "1",
+};
+
+/** The door into the own-pane, from the goals list and from its empty state. */
+function AddOwnButton({
+  disabled,
+  onClick,
+}: {
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      // `min-h-11` and real padding rather than a `tap-area-44` overlay: this
+      // is a box in its own right, so the 44px IS the control (TaskLinkSummary's
+      // rule, one component along).
+      className={cn(
+        "mt-4 flex min-h-11 w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-left",
+        "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-brand)]",
+        "hover:bg-surface-hover",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "disabled:pointer-events-none disabled:text-disabled-foreground",
+      )}
+    >
+      <PlusIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      <span className="text-sm font-medium text-foreground">
+        Add a task for myself
+      </span>
+    </button>
+  );
+}
+
+/**
+ * A task of the member's own — the form, and the one place it can be removed.
+ *
+ * WHY THE MEMBER GETS THIS AT ALL. 0023 decided the opposite ("members do not
+ * assign themselves") and it was right about the thing it was deciding: what
+ * the circle asks of whom is the admin's, and nothing here touches that. This
+ * is a third thing beside "what the circle asks" and "what I privately aim at"
+ * (D51) — work the circle never asked for, carried by nobody but me.
+ *
+ * WHAT IT COSTS AND WHAT IT DOES NOT. It closes my rings, completes my day,
+ * feeds my streak and my garden — everything that judges me alone, because
+ * `private.obligations` reads the assignment interval and this task has one.
+ * It is kept OUT of the circle's collective bar and out of the weekly standings
+ * (0036), because a shared goal one member can inflate is not a shared goal and
+ * a ranking you can climb by inventing work for yourself is not a ranking.
+ *
+ * The circle can SEE it, listed with my name against it exactly as any
+ * single-assignee task has been since 0023 — so the description above says so
+ * rather than letting the member assume otherwise.
+ */
+function OwnTaskPane({
+  draft,
+  onChange,
+  disabled,
+  error,
+  existing,
+  confirmRemove,
+  onArmRemove,
+  onRemove,
+}: {
+  draft: OwnDraft;
+  onChange: (patch: Partial<OwnDraft>) => void;
+  disabled: boolean;
+  error: string | null;
+  /** The task being changed, or null when one is being added. */
+  existing: GoalRow | null;
+  confirmRemove: boolean;
+  onArmRemove: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-muted-foreground">
+        Something you want to keep up that your circle hasn&rsquo;t asked for.
+        It fills a ring like anything else and counts towards your day and your
+        streak. Your circle can see it, but it won&rsquo;t move the
+        circle&rsquo;s total or the weekly standings.
+      </p>
+
+      <div className="flex flex-col gap-4">
+        <Field label="Name" htmlFor="own-label" required>
+          <Input
+            id="own-label"
+            disabled={disabled}
+            maxLength={80}
+            placeholder="Qur'an"
+            value={draft.label}
+            onChange={(e) => onChange({ label: e.target.value })}
+          />
+        </Field>
+        <Field
+          label="Note"
+          htmlFor="own-subtitle"
+          hint="Optional — a word about what it is."
+        >
+          <Input
+            id="own-subtitle"
+            disabled={disabled}
+            maxLength={120}
+            placeholder="A page after Fajr"
+            value={draft.subtitle}
+            onChange={(e) => onChange({ subtitle: e.target.value })}
+          />
+        </Field>
+        <Field
+          label="How many"
+          htmlFor="own-target"
+          hint="What one full go looks like — the number that closes the ring."
+        >
+          <Input
+            id="own-target"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            disabled={disabled}
+            className="w-28 tabular-nums"
+            value={draft.target}
+            onChange={(e) => onChange({ target: e.target.value })}
+          />
+        </Field>
+        {/* No `max` here, unlike the per-task picker in the goals list. That
+            one is capped at the circle's own cycle because a member may only
+            come round MORE often than they were asked; nobody asked for this
+            one, so the whole 1–14 range is theirs. */}
+        <FrequencyPicker
+          id="own-frequency"
+          label="How often"
+          disabled={disabled}
+          value={Number(draft.frequency) || 1}
+          onChange={(d) => onChange({ frequency: String(d) })}
+        />
+      </div>
+
+      {error && (
+        <p className="text-sm text-danger" role="alert">
+          {error}
+        </p>
+      )}
+
+      {/* REMOVE lives here and nowhere else. It is the only destructive control
+          in this dialog, so it is one pane deep, at the bottom, and asks twice —
+          the first tap arms it and the second does it. Nothing is soft-deleted:
+          the logs go with the task, which is honest for work nobody but this
+          member ever carried. */}
+      {existing && (
+        <div className="border-t border-border pt-4">
+          {/* `destructive-outline` at rest, `destructive` once armed — the
+              primitive's own rule: the filled red is for confirmed, final
+              destruction, and shouting before the member has decided reads as
+              a warning about something they have not done. */}
+          <Button
+            variant={confirmRemove ? "destructive" : "destructive-outline"}
+            size="sm"
+            disabled={disabled}
+            onClick={confirmRemove ? onRemove : onArmRemove}
+          >
+            {confirmRemove ? "Yes, remove it" : "Remove this task"}
+          </Button>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {confirmRemove
+              ? "This also removes what you've counted on it. It can't be undone."
+              : "It stops appearing on your Today, for good."}
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 

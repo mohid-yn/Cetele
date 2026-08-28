@@ -76,7 +76,14 @@ export default async function GroupPage({
         .from("tasks")
         // frequency + anchor: the breakdown's `daysFull` is a score and has to
         // mirror is_day_complete, which skips a task that had not come round.
-        .select("id, label, target_count, frequency_days, created_at")
+        // `personal_for` (0036, D70): whose own task this is, or NULL for one
+        // the circle asks of people. It changes NO obligation — the assignment
+        // intervals still decide that, so the rings, the grids and `daysFull`
+        // all read it exactly as they read any other task — but the two figures
+        // that compare members to each other must skip it.
+        .select(
+          "id, label, target_count, frequency_days, created_at, personal_for",
+        )
         .eq("group_id", groupId)
         .order("sort_order"),
       supabase
@@ -90,6 +97,20 @@ export default async function GroupPage({
   const todayISO = localDateISO(tz);
   const taskList = tasks ?? [];
   const taskIds = taskList.map((t) => t.id);
+  /**
+   * What the CIRCLE asked for — `taskList` minus anything a member added for
+   * themselves (D70).
+   *
+   * Used by exactly two figures, and both are comparisons BETWEEN members: the
+   * collective bar and the weekly standings. A shared goal a member can move by
+   * adding their own work is not shared, and a ranking they can climb by
+   * inventing work for themselves is not a ranking.
+   *
+   * Everything that judges a member ALONE goes on reading `taskList`: their
+   * rings today, the fortnight grid, `daysFull`, and the streak behind all
+   * three. That is the whole trade — it counts for you, not against anyone.
+   */
+  const circleTasks = taskList.filter((t) => t.personal_for === null);
   const memberList = members ?? [];
   const memberIds = memberList.map((m) => m.user_id);
 
@@ -265,6 +286,9 @@ export default async function GroupPage({
       taskId: t.id,
       label: t.label,
       assignees: who,
+      // The row stays in the list — the circle sees a member's own work, with
+      // their name on it (D70) — and the client leaves it out of the headline.
+      personalFor: t.personal_for,
       total: carriers.reduce((s, u) => s + countOf(u, t.id, todayOf(u)), 0),
       // The SUM of what each carrier is actually asked for (0032), not
       // `target × carriers`. Once a circle splits a task unequally the product
@@ -326,7 +350,13 @@ export default async function GroupPage({
       let total = 0;
       const activeDates = new Set<string>();
       const mLast7 = memberLast7.get(m.user_id) ?? new Set<string>();
-      for (const t of taskList) {
+      // `circleTasks`, not `taskList`: standings rank the members of this
+      // circle against one another, so what is counted has to be work the
+      // circle actually asked for. A member's own task raises their total and
+      // nobody else's, which would be a ranking they could climb by adding
+      // rows (D70). Their rings and their streak still count it — see
+      // `circleTasks`' note.
+      for (const t of circleTasks) {
         for (const d of mLast7) {
           const c = countOf(m.user_id, t.id, d);
           if (c > 0) {
@@ -344,8 +374,13 @@ export default async function GroupPage({
       const mTz = tzOf(m.user_id);
       let expected = 0;
       for (const d of mLast7)
-        for (const t of owedOn(m.user_id, d, mTz))
+        for (const t of owedOn(m.user_id, d, mTz)) {
+          // The denominator drops it too. Excluding it from `total` alone would
+          // measure a member against a bar that includes work this screen
+          // refused to count — the one-sided version of the same mistake.
+          if (t.personal_for !== null) continue;
           expected += targetFor(m.user_id, t, d, mTz);
+        }
       return {
         userId: m.user_id,
         name: names[m.user_id],

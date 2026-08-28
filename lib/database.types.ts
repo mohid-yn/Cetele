@@ -1055,6 +1055,7 @@ export type Database = {
           group_id: string;
           id: string;
           label: string;
+          personal_for: string | null;
           sort_order: number;
           subtitle: string | null;
           target_count: number;
@@ -1065,6 +1066,7 @@ export type Database = {
           group_id: string;
           id?: string;
           label: string;
+          personal_for?: string | null;
           sort_order?: number;
           subtitle?: string | null;
           target_count: number;
@@ -1075,6 +1077,7 @@ export type Database = {
           group_id?: string;
           id?: string;
           label?: string;
+          personal_for?: string | null;
           sort_order?: number;
           subtitle?: string | null;
           target_count?: number;
@@ -1085,6 +1088,13 @@ export type Database = {
             columns: ["group_id"];
             isOneToOne: false;
             referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tasks_personal_for_fkey";
+            columns: ["personal_for"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -1109,7 +1119,37 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      add_personal_task: {
+        Args: {
+          p_frequency: number;
+          p_group: string;
+          p_label: string;
+          p_subtitle: string;
+          p_target: number;
+        };
+        Returns: {
+          created_at: string;
+          frequency_days: number;
+          group_id: string;
+          id: string;
+          label: string;
+          personal_for: string | null;
+          sort_order: number;
+          subtitle: string | null;
+          target_count: number;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "tasks";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       can_claim_ownership: { Args: { p_group: string }; Returns: boolean };
+      can_read_roadmap_cohort: {
+        Args: { p_roadmap: string };
+        Returns: boolean;
+      };
       claim_due_reminders: {
         Args: never;
         Returns: {

@@ -73,6 +73,14 @@ export type TaskTotal = {
    * its count; only the member's own Today is narrowed to what they carry.
    */
   assignees: string[] | null;
+  /**
+   * The member whose OWN task this is (0036, D70), or null for one the circle
+   * asks of people. The circle still sees it — it is listed here with its
+   * count, exactly as any single-assignee task is — but it is out of the
+   * headline collective below, because a shared bar one member can inflate by
+   * adding work for themselves is not a shared bar.
+   */
+  personalFor: string | null;
 };
 export type { RingRow };
 export type Contribution = {
@@ -171,9 +179,12 @@ export function GroupClient({
   // delete first), so the Members tab shows them that instead of a Leave button.
   const myRole = contributions.find((c) => c.isMe)?.role;
 
-  // Overall collective progress today (the live headline).
-  const collectiveTotal = taskTotals.reduce((s, t) => s + t.total, 0);
-  const collectiveGoal = taskTotals.reduce((s, t) => s + t.goal, 0);
+  // Overall collective progress today (the live headline) — over what the
+  // CIRCLE asked for, never a member's own additions (D70). Both sides of the
+  // fraction, or the bar would sit permanently over 100%.
+  const circleTotals = taskTotals.filter((t) => t.personalFor === null);
+  const collectiveTotal = circleTotals.reduce((s, t) => s + t.total, 0);
+  const collectiveGoal = circleTotals.reduce((s, t) => s + t.goal, 0);
   const collectivePct = collectiveGoal
     ? Math.min(100, Math.round((collectiveTotal / collectiveGoal) * 100))
     : 0;
@@ -316,7 +327,14 @@ export function GroupClient({
                   ) : (
                     <ul className="mt-5 flex flex-col gap-3 border-t border-border pt-5">
                       {taskTotals.map(
-                        ({ taskId, label, total, goal, assignees }) => {
+                        ({
+                          taskId,
+                          label,
+                          total,
+                          goal,
+                          assignees,
+                          personalFor,
+                        }) => {
                           const pct =
                             goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
                           const met = goal > 0 && total >= goal;
@@ -335,6 +353,15 @@ export function GroupClient({
                                         assignees,
                                         (id) => names[id],
                                       )}
+                                    </span>
+                                  )}
+                                  {/* Says WHY this row is not in the total
+                                      above. Without it the arithmetic on this
+                                      card does not add up on screen, which
+                                      reads as a bug rather than as a rule. */}
+                                  {personalFor !== null && (
+                                    <span className="text-xs font-normal text-muted-foreground">
+                                      &middot; their own
                                     </span>
                                   )}
                                   {met && (

@@ -76,6 +76,10 @@ export type TodayTask = {
   links: LinkedSibling[];
   /** The one cross-circle task worth offering to link this to, or null. */
   linkSuggestion: LinkableTask | null;
+  /** I added this one for myself (0036, D70) — so I may remove it, and the
+   *  circle's collective bar does not count it. False for everything the
+   *  circle asks of me, which is the ordinary case. */
+  personal: boolean;
 };
 
 export type CircleMember = {
@@ -748,6 +752,8 @@ export function TodayClient({
           myFrequencyDays: freqById[t.id] ?? t.myFrequencyDays,
           links: t.links,
           linkSuggestion: t.linkSuggestion,
+          personal: t.personal,
+          subtitle: t.subtitle,
         }))}
         onSaved={(saved) => setGoalById((g) => ({ ...g, ...saved }))}
         onFrequencySaved={(saved) => setFreqById((f) => ({ ...f, ...saved }))}

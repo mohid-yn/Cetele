@@ -67,7 +67,12 @@ export default async function ManageGroupPage({
       .eq("group_id", active.groupId),
     supabase
       .from("tasks")
-      .select("id, label, subtitle, target_count, frequency_days, sort_order")
+      // `personal_for` (0036, D70): a task a member added for themselves. An
+      // admin may still edit and remove it — it is in their circle's list —
+      // but it cannot be REASSIGNED, so the row has to know which kind it is.
+      .select(
+        "id, label, subtitle, target_count, frequency_days, sort_order, personal_for",
+      )
       .eq("group_id", active.groupId)
       .order("sort_order"),
     supabase

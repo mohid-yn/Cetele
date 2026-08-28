@@ -79,7 +79,13 @@ export default async function TodayPage({
         .maybeSingle(),
       supabase
         .from("tasks")
-        .select("id, label, subtitle, target_count, frequency_days, created_at")
+        // `personal_for` (0036, D70): whose own task this is, or NULL for one
+        // the circle asks of people. It decides nothing about obligation — the
+        // assignment intervals still do that — but the collective figures below
+        // must skip it, and the row has to say whose it is.
+        .select(
+          "id, label, subtitle, target_count, frequency_days, created_at, personal_for",
+        )
         .eq("group_id", active.groupId)
         .order("sort_order"),
       // last_active drives the CET-19 comeback landmark.
@@ -445,10 +451,24 @@ export default async function TodayPage({
       return [t.id, who === null ? memberIds : new Set(who)];
     }),
   );
+  // WHAT THE CIRCLE ITSELF ASKED FOR — a task somebody added for themselves
+  // (0036, D70) is not part of the shared bar, on either side of the fraction.
+  // The collective is the cetele: work the circle agreed to split, and a member
+  // who adds three tasks of their own must not be able to move the number
+  // everyone else is measured against. It stays in every figure that judges
+  // that member alone — their rings above, their day, their streak, the garden
+  // — which is the entire point of letting them add it.
+  //
+  // A SET of ids rather than a filtered task list, because the numerator is
+  // built from `logs` and has to reject a personal task's rows by task id.
+  const circleTaskIds = new Set(
+    (tasks ?? []).filter((t) => t.personal_for === null).map((t) => t.id),
+  );
   const total = (todayLogs ?? [])
     .filter(
       (l) =>
         memberIds.has(l.user_id) &&
+        circleTaskIds.has(l.task_id) &&
         l.date === todayOf(l.user_id) &&
         (carriersOf.get(l.task_id)?.has(l.user_id) ?? false),
     )
@@ -460,13 +480,19 @@ export default async function TodayPage({
   // D8 forbids.
   const goal = (tasks ?? []).reduce(
     (s, t) =>
-      s +
-      // The SUM of each carrier's own share (0032), not `target × carriers`:
-      // once a circle splits a task unequally the product is simply the wrong
-      // number, and the bar would either overfill or never close.
-      collectiveGoal(currentAssignees(assignments, t.id), [...memberIds], (u) =>
-        targetFor(u, t, todayOf(u), tzOf(u)),
-      ),
+      // Personal tasks are out of the denominator too — a one-sided exclusion
+      // would draw a circle that is permanently over 100%.
+      t.personal_for !== null
+        ? s
+        : s +
+          // The SUM of each carrier's own share (0032), not `target × carriers`:
+          // once a circle splits a task unequally the product is simply the wrong
+          // number, and the bar would either overfill or never close.
+          collectiveGoal(
+            currentAssignees(assignments, t.id),
+            [...memberIds],
+            (u) => targetFor(u, t, todayOf(u), tzOf(u)),
+          ),
     0,
   );
   const collectivePct = goal ? Math.round((total / goal) * 100) : 0;
@@ -550,6 +576,11 @@ export default async function TodayPage({
           // slicing the string takes the date in whatever offset PostgREST
           // happened to render, which is the UTC reduction this replaced.
           createdOn: timestampDateISO(tz, t.created_at),
+          // Mine alone, added by me (0036, D70) — the dialog offers a Remove on
+          // these and on nothing else. Compared against `me` rather than passed
+          // through raw: another member's personal task is listed on the group
+          // screen, but on THIS screen it is simply not one of my rows.
+          personal: t.personal_for === me,
           // Linked tasks (D64), as the goals dialog draws them (D66): what this
           // act already covers, and the one circle worth offering next.
           links: siblingsOf(t.id),

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
 import { signOutIfStaleSession } from "@/lib/stale-session";
 import { groupHref, GROUP_WRITE_PATHS } from "@/lib/group-href";
+import { MAX_FREQUENCY_DAYS } from "@/lib/goals";
 import type { ReactionKind } from "@/lib/retention";
 
 /**
@@ -152,6 +153,135 @@ export async function setTaskGoal(
 
   for (const sub of GROUP_WRITE_PATHS) revalidatePath(groupHref(groupId, sub));
   return { goal: data, error: null };
+}
+
+/**
+ * Add a task I carry alone, in a circle I belong to (D70, 0036).
+ *
+ * Every rule lives in `add_personal_task`: membership, the non-empty name, the
+ * bounds the table already keeps, and — the one that matters — that
+ * `personal_for` is set to the CALLER and to nobody else. `authenticated` holds
+ * no write grant on that column, so this action could not lie about whose task
+ * it is even if it tried to.
+ *
+ * Returns the inserted row so the dialog can append it without a refetch
+ * (`addTask`'s contract, CET-30 / D45) — the member has just typed it and must
+ * see it land.
+ *
+ * `GROUP_WRITE_PATHS` rather than `/today` alone: a new task changes what the
+ * member owes today, so their rings, the group screen's task list and the
+ * progress grids are all now stale.
+ */
+export async function addPersonalTask(
+  groupId: string,
+  input: { label: string; subtitle: string; target: number; frequency: number },
+): Promise<{ task: PersonalTaskRow | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data, error } = await q(
+    "rpc.add_personal_task",
+    supabase.rpc("add_personal_task", {
+      p_group: groupId,
+      p_label: input.label,
+      p_subtitle: input.subtitle,
+      p_target: input.target,
+      p_frequency: input.frequency,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { task: null, error: error.message };
+
+  for (const sub of GROUP_WRITE_PATHS) revalidatePath(groupHref(groupId, sub));
+  return { task: data as PersonalTaskRow, error: null };
+}
+
+/** What `add_personal_task` hands back — the `tasks` row it just wrote. */
+export type PersonalTaskRow = {
+  id: string;
+  label: string;
+  subtitle: string | null;
+  target_count: number;
+  frequency_days: number;
+  personal_for: string | null;
+};
+
+/**
+ * Change a task I added for myself (D70).
+ *
+ * A plain UPDATE, gated by `tasks_update_admin_or_own_personal` (0036): the
+ * policy lets the member through only for a row whose `personal_for` is theirs.
+ * `personal_for` and `group_id` carry no update grant at all, so this cannot
+ * move the task between circles or hand it to somebody else however it is
+ * called.
+ *
+ * The bounds are the TABLE's — `target_count > 0`, `frequency_days between 1
+ * and 14` — so a bad value is a constraint violation rather than a silent
+ * write. They are checked here first only so the member reads a sentence.
+ *
+ * Raising the target re-judges TODAY and today alone, exactly as an admin's
+ * raise does (0024): every completed past day is measured against the target
+ * that day asked for, and is untouched.
+ */
+export async function updatePersonalTask(
+  groupId: string,
+  taskId: string,
+  input: { label: string; subtitle: string; target: number; frequency: number },
+): Promise<{ error: string | null }> {
+  const label = input.label.trim();
+  if (!label) return { error: "A name is required" };
+  if (!Number.isFinite(input.target) || input.target < 1)
+    return { error: "The target must be at least 1" };
+  if (
+    !Number.isFinite(input.frequency) ||
+    input.frequency < 1 ||
+    input.frequency > MAX_FREQUENCY_DAYS
+  )
+    return {
+      error: `How often must be between 1 and ${MAX_FREQUENCY_DAYS} days`,
+    };
+
+  const supabase = await createClient();
+  const { error } = await q(
+    "tasks.update (my own personal task)",
+    supabase
+      .from("tasks")
+      .update({
+        label,
+        subtitle: input.subtitle.trim() || null,
+        target_count: input.target,
+        frequency_days: input.frequency,
+      })
+      .eq("id", taskId),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+
+  for (const sub of GROUP_WRITE_PATHS) revalidatePath(groupHref(groupId, sub));
+  return { error: null };
+}
+
+/**
+ * Remove a task I added for myself (D70).
+ *
+ * A plain DELETE, gated by `tasks_delete_admin_or_own_personal` (0036) rather
+ * than by anything here: the policy is what decides, and it lets the member
+ * through only for a row whose `personal_for` is theirs, in a circle they are
+ * still in. Passing another task's id gets nothing deleted and no error, which
+ * is RLS behaving normally and is why the client reconciles by id.
+ */
+export async function deletePersonalTask(
+  groupId: string,
+  taskId: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await q(
+    "tasks.delete (my own personal task)",
+    supabase.from("tasks").delete().eq("id", taskId),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+
+  for (const sub of GROUP_WRITE_PATHS) revalidatePath(groupHref(groupId, sub));
+  return { error: null };
 }
 
 /**
