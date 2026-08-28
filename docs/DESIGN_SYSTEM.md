@@ -620,10 +620,75 @@ Active state is **never colour alone** — the pill and the heavier icon stroke 
 | Menu / popover | `--surface-highest`   | `--outline-variant` | light `shadow-md` · dark tone only |
 | Scrim          | `rgb(31 27 22 / 0.4)` | —                   | —                                  |
 
-**A modal never exceeds the viewport and is never un-closable:** capped at `calc(100dvh - 2rem)`, flex
-column, title and actions pinned, only the body scrolls (`min-h-0` on the scroll child, or the cap
-silently does nothing). Any async work that disables the dialog's controls goes in `try/finally`, and
-`onClose` stays live throughout.
+**A modal never exceeds the viewport:** capped at `calc(100dvh - 2rem)`, flex column, header and
+actions pinned, only the body scrolls (`min-h-0` on the scroll child, or the cap silently does
+nothing). Any async work that disables the dialog's controls goes in `try/finally`, and `onClose`
+stays live throughout.
+
+**A modal is never un-closable — and that means a VISIBLE control, not a dismiss gesture.** This
+sentence used to end at "never un-closable" and the app violated it for months, because the cap above
+is a _layout_ rule and says nothing about what actually dismisses the thing. Count the exits on a
+phone:
+
+| Exit            | On a phone                                                                                                                                                                                                                               |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ESC             | Needs a hardware keyboard. There isn't one.                                                                                                                                                                                              |
+| Click-outside   | The card is `max-h-[calc(100dvh-2rem)]` inside a `p-4` container, so a full-height dialog leaves a **~16px sliver** of backdrop top and bottom — under the 44px floor, and beside a scrolling body it reads as scroll, not as "outside". |
+| A footer button | Only if the caller passed a `footer`. Two didn't.                                                                                                                                                                                        |
+
+So `Dialog` renders a close button in its header **unconditionally** — it is not a prop, not
+`showClose`, and not the caller's to opt into, because the two surfaces that needed it most are
+exactly the two that would have forgotten. It is `ghost` + `icon-sm` (36px painted, **44px tappable**
+via `tap-area-44-box`), lives outside the scroll container and is `shrink-0`, so it stays on screen
+however long the body gets.
+
+> **The lesson generalises past dialogs:** when a primitive's safety property depends on every caller
+> remembering a prop, it is not a property — it is a convention, and conventions lose. Put it in the
+> primitive. `MemberBreakdownDialog` (the admin logger) is the proof: it is the tallest surface in the
+> app, so it ate the most backdrop, and it passed no footer, so it had **no exit at all** once opened
+> on a phone.
+
+**Pin it with a test that a wrong implementation fails.** The e2e check clicks _below_ the painted
+36px button, inside the 44px overhang — one click that asserts both that the control exists and that
+it is a real thumb target. It was mutation-checked in both directions: deleting the button fails it,
+and keeping the button while killing the overhang (`after:hidden`) fails it too. A test that only
+asserted `toBeVisible()` would have passed the second mutant and told you nothing about whether a
+thumb can hit it.
+
+### 8.14 Marks — drawn icons, and the one emoji exception
+
+**Every mark in this app is a drawn icon from `components/app/icons.tsx`** — 24×24, 2px stroke, round
+caps, `currentColor`. Colour therefore arrives from a text token like everything else, and the mark
+honours light/dark, hover, disabled and the contrast contract in §7 without being told.
+
+**An emoji cannot do any of that.** It is rendered by the OS, in the OS's own font and its own fixed
+colours, on top of a token contract that exists precisely so colour is never out of the app's hands.
+It also changes shape per platform, so a spec'd layout is a guess. That is why the rule is "no emoji"
+and not "prefer icons", and why it reaches past `.tsx` strings into **DB seeds and push
+notification bodies** too. Nothing in lint catches it; it is a review rule.
+
+**The single exception is peer reactions (D68):** 🤲 ✨ ❤️ 🔥, defined as `glyph` on `REACTIONS` in
+`lib/retention.ts` and rendered in `components/app/peer-reactions.tsx`.
+
+|                     | An icon                         | A reaction                                |
+| ------------------- | ------------------------------- | ----------------------------------------- |
+| What it is          | A mark standing in for a thing  | **The message itself**                    |
+| Who authored it     | Us                              | The sender, choosing between four         |
+| Should it be themed | Yes — it belongs to the surface | No — it belongs to the person who sent it |
+
+An outline `HeartIcon` inside a pill reads as _a button you press_. A ❤️ reads as _a heart somebody
+sent you_. The vocabulary is already universal because every messaging app taught it, and re-drawing
+it throws that away for nothing. `def9314` swept these four in with everything else; the owner's
+verdict on the result was "weird icons".
+
+**Do not grow the exception, and do not sweep it back.** It is written in four places on purpose —
+here, `CLAUDE.md`, STATUS §4, and decision D68 — plus an assertion in `retention.spec.ts` that the dua
+pill contains its glyph, because prose alone already failed once. A future sweep breaks a test.
+
+**When you swap a glyph for a stroke, re-tune what surrounded it.** Emoji sizing (`text-2xl`),
+`grayscale` and low `opacity` were all tuned for a solid coloured glyph and are wrong for a 2px
+stroke — that is a separate defect this repo has already paid for. In the other direction, an emoji's
+line box is taller than a Latin one, so it needs `leading-none` or it pushes its row off the baseline.
 
 ---
 
@@ -715,6 +780,19 @@ moments.
 The last one matters most: **the token pairs are testable, and this document's numbers are the
 fixtures.** A script that parses `globals.css` and asserts §7 turns this spec into a gate rather than a
 memo. That is the point of §14's "enforce it later".
+
+**Two rules in this document are already gates, and both are BEHAVIOURAL** — they could not be caught
+by parsing a stylesheet, because what they assert is what a thumb can reach and what a person sees:
+
+| Rule                                                       | Pinned by                                                                                                             |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| §8.13 — a dialog is closable, by a control a thumb can hit | `e2e/member-shares.spec.ts` — clicks _below_ the painted button, inside the 44px overhang; mutation-checked both ways |
+| §8.14 — the four peer reactions are real emoji             | `e2e/retention.spec.ts` — asserts the dua pill contains its glyph                                                     |
+
+Both exist because the rule was previously **prose only**, and prose lost: §8.13 asserted "never
+un-closable" while two dialogs had no exit on a phone, and the no-emoji rule did not stop `def9314`
+sweeping the reactions. **If a rule here matters, give it a test — and check the test fails when the
+rule is broken.** A green test you have never seen fail is a decoration.
 
 ---
 

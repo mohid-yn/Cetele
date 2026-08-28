@@ -199,7 +199,7 @@ A(heading("v2 — retention deepening (research-backed)", 2))
 A(normal([N("From research/03-feature-recommendations.md (links the motivation science in research/02 to the competitive gaps in research/01). Top priority is to promote two already-scoped items: variable-reward milestones (v1) and reminders + habit-stacking (v1.1).")]))
 for t in [
     ("Group garden (collective living artefact)", "a shared garden per circle that grows as the group completes its rings and goes calmly dormant (never shaming) when activity drops. The emotional/identity layer Cetele lacks — built on the group, not a solo avatar, so it reinforces accountability; jannah/garden imagery suits a worship app. Optional personal “your corner” plant. Levers: ownership + relatedness; precedent: Finch / Forest."),
-    ("One-tap peer reactions", "send a quick dua / “barakAllahu feek” / heart when a peer closes their rings. Near-zero-effort relatedness spark. Precedent: Strava kudos."),
+    ("One-tap peer reactions", "send a quick dua, mashaAllah, heart or on-fire when a peer closes their rings. Near-zero-effort relatedness spark. Precedent: Strava kudos. These four are real emoji — the sole exception to the app’s “no emoji in the UI” rule, because here the glyph is the message rather than a mark standing in for one (D68)."),
     ("Fresh-start re-engagement", "re-invite lapsed members on temporal landmarks (Hijri new month, Ramadan, week start) with a clean-slate framing. Lever: fresh-start effect."),
     ("Achievement badges", "streak landmarks (7 / 30 / 100 days) + monthly awards; earned and escalating, never saturating. Precedent: Apple Fitness awards."),
     ("Endowed-progress onboarding", "new members/groups start visibly “part-way” so day one feels like momentum, not a cold start. Lever: endowed-progress effect."),
@@ -224,7 +224,7 @@ A(table([
     ["Real accountability", "durable", "Visible group peers (the cetele itself)"],
     ["Trigger", "dopamine", "(v1.1) Daily reminders — member-named, member-timed, as many as they want (D30/D62)"],
     ["Ownership", "durable", "(v2) Group garden — a collective artefact that grows with the group"],
-    ["Peer encouragement", "accountability", "(v2) One-tap dua / kudos reactions on a peer's completion"],
+    ["Peer encouragement", "accountability", "(v2) One-tap reactions on a peer's completion — dua, mashaAllah, heart, on fire"],
     ["Re-engagement", "durable", "(v2) Fresh-start prompts (Hijri new month, Ramadan, week start)"],
     ["Recognition", "accountability", "(admin-only, backend-era) Steadfastness view — recent-consistency rate (sliding 90-day avg), for an optional out-of-app reward (D31)"],
 ], widths=[2600, 2200, 4560]))

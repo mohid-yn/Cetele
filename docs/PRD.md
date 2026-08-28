@@ -119,7 +119,7 @@ off, it is not counted, so nothing here reaches `logs`, streaks, rings or the co
 > From [`research/03-feature-recommendations.md`](../research/03-feature-recommendations.md), which links the motivation science (`research/02`) to the competitive gaps (`research/01`). Ordered by impact ÷ effort. **Two already-scoped items are the research's _top_ priority — promote them:** variable-reward milestones (strongest dopamine lever, v1) and reminders + habit-stacking (the missing trigger, v1.1).
 
 - **Group garden (collective living artefact)** — a shared garden per circle that **grows as the group completes its rings** and goes calmly dormant (never shaming) when activity drops. The emotional/identity layer Cetele lacks — built on the **group**, not a solo avatar, so it reinforces accountability; _jannah_/garden imagery suits a worship app. Optional personal "your corner" plant feeds the shared garden. _Levers: ownership + relatedness; precedent: Finch / Forest._
-- **One-tap peer reactions** — send a quick **dua / "barakAllahu feek" / ❤️** when a peer closes their rings. Near-zero-effort relatedness spark. _Precedent: Strava kudos._
+- **One-tap peer reactions** — send a quick **🤲 dua / ✨ mashaAllah / ❤️ heart / 🔥 on fire** when a peer closes their rings. Near-zero-effort relatedness spark. _Precedent: Strava kudos._ These four glyphs are **real emoji** — the sole exception to the app's "no emoji in the UI" rule, because here the glyph is the message rather than a mark standing in for one (D68).
 - **Fresh-start re-engagement** — re-invite lapsed members on temporal landmarks (**Hijri new month, Ramadan, week start**) with a clean-slate framing. _Lever: fresh-start effect._
 - **Achievement badges** — streak landmarks (7 / 30 / 100 days) + monthly awards; earned and escalating, never saturating. _Precedent: Apple Fitness awards._
 - **Endowed-progress onboarding** — new members/groups start visibly **"part-way"** (a pre-filled first contribution, the group goal already moving) so day one feels like momentum, not a cold start. _Lever: endowed-progress effect._
@@ -148,7 +148,7 @@ off, it is not counted, so nothing here reaches `logs`, streaks, rings or the co
 | Real accountability | durable        | Visible group peers (the _cetele_ itself)                                                                                                  |
 | Trigger             | dopamine       | _(v1.1)_ Daily reminders — member-named, member-timed, as many as they want (D30/D62)                                                      |
 | Ownership           | durable        | _(v2)_ Group garden — a collective artefact that grows with the group                                                                      |
-| Peer encouragement  | accountability | _(v2)_ One-tap dua / kudos reactions on a peer's completion                                                                                |
+| Peer encouragement  | accountability | _(v2)_ One-tap reactions on a peer's completion — dua, mashaAllah, heart, on fire                                                          |
 | Re-engagement       | durable        | _(v2)_ Fresh-start prompts (Hijri new month, Ramadan, week start)                                                                          |
 | Recognition         | accountability | _(admin-only, backend-era)_ Steadfastness view — recent-consistency **rate** (sliding 90-day avg), for an optional out-of-app reward (D31) |
 
