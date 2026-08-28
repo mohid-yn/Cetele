@@ -28,14 +28,23 @@ import {
  * catalogue next door, so "what does it ask for" and "who has done it" are two
  * readings of one thing rather than two screens that happen to mention it.
  *
- * ONE route for both readers, and that is the design rather than a shortcut:
- * `roadmap_progress`'s RLS policy already answers "whose progress may this
- * person see" — their own, their circle's members if they are its admin and it
- * follows the programme, everyone if they are a super admin. So this screen
- * asks for all of it and renders what comes back. There is no viewer check in
- * this file at all, which means there is no second copy of the rule to drift
- * from the first, and no way for an app-level filter to be more generous than
- * the database.
+ * WHOSE ROWS: still the RLS policy's answer, never a filter here.
+ * `roadmap_progress`'s policy says which rows a reader may see — their own,
+ * their circle's members if they are its admin and it follows the programme,
+ * everyone if they are a super admin — so this screen asks for all of it and
+ * renders what comes back. Nothing below narrows that set, which is what keeps
+ * an app-level filter from ever being more generous than the database.
+ *
+ * WHO MAY BE HERE AT ALL is a separate question, and it is answered ONCE, at
+ * the top, by `can_read_roadmap_cohort` (0035, D69): an organiser, or whoever
+ * leads a circle following this programme. A plain member passed the old
+ * check — there wasn't one — and got a page headed "Members' progress" holding
+ * a cohort strip and a roster of exactly one person, themselves. No data
+ * escaped; the screen was simply not theirs, and reading a cohort is an
+ * administrative act (D26/D28, the same line that keeps the fortnight grid off
+ * the member-facing roster). The check is a DATABASE function rather than an
+ * `exists` assembled here for the reason this header has always given: one
+ * definition of the three readers, not a TypeScript copy to drift from it.
  *
  * It is also why the route is NOT group-scoped: progress is keyed on the member
  * (D55), a super admin need not be in any circle, and a member on one programme
@@ -63,6 +72,7 @@ export default async function ProgrammeReportPage({
     { data: rows },
     { data: reqs },
     { data: roster },
+    { data: canReadCohort },
     { data: viewer },
   ] = await Promise.all([
     q(
@@ -104,6 +114,15 @@ export default async function ProgrammeReportPage({
     // carrying the SAME three readers as the progress policy (0025). It answers
     // for every programme at once, so the narrowing to this one happens below.
     q("report.roster", supabase.rpc("roadmap_roster")),
+    // MAY THE CALLER BE HERE (0035, D69) — the one gate on this route, and the
+    // only thing in this file that decides anything about the audience. In the
+    // same round trip as the rest: the queries beside it are RLS-scoped
+    // regardless, so fetching them before the answer lands exposes nothing, and
+    // the guard below returns before a single row of it is rendered.
+    q(
+      "report.may read the cohort (0035)",
+      supabase.rpc("can_read_roadmap_cohort", { p_roadmap: roadmapId }),
+    ),
     // WHICH READER this is — for the footer only, never for filtering. The
     // rows above are already scoped by RLS, and re-deciding the audience in
     // app code is the second copy of the rule this file's header refuses to
@@ -121,6 +140,22 @@ export default async function ProgrammeReportPage({
   ]);
 
   const isSuperAdmin = viewer?.is_super_admin ?? false;
+
+  // NOT YOURS TO READ. Said the same way as "no programme here" and for the
+  // same reason: a member who types this URL learns nothing about the cohort,
+  // not even its size. Their OWN progress is not hidden by this — it is the
+  // circle's roadmap screen, which is where they record it.
+  if (!canReadCohort) {
+    return (
+      <Screen>
+        <BackLink roadmapId={roadmapId} />
+        <EmptyCard
+          title="Not your report"
+          body="Members’ progress is for a circle’s owner and co-admins. Your own is on your circle’s Roadmap."
+        />
+      </Screen>
+    );
+  }
 
   // RLS returning nothing and the id being wrong are the same answer here, and
   // that is correct: "there is no programme you may read at this address" tells
@@ -278,11 +313,13 @@ export default async function ProgrammeReportPage({
       {/* Say which reader this is. The old line described exactly one of the
           three — "your own circles' members if you lead one" — and a super
           admin, who leads nothing and is looking at every circle at once, was
-          reading a caption about somebody else's view of the same screen. */}
+          reading a caption about somebody else's view of the same screen. Since
+          D69 there are only two readers left standing here, so the alternative
+          arm can finally say what it means rather than hedging with "if". */}
       <p className="px-1 text-center text-xs text-muted-foreground">
         {isSuperAdmin
           ? "You are an organiser, so this is everyone on every circle following this programme."
-          : "You see the people whose progress you are entitled to — your own circles’ members if you lead one."}{" "}
+          : "You lead a circle following this programme, so this is its members."}{" "}
         <Link href="/programme" className="underline">
           All programmes
         </Link>

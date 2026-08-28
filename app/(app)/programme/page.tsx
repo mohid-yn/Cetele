@@ -22,12 +22,21 @@ import { NewProgrammeButton } from "./new-programme";
  * Roadmap tab in the nav lands here for an organiser (who is in no circle by
  * role, D27, and so has no group-scoped roadmap to land on instead).
  *
- * NO VIEWER CHECK, exactly as the two screens either side of it. RLS on
- * `roadmaps` returns the published programmes the reader is entitled to — the
- * ones their circles follow, or all of them for an organiser (0025) — so what
- * is listed here is the database's answer rather than a second copy of the rule.
- * A member of a following circle who types the URL gets their own programme and
- * a report containing only themselves, which is true and harmless.
+ * NO VIEWER CHECK ON THE LIST, exactly as the two screens either side of it.
+ * RLS on `roadmaps` returns the published programmes the reader is entitled to
+ * — the ones their circles follow, or all of them for an organiser (0025) — so
+ * what is listed here is the database's answer rather than a second copy of the
+ * rule.
+ *
+ * THE COHORT BUTTON IS A DIFFERENT QUESTION, and since D69 it has a different
+ * answer. This screen used to offer "Progress" on every row on the argument
+ * that the report is RLS-scoped, so a plain member would simply see themselves
+ * — true of the data and wrong about the screen, which is headed "Members'
+ * progress" and would hand them a roster of one. Reading a cohort is an
+ * administrative act, so each row's button is gated on
+ * `can_read_roadmap_cohort` (0035), the same function the catalogue and the
+ * report itself ask. The route refuses either way; this is what stops a member
+ * being offered a door that is going to be shut in their face.
  */
 export default async function ProgrammeHubPage() {
   const supabase = await createClient();
@@ -84,6 +93,27 @@ export default async function ProgrammeHubPage() {
     // someone else's. An organiser reads every one, so for them an empty
     // programme really is empty and stays on the list.
     .filter((p) => isSuperAdmin || p.items > 0);
+
+  // WHICH of these the viewer may read the COHORT for — an organiser, or
+  // whoever leads a circle following that programme (0035, D69). Asked of the
+  // DATABASE, once per listed programme, rather than assembled here from
+  // memberships: this is the same question the catalogue and the report ask,
+  // and keeping the three readers on one definition is the whole reason it is a
+  // function. `programmes` is an administration's programmes — single digits —
+  // and the calls go out together, so this is one round of waiting, not N.
+  const cohortReadable = new Set(
+    (
+      await Promise.all(
+        programmes.map(async (p) => {
+          const { data } = await q(
+            "programmeHub.may read the cohort (0035)",
+            supabase.rpc("can_read_roadmap_cohort", { p_roadmap: p.id }),
+          );
+          return data ? p.id : null;
+        }),
+      )
+    ).filter((id) => id !== null),
+  );
 
   return (
     <Screen>
@@ -154,19 +184,26 @@ export default async function ProgrammeHubPage() {
                 </Link>
                 {/* This programme's cohort, beside this programme's name —
                     the same arrangement /groups uses for Manage: the card
-                    opens the thing, the button does the other job on it. */}
-                <Link
-                  href={`/programme/${p.id}/progress`}
-                  aria-label={`Members' progress on ${p.name}`}
-                  className={buttonVariants({
-                    variant: "outline",
-                    size: "sm",
-                    className: "mr-1.5",
-                  })}
-                >
-                  <UsersIcon aria-hidden className="size-4" />
-                  Progress
-                </Link>
+                    opens the thing, the button does the other job on it.
+
+                    Only for whoever LEADS a circle following it (D69). A plain
+                    member's row is the card alone, which is the whole of what
+                    this screen has for them: the programme opens, the cohort
+                    is not theirs to read. */}
+                {cohortReadable.has(p.id) && (
+                  <Link
+                    href={`/programme/${p.id}/progress`}
+                    aria-label={`Members' progress on ${p.name}`}
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                      className: "mr-1.5",
+                    })}
+                  >
+                    <UsersIcon aria-hidden className="size-4" />
+                    Progress
+                  </Link>
+                )}
               </Card>
             ))}
           </div>

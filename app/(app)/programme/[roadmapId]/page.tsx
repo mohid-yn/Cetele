@@ -181,6 +181,15 @@ export default async function ProgrammeCataloguePage({
   );
   const canEdit = viewer?.is_super_admin ?? false;
 
+  // WHO MAY READ THE COHORT — an organiser, or whoever leads a circle that
+  // follows this programme (0035, D69). Asked of the DATABASE rather than
+  // assembled here: it is `can_read_roadmap_progress`' third arm, and a second
+  // copy in TypeScript is the drift this whole area keeps refusing to grow.
+  const { data: canReadCohort } = await q(
+    "catalogue.may read the cohort (0035)",
+    supabase.rpc("can_read_roadmap_cohort", { p_roadmap: roadmapId }),
+  );
+
   return (
     <Screen>
       <BackLink />
@@ -212,21 +221,29 @@ export default async function ProgrammeCataloguePage({
       )}
 
       {/* The OTHER reading of this same programme, at the same id: this screen
-          says what it asks for, that one says who has done it (D59). Offered to
-          every reader rather than only an organiser — the report is RLS-scoped,
-          so a circle's admin sees their members and a plain member sees
-          themselves, which is exactly what each is entitled to. */}
-      <Link
-        href={`/programme/${roadmapId}/progress`}
-        className={buttonVariants({
-          variant: "outline",
-          size: "sm",
-          className: "self-start",
-        })}
-      >
-        <UsersIcon aria-hidden className="size-4" />
-        Members&rsquo; progress
-      </Link>
+          says what it asks for, that one says who has done it (D59).
+
+          FOR WHOEVER LEADS A CIRCLE, and nobody else (D69). It used to be
+          offered to every reader on the argument that the report is RLS-scoped,
+          so a plain member would simply see themselves — true of the data and
+          wrong about the screen. They arrived at a page headed "Members'
+          progress", with a cohort strip and a roster of exactly one person,
+          which answers no question they have and reads as though the circle has
+          one person on the programme. The cohort is an administrative reading,
+          so the door is administrative too. */}
+      {canReadCohort && (
+        <Link
+          href={`/programme/${roadmapId}/progress`}
+          className={buttonVariants({
+            variant: "outline",
+            size: "sm",
+            className: "self-start",
+          })}
+        >
+          <UsersIcon aria-hidden className="size-4" />
+          Members&rsquo; progress
+        </Link>
+      )}
 
       {canEdit && (
         <RewardsEditor

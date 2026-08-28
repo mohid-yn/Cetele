@@ -258,7 +258,7 @@ test("the roadmap never touches the daily engine", async ({ page }) => {
   await expect(page.getByText("Fresh start", { exact: true })).toBeVisible();
 });
 
-test("an outsider's circle sees no programme, and the report shows them nobody", async ({
+test("an outsider's circle sees no programme, and the report refuses them", async ({
   page,
 }) => {
   await signIn(page, OUTSIDER);
@@ -271,11 +271,18 @@ test("an outsider's circle sees no programme, and the report shows them nobody",
   await expect(page.getByText("isn’t following a programme")).toBeVisible();
   await expect(page.getByText("Level 1 complete")).toHaveCount(0);
 
-  // The report is scoped by RLS, not by app code: this admin leads a circle
-  // that follows nothing, so there is nobody they are entitled to see — least
-  // of all the owner above, who is on the same programme in another circle.
+  // REFUSED, where this used to show them an empty roster (D69, 0035). Reading
+  // a cohort is an administrative act, and this admin leads a circle that
+  // follows nothing — so `can_read_roadmap_cohort` is false for them, which is
+  // the same negative pgTAP 020 asserts against the function directly.
+  //
+  // The refusal is the stronger answer, and deliberately so: "Nothing recorded
+  // yet" told an outsider that the cohort exists and is empty. This tells them
+  // nothing at all, and is worded like the neighbouring "no programme here" so
+  // it is not an oracle for whether the programme exists either.
   await page.goto(`/programme/${IDP}/progress`);
-  await expect(page.getByText("Nothing recorded yet")).toBeVisible();
+  await expect(page.getByText("Not your report")).toBeVisible();
+  await expect(page.getByText("Nothing recorded yet")).toHaveCount(0);
 
   // And the hub above it is empty for the same reason, in the other direction:
   // `roadmaps` is readable to anyone once published, but the ITEMS are gated on
