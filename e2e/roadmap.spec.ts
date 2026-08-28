@@ -493,6 +493,18 @@ test("the timeline, its pictures, and an organiser editing an item", async ({
   await link.fill("https://youtube.com/watch?v=e2e-guarding");
   await page.getByLabel("Description").fill("A short talk on the tongue.");
   await page.getByRole("button", { name: "Save" }).click();
+  // WAIT FOR THE DIALOG TO CLOSE FIRST. It closes only on SUCCESS — the
+  // `javascript:` refusal above is the same dialog staying open — so this is
+  // the barrier that says the write has come back. Without it the reload below
+  // races the in-flight action: the row still lands (the action completes
+  // server-side), but the reloaded page can render before it does.
+  //
+  // That race was invisible for as long as it existed, because this item is
+  // SEEDED and shared: once any earlier run had written the link, a re-run
+  // asserted against the leftover value and passed. It only shows on a freshly
+  // reset database, which is the one condition under which the assertion below
+  // means what it says.
+  await expect(page.getByRole("dialog")).toBeHidden();
 
   // RELOADED before asserting, deliberately. `router.refresh()` makes the row
   // update in place, but asserting on that only proves the optimistic path; a
@@ -658,6 +670,14 @@ test("a circle follows TWO programmes, and the roadmap switches between them", a
   await expect(
     page.getByRole("checkbox", { name: "Islamic Development Program" }),
   ).toBeChecked();
+  await expect(second).toBeChecked();
+
+  // RELOADED before moving on. The two assertions above pass on the OPTIMISTIC
+  // state — `setFollowed` runs before `roadmapAct.run` goes out — so navigating
+  // straight to the roadmap screen raced the follow, and the switcher below
+  // would read a circle that still followed only one programme. A reload proves
+  // the follow is in the database, which is what the rest of this test assumes.
+  await page.reload();
   await expect(second).toBeChecked();
 
   await page.goto(`/g/${groupId}/roadmap`);
