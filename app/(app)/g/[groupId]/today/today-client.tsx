@@ -24,6 +24,7 @@ import { StreakChip } from "@/components/app/streak-chip";
 import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
 import {
   CheckIcon,
+  PlusIcon,
   ChevronRightIcon,
   HandsIcon,
   TargetIcon,
@@ -31,6 +32,11 @@ import {
 import { groupHref } from "@/lib/group-href";
 import { useLocalToday } from "@/lib/use-local-today";
 import { usePropState } from "@/lib/use-prop-state";
+import { hapticCelebrate, hapticTick } from "@/lib/haptics";
+import { milestoneCrossed } from "@/lib/quick-count";
+import { playComplete } from "@/lib/sound";
+import { useCelebration } from "@/components/app/celebration";
+import { useQuickCount } from "./use-quick-count";
 import { GoalsDialog } from "./goals-dialog";
 import type { LinkableTask, LinkedSibling } from "@/lib/task-links";
 import { isDueOn, daysUntilDue, dueLabel, frequencyLabel } from "@/lib/goals";
@@ -210,7 +216,14 @@ export function TodayClient({
   const [freqById, setFreqById] =
     usePropState<Record<string, number>>(freqSeed);
 
-  const countOn = (taskId: string, d: string) => counts[d]?.[taskId] ?? 0;
+  // Taps on a ring are folded in here, so the headline, the circle figure and the
+  // day strip all move with the ring rather than waiting for a refresh.
+  const quick = useQuickCount(groupId);
+  const { celebrate } = useCelebration();
+  const countOn = (taskId: string, d: string) => {
+    const server = counts[d]?.[taskId] ?? 0;
+    return quick.countFor(taskId, d, server);
+  };
   // What the circle asked of ME for this task on this day (0024 + 0032) — my
   // share folded over the circle's as-of target. An admin may have moved either
   // since; a past day is judged by what IT asked for, as `obligations` does.
@@ -513,64 +526,45 @@ export function TodayClient({
               // next one implies a sequence that does not exist, and the member
               // decides what to reach for. Every ring is offered equally; the
               // rings themselves already show where the progress is.
-              return (
-                <li key={t.id}>
-                  {/* A resting task keeps its full card and stays tappable —
-                    counting ahead is welcome, and the engine only claims a day
-                    once you COMPLETE it, so nothing is risked by starting
-                    early. It is marked by a dashed edge and a muted surface
-                    (structure, not colour: the intensity ramp stays reserved
-                    for progress) plus the one fact that answers "why is this
-                    not counting" — when it next comes round. */}
-                  <Link
-                    href={`${groupHref(groupId, `/count/${t.id}`)}${isToday ? "" : `?date=${date}`}`}
-                    className={cn(
-                      cardVariants({ padding: "compact" }),
-                      "flex items-center gap-4 transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-md motion-reduce:transform-none",
-                      // The BORDER does the work, not the fill. v1 used
-                      // `bg-muted/40`, which composited to 1.01:1 against the
-                      // page with a 1.23:1 edge — the card vanished. A recessed
-                      // surface should be quiet; what makes it legible as a
-                      // *thing* is a boundary at the 3:1 non-text floor.
-                      !due &&
-                        "border-dashed border-outline bg-muted shadow-none",
-                    )}
-                  >
-                    <ProgressRing
-                      value={due ? count : 0}
-                      max={goal}
-                      mark={due && stretched ? share : undefined}
-                      size={72}
-                      thickness={8}
-                    >
-                      {!due ? (
-                        // Its own number, not a percentage: a resting ring has no
-                        // progress to report and "0%" would read as a failure.
-                        <span className="text-sm font-bold text-muted-foreground tabular-nums">
-                          {daysAway}d
-                        </span>
-                      ) : done ? (
-                        <CheckIcon className="size-6 text-success" />
-                      ) : (
-                        // Success-toned once the circle's share is in: the
-                        // number is still short of MY goal, but the part that
-                        // the circle and the streak are counting is finished,
-                        // and a plain foreground percent would read as neither.
-                        <span
-                          className={cn(
-                            "text-sm font-bold tabular-nums",
-                            shareDone ? "text-success" : "text-foreground",
-                          )}
-                        >
-                          {Math.round((count / goal) * 100)}%
-                        </span>
+              const ringLink = `${groupHref(groupId, `/count/${t.id}`)}${isToday ? "" : `?date=${date}`}`;
+              const ringGraphic = (
+                <ProgressRing
+                  value={due ? count : 0}
+                  max={goal}
+                  mark={due && stretched ? share : undefined}
+                  size={72}
+                  thickness={8}
+                >
+                  {!due ? (
+                    // Its own number, not a percentage: a resting ring has no
+                    // progress to report and "0%" would read as a failure.
+                    <span className="text-sm font-bold text-muted-foreground tabular-nums">
+                      {daysAway}d
+                    </span>
+                  ) : done ? (
+                    <CheckIcon className="size-6 text-success" />
+                  ) : (
+                    // Success-toned once the circle's share is in: the
+                    // number is still short of MY goal, but the part that
+                    // the circle and the streak are counting is finished,
+                    // and a plain foreground percent would read as neither.
+                    <span
+                      className={cn(
+                        "text-sm font-bold tabular-nums",
+                        shareDone ? "text-success" : "text-foreground",
                       )}
-                    </ProgressRing>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-display text-base font-semibold text-foreground">
-                        {t.label}
-                      </p>
-                      {/* Not truncated: the bigger ring left ~192px here and
+                    >
+                      {count.toLocaleString()}
+                    </span>
+                  )}
+                </ProgressRing>
+              );
+              const ringBody = (
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-base font-semibold text-foreground">
+                    {t.label}
+                  </p>
+                  {/* Not truncated: the bigger ring left ~192px here and
                         "Allahumma salli ala Muhammad" needs 203, so it clipped
                         to "…humma salli ala Muhammad" — and for an RTL subtitle
                         the ellipsis lands at the START of the phrase. Clipping
@@ -584,52 +578,142 @@ export function TodayClient({
                         help, because the token cannot be broken at all.
                         `dir`/`lang` resolve from the text (lib/text-direction).
                       */}
-                      {t.subtitle && (
-                        <p
-                          className="text-sm wrap-anywhere text-muted-foreground"
-                          dir="auto"
-                          lang={langOf(t.subtitle)}
-                        >
-                          {t.subtitle}
-                        </p>
-                      )}
-                      {due ? (
-                        <>
-                          <ProgressBar
-                            value={count}
-                            max={goal}
-                            tone={done || shareDone ? "success" : "primary"}
-                            className="mt-2 h-1.5"
-                          />
-                          <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                            {count.toLocaleString()} / {goal.toLocaleString()}
-                            {stretched && (
-                              <span className="ms-1.5 tabular-nums">
-                                · circle&rsquo;s share {share.toLocaleString()}
-                              </span>
-                            )}
-                          </p>
-                        </>
-                      ) : (
-                        // No bar at all. An empty progress bar on a task that was
-                        // never asked for today reads as "you are behind"; the
-                        // schedule is the fact here, not the absent progress.
-                        <p className="mt-1.5 text-xs font-medium text-muted-foreground">
-                          {dueLabel(daysAway)}
-                          <span className="ms-1.5 font-normal">
-                            ·{" "}
-                            {frequencyLabel(
-                              t.myFrequencyDays ?? t.frequencyDays,
-                            ).toLowerCase()}
+                  {t.subtitle && (
+                    <p
+                      className="text-sm wrap-anywhere text-muted-foreground"
+                      dir="auto"
+                      lang={langOf(t.subtitle)}
+                    >
+                      {t.subtitle}
+                    </p>
+                  )}
+                  {due ? (
+                    <>
+                      <ProgressBar
+                        value={count}
+                        max={goal}
+                        tone={done || shareDone ? "success" : "primary"}
+                        className="mt-2 h-1.5"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                        {count.toLocaleString()} / {goal.toLocaleString()}
+                        {stretched && (
+                          <span className="ms-1.5 tabular-nums">
+                            · circle&rsquo;s share {share.toLocaleString()}
                           </span>
-                        </p>
+                        )}
+                      </p>
+                    </>
+                  ) : (
+                    // No bar at all. An empty progress bar on a task that was
+                    // never asked for today reads as "you are behind"; the
+                    // schedule is the fact here, not the absent progress.
+                    <p className="mt-1.5 text-xs font-medium text-muted-foreground">
+                      {dueLabel(daysAway)}
+                      <span className="ms-1.5 font-normal">
+                        ·{" "}
+                        {frequencyLabel(
+                          t.myFrequencyDays ?? t.frequencyDays,
+                        ).toLowerCase()}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              );
+              return (
+                <li key={t.id}>
+                  {/* A resting task keeps its full card and stays tappable —
+                    counting ahead is welcome, and the engine only claims a day
+                    once you COMPLETE it, so nothing is risked by starting
+                    early. It is marked by a dashed edge and a muted surface
+                    (structure, not colour: the intensity ramp stays reserved
+                    for progress) plus the one fact that answers "why is this
+                    not counting" — when it next comes round. */}
+                  {/* TODAY'S RINGS COUNT WHERE THEY ARE (owner's call). Going into the count
+                      screen and back out for every ring took too long, so the ring
+                      adds one and the name still opens the full screen. A closed
+                      ring goes inert rather than opening anything, so a fast extra
+                      tap can't overshoot or throw the member onto another screen.
+                      Past days and resting rings keep the whole card as a link. */}
+                  {isToday && due ? (
+                    <div
+                      className={cn(
+                        cardVariants({ padding: "compact" }),
+                        "flex items-center gap-2",
                       )}
+                    >
+                      {done ? (
+                        <span className="shrink-0">{ringGraphic}</span>
+                      ) : (
+                        <button
+                          type="button"
+                          aria-label={`Add one to ${t.label}. ${count.toLocaleString()} of ${goal.toLocaleString()}`}
+                          onClick={() => {
+                            hapticTick();
+                            const crossed = milestoneCrossed(
+                              count,
+                              count + 1,
+                              share,
+                              goal,
+                            );
+                            quick.tap(t.id, date, crossed === "goal");
+                            if (crossed) {
+                              playComplete();
+                              celebrate({ confettiOnly: true });
+                            }
+                            if (crossed === "goal") hapticCelebrate();
+                          }}
+                          className="relative shrink-0 cursor-pointer touch-manipulation rounded-full transition-transform duration-[var(--duration-fast)] ease-[var(--ease-brand)] select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:scale-95 motion-reduce:transform-none"
+                        >
+                          {ringGraphic}
+                          {/* Says the ring is a button, without words on every row. */}
+                          <span
+                            aria-hidden
+                            className="absolute -right-0.5 -bottom-0.5 grid size-6 place-items-center rounded-full border-2 border-card bg-primary text-primary-foreground"
+                          >
+                            <PlusIcon className="size-3.5" />
+                          </span>
+                        </button>
+                      )}
+                      <Link
+                        href={ringLink}
+                        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-xl p-2 transition-colors duration-[var(--duration-fast)] hover:bg-surface-hover active:bg-surface-active"
+                      >
+                        {ringBody}
+                        <ChevronRightIcon
+                          aria-hidden
+                          className="size-5 shrink-0 text-muted-foreground"
+                        />
+                      </Link>
                     </div>
-                    <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
-                  </Link>
+                  ) : (
+                    <Link
+                      href={ringLink}
+                      className={cn(
+                        cardVariants({ padding: "compact" }),
+                        "flex items-center gap-4 transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-md motion-reduce:transform-none",
+                        // The BORDER does the work, not the fill. v1 used
+                        // `bg-muted/40`, which composited to 1.01:1 against the
+                        // page with a 1.23:1 edge — the card vanished. A recessed
+                        // surface should be quiet; what makes it legible as a
+                        // *thing* is a boundary at the 3:1 non-text floor.
+                        !due &&
+                          "border-dashed border-outline bg-muted shadow-none",
+                      )}
+                    >
+                      {ringGraphic}
+                      {ringBody}
+                      <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
+                    </Link>
+                  )}
                 </li>
               );
             },
+          )}
+          {quick.error && (
+            <li role="alert" className="text-sm text-danger">
+              {quick.error}
+            </li>
           )}
           {rings.length === 0 && (
             <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
