@@ -2,29 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
-import { Badge, buttonVariants, Card, Screen } from "@/components/ui";
-import { SectionHeading } from "@/components/app/section-heading";
+import { localDateISO } from "@/lib/local-date";
+import { buttonVariants, Card, Screen } from "@/components/ui";
+import { ArrowLeftIcon, FlagIcon, UsersIcon } from "@/components/app/icons";
+import { CatalogueView } from "./catalogue-view";
+import { BUILDER_TABS, type BuilderTab } from "./builder-tabs";
+import { ProgrammeBuilder } from "./programme-builder";
 import {
-  ArrowLeftIcon,
-  BookIcon,
-  PlayIcon,
-  FlagIcon,
-  UsersIcon,
-} from "@/components/app/icons";
-import { RewardLadder } from "@/components/app/roadmap-rewards";
-import { RoadmapCover } from "@/components/app/roadmap-cover";
-import { ItemEditor } from "./item-editor";
-import { ProgrammeAdmin } from "./programme-admin";
-import { ItemFormButton } from "./item-form";
-import { RewardsEditor } from "./rewards-editor";
-import {
-  CATEGORY_LABEL,
-  categoriesAt,
-  itemsAt,
-  itemsIn,
-  isSafeItemUrl,
   levelsOf,
-  requirementFor,
   type LevelRequirement,
   type RoadmapCategory,
   type RoadmapItem,
@@ -52,10 +37,13 @@ import {
  */
 export default async function ProgrammeCataloguePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ roadmapId: string }>;
+  searchParams: Promise<{ tab?: string; view?: string }>;
 }) {
   const { roadmapId } = await params;
+  const { tab, view } = await searchParams;
 
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
@@ -114,10 +102,10 @@ export default async function ProgrammeCataloguePage({
               <FlagIcon aria-hidden className="size-6" />
             </div>
             <p className="text-sm font-semibold text-foreground">
-              No programme here
+              No roadmap here
             </p>
             <p className="max-w-xs text-sm text-balance text-muted-foreground">
-              Either it doesn&rsquo;t exist, or it isn&rsquo;t one you can read.
+              It may not exist, or it may not be open to you.
             </p>
           </div>
         </Card>
@@ -190,48 +178,82 @@ export default async function ProgrammeCataloguePage({
     supabase.rpc("can_read_roadmap_cohort", { p_roadmap: roadmapId }),
   );
 
+  // Who may edit. Only decides which screen renders: every RPC behind the builder
+  // refuses a non-organiser on its own.
+  if (canEdit && view !== "member") {
+    const [{ data: circles }, { data: profile }] = await Promise.all([
+      q(
+        "catalogue.circles (0037)",
+        supabase.rpc("roadmap_circles", { p_roadmap: roadmapId }),
+      ),
+      q(
+        "catalogue.profile (timezone)",
+        supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
+      ),
+    ]);
+
+    return (
+      <ProgrammeBuilder
+        roadmap={{
+          id: roadmap.id,
+          name: roadmap.name,
+          startsOn: roadmap.starts_on,
+          endsOn: roadmap.ends_on,
+          published: roadmap.published,
+        }}
+        items={items}
+        requirements={requirements}
+        rewards={rewards ?? []}
+        circles={(circles ?? []).map((c) => ({
+          id: c.group_id,
+          name: c.name,
+          memberCount: c.member_count,
+          following: c.following,
+        }))}
+        recordedIds={[...recorded]}
+        sortOrders={[...sortOrderOf]}
+        canReadCohort={Boolean(canReadCohort)}
+        todayISO={localDateISO(profile?.timezone ?? "UTC")}
+        initialTab={
+          BUILDER_TABS.includes(tab as BuilderTab)
+            ? (tab as BuilderTab)
+            : "items"
+        }
+      />
+    );
+  }
+
   return (
     <Screen>
-      <BackLink />
+      {canEdit ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-muted px-4 py-2">
+          <p className="text-sm font-medium text-foreground">
+            Preview of what members see
+          </p>
+          <Link
+            href={`/programme/${roadmapId}`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Back to editing
+          </Link>
+        </div>
+      ) : (
+        <BackLink />
+      )}
 
       <div>
-        <h1 className="font-display text-2xl font-bold text-foreground">
+        <h1 className="font-display text-2xl font-bold wrap-anywhere text-foreground">
           {roadmap.name}
         </h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {levels.length} {levels.length === 1 ? "level" : "levels"} ·{" "}
-          {items.length} {items.length === 1 ? "item" : "items"} · what the
-          programme asks for
+        <p className="mt-0.5 text-sm text-muted-foreground tabular-nums">
+          {levels.length} {levels.length === 1 ? "level" : "levels"},{" "}
+          {items.length} {items.length === 1 ? "item" : "items"}
         </p>
       </div>
 
-      {/* The organiser's controls for the programme itself (D59): publish or
-          withdraw it, rename it, move its window, delete it while nobody has
-          worked on it. Above the reward ladder because publishing is the thing
-          that decides whether any of what follows is visible at all. */}
-      {canEdit && (
-        <ProgrammeAdmin
-          roadmapId={roadmapId}
-          name={roadmap.name}
-          startsOn={roadmap.starts_on}
-          endsOn={roadmap.ends_on}
-          published={roadmap.published}
-          recorded={recorded.size > 0}
-        />
-      )}
-
-      {/* The OTHER reading of this same programme, at the same id: this screen
-          says what it asks for, that one says who has done it (D59).
-
-          FOR WHOEVER LEADS A CIRCLE, and nobody else (D69). It used to be
-          offered to every reader on the argument that the report is RLS-scoped,
-          so a plain member would simply see themselves — true of the data and
-          wrong about the screen. They arrived at a page headed "Members'
-          progress", with a cohort strip and a roster of exactly one person,
-          which answers no question they have and reads as though the circle has
-          one person on the programme. The cohort is an administrative reading,
-          so the door is administrative too. */}
-      {canReadCohort && (
+      {/* For whoever leads a circle, and nobody else (D69). The cohort is an
+          administrative reading, so the door to it is administrative too. */}
+      {canReadCohort && !canEdit && (
         <Link
           href={`/programme/${roadmapId}/progress`}
           className={buttonVariants({
@@ -245,187 +267,11 @@ export default async function ProgrammeCataloguePage({
         </Link>
       )}
 
-      {canEdit && (
-        <RewardsEditor
-          roadmapId={roadmapId}
-          rewards={(rewards ?? []).map((r) => ({
-            id: r.id,
-            threshold: r.threshold,
-            label: r.label,
-            description: r.description,
-          }))}
-          recorded={recorded.size > 0}
-        />
-      )}
-
-      {/* The read-only ladder is for whoever is NOT editing. An organiser has
-          the editor above, which lists the same label, level and promise —
-          rendering both put two "Rewards" headings on the screen, one of them
-          a control and one of them a picture of the same three rows. */}
-      {!canEdit && rewards && rewards.length > 0 && (
-        <section>
-          <SectionHeading>Rewards</SectionHeading>
-          <Card padding="md">
-            {/* levelsDone={0}: this screen has no reader's progress on it and
-                must not imply one. Every rung reads as still to earn, which is
-                what the programme looks like described rather than measured. */}
-            <RewardLadder
-              rewards={rewards}
-              levelsDone={0}
-              totalLevels={levels.length}
-            />
-          </Card>
-        </section>
-      )}
-
-      {levels.length === 0 ? (
-        <Card padding="md">
-          <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              This programme has no work on it yet.
-            </p>
-            {/* The first item has no level section to hang off, so the button
-                lives here instead — without it a newly created programme is a
-                dead end on the very screen that made it. */}
-            {canEdit && (
-              <ItemFormButton
-                roadmapId={roadmapId}
-                level={1}
-                nextSortOrder={1}
-              />
-            )}
-          </div>
-        </Card>
-      ) : (
-        levels.map((level) => (
-          <section key={level}>
-            <SectionHeading
-              action={
-                canEdit ? (
-                  <ItemFormButton
-                    roadmapId={roadmapId}
-                    level={level}
-                    nextSortOrder={itemsAt(items, level).length + 1}
-                  />
-                ) : undefined
-              }
-            >
-              Level {level}
-            </SectionHeading>
-            <div className="flex flex-col gap-3">
-              {categoriesAt(items, level).map((category) => {
-                const group = itemsIn(items, level, category);
-                const req = requirementFor(requirements, level, category);
-                return (
-                  <Card key={category} padding="none">
-                    <div className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
-                      <h3 className="text-sm font-semibold text-foreground">
-                        {CATEGORY_LABEL[category]}
-                      </h3>
-                      {/* A budgeted category is a MENU with a total, not a list
-                          to finish — saying so here is the difference between
-                          "watch all of these" and "choose 600 minutes of them". */}
-                      <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                        {req
-                          ? `choose ${req.minTotal} ${group[0]?.unit ?? ""}`
-                          : `${group.length} to complete`}
-                      </p>
-                    </div>
-                    <ul className="divide-y divide-border">
-                      {group.map((i) => (
-                        <li key={i.id} className="flex items-start gap-3 p-4">
-                          <RoadmapCover
-                            imageUrl={i.imageUrl}
-                            className="w-12"
-                            fallback={
-                              <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                                {i.category === "listening" ? (
-                                  <PlayIcon aria-hidden className="size-4" />
-                                ) : (
-                                  <BookIcon aria-hidden className="size-4" />
-                                )}
-                              </div>
-                            }
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium wrap-anywhere text-foreground">
-                              <span>{i.title}</span>
-                              {i.compulsory && (
-                                <Badge variant="primary" size="sm">
-                                  Required
-                                </Badge>
-                              )}
-                            </p>
-                            {i.source && (
-                              <p className="text-xs wrap-anywhere text-muted-foreground">
-                                {i.source}
-                              </p>
-                            )}
-                            {i.description && (
-                              <p className="mt-1 line-clamp-2 text-xs leading-relaxed wrap-anywhere text-muted-foreground">
-                                {i.description}
-                              </p>
-                            )}
-                            {isSafeItemUrl(i.url) && (
-                              <a
-                                href={i.url!}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="mt-1 inline-block text-xs wrap-anywhere text-primary underline underline-offset-2"
-                              >
-                                {i.url}
-                              </a>
-                            )}
-                          </div>
-                          <div className="flex shrink-0 flex-col items-end gap-2">
-                            <p className="text-xs text-muted-foreground tabular-nums">
-                              {/* A target of 1 in its own unit ("1 book") is
-                                  noise; the title already says what it is. */}
-                              {i.target === 1 ? "" : `${i.target} ${i.unit}`}
-                            </p>
-                            {canEdit && (
-                              // Horizontal, and only TWO controls: three
-                              // stacked buttons made every row 150px tall on a
-                              // list of forty-six. Removal lives inside the
-                              // shape dialog, where the item is already named.
-                              <div className="flex shrink-0 items-center gap-1">
-                                <ItemEditor
-                                  item={{
-                                    id: i.id,
-                                    title: i.title,
-                                    url: i.url,
-                                    description: i.description,
-                                    imageUrl: i.imageUrl,
-                                  }}
-                                />
-                                <ItemFormButton
-                                  roadmapId={roadmapId}
-                                  item={{
-                                    id: i.id,
-                                    level: i.level,
-                                    category: i.category,
-                                    title: i.title,
-                                    source: i.source,
-                                    unit: i.unit,
-                                    target: i.target,
-                                    compulsory: i.compulsory,
-                                    sortOrder: sortOrderOf.get(i.id) ?? 0,
-                                    recorded: recorded.has(i.id),
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </Card>
-                );
-              })}
-            </div>
-          </section>
-        ))
-      )}
+      <CatalogueView
+        items={items}
+        requirements={requirements}
+        rewards={rewards ?? []}
+      />
     </Screen>
   );
 }
@@ -436,7 +282,7 @@ function BackLink() {
       href="/programme"
       className="-ml-2 inline-flex min-h-11 items-center gap-1.5 self-start px-2 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
     >
-      <ArrowLeftIcon className="size-4" /> Back
+      <ArrowLeftIcon aria-hidden className="size-4" /> Roadmaps
     </Link>
   );
 }

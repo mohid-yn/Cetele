@@ -506,7 +506,7 @@ export function ManageClient({
                   )}
                 </div>
                 {isOwnerRow ? (
-                  <Badge variant="accent" size="sm">
+                  <Badge variant="primary" size="sm">
                     owner
                   </Badge>
                 ) : (
@@ -780,11 +780,12 @@ export function ManageClient({
       {(roadmaps.length > 0 || followed.length > 0) && (
         <section>
           <h2 className="mb-2 text-sm font-semibold text-foreground">
-            Programmes
+            Roadmaps
           </h2>
           <Card className="p-4">
-            <p className="mb-3 text-sm font-medium text-foreground">
-              This circle follows
+            <p className="mb-3 text-sm text-muted-foreground">
+              Everyone in this circle sees the roadmaps ticked here. An
+              organiser can also add or remove them.
             </p>
 
             {/* CHECKBOXES, not a <select> (0028). A circle may follow several,
@@ -829,10 +830,9 @@ export function ManageClient({
                 );
               })}
 
-              {/* A programme this circle follows that the admin can no longer
-                  READ, because it was unpublished. Named rather than hidden:
-                  members can still see it, so an admin who cannot find it here
-                  has no way to understand what they are looking at. */}
+              {/* A roadmap this circle follows that has been withdrawn, or is
+                  a draft an organiser lined up. RLS hides it from members and
+                  admins alike, so all that can be said is that it exists. */}
               {followed
                 .filter((id) => !roadmaps.some((r) => r.id === id))
                 .map((id) => (
@@ -854,7 +854,8 @@ export function ManageClient({
                         }}
                       />
                       <span className="min-w-0 flex-1 text-sm text-muted-foreground">
-                        A programme that is no longer published
+                        A roadmap that isn&rsquo;t published right now. Members
+                        can&rsquo;t see it until it is.
                       </span>
                     </label>
                   </li>
@@ -862,14 +863,8 @@ export function ManageClient({
             </ul>
 
             <p className="mt-3 text-xs text-muted-foreground">
-              Everyone in the circle sees the programmes it follows and records
-              their own progress. You and the organisers can see how far each
-              member has got; nothing on them affects streaks or the
-              circle&rsquo;s figures.
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Un-following keeps everything already recorded — pick it up again
-              and members are exactly where they left off.
+              Roadmaps don&rsquo;t affect streaks or the circle&rsquo;s figures.
+              Unticking one keeps everything already recorded.
             </p>
             {followed.length > 0 && (
               // A cohort belongs to ONE programme now (D59). Following a single

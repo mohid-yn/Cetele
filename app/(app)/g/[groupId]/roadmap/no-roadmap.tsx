@@ -24,10 +24,7 @@ export function NoRoadmap({
 }) {
   return (
     <Screen>
-      <PageHeader
-        title="Roadmap"
-        subtitle="A yearly programme, followed by a circle"
-      />
+      <PageHeader title="Roadmap" />
 
       <Card padding="md">
         <div className="flex flex-col items-center gap-3 py-6 text-center">
@@ -35,7 +32,7 @@ export function NoRoadmap({
             <FlagIcon aria-hidden className="size-6" />
           </div>
           <p className="text-sm font-semibold text-foreground">
-            This circle isn&rsquo;t following a programme
+            This circle isn&rsquo;t on a roadmap
           </p>
           <p className="max-w-xs text-sm text-balance text-muted-foreground">
             {canFollow

@@ -136,6 +136,33 @@ export const ChevronDownIcon = (p: IconProps) => (
   </svg>
 );
 
+export const ChevronUpIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="m18 15-6-6-6 6" />
+  </svg>
+);
+
+export const LockIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </svg>
+);
+
+export const EyeIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+export const AlertIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M10.3 3.9 2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+    <path d="M12 9v4M12 17h.01" />
+  </svg>
+);
+
 export const BellIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />

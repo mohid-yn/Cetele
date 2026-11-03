@@ -1,15 +1,9 @@
 "use client";
 
 import * as React from "react";
-import {
-  Button,
-  Card,
-  ConfirmDialog,
-  Dialog,
-  Field,
-  Input,
-} from "@/components/ui";
-import { PlusIcon } from "@/components/app/icons";
+import { Button, ConfirmDialog, Dialog, Field, Input } from "@/components/ui";
+import { ChevronRightIcon, LockIcon, PlusIcon } from "@/components/app/icons";
+import { selectCls } from "@/components/app/role-toggle";
 import { useAction } from "@/lib/use-action";
 import { deleteRoadmapReward, upsertRoadmapReward } from "./authoring-actions";
 
@@ -23,23 +17,23 @@ export type EditableReward = {
 /**
  * What the administration gives, and at which level (D55, D59).
  *
- * THE WORDING IS ALWAYS EDITABLE; THE LEVEL IS NOT, once anybody has recorded
- * work. A reward's threshold is a promise about how much work earns it, so it
- * freezes with everything else completion depends on — but its label and
- * description are the administration describing what it hands over, and that
- * is exactly the thing still unsettled (the "$1,000 per level toward the
- * international trip" was a working figure). This editor is what closes that
- * question without a migration, on a programme already under way.
+ * The wording stays editable for good, because it is the administration
+ * describing what it hands over. The level freezes once anyone has recorded work,
+ * because it is a promise about how much work earns the reward. The level is a
+ * picker over the levels that exist, so a reward nobody could reach can't be
+ * typed in by accident.
  */
 export function RewardsEditor({
   roadmapId,
   rewards,
   recorded,
+  levelCount,
 }: {
   roadmapId: string;
   rewards: EditableReward[];
-  /** Anyone recorded work on this programme? Freezes thresholds and removal. */
+  /** Anyone recorded work on this roadmap? Freezes thresholds and removal. */
   recorded: boolean;
+  levelCount: number;
 }) {
   const [editing, setEditing] = React.useState<EditableReward | "new" | null>(
     null,
@@ -47,7 +41,6 @@ export function RewardsEditor({
   const [removing, setRemoving] = React.useState<EditableReward | null>(null);
   const save = useAction();
   const remove = useAction();
-
   const [form, setForm] = React.useState({
     threshold: "1",
     label: "",
@@ -57,7 +50,13 @@ export function RewardsEditor({
   const open = (reward: EditableReward | "new") => {
     setForm(
       reward === "new"
-        ? { threshold: String(rewards.length + 1), label: "", description: "" }
+        ? {
+            threshold: String(
+              Math.min(rewards.length + 1, Math.max(levelCount, 1)),
+            ),
+            label: "",
+            description: "",
+          }
         : {
             threshold: String(reward.threshold),
             label: reward.label,
@@ -67,62 +66,64 @@ export function RewardsEditor({
     setEditing(reward);
   };
 
-  return (
-    <Card className="flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-foreground">Rewards</h3>
-        {/* A new reward changes what the ladder promises, so it is offered only
-            while nothing has been recorded — the same rule the RPC enforces. */}
-        {!recorded && (
-          <Button variant="outline" size="sm" onClick={() => open("new")}>
-            <PlusIcon aria-hidden className="size-4" />
-            Add
-          </Button>
-        )}
-      </div>
+  const editingReward = editing !== "new" ? editing : null;
+  const choices = Array.from(
+    new Set([
+      ...Array.from({ length: Math.max(levelCount, 1) }, (_, i) => i + 1),
+      ...(editingReward ? [editingReward.threshold] : []),
+    ]),
+  ).sort((a, b) => a - b);
 
-      {rewards.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
-          No rewards yet. A reward unlocks when a member has finished that many
-          levels.
-        </p>
-      ) : (
-        <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-muted-foreground">
+        A reward unlocks when a member has finished that many levels.
+      </p>
+
+      {rewards.length > 0 && (
+        <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
           {rewards.map((r) => (
-            <li key={r.id} className="flex items-center gap-2 p-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {r.label}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  at {r.threshold} {r.threshold === 1 ? "level" : "levels"}
-                  {r.description ? ` · ${r.description}` : ""}
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => open(r)}>
-                Edit
-              </Button>
-              {!recorded && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-danger"
-                  onClick={() => setRemoving(r)}
-                >
-                  Remove
-                </Button>
-              )}
+            <li key={r.id}>
+              <button
+                type="button"
+                aria-label={`Edit ${r.label}`}
+                onClick={() => open(r)}
+                className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-[var(--duration-fast)] first:rounded-t-2xl last:rounded-b-2xl hover:bg-surface-hover active:bg-surface-active"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium wrap-anywhere text-foreground">
+                    {r.label}
+                  </span>
+                  <span className="mt-0.5 block text-xs wrap-anywhere text-muted-foreground">
+                    After {r.threshold} {r.threshold === 1 ? "level" : "levels"}
+                    {r.description ? ` · ${r.description}` : ""}
+                  </span>
+                </span>
+                <ChevronRightIcon
+                  aria-hidden
+                  className="size-4 shrink-0 text-muted-foreground"
+                />
+              </button>
             </li>
           ))}
         </ul>
       )}
 
-      {recorded && (
-        <p className="text-xs text-muted-foreground">
-          Members have recorded work, so a reward&rsquo;s level is fixed and
-          none can be added or removed. What it says it gives is still yours to
-          edit.
+      {recorded ? (
+        <p className="flex gap-2 text-sm text-muted-foreground">
+          <LockIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
+          Members have recorded work, so rewards can&rsquo;t be added or
+          removed, and their levels are fixed. The wording can still change.
         </p>
+      ) : (
+        <Button
+          variant="outline"
+          className="self-start"
+          onClick={() => open("new")}
+        >
+          <PlusIcon aria-hidden />
+          Add reward
+        </Button>
       )}
 
       {remove.error && (
@@ -134,10 +135,21 @@ export function RewardsEditor({
       <Dialog
         open={editing !== null}
         onClose={() => setEditing(null)}
-        title={editing === "new" ? "Add a reward" : "Edit reward"}
-        description="What the administration gives, and how many finished levels earn it."
+        title={editing === "new" ? "Add reward" : "Edit reward"}
         footer={
           <>
+            {editingReward && !recorded && (
+              <Button
+                variant="ghost"
+                className="mr-auto text-danger"
+                onClick={() => {
+                  setEditing(null);
+                  setRemoving(editingReward);
+                }}
+              >
+                Remove
+              </Button>
+            )}
             <Button variant="ghost" onClick={() => setEditing(null)}>
               Cancel
             </Button>
@@ -148,10 +160,7 @@ export function RewardsEditor({
                 void save.run(
                   () =>
                     upsertRoadmapReward(roadmapId, {
-                      id:
-                        editing === "new" || editing === null
-                          ? null
-                          : editing.id,
+                      id: editingReward?.id ?? null,
                       threshold: parseInt(form.threshold, 10) || 1,
                       label: form.label,
                       description: form.description,
@@ -165,7 +174,7 @@ export function RewardsEditor({
           </>
         }
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 pb-1">
           <Field label="Label" htmlFor="reward-label" required>
             <Input
               id="reward-label"
@@ -178,33 +187,31 @@ export function RewardsEditor({
           <Field
             label="What it gives"
             htmlFor="reward-description"
-            hint="The administration's own words. Editable at any time."
+            hint="Can be edited at any time."
           >
             <Input
               id="reward-description"
               value={form.description}
               autoComplete="off"
-              placeholder="$1,000 toward the international trip"
               onChange={(e) =>
                 setForm({ ...form, description: e.target.value })
               }
             />
           </Field>
-          <Field
-            label="Unlocks at"
-            htmlFor="reward-threshold"
-            className="w-40"
-            hint="Finished levels"
-          >
-            <Input
+          <Field label="Unlocks after" htmlFor="reward-threshold">
+            <select
               id="reward-threshold"
-              type="number"
-              min={1}
-              inputMode="numeric"
+              className={selectCls}
               disabled={recorded}
               value={form.threshold}
               onChange={(e) => setForm({ ...form, threshold: e.target.value })}
-            />
+            >
+              {choices.map((n) => (
+                <option key={n} value={n}>
+                  {n} finished {n === 1 ? "level" : "levels"}
+                </option>
+              ))}
+            </select>
           </Field>
           {save.error && (
             <p role="alert" className="text-sm text-danger">
@@ -224,7 +231,6 @@ export function RewardsEditor({
             : undefined
         }
         confirmLabel="Remove"
-        destructive
         onConfirm={() => {
           const target = removing;
           if (!target) return;
@@ -234,6 +240,6 @@ export function RewardsEditor({
           );
         }}
       />
-    </Card>
+    </div>
   );
 }

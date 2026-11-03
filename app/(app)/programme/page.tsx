@@ -2,15 +2,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
-import { Card, Screen, buttonVariants } from "@/components/ui";
+import { Badge, Card, Screen, buttonVariants } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { FlagIcon, UsersIcon } from "@/components/app/icons";
-import { levelsOf } from "@/lib/roadmap";
+import { localDateISO } from "@/lib/local-date";
+import { levelsOf, programmeWindow } from "@/lib/roadmap";
 import { NewProgrammeButton } from "./new-programme";
 
 /**
- * The roadmap hub — the administration's programmes, and the way in to both
+ * The roadmap hub: the administration's programmes, and the way in to both
  * things you can do with one (D59).
  *
  * WHY IT EXISTS. The report used to live at this address, so an organiser's
@@ -52,7 +53,9 @@ export default async function ProgrammeHubPage() {
         // `level` alone — this screen counts the shape of a programme, it never
         // renders an item. Pulling titles and cover art here would be a page of
         // data for a line of text.
-        .select("id, name, starts_on, ends_on, published, roadmap_items(level)")
+        .select(
+          "id, name, starts_on, ends_on, published, roadmap_items(level), group_roadmaps(group_id)",
+        )
         .order("starts_on", { ascending: false }),
     ),
     // WHICH READER this is, for the empty state and the footer — never as a
@@ -62,13 +65,14 @@ export default async function ProgrammeHubPage() {
       "programmeHub.viewer (is_super_admin — copy only)",
       supabase
         .from("profiles")
-        .select("is_super_admin")
+        .select("is_super_admin, timezone")
         .eq("id", me)
         .maybeSingle(),
     ),
   ]);
 
   const isSuperAdmin = viewer?.is_super_admin ?? false;
+  const todayISO = localDateISO(viewer?.timezone ?? "UTC");
 
   const programmes = (roadmaps ?? [])
     .map((r) => ({
@@ -82,6 +86,8 @@ export default async function ProgrammeHubPage() {
       // screen count with.
       levels: levelsOf(r.roadmap_items ?? []).length,
       items: (r.roadmap_items ?? []).length,
+      // RLS shows an organiser every row, so this count is only rendered for them.
+      circles: (r.group_roadmaps ?? []).length,
     }))
     // THE TWO POLICIES DISAGREE ON PURPOSE, and this is where that shows.
     // `roadmaps` is readable to anyone once PUBLISHED — that is how an admin
@@ -115,106 +121,112 @@ export default async function ProgrammeHubPage() {
     ).filter((id) => id !== null),
   );
 
+  const phaseOf = (p: (typeof programmes)[number]) =>
+    !p.published
+      ? "draft"
+      : programmeWindow(p.startsOn, p.endsOn, todayISO).state === "closed"
+        ? "closed"
+        : "live";
+
+  // Grouped by what an organiser would do next. A member never sees a draft, so
+  // their list has at most two groups and usually one.
+  const groups = [
+    { key: "live", title: "Live" },
+    { key: "draft", title: "Drafts" },
+    { key: "closed", title: "Closed" },
+  ]
+    .map((g) => ({
+      ...g,
+      rows: programmes.filter((p) => phaseOf(p) === g.key),
+    }))
+    .filter((g) => g.rows.length > 0);
+
+  const years = (p: (typeof programmes)[number]) =>
+    p.startsOn.slice(0, 4) === p.endsOn.slice(0, 4)
+      ? p.startsOn.slice(0, 4)
+      : `${p.startsOn.slice(0, 4)}-${p.endsOn.slice(0, 4)}`;
+
   return (
     <Screen>
       <PageHeader
-        title="Roadmap"
-        subtitle="The programmes the administration sets, and how everyone is getting on with them."
+        title="Roadmaps"
         action={isSuperAdmin ? <NewProgrammeButton /> : undefined}
       />
 
-      {/* NO screen-level "Members' progress" button, and that is the owner's
-          correction (D59): a cohort belongs to a programme. Levels, rewards and
-          the contribution are all per programme (D55), so a single report
-          stacking every one of them invited a comparison that means nothing —
-          and left the reader to work out which roster they were looking at.
-          Each row below carries its own instead. */}
-      <section>
-        <SectionHeading>Programmes</SectionHeading>
-        {programmes.length === 0 ? (
-          <Card padding="md">
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <div className="grid size-12 place-items-center rounded-2xl bg-muted text-muted-foreground">
-                <FlagIcon aria-hidden className="size-6" />
-              </div>
-              <p className="text-sm font-semibold text-foreground">
-                No programme to show
-              </p>
-              <p className="max-w-xs text-sm text-balance text-muted-foreground">
-                {isSuperAdmin
-                  ? "Nothing is published yet. A programme appears here as soon as one is."
-                  : "A programme appears here once your circle follows one — an admin chooses it in Manage."}
-              </p>
+      {programmes.length === 0 ? (
+        <Card padding="md">
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <div className="grid size-12 place-items-center rounded-2xl bg-muted text-muted-foreground">
+              <FlagIcon aria-hidden className="size-6" />
             </div>
-          </Card>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {programmes.map((p) => (
-              // The circle-card pattern from /groups, deliberately: a row you
-              // tap to open, with the same inset and the same hover. Two lists
-              // of things-you-open should not be two different controls.
-              <Card key={p.id} className="flex items-center gap-1 p-1.5">
-                {/* The whole card opens the programme — where the work is
-                    listed and, for an organiser, where each item is edited.
-                    That is the trip this screen exists to shorten. */}
-                <Link
-                  href={`/programme/${p.id}`}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/50"
-                >
-                  <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                    <FlagIcon aria-hidden className="size-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-foreground">
-                      {p.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {!p.published && (
-                        <span className="font-medium text-foreground">
-                          Draft ·{" "}
-                        </span>
-                      )}
-                      {p.levels} {p.levels === 1 ? "level" : "levels"} ·{" "}
-                      {p.items} {p.items === 1 ? "item" : "items"} ·{" "}
-                      {p.startsOn.slice(0, 4)}
-                      {p.endsOn.slice(0, 4) !== p.startsOn.slice(0, 4) &&
-                        `–${p.endsOn.slice(0, 4)}`}
-                    </p>
-                  </div>
-                </Link>
-                {/* This programme's cohort, beside this programme's name —
-                    the same arrangement /groups uses for Manage: the card
-                    opens the thing, the button does the other job on it.
-
-                    Only for whoever LEADS a circle following it (D69). A plain
-                    member's row is the card alone, which is the whole of what
-                    this screen has for them: the programme opens, the cohort
-                    is not theirs to read. */}
-                {cohortReadable.has(p.id) && (
-                  <Link
-                    href={`/programme/${p.id}/progress`}
-                    aria-label={`Members' progress on ${p.name}`}
-                    className={buttonVariants({
-                      variant: "outline",
-                      size: "sm",
-                      className: "mr-1.5",
-                    })}
-                  >
-                    <UsersIcon aria-hidden className="size-4" />
-                    Progress
-                  </Link>
-                )}
-              </Card>
-            ))}
+            <p className="text-sm font-semibold text-foreground">
+              No roadmap to show
+            </p>
+            <p className="max-w-xs text-sm text-balance text-muted-foreground">
+              {isSuperAdmin
+                ? "Create the first one. It stays private until you publish it."
+                : "One appears here once your circle follows it. A circle's admins choose that in Manage."}
+            </p>
           </div>
-        )}
-      </section>
-
-      <p className="px-1 text-center text-xs text-muted-foreground">
-        {isSuperAdmin
-          ? "Opening a programme shows what it asks for at every level — and lets you edit an item’s link, description and cover."
-          : "Opening a programme shows what it asks for at every level."}
-      </p>
+        </Card>
+      ) : (
+        groups.map((group) => (
+          <section key={group.key}>
+            {/* One group needs no label, unless it's a label worth reading. */}
+            {(groups.length > 1 || group.key !== "live") && (
+              <SectionHeading>{group.title}</SectionHeading>
+            )}
+            <ul className="flex flex-col gap-2">
+              {group.rows.map((p) => (
+                <li key={p.id}>
+                  <Card className="flex items-center gap-1 p-1.5">
+                    <Link
+                      href={`/programme/${p.id}`}
+                      className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-lg px-2.5 py-1.5 text-left transition-colors duration-[var(--duration-fast)] hover:bg-surface-hover active:bg-surface-active"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold wrap-anywhere text-foreground">
+                          {p.name}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">
+                          {p.levels} {p.levels === 1 ? "level" : "levels"},{" "}
+                          {p.items} {p.items === 1 ? "item" : "items"},{" "}
+                          {years(p)}
+                        </span>
+                      </span>
+                      {isSuperAdmin && p.published && (
+                        <Badge
+                          variant={p.circles > 0 ? "primary" : "warning"}
+                          size="sm"
+                          className="shrink-0 tabular-nums"
+                        >
+                          {p.circles === 0
+                            ? "No circles"
+                            : `${p.circles} ${p.circles === 1 ? "circle" : "circles"}`}
+                        </Badge>
+                      )}
+                    </Link>
+                    {/* Only for whoever leads a circle following it (D69). */}
+                    {cohortReadable.has(p.id) && (
+                      <Link
+                        href={`/programme/${p.id}/progress`}
+                        aria-label={`Members' progress on ${p.name}`}
+                        className={buttonVariants({
+                          variant: "ghost",
+                          size: "icon",
+                          className: "text-muted-foreground",
+                        })}
+                      >
+                        <UsersIcon aria-hidden />
+                      </Link>
+                    )}
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      )}
     </Screen>
   );
 }

@@ -38,14 +38,14 @@ export function NewProgrammeButton() {
     <>
       <Button variant="accent" size="sm" onClick={openDialog}>
         <PlusIcon aria-hidden className="size-4" />
-        New programme
+        New roadmap
       </Button>
 
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title="New programme"
-        description="It starts unpublished, so no circle sees it until you say so."
+        title="New roadmap"
+        description="It stays private until you publish it."
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>
@@ -53,7 +53,7 @@ export function NewProgrammeButton() {
             </Button>
             <Button
               variant="primary"
-              disabled={act.pending || name.trim() === ""}
+              disabled={act.pending || name.trim() === "" || endsOn < startsOn}
               onClick={() =>
                 void act.run(() => createRoadmap(name, startsOn, endsOn))
               }
@@ -64,21 +64,16 @@ export function NewProgrammeButton() {
         }
       >
         <div className="flex flex-col gap-4">
-          <Field
-            label="Name"
-            htmlFor="new-programme-name"
-            hint="What the administration calls it."
-          >
+          <Field label="Name" htmlFor="new-programme-name">
             <Input
               id="new-programme-name"
               value={name}
               autoComplete="off"
-              placeholder="Islamic Development Program"
               onChange={(e) => setName(e.target.value)}
             />
           </Field>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <Field
               label="Opens"
               htmlFor="new-programme-start"
@@ -95,6 +90,7 @@ export function NewProgrammeButton() {
               label="Closes"
               htmlFor="new-programme-end"
               className="flex-1"
+              error={endsOn < startsOn ? "Must be after it opens." : undefined}
             >
               <Input
                 id="new-programme-end"

@@ -258,7 +258,7 @@ export function RoadmapClient({
             })}
           >
             <FlagIcon aria-hidden className="size-4" />
-            Open programme
+            Open roadmap
           </Link>
         </div>
       )}
@@ -277,7 +277,7 @@ export function RoadmapClient({
           current
             ? `Level ${current}`
             : finished
-              ? "Programme complete"
+              ? "Roadmap complete"
               : "Not published yet"
         }
         stat={
@@ -289,7 +289,7 @@ export function RoadmapClient({
         }
         caption={
           empty
-            ? "This programme has no work on it yet"
+            ? "This roadmap has nothing on it yet"
             : done === 0
               ? `${levels.length} levels · none finished yet`
               : `${done} of ${levels.length} levels finished`
@@ -547,7 +547,7 @@ export function RoadmapClient({
           to the people who hand over the rewards — that is the deal, and a
           member who is not told is being read without knowing (D55). */}
       <p className="px-1 text-center text-xs text-muted-foreground">
-        Your circle&rsquo;s admins and the programme&rsquo;s organisers can see
+        Your circle&rsquo;s admins and the roadmap&rsquo;s organisers can see
         how far you&rsquo;ve got. Nothing here affects your streak, your rings
         or your circle&rsquo;s figures.
       </p>

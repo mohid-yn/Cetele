@@ -1246,6 +1246,28 @@ export type Database = {
         Returns: undefined;
       };
       revoke_super_admin: { Args: { p_user: string }; Returns: undefined };
+      roadmap_circles: {
+        Args: { p_roadmap: string };
+        Returns: {
+          following: boolean;
+          group_id: string;
+          member_count: number;
+          name: string;
+        }[];
+      };
+      reorder_roadmap_items: {
+        Args: {
+          p_category: string;
+          p_items: string[];
+          p_level: number;
+          p_roadmap: string;
+        };
+        Returns: undefined;
+      };
+      set_circle_on_roadmap: {
+        Args: { p_follow: boolean; p_group: string; p_roadmap: string };
+        Returns: undefined;
+      };
       roadmap_roster: {
         Args: never;
         Returns: {

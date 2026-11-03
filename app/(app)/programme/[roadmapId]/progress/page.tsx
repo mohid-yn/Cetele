@@ -37,7 +37,7 @@ import {
  *
  * WHO MAY BE HERE AT ALL is a separate question, and it is answered ONCE, at
  * the top, by `can_read_roadmap_cohort` (0035, D69): an organiser, or whoever
- * leads a circle following this programme. A plain member passed the old
+ * leads a circle following this roadmap. A plain member passed the old
  * check — there wasn't one — and got a page headed "Members' progress" holding
  * a cohort strip and a roster of exactly one person, themselves. No data
  * escaped; the screen was simply not theirs, and reading a cohort is an
@@ -166,7 +166,7 @@ export default async function ProgrammeReportPage({
       <Screen>
         <BackLink roadmapId={roadmapId} />
         <EmptyCard
-          title="No programme here"
+          title="No roadmap here"
           body="Either it doesn’t exist, or it isn’t one you can read."
         />
       </Screen>
@@ -271,7 +271,7 @@ export default async function ProgrammeReportPage({
       {people.length === 0 ? (
         <EmptyCard
           title="Nothing recorded yet"
-          body="People on a circle’s programme show up here, whether or not they have started."
+          body="People on a circle’s roadmap show up here, whether or not they have started."
         />
       ) : (
         <>
@@ -318,10 +318,10 @@ export default async function ProgrammeReportPage({
           arm can finally say what it means rather than hedging with "if". */}
       <p className="px-1 text-center text-xs text-muted-foreground">
         {isSuperAdmin
-          ? "You are an organiser, so this is everyone on every circle following this programme."
-          : "You lead a circle following this programme, so this is its members."}{" "}
+          ? "You are an organiser, so this is everyone on every circle following this roadmap."
+          : "You lead a circle following this roadmap, so this is its members."}{" "}
         <Link href="/programme" className="underline">
-          All programmes
+          All roadmaps
         </Link>
       </p>
     </Screen>

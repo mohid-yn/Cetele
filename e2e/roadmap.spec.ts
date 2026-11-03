@@ -130,7 +130,7 @@ test("a circle follows a programme, and its members can record against it", asyn
     page.getByRole("link", { name: /Members’ progress/ }),
   ).toHaveAttribute("href", `/programme/${IDP}/progress`);
   await expect(
-    page.getByRole("link", { name: /Open programme/ }),
+    page.getByRole("link", { name: /Open roadmap/ }),
   ).toHaveAttribute("href", /^\/programme\/[0-9a-f-]+$/);
 
   // A fresh member starts at LEVEL 1 and has finished nothing. Everyone begins
@@ -230,7 +230,7 @@ test("a circle follows a programme, and its members can record against it", asyn
   // The member is TOLD who reads this (D55) — being read without knowing is
   // the thing the disclosure exists to prevent.
   await expect(
-    page.getByText(/admins and the programme’s organisers can see/),
+    page.getByText(/admins and the roadmap’s organisers can see/),
   ).toBeVisible();
 });
 
@@ -268,7 +268,7 @@ test("an outsider's circle sees no programme, and the report refuses them", asyn
   // crucially not the rewards, which are the administration's real promises to
   // people it has actually enrolled.
   await page.goto(manageUrl.replace("/group/manage", "/roadmap"));
-  await expect(page.getByText("isn’t following a programme")).toBeVisible();
+  await expect(page.getByText("isn’t on a roadmap")).toBeVisible();
   await expect(page.getByText("Level 1 complete")).toHaveCount(0);
 
   // REFUSED, where this used to show them an empty roster (D69, 0035). Reading
@@ -290,8 +290,8 @@ test("an outsider's circle sees no programme, and the report refuses them", asyn
   // as "0 levels · 0 items", a broken programme rather than someone else's. The
   // hub drops it and says why (D59).
   await page.goto("/programme");
-  await expect(page.getByText("No programme to show")).toBeVisible();
-  await expect(page.getByText(/an admin chooses it in Manage/)).toBeVisible();
+  await expect(page.getByText("No roadmap to show")).toBeVisible();
+  await expect(page.getByText(/admins choose that in Manage/)).toBeVisible();
 });
 
 test("a super admin has a way in, and reads the cohort across circles", async ({
@@ -303,7 +303,7 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   await signIn(page, OUTSIDER);
   await page.goto("/groups");
   await expect(page.getByText("Administration")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: /^Programme/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /^Roadmaps/ })).toHaveCount(0);
 
   // The gap this closes: a super admin is deliberately in no circle, and the
   // report's ONLY link lived inside a circle's Manage screen — gated on leading
@@ -398,7 +398,7 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
 
   // And there is a way back out — to the hub the Roadmap tab lands on, which
   // is where the card that opened this screen lives.
-  await page.getByRole("link", { name: "Back" }).click();
+  await page.getByRole("link", { name: "Roadmaps", exact: true }).click();
   await page.waitForURL("**/programme");
 });
 
@@ -472,7 +472,9 @@ test("the timeline, its pictures, and an organiser editing an item", async ({
 
   // The catalogue carries the booklet's own descriptions and cover artwork
   // (0027). Before this, an item was a title and a target and nothing else.
-  await page.goto(`/programme/${IDP}`);
+  // Read through the preview: the organiser's own list is kept to titles, so
+  // forty-six items can be scanned.
+  await page.goto(`/programme/${IDP}?view=member`);
   await expect(
     page.getByRole("heading", { name: "Islamic Development Program" }),
   ).toBeVisible();
@@ -480,6 +482,8 @@ test("the timeline, its pictures, and an organiser editing an item", async ({
   await expect(
     page.locator('img[src="/roadmap/calling-to-good.png"]'),
   ).toBeVisible();
+  await page.getByRole("link", { name: "Back to editing" }).click();
+  await page.waitForURL(`**/programme/${IDP}`);
 
   // THE EDITOR. The link is why it exists: the booklet's URLs are placeholders,
   // so every item shipped with none and the only way to enter a real one was a
@@ -518,10 +522,13 @@ test("the timeline, its pictures, and an organiser editing an item", async ({
   // reload proves the edit is IN THE DATABASE, which is the claim that matters
   // for content every member will read.
   await page.reload();
-  await expect(
-    page.getByText("https://youtube.com/watch?v=e2e-guarding"),
-  ).toBeVisible();
-  await expect(page.getByText("A short talk on the tongue.")).toBeVisible();
+  await page.getByRole("button", { name: "Edit Guarding the Tongue" }).click();
+  await expect(page.getByLabel("Link")).toHaveValue(
+    "https://youtube.com/watch?v=e2e-guarding",
+  );
+  await expect(page.getByLabel("Description")).toHaveValue(
+    "A short talk on the tongue.",
+  );
 
   // AND THE MEMBER SEES IT, which is the whole point of the editor: the two
   // screens read the same row, so an organiser's edit reaches every circle
@@ -603,7 +610,7 @@ test("an organiser builds a programme: create, add work, publish, delete", async
   await makeSuperAdmin(ORGANISER);
 
   await page.goto("/programme");
-  await page.getByRole("button", { name: "New programme" }).click();
+  await page.getByRole("button", { name: "New roadmap" }).click();
   await page.getByLabel("Name").fill(SECOND_PROGRAMME);
   await page.getByRole("button", { name: "Create" }).click();
 
@@ -611,7 +618,7 @@ test("an organiser builds a programme: create, add work, publish, delete", async
   // the next thing to do is add the work, which lives on this screen.
   await page.waitForURL(/\/programme\/[0-9a-f-]+$/);
   const createdUrl = page.url();
-  await expect(page.getByText("only you can see it")).toBeVisible();
+  await expect(page.getByText("Only organisers can see this.")).toBeVisible();
 
   // A DRAFT IS INVISIBLE TO EVERYONE ELSE, which is the point of being born
   // unpublished — `roadmaps_select_published` (0025) is what enforces it.
@@ -624,7 +631,7 @@ test("an organiser builds a programme: create, add work, publish, delete", async
 
   // ADDING WORK. The empty state carries its own button, because the per-level
   // one does not exist until there is a level.
-  await page.getByRole("button", { name: "Add work" }).click();
+  await page.getByRole("button", { name: "Add item" }).click();
   // Scoped to the dialog: the rewards card behind it has its own "Add", and an
   // unscoped locator matches both — the strict-mode violation this suite keeps
   // re-learning.
@@ -641,7 +648,7 @@ test("an organiser builds a programme: create, add work, publish, delete", async
   // item can still be removed — the two things that freeze the moment a member
   // does any of it (pgTAP 017 pins both sides).
   await page
-    .getByRole("button", { name: "Edit the shape of Nightly reminder series" })
+    .getByRole("button", { name: "Edit Nightly reminder series" })
     .click();
   const shape = page.getByRole("dialog");
   await expect(shape.getByLabel("Target")).toBeEnabled();
@@ -650,7 +657,7 @@ test("an organiser builds a programme: create, add work, publish, delete", async
 
   // PUBLISHING is what makes it real for circles — the next spec follows it.
   await page.getByRole("button", { name: "Publish" }).click();
-  await expect(page.getByText("every circle can follow it")).toBeVisible();
+  await expect(page.getByText(/no circle is on it yet/)).toBeVisible();
 });
 
 test("a circle follows TWO programmes, and the roadmap switches between them", async ({
@@ -738,4 +745,109 @@ test("a circle follows TWO programmes, and the roadmap switches between them", a
       .first()
       .getByRole("button", { name: "Undo" }),
   ).toBeVisible();
+});
+
+test("an organiser sees who a roadmap reaches, and puts a circle on it", async ({
+  page,
+}) => {
+  // D72. Publishing alone reaches nobody, and the organiser could not see that.
+  const name = `Assigned Roadmap ${STAMP}`;
+  await signIn(page, ORGANISER);
+  await makeSuperAdmin(ORGANISER);
+  await page.goto("/programme");
+  await page.getByRole("button", { name: "New roadmap" }).click();
+  await page.getByLabel("Name").fill(name);
+  await page.getByRole("button", { name: "Create" }).click();
+  await page.waitForURL(/\/programme\/[0-9a-f-]+$/);
+  const url = page.url();
+
+  // An empty roadmap cannot be published, and the screen says why.
+  await expect(page.getByRole("button", { name: "Publish" })).toBeDisabled();
+  await expect(page.getByText("Add at least one item.")).toBeVisible();
+
+  // One form for an item, and "Add another" keeps it open for the next one.
+  await page.getByRole("button", { name: "Add item" }).click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByLabel("Category").selectOption("listening");
+  await expect(sheet.getByLabel("Unit")).toHaveValue("minutes");
+  await sheet.getByLabel("Target").fill("300");
+  await sheet.getByLabel("Title").fill("First talk");
+  await sheet.getByRole("button", { name: "Add another" }).click();
+  await expect(sheet.getByText("Added “First talk”.")).toBeVisible();
+  await expect(sheet.getByLabel("Title")).toHaveValue("");
+  await sheet.getByLabel("Title").fill("Second talk");
+  await sheet.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(sheet).toBeHidden();
+
+  // A scoring total, which no screen could set before.
+  await page.getByRole("button", { name: /Change how/ }).click();
+  const scoring = page.getByRole("dialog");
+  await scoring.getByRole("radio", { name: /Reach a total/ }).check();
+  await scoring.getByLabel("Total minutes").fill("900");
+  await expect(scoring.getByRole("button", { name: "Save" })).toBeDisabled();
+  await scoring.getByLabel("Total minutes").fill("450");
+  await scoring.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Choose 450 minutes")).toBeVisible();
+
+  // Reordering persists, which a reload proves.
+  await page.getByRole("button", { name: "Reorder" }).click();
+  await page.getByRole("button", { name: "Move Second talk up" }).click();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect
+    .poll(async () => {
+      await page.reload();
+      return page
+        .getByRole("button", { name: /^Edit / })
+        .first()
+        .getAttribute("aria-label");
+    })
+    .toBe("Edit Second talk");
+
+  // Published but on no circle is not "live", and the screen must not say so.
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByText(/no member can see it/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Add circles" }).click();
+  await expect(page).toHaveURL(/tab=circles/);
+  const circle = page.getByRole("checkbox", { name: /Roadmap Circle/ }).first();
+  await circle.check();
+  await expect(
+    page.getByText(/^Live for \d+ members? in 1 circle\.$/),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("checkbox", { name: /Roadmap Circle/ }).first(),
+  ).toBeChecked();
+
+  // The circle's admin sees it ticked, with the control they have always had.
+  await signIn(page, OWNER);
+  await page.goto("/groups");
+  await page
+    .getByRole("link", { name: /Roadmap Circle/ })
+    .first()
+    .click();
+  await page.waitForURL("**/today");
+  const groupId = page.url().match(/\/g\/([^/]+)\//)![1];
+  await page.goto(`/g/${groupId}/group/manage`);
+  await expect(page.getByRole("checkbox", { name })).toBeChecked();
+
+  // Withdrawing a live roadmap asks first, because it takes it away from people.
+  await signIn(page, ORGANISER);
+  await page.goto(url);
+  await page.getByRole("button", { name: "Withdraw" }).click();
+  const confirm = page.getByRole("dialog");
+  await expect(
+    confirm.getByText(/Nothing they recorded is lost/),
+  ).toBeVisible();
+  await confirm.getByRole("button", { name: "Withdraw" }).click();
+  await expect(page.getByText(/1 circle will get it/)).toBeVisible();
+
+  // Tidy up the circle's follow, so later specs see what they expect.
+  await page.getByRole("tab", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Delete" }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Delete" })
+    .click();
+  await page.waitForURL("**/programme");
 });

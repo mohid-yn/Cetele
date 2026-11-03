@@ -210,3 +210,149 @@ export async function deleteRoadmapReward(rewardId: string): Promise<Result> {
   revalidateProgramme();
   return { error: null };
 }
+
+/**
+ * Save one item from the single item form (D72). Shape and content are still two
+ * RPCs because they have different freeze rules, so this runs them in order.
+ *
+ * A link is checked BEFORE a new item is created. Otherwise a bad link would
+ * create the item, report an error, and a second press of Add would create it
+ * twice. The message matches the one `set_roadmap_item_content` raises.
+ */
+export async function saveRoadmapItem(
+  roadmapId: string,
+  itemId: string | null,
+  shape: {
+    level: number;
+    category: string;
+    title: string;
+    source: string;
+    unit: string;
+    target: number;
+    compulsory: boolean;
+    sortOrder: number;
+  },
+  content: { url: string; description: string; imageUrl: string },
+): Promise<Result & { id: string | null }> {
+  const url = content.url.trim();
+  if (url !== "" && !/^https?:\/\//i.test(url)) {
+    return {
+      error: "a link must start with http:// or https://",
+      id: itemId,
+    };
+  }
+
+  const supabase = await createClient();
+  const shapeArgs = {
+    p_level: shape.level,
+    p_category: shape.category,
+    p_title: shape.title,
+    p_source: shape.source,
+    p_unit: shape.unit,
+    p_target: shape.target,
+    p_compulsory: shape.compulsory,
+    p_sort_order: shape.sortOrder,
+  };
+
+  let id = itemId;
+  if (id) {
+    const { error } = await q(
+      "rpc.set_roadmap_item_shape",
+      supabase.rpc("set_roadmap_item_shape", { p_item: id, ...shapeArgs }),
+    );
+    await signOutIfStaleSession(error);
+    if (error) return { error: error.message, id };
+  } else {
+    const { data, error } = await q(
+      "rpc.create_roadmap_item",
+      supabase.rpc("create_roadmap_item", {
+        p_roadmap: roadmapId,
+        ...shapeArgs,
+      }),
+    );
+    await signOutIfStaleSession(error);
+    if (error) return { error: error.message, id: null };
+    id = data as string;
+  }
+
+  const { error } = await q(
+    "rpc.set_roadmap_item_content",
+    supabase.rpc("set_roadmap_item_content", {
+      p_item: id,
+      p_url: url,
+      p_description: content.description,
+      p_image_url: content.imageUrl,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  revalidateProgramme();
+  // The id comes back even on failure, so a retry edits the new item instead of
+  // adding a second copy of it.
+  return { error: error?.message ?? null, id };
+}
+
+export async function reorderRoadmapItems(
+  roadmapId: string,
+  level: number,
+  category: string,
+  itemIds: string[],
+): Promise<Result> {
+  const supabase = await createClient();
+  const { error } = await q(
+    "rpc.reorder_roadmap_items",
+    supabase.rpc("reorder_roadmap_items", {
+      p_roadmap: roadmapId,
+      p_level: level,
+      p_category: category,
+      p_items: itemIds,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+  revalidateProgramme();
+  return { error: null };
+}
+
+/** Null clears the total, so the category goes back to "finish every item". */
+export async function setRoadmapLevelRequirement(
+  roadmapId: string,
+  level: number,
+  category: string,
+  minTotal: number | null,
+): Promise<Result> {
+  const supabase = await createClient();
+  const { error } = await q(
+    "rpc.set_roadmap_level_requirement",
+    supabase.rpc("set_roadmap_level_requirement", {
+      p_roadmap: roadmapId,
+      p_level: level,
+      p_category: category,
+      // The generated type says number, and the function treats null as "clear".
+      p_min_total: minTotal as number,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+  revalidateProgramme();
+  return { error: null };
+}
+
+export async function setCircleOnRoadmap(
+  roadmapId: string,
+  groupId: string,
+  follow: boolean,
+): Promise<Result> {
+  const supabase = await createClient();
+  const { error } = await q(
+    "rpc.set_circle_on_roadmap",
+    supabase.rpc("set_circle_on_roadmap", {
+      p_roadmap: roadmapId,
+      p_group: groupId,
+      p_follow: follow,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+  revalidateProgramme();
+  return { error: null };
+}
