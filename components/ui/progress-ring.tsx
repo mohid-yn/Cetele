@@ -108,7 +108,10 @@ export function ProgressRing({
           r={radius}
           fill="none"
           stroke={trackColor}
-          strokeWidth={thickness}
+          // A thin line under the arc rather than a band of the same width: a
+          // solid band made 0% look like a finished ring in the wrong colour
+          // (D72). The token still holds its 3:1 boundary.
+          strokeWidth={Math.max(1.5, thickness / 4)}
         />
         <circle
           cx={size / 2}

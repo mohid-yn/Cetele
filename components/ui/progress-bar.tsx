@@ -49,10 +49,11 @@ export function ProgressBar({
   return (
     <div
       className={cn(
-        // Same track token as ProgressRing, for the same reason: `bg-muted` is
-        // a large-area fill, and at 10px tall it measured 1.2:1 on a card —
-        // the bar read as a floating fill with no length to judge it against.
-        "h-2.5 overflow-hidden rounded-full bg-progress-track",
+        // A HOLLOW track, held to the same 3:1 boundary token as ProgressRing.
+        // It used to be a solid fill of that token, which is what made an empty
+        // bar read as a full one (D72): at 0% the whole bar was a tan slab. The
+        // outline still shows the bar's length, and only progress is solid.
+        "h-2.5 overflow-hidden rounded-full ring-1 ring-progress-track ring-inset",
         className,
       )}
       {...props}

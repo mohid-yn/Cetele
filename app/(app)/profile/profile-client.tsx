@@ -176,8 +176,8 @@ export function ProfileClient({
         <div>
           <NameEditor name={name} onSaved={setName} />
           <div className="mt-1 flex flex-wrap justify-center gap-1.5">
-            {role === "owner" && <Badge variant="accent">Owner</Badge>}
-            {role === "admin" && <Badge variant="primary">Co-admin</Badge>}
+            {role === "owner" && <Badge variant="primary">Owner</Badge>}
+            {role === "admin" && <Badge variant="outline">Co-admin</Badge>}
             {groupName && <Badge variant="neutral">{groupName}</Badge>}
           </div>
         </div>

@@ -40,7 +40,7 @@ export function RoadmapSwitcher({
   return (
     <div>
       <Eyebrow as="p" className="mb-1.5">
-        Programme
+        Roadmap
       </Eyebrow>
       <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0">
         {programmes.map((p) => {

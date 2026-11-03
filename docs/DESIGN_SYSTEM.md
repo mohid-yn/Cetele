@@ -524,6 +524,7 @@ text on a light sage fill. `--primary-container` is a pair and flips. Measured o
   actually matters for a bar, fill-vs-track, to 1.35:1 — the filled part stops being tellable from
   the empty part. `--progress-track` is now its own token on the neutral (tan) ramp, held near the
   floor: 3.18/3.08 light and 3.06/3.31 dark, with fill-vs-track back to 1.90 and 3.40.
+- **The track is an outline, never a solid band (D72).** A bar is `ring-1 ring-inset` of the token, and a ring draws it at a quarter of the arc's width. Measured contrast was never enough: at 3:1, a solid track at 0% still looked like a finished bar in the wrong colour. Only progress is solid.
 - **Never thin the track with alpha.** Both hero rings independently "receded" it to 60% in v1, so the
   ring you stare at for a whole session had the faintest track in the app.
 - **`--progress-mark` inverts between themes** — it is judged against the arc it is drawn on, not the
@@ -728,6 +729,8 @@ steps** because nothing owned the decision.
   `aspect-square`.
 - **Any flex child that must shrink needs `min-h-0`.**
 - Page width ladder `--container-page`: 64 → 82 → 98 → 118rem at 1400/1700/2100px.
+
+**Page transitions use `--duration-fast` (D72):** tab changes are the most repeated motion in the app.
 
 **Motion:** `--duration-fast|base|slow` = 150/220/360ms. `--ease-brand`
 `cubic-bezier(0.22,1,0.36,1)` for routine; `--ease-emphasized` `cubic-bezier(0.16,1,0.3,1)` for earned

@@ -227,10 +227,13 @@ export function GroupClient({
           <div className="flex items-center gap-1.5">
             <Link
               href="/groups"
+              aria-label="Groups"
               className={buttonVariants({ variant: "outline", size: "sm" })}
             >
-              <GridIcon className="size-4" />
-              Groups
+              <GridIcon aria-hidden className="size-4" />
+              {/* Icon-only on a phone, where the label was truncating the
+                  circle's own name beside it. */}
+              <span className="hidden sm:inline">Groups</span>
             </Link>
             {canManage && (
               <Link

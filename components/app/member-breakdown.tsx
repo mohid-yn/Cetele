@@ -83,7 +83,7 @@ export function MemberBreakdownDialog({
         {/* Summary chips */}
         <div className="flex flex-wrap items-center gap-2">
           {member.role === "owner" && (
-            <Badge variant="accent" size="sm">
+            <Badge variant="primary" size="sm">
               owner
             </Badge>
           )}

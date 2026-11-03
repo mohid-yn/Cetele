@@ -46,7 +46,7 @@ export function CohortShape({
     <div className="mb-2">
       <div
         aria-hidden
-        className="flex h-2.5 overflow-hidden rounded-full bg-progress-track"
+        className="flex h-2.5 overflow-hidden rounded-full ring-1 ring-progress-track ring-inset"
       >
         {distribution.map((b) =>
           b.count === 0 ? null : (
@@ -73,7 +73,9 @@ export function CohortShape({
                 aria-hidden
                 className={cn(
                   "size-2 shrink-0 rounded-full",
-                  b.levels > 0 ? "bg-primary" : "bg-progress-track",
+                  b.levels > 0
+                    ? "bg-primary"
+                    : "ring-1 ring-progress-track ring-inset",
                 )}
                 style={{
                   opacity: b.levels > 0 ? tint(b.levels) : undefined,

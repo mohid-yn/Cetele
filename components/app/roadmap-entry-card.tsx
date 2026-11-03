@@ -50,7 +50,7 @@ export function RoadmapEntryCard({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">{name}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            The circle&rsquo;s programme ·{" "}
+            The circle&rsquo;s roadmap ·{" "}
             {phase.state === "closed"
               ? "closed"
               : phase.state === "upcoming"

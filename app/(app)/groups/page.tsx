@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge, Card, buttonVariants } from "@/components/ui";
+import { Card, buttonVariants } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import { FlagIcon, UsersIcon } from "@/components/app/icons";
@@ -41,9 +41,9 @@ function ProgrammeEntry() {
           <FlagIcon className="size-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-foreground">Programme</p>
+          <p className="font-semibold text-foreground">Roadmaps</p>
           <p className="text-xs text-muted-foreground">
-            What the programmes ask for, and how far everyone has got
+            What each roadmap asks for, and how far everyone has got
           </p>
         </div>
       </Link>
@@ -118,20 +118,14 @@ export default async function GroupsHomePage() {
             <UsersIcon className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 font-semibold text-foreground">
-              <span className="truncate">{g.name}</span>
-              {row.role === "owner" && (
-                <Badge variant="accent" size="sm">
-                  owner
-                </Badge>
-              )}
-              {row.role === "admin" && (
-                <Badge variant="primary" size="sm">
-                  co-admin
-                </Badge>
-              )}
+            <p className="font-semibold wrap-anywhere text-foreground">
+              {g.name}
             </p>
+            {/* The role lives on this line so it doesn't cut the circle's name
+                short, and it isn't rose, which is kept for earned moments. */}
             <p className="text-xs text-muted-foreground">
+              {row.role === "owner" && "Owner · "}
+              {row.role === "admin" && "Co-admin · "}
               {members} {members === 1 ? "member" : "members"}
             </p>
           </div>

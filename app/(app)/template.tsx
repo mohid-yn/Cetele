@@ -27,9 +27,11 @@ export default function Template({ children }: { children: React.ReactNode }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      // Fast, because tab changes are the most repeated motion in the app. At
+      // 360ms every tap felt like waiting for the screen to arrive.
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: DURATION.slow, ease: EASE_BRAND }}
+      transition={{ duration: DURATION.fast, ease: EASE_BRAND }}
       className="flex flex-1 flex-col"
     >
       {children}

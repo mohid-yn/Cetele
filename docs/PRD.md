@@ -98,7 +98,7 @@ off, it is not counted, so nothing here reaches `logs`, streaks, rings or the co
   tajweed text or a lecture with a minute budget and a link to watch it — each with its own unit, target and
   cover image, and each either compulsory or chosen. A **level requirement** sets the minimum a member must
   total in a category to clear that level, so a level is a bar rather than a checklist
-- **A circle opts in from Manage, and may follow several programmes at once** (D58) — a yearly programme and a
+- **A circle gets onto a roadmap two ways: its admins opt in from Manage, or an organiser assigns it** (D72). Members see it once it is published and their circle is on it. **A circle may follow several programmes at once** (D58) — a yearly programme and a
   Ramadan one need not be two circles. Progress is keyed on the **member and the item**, so following a second
   programme adds work rather than splitting what is already recorded
 - **Rewards are informational and out-of-app** (D31's shape): a threshold and a wording an organiser can

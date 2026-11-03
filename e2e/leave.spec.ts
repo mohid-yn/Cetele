@@ -91,7 +91,7 @@ test("the circle survives, back to one member", async ({ page }) => {
   // Scoped to <main> — the sidebar switcher can also carry the circle's name
   // on /groups (a bare getByText then hits Playwright strict mode).
   await expect(page.getByRole("main").getByText(CIRCLE)).toBeVisible();
-  await expect(page.getByText("1 member", { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByText(/\b1 member$/)).toBeVisible();
 
   await signOut(page);
 });

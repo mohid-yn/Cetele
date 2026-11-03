@@ -51,8 +51,8 @@ export function Organisers({
       <div>
         <h3 className="text-sm font-semibold text-foreground">Organisers</h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Organisers see how far everyone has got on a programme. They see
-          nothing else — no circle&rsquo;s dhikr, no streaks, no daily figures.
+          Organisers see how far everyone has got on a roadmap. They see nothing
+          else — no circle&rsquo;s dhikr, no streaks, no daily figures.
         </p>
       </div>
 
@@ -149,7 +149,7 @@ export function Organisers({
         // pressing Remove on the line above the one you meant.
         description={
           pendingRemoval
-            ? `${pendingRemoval.name ?? pendingRemoval.email} will stop being an organiser and will no longer see the programme report.${
+            ? `${pendingRemoval.name ?? pendingRemoval.email} will stop being an organiser and will no longer see the roadmap report.${
                 pendingRemoval.userId === me
                   ? " This is you — you will lose access as soon as it is done."
                   : ""
