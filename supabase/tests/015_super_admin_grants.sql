@@ -299,12 +299,19 @@ select ok(not has_function_privilege('anon', 'public.list_super_admins()', 'exec
 select ok(has_function_privilege('authenticated', 'public.grant_super_admin(text)', 'execute'),
   'authenticated may CALL grant_super_admin — the function itself does the gating');
 
--- The bootstrap path: service_role can set the column (the first organiser has
--- no in-app route by design) but nothing else writable on profiles.
+-- The bootstrap path: service_role can set the column, because the first organiser
+-- has no in-app route by design.
+--
+-- This used to also assert that service_role could NOT write `profiles.name`. That
+-- was never ours to promise: what service_role holds beyond our grant is the
+-- platform's call. Production has it (read on 2026-11-04), and Supabase CLI 3.0 now
+-- grants it on a fresh stack too, which failed this suite on code that never touched
+-- it. The key is server-only and bypasses row security anyway, so the line that
+-- matters is the one above: `authenticated` cannot write this column.
 select ok(has_column_privilege('service_role', 'public.profiles', 'is_super_admin', 'update'),
   'service_role can set is_super_admin — this is how the FIRST organiser is made');
-select ok(not has_column_privilege('service_role', 'public.profiles', 'name', 'update'),
-  '...and that grant is column-scoped, not a general write on profiles');
+select ok(not has_column_privilege('authenticated', 'public.profiles', 'is_super_admin', 'update'),
+  'and a signed-in member cannot');
 
 select * from finish();
 rollback;
