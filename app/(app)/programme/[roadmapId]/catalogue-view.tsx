@@ -41,11 +41,9 @@ export function CatalogueView({
         <section>
           <SectionHeading>Rewards</SectionHeading>
           <Card padding="md">
-            {/* levelsDone={0}: nobody's progress is on this screen, so every
-                rung reads as still to earn. */}
             <RewardLadder
               rewards={rewards}
-              levelsDone={0}
+              levelsDone={null}
               totalLevels={levels.length}
             />
           </Card>

@@ -211,5 +211,36 @@ select ok(not has_function_privilege('anon', 'public.set_circle_on_roadmap(uuid,
 select ok(not has_function_privilege('anon', 'public.reorder_roadmap_items(uuid, integer, text, uuid[])', 'execute'),
   'anon cannot reorder');
 
+-- ----------------------------------------------------------------------------
+-- 7. Reach counts PEOPLE (0038). A is in both circles and must count once.
+-- ----------------------------------------------------------------------------
+insert into public.group_roadmaps (group_id, roadmap_id) values
+  ('ca000000-0000-0000-0000-0000000000d1', 'ca000000-0000-0000-0000-0000000000a2'),
+  ('ca000000-0000-0000-0000-0000000000d2', 'ca000000-0000-0000-0000-0000000000a2')
+on conflict do nothing;
+
+select pg_temp.impersonate('ca000000-0000-0000-0000-00000000000f');
+select is(
+  public.roadmap_reach('ca000000-0000-0000-0000-0000000000a2'),
+  2,
+  'reach counts someone in two circles once');
+select cmp_ok(
+  public.roadmap_reach('ca000000-0000-0000-0000-0000000000a2'),
+  '<',
+  (select sum(member_count)::integer
+     from public.roadmap_circles('ca000000-0000-0000-0000-0000000000a2')
+    where following),
+  'and is below the sum of the circles'' head-counts');
+select pg_temp.reset_role();
+
+select pg_temp.impersonate('ca000000-0000-0000-0000-00000000000b');
+select throws_like(
+  $$ select public.roadmap_reach('ca000000-0000-0000-0000-0000000000a2') $$,
+  '%organisers only%', 'a member is refused the reach figure');
+select pg_temp.reset_role();
+
+select ok(not has_function_privilege('anon', 'public.roadmap_reach(uuid)', 'execute'),
+  'anon cannot read reach');
+
 select * from finish();
 rollback;

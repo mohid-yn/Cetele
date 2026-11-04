@@ -30,7 +30,11 @@ export async function setTimezone(
     .eq("id", me);
   if (error) return { error: error.message };
 
-  revalidatePath("/", "layout");
+  // No revalidate. `TimezoneSync` refreshes when the calendar day on screen is
+  // actually wrong, and a revalidate here re-rendered the whole tree on every zone
+  // change. Worse, the action's response re-renders the screen it STARTED on, so a
+  // member who had already tapped away landed back on Today with the URL saying
+  // /progress.
   return { error: null };
 }
 

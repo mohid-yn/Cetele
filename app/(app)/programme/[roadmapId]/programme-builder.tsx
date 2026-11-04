@@ -45,6 +45,7 @@ export function ProgrammeBuilder({
   requirements,
   rewards,
   circles,
+  reachMembers,
   recordedIds,
   sortOrders,
   canReadCohort,
@@ -62,6 +63,8 @@ export function ProgrammeBuilder({
   requirements: LevelRequirement[];
   rewards: EditableReward[];
   circles: RoadmapCircle[];
+  /** Distinct people on those circles (0038). */
+  reachMembers: number;
   recordedIds: string[];
   sortOrders: [string, number][];
   canReadCohort: boolean;
@@ -80,7 +83,7 @@ export function ProgrammeBuilder({
   };
 
   const following = circles.filter((c) => c.following);
-  const reach = programmeReach(roadmap.published, following);
+  const reach = programmeReach(roadmap.published, following, reachMembers);
   const readiness = programmeReadiness({
     items: items.map((i) => ({
       level: i.level,
@@ -116,7 +119,7 @@ export function ProgrammeBuilder({
           {canReadCohort && following.length > 0 && (
             <Link
               href={`/programme/${roadmap.id}/progress`}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
+              className={buttonVariants({ variant: "tonal", size: "sm" })}
             >
               <UsersIcon aria-hidden />
               Members&rsquo; progress
@@ -124,7 +127,7 @@ export function ProgrammeBuilder({
           )}
           <Link
             href={`/programme/${roadmap.id}?view=member`}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "tonal", size: "sm" })}
           >
             <EyeIcon aria-hidden />
             Preview

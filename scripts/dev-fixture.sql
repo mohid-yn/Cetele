@@ -54,9 +54,10 @@ where u.email like '%@example.com'
 
 -- 2. Demo state ---------------------------------------------------------------
 
--- A second circle on the SAME programme, which Ahmad is in no way part of —
--- this is what makes the super-admin reader visibly different from a circle
--- owner's. Bilal owns it.
+-- A second circle on the SAME programme. `seed.sql` creates it now, owned by
+-- Yusuf with Ahmad as a member, so these inserts only cover an older seed. Bilal
+-- exists but stays in no circle: making him owner here collided with
+-- `one_owner_per_group` and stopped this script on every fresh database.
 insert into auth.users (id, instance_id, email, raw_user_meta_data, aud, role,
   created_at, updated_at, email_confirmed_at, confirmation_token, recovery_token,
   email_change_token_new, email_change_token_current, email_change, phone_change,
@@ -77,13 +78,6 @@ on conflict (id) do nothing;
 insert into public.group_roadmaps (group_id, roadmap_id)
 values ('00000000-0000-0000-0000-0000000000b2','00000000-0000-0000-0000-0000000000f1')
 on conflict do nothing;
-
-insert into public.memberships (user_id, group_id, role, created_at) values
-  ('00000000-0000-0000-0000-0000000000a4','00000000-0000-0000-0000-0000000000b2','owner',  current_date - 10),
-  -- Yusuf in TWO circles, so Today's group switcher has something to switch to
-  -- (it hides itself for a single-circle member, by design).
-  ('00000000-0000-0000-0000-0000000000a2','00000000-0000-0000-0000-0000000000b2','member', current_date - 5)
-on conflict (user_id, group_id) do nothing;
 
 -- Yusuf has finished level 1, Zayd levels 1 and 2 — so the cohort strip has a
 -- shape to show rather than one flat "nobody has started" band.

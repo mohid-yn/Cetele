@@ -25,8 +25,9 @@ export function RewardLadder({
   rewards: RoadmapReward[];
   /** LEVELS finished so far — what a threshold is measured against. A reward
    *  is earned by finishing a stage, which is the unit the programme is built
-   *  in and the unit the administration pays out on. */
-  levelsDone: number;
+   *  in and the unit the administration pays out on. `null` on a screen that
+   *  shows nobody's progress: a "1 level to go" there reads as being about you. */
+  levelsDone: number | null;
   /** Levels in the programme, for the "N of M" reading on each rung. */
   totalLevels: number;
 }) {
@@ -35,13 +36,15 @@ export function RewardLadder({
   return (
     <ol className="flex flex-col">
       {rewards.map((r, i) => {
-        const unlocked = levelsDone >= r.threshold;
+        const unlocked = levelsDone != null && levelsDone >= r.threshold;
         // Exactly one rung is "next": the first still locked. It carries the
         // distance, so the member always has one number to aim at rather than
         // having to work it out across four rungs.
         const isNext =
-          !unlocked && rewards.findIndex((x) => levelsDone < x.threshold) === i;
-        const remaining = r.threshold - levelsDone;
+          levelsDone != null &&
+          !unlocked &&
+          rewards.findIndex((x) => levelsDone < x.threshold) === i;
+        const remaining = r.threshold - (levelsDone ?? 0);
         const last = i === rewards.length - 1;
 
         return (

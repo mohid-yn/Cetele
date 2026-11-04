@@ -99,10 +99,12 @@ export type Reach =
 /** The one sentence the admin screen leads with. */
 export function programmeReach(
   published: boolean,
-  following: { memberCount: number }[],
+  following: unknown[],
+  /** Distinct people, from `roadmap_reach`. Not a sum of the circles' head-counts:
+   *  that counted someone in two circles twice. */
+  members: number,
 ): Reach {
   const circles = following.length;
-  const members = following.reduce((sum, c) => sum + c.memberCount, 0);
   if (!published) return { state: "draft", circles, members };
   if (circles === 0) return { state: "unassigned", circles: 0, members: 0 };
   return { state: "live", circles, members };

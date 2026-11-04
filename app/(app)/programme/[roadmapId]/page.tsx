@@ -181,16 +181,25 @@ export default async function ProgrammeCataloguePage({
   // Who may edit. Only decides which screen renders: every RPC behind the builder
   // refuses a non-organiser on its own.
   if (canEdit && view !== "member") {
-    const [{ data: circles }, { data: profile }] = await Promise.all([
-      q(
-        "catalogue.circles (0037)",
-        supabase.rpc("roadmap_circles", { p_roadmap: roadmapId }),
-      ),
-      q(
-        "catalogue.profile (timezone)",
-        supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
-      ),
-    ]);
+    const [{ data: circles }, { data: reachMembers }, { data: profile }] =
+      await Promise.all([
+        q(
+          "catalogue.circles (0037)",
+          supabase.rpc("roadmap_circles", { p_roadmap: roadmapId }),
+        ),
+        q(
+          "catalogue.reach (0038)",
+          supabase.rpc("roadmap_reach", { p_roadmap: roadmapId }),
+        ),
+        q(
+          "catalogue.profile (timezone)",
+          supabase
+            .from("profiles")
+            .select("timezone")
+            .eq("id", me)
+            .maybeSingle(),
+        ),
+      ]);
 
     return (
       <ProgrammeBuilder
@@ -210,6 +219,7 @@ export default async function ProgrammeCataloguePage({
           memberCount: c.member_count,
           following: c.following,
         }))}
+        reachMembers={reachMembers ?? 0}
         recordedIds={[...recorded]}
         sortOrders={[...sortOrderOf]}
         canReadCohort={Boolean(canReadCohort)}
@@ -257,7 +267,7 @@ export default async function ProgrammeCataloguePage({
         <Link
           href={`/programme/${roadmapId}/progress`}
           className={buttonVariants({
-            variant: "outline",
+            variant: "tonal",
             size: "sm",
             className: "self-start",
           })}

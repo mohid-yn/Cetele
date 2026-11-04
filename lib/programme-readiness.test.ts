@@ -90,33 +90,33 @@ describe("programmeReadiness", () => {
 
 describe("programmeReach", () => {
   it("keeps a draft private even with circles lined up", () => {
-    const r = programmeReach(false, [{ memberCount: 4 }]);
+    const r = programmeReach(false, [{}], 4);
     assert.equal(r.state, "draft");
     assert.match(reachSentence(r), /Only organisers.*1 circle will get it/);
   });
 
   it("says a draft with no circles is simply private", () => {
     assert.equal(
-      reachSentence(programmeReach(false, [])),
+      reachSentence(programmeReach(false, [], 0)),
       "Only organisers can see this.",
     );
   });
 
   it("does not call a published roadmap with no circles live", () => {
-    const r = programmeReach(true, []);
+    const r = programmeReach(true, [], 0);
     assert.equal(r.state, "unassigned");
     assert.match(reachSentence(r), /no member can see it/);
   });
 
-  it("adds up members across circles, and pluralises", () => {
+  it("reports the people it is given, and pluralises", () => {
+    // 3 people across 2 circles: someone in both counts once. The server does
+    // that sum (`roadmap_reach`), pgTAP 022 pins it.
     assert.equal(
-      reachSentence(
-        programmeReach(true, [{ memberCount: 3 }, { memberCount: 4 }]),
-      ),
-      "Live for 7 members in 2 circles.",
+      reachSentence(programmeReach(true, [{}, {}], 3)),
+      "Live for 3 members in 2 circles.",
     );
     assert.equal(
-      reachSentence(programmeReach(true, [{ memberCount: 1 }])),
+      reachSentence(programmeReach(true, [{}], 1)),
       "Live for 1 member in 1 circle.",
     );
   });
