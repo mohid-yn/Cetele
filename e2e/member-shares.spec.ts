@@ -168,7 +168,16 @@ test("THE WAY OUT: the breakdown closes on a phone, with no keyboard and no back
   // Clicked BELOW the painted 36px button, inside its 44px `tap-area-44-box`
   // overhang — one click that proves both that the control is there and that
   // it is a real thumb target, not a 36px square.
-  const box = (await close.boundingBox())!;
+  // Measured only once the dialog has stopped moving: it scales in, so a box taken
+  // mid-animation points a few pixels away from where the button ends up.
+  let box = (await close.boundingBox())!;
+  await expect
+    .poll(async () => {
+      const before = box;
+      box = (await close.boundingBox())!;
+      return before.x === box.x && before.y === box.y;
+    })
+    .toBe(true);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height + 2);
 
   await expect(page.getByRole("dialog")).toBeHidden();
