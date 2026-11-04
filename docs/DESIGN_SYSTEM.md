@@ -693,6 +693,80 @@ line box is taller than a Latin one, so it needs `leading-none` or it pushes its
 
 ---
 
+### 8.15 Rows and rings that act (D72)
+
+A row that opens something, a level heading that collapses and a ring that counts are bare `<button>`s
+with their own classes. `Button` is built for a labelled control and would fight each of these shapes.
+This is the exception to §8.1, and it holds only if the element keeps what the primitive guarantees:
+a visible focus ring, a 44px target and a pressed state. Anything shaped like a button still uses `Button`.
+
+| Pattern               | Rule                                                                                                                                                                                   |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ring that counts      | Today's due rings only. Shows the count, not a percentage, because one tap must visibly change it. A small "+" says it is a button. `touch-action: manipulation` stops double-tap zoom |
+| Closed ring           | Inert, never a link, so a fast extra tap cannot overshoot or navigate                                                                                                                  |
+| Reorder               | A mode switched on per category, so arrows do not take width from every title                                                                                                          |
+| Long lists of toggles | Rows keep their order when toggled, so the row under a thumb never moves                                                                                                               |
+| Destructive confirm   | Only where people lose something at once (withdrawing a live roadmap). Reversible toggles do not ask                                                                                   |
+
+**Role badges:** owner is `primary`, co-admin is `outline`, member is unmarked. Never `accent`: rose is for earned moments.
+
+### 8.16 What stops this looking generated (2026-11-04)
+
+The phone PWA is the product, so judge every screen at 390px first. These rules came out of a phone-first pass with the Impeccable, Taste and motion skills.
+
+| Rule                                                             | Instead of                                                           | Where                |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------- |
+| A card has one elevation cue: a hairline. Radius is `rounded-xl` | Border plus soft shadow on every card                                | `cardVariants`       |
+| Rows of the same thing are one list with dividers on phones      | A stack of separate cards                                            | Today's rings        |
+| A figure appears in one place, plus at most one supporting line  | Ring, bar, text and button all repeating one number                  | Today's rows         |
+| A screen's main number is type on the page                       | Gradient card, icon tile, uppercase label and pill                   | `HeroCard`           |
+| Labels are sentence case                                         | Wide-tracked capitals above headings                                 | `Eyebrow`, day strip |
+| The active tab's pill sits behind the icon                       | A filled block around icon and label                                 | Bottom nav           |
+| A scrim is a flat tint                                           | `backdrop-blur`                                                      | Dialog, celebration  |
+| Status dots only mark a real, changing state, and never pulse    | Decorative pulsing dots                                              | Today, Group         |
+| Sentences use full stops and commas                              | Em dashes in visible copy (placeholders for missing values are fine) | Everywhere           |
+
+**Motion follows frequency.** A count tap happens hundreds of times a session, so it gets one small answer: the number at 1.06 scale, the arc at `--duration-fast`, and the haptic. No ripple and no glow. Buttons press to `scale(0.97)`. Confetti is sage and rose only and falls behind the card, never across its words.
+
+**A control must look like a control at rest.** A phone has no hover, so anything revealed by hover is invisible to most members (owner, 2026-11-04: "better visual cues for functionality", app-wide).
+
+| If it...                   | It must have...                                                                               | Example                        |
+| -------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------ |
+| Opens a menu               | An edge, a surface and a solid chevron                                                        | `GroupSwitcher`                |
+| Is a button                | A visible edge or fill at rest. `ghost` keeps a hairline                                      | Remove, Edit                   |
+| Is a tappable row          | A chevron, plus a pressed state                                                               | Profile rows, roadmap hub      |
+| Is an icon on its own      | A word beside it, unless the icon is universal (back, close, chevron)                         | Group's Manage                 |
+| Is a toggle                | An off state with a visible body and a 44px target                                            | Reminder switch                |
+| Does something non-obvious | One plain line saying so                                                                      | Today's ring hint              |
+| Is NOT pressable           | No button shape. Status pills stay small and never stand alone as the only way to read a fact | Locked badges are dashed slots |
+
+A dashed edge means an empty slot, or a place to add something. Don't use it to box a note. A link inside a sentence is underlined, because colour alone doesn't say it can be pressed. A dialog card takes focus for screen readers but shows no ring, which is set inline in `dialog.tsx`. Segmented thumbs use `bg-elevated`, because `bg-card` nearly vanishes on the dark track.
+
+Hiding a `buttonVariants` element needs `cn(buttonVariants(...), "hidden sm:inline-flex")`. Passed as its `className` option, `hidden` loses to the base `inline-flex`.
+
+**Colour has four jobs (2026-11-04).** The swatches did not change. How they are spent did.
+
+| Colour | Its job                                         | Where                                                                                  |
+| ------ | ----------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Sage   | Interaction, selection, progress                | `tonal` buttons, the circle switcher, tab pill, rings                                  |
+| Tan    | Structure                                       | Hairlines (`--border`), interactive edges (`--outline`, `--input`), wells, the tab bar |
+| Plum   | Secondary text only                             | `--muted-foreground`                                                                   |
+| Rose   | The one earned action per view, and celebration | `accent`                                                                               |
+
+**Pick a button by what it does:**
+
+| Variant   | Use for                                                                        |
+| --------- | ------------------------------------------------------------------------------ |
+| `accent`  | The one earned action in a view                                                |
+| `primary` | A form's confirm                                                               |
+| `tonal`   | The everyday secondary action: opens, adds or moves forward                    |
+| `outline` | A neutral way out, or a choice that needs weighing: Cancel, Sign out, Withdraw |
+| `ghost`   | A quiet action inside a row: Edit, Remove                                      |
+
+Ring and bar tracks are a grey sage, so a ring reads as one family. Measured values are beside each token in `globals.css`.
+
+**Browser surfaces are themed** in `globals.css`: tap highlight, `touch-action`, selection and caret.
+
 ## 9. Typography
 
 | Role                              | Face                  | Sizes                 | Treatment                                      |
@@ -828,7 +902,7 @@ the old manifest — existing users must remove and re-add the home-screen icon 
 | 1   | **Gold is gone — ANSWERED 2026-08-01: recolour everything, mark included.** D20/D25 justified gold partly on Islamic resonance; rose carries warmth and celebration but not that. The owner was offered a middle option (sage mark, gold arrow kept, so gold survived in the brand asset only) and chose full sage + rose. | The one meaning this palette doesn't carry forward. Reopening it means a sixth hue for celebration only — not a return of gold to the accent role, which is rose's now |
 | 2   | **Rose is the accent, and accent sits where danger lives** (§3.1).                                                                                                                                                                                                                                                         | Mitigated by depth + the mandatory glyph, but it is a real constraint of the palette you chose                                                                         |
 | 3   | **Sage is lighter than emerald.** Primary tone 40 `#346d3f` is a softer, greyer green — calmer, less assertive.                                                                                                                                                                                                            | It changes how "brand" feels, not just how it looks                                                                                                                    |
-| 4   | **Quicksand** as the display face — the most generic choice in the stack, and it doesn't carry this direction.                                                                                                                                                                                                             | Consequential; deliberately **not** specced here                                                                                                                       |
+| 4   | **Display face: ANSWERED 2026-11-04.** Quicksand replaced by **Figtree** on the owner's go-ahead, chosen by comparing candidates live on Today and the counter. Its digits hold one width.                                                                                                                                 | Done                                                                                                                                                                   |
 | 5   | **Apply order.** §13 items 1–3 are what you reported; 4–9 are systemic. Item 7 is the one with asset cost.                                                                                                                                                                                                                 | Worth doing 1–6 first and 7 as its own change                                                                                                                          |
 
 ---

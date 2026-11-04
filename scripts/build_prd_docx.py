@@ -156,7 +156,7 @@ A(heading("3. The core loop", 1))
 for step in [
     "Open app → see group + own progress (rings unfilled, \"Day 12 streak\")",
     "Tap-count dhikr → ring fills → group total ticks up live",
-    "Hit target → ring closes → confetti / surprise reward",
+    "Hit target → ring closes → confetti → next open ring → last ring: the day-closed card",
     "Streak +1 → climb leaderboard",
     "(later) push notification next day → repeat",
 ]:
@@ -172,7 +172,7 @@ for t in [
     ("Per-member shares", "the circle's goal is SPLIT between its members, and an admin may ask MORE of one of them than the circle's default, per task (D61). A cetele is a shared goal divided among people and the division is not always equal: somebody who can carry 500 takes 500. Unlike a stretch goal this is an obligation — it is what \u201cdone\u201d means for that member, what their streak is judged at, and what the circle counts on them for, so the collective goal is the SUM of each carrier's share rather than target \u00d7 members. Raise-only, and a past day is always judged by the share in force THAT day, so raising somebody today can never un-keep a day they already kept. Lowering a member below the circle's number is deliberately not offered."),
     ("Personal stretch goals", "a member may raise their OWN daily bar above THEIR share, per task (D51). Raise-only: their share is the floor, so nobody can quietly owe the group less, and an admin raising the target or their share above someone's goal simply wins. It changes only what that member aims at — the ring and the celebration. Everything shared or judged (day-completion, streak, consistency, steadfastness, the garden, the circle's collective goal) still counts from their share, so aiming higher can only ever add."),
     ("One act, many circles", "a member in three circles that all ask for salawat does the dhikr ONCE; the app lets them say so, and one tap then counts in all of them (D64, refined by D66/D67). A link is the member's own claim that circle A's task and circle B's task are the same act — never inferred, never automatic. It fans out on write: tapping records the same raw number against each linked task, so each circle goes on judging its own task by its own target and its own share. The raw count travels, the completion does not — circle A asking 1 and circle B asking 500 means logging 1 makes the day in A and leaves B at 1-of-500, which is true. Clusters, not pairs (up to 10 tasks), so three circles need no chain of links; two tasks in the SAME circle can never be linked, because that would count one act twice in that circle's own total. The link is private to the member — an admin cannot declare it — and offered on each task's row in “My goals”, where every cross-circle task is listed and similar names only sort the list. Leaving a circle makes a link dormant, not deleted: nothing is counted there while you are out, the member can clear it themselves, and it revives if they rejoin."),
-    ("Tap counter", "tasbih-style: tap to count, haptics + subtle sound, number animation"),
+    ("Tap counter", "tasbih-style: tap to count, haptics + subtle sound, number animation. Today's rings count in place, so a member can move through them without opening each one; the full count screen is one tap further (D72)"),
     ("Progress rings", "Apple-Watch-style ring per item, fills toward target, closes on completion"),
     ("Live collective counter", "real-time group total (\"41,300 / 100,000 today\") via Supabase Realtime"),
     ("Streaks", "personal daily streak; \"never miss twice\" forgiveness (1 streak-freeze that re-arms after every kept day — a single missed day is always forgiven if you come back; two in a row reset)"),
@@ -188,6 +188,7 @@ for t in [
     ("A circle gets onto a roadmap two ways: its admins opt in from Manage, or an organiser assigns it (D72). It may follow several programmes at once", "(D58) — a yearly programme and a Ramadan one need not be two circles. Progress is keyed on the MEMBER and the ITEM, so following a second programme adds work rather than splitting what is already recorded."),
     ("Rewards are informational and out-of-app", "(D31's shape): a threshold and a wording an organiser can correct on a live programme (D60). The app never handles fulfilment."),
     ("The organiser role authors it in-app", "create a programme, add and edit items, publish, appoint another organiser. The FIRST organiser is still set by hand in Supabase; there is deliberately no in-app bootstrap."),
+    ("An organiser sees who a roadmap reaches", "which circles are on it and how many members that is. Publishing is checked first, and refused for an empty roadmap, a total the items cannot reach, or a reward nobody can earn (D72)"),
     ("An organiser reads the cohort, not just their own circle", "a progress report per programme, across every circle following it."),
 ]:
     A(bullet([B(t[0] + " — "), N(t[1])]))
