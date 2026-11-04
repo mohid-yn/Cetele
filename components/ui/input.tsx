@@ -13,6 +13,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         // that, but capping scale breaks pinch-zoom for everyone (WCAG 1.4.4) —
         // so the type size is the honest fix and the cap stayed off.
         "flex h-11 w-full rounded-lg border border-input bg-background px-3.5",
+        "[&::-webkit-calendar-picker-indicator]:ml-auto",
         "text-base md:text-sm",
         "text-foreground placeholder:text-muted-foreground",
         "transition-[border-color,box-shadow] duration-[var(--duration-fast)]",

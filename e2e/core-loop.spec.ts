@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { signIn } from "./helpers";
+import { test, expect } from "@playwright/test";
+import { closesDay, signIn } from "./helpers";
 
 /**
  * The M3 core loop, end-to-end against the real local stack:
@@ -12,18 +12,6 @@ const STAMP = Date.now();
 const USER = `e2e-core-${STAMP}@example.com`;
 
 test.describe.configure({ mode: "serial" });
-
-/**
- * Wait for the ring-close celebration, then tap it away. It's a full-screen
- * modal that only self-dismisses after 4.2s, so clicking straight through to
- * the page underneath just races that timer (the click gets intercepted and
- * retried until the card clears) — which is what made these specs flaky.
- */
-async function closeCelebration(page: Page) {
-  await expect(page.getByText("Ring closed!")).toBeVisible();
-  await page.getByRole("dialog").click();
-  await expect(page.getByRole("dialog")).toBeHidden();
-}
 
 test("tap → count persists → ring closes → streak advances", async ({
   page,
@@ -49,7 +37,7 @@ test("tap → count persists → ring closes → streak advances", async ({
   // /today now renders the ring from the DB, with the gold Continue CTA
   await page.goto("/today");
   await expect(
-    page.getByText("A fresh page — start with one ring"),
+    page.getByText("A fresh page. Start with one ring"),
   ).toBeVisible();
   await expect(page.getByText("0 day streak")).toBeVisible();
   await page.click('a:has-text("Continue Salawat")');
@@ -60,12 +48,9 @@ test("tap → count persists → ring closes → streak advances", async ({
   await pad.click();
   await pad.click();
   await pad.click();
-  await expect(page.getByText("Completed — tap to keep going")).toBeVisible();
-  await closeCelebration(page);
-
-  // heading back waits for the debounced flush, so the DB has the count
-  await page.click('button:has-text("Back to today")');
-  await page.waitForURL("**/today");
+  // The third tap closes it and the screen leaves by itself. The navigation waits
+  // on the flush, so arriving is also the proof the count reached Postgres.
+  await closesDay(page);
   await expect(page.getByText(/All rings closed today/)).toBeVisible();
   await expect(page.getByText("1 day streak")).toBeVisible();
   await expect(page.getByText("100%")).toBeVisible();
@@ -92,7 +77,10 @@ test("back-fill: yesterday's ring can still be closed (D8)", async ({
   await pad.click();
   await pad.click();
   await pad.click();
-  await closeCelebration(page);
+  // A PAST day does not move: back-filling is a correction, not a session, and
+  // there is no "next ring" in a day already gone. So the way out is still the
+  // button, and it is still what flushes the queue.
+  await expect(page.getByText("Completed. Tap to keep going")).toBeVisible();
   await page.click('button:has-text("Back to today")');
   await page.waitForURL("**/today");
 
@@ -159,17 +147,20 @@ test("correcting down: undo one, then set an exact count", async ({ page }) => {
   await page.click('button:has-text("Edit count")');
   await page.getByRole("dialog").getByRole("spinbutton").fill("3");
   await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
-  // the editor closes first, so the celebration is the only dialog left — two
-  // at once would make `closeCelebration`'s locator ambiguous under strict mode
   await expect(page.getByRole("dialog", { name: "Edit count" })).toBeHidden();
-  await closeCelebration(page);
-  await expect(page.getByText("Completed — tap to keep going")).toBeVisible();
+  // Setting the exact number onto the target is a completion like any other, so
+  // it takes the same exit (D71). The editor is not a second path.
+  await closesDay(page);
 
-  // Same drain as above: `Edit count` is a `set` op on that same queue, so the
-  // closed ring and the celebration are both optimistic and prove nothing about
-  // what reached Postgres.
-  await page.waitForLoadState("networkidle");
-  await page.reload();
+  // `Edit count` is a `set` op on the same optimistic queue, so the closed ring
+  // proved nothing about Postgres on its own. Going back IN is the drain: the
+  // count screen re-reads the day from the database.
+  await page
+    .getByRole("main")
+    .getByRole("listitem")
+    .getByRole("link", { name: /Salawat/ })
+    .click();
+  await page.waitForURL("**/count/**");
   await expect(page.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
     "3",
@@ -194,14 +185,17 @@ test("the celebration fires on CLOSING a ring, not on tapping a closed one", asy
     "3",
   );
 
-  // extra dhikr past the target is welcome, but it is not a fresh completion:
-  // congratulating it again is what makes the reward cheap
+  // Extra dhikr past the target is welcome, and it is not a fresh completion.
+  // Re-firing here would now cost more than a cheapened reward: the screen
+  // would throw the member out mid-count, on a ring they deliberately re-opened
+  // to carry on with. So the assertion is that it STAYS.
+  const past = page.url();
   await page.getByRole("button", { name: "Tap to count" }).click();
   await expect(page.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
     "4",
   );
-  await expect(page.getByText("Ring closed!")).toBeHidden();
+  expect(page.url()).toBe(past);
 
   // same for a finished day picked off the strip (yesterday, closed earlier).
   // The count assertion has to come first: it proves the tap has been handled,
@@ -216,10 +210,10 @@ test("the celebration fires on CLOSING a ring, not on tapping a closed one", asy
     "aria-valuenow",
     "4",
   );
-  await expect(page.getByText("Ring closed!")).toBeHidden();
+  expect(page.url()).toBe(past);
 });
 
-test("Mark done closes the ring without ending the session", async ({
+test("Mark done on a past day fills the ring and stays (D71)", async ({
   page,
 }) => {
   await signIn(page, USER);
@@ -243,17 +237,19 @@ test("Mark done closes the ring without ending the session", async ({
     "0",
   );
 
-  const url = page.url();
+  const past = page.url();
   await page.getByRole("button", { name: "Mark done" }).click();
-  await closeCelebration(page);
 
-  // it fills the ring and STAYS PUT: finishing must not be the one path that
-  // ends the session, because counting past the target is normal and welcome
-  expect(page.url()).toBe(url);
+  // A PAST day does not move: back-filling is a correction, not a session. Today's
+  // version of this, which does move on, is walked in ring-chain.spec.ts.
+  await expect(page.getByText("Completed. Tap to keep going")).toBeVisible();
   await expect(page.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
     "3",
   );
+  expect(page.url()).toBe(past);
+
+  // Counting past the target stays possible.
   await page.getByRole("button", { name: "Tap to count" }).click();
   await expect(page.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",

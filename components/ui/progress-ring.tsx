@@ -111,7 +111,7 @@ export function ProgressRing({
           // A thin line under the arc rather than a band of the same width: a
           // solid band made 0% look like a finished ring in the wrong colour
           // (D72). The token still holds its 3:1 boundary.
-          strokeWidth={Math.max(1.5, thickness / 4)}
+          strokeWidth={Math.max(1.5, thickness / 6)}
         />
         <circle
           cx={size / 2}
@@ -125,7 +125,7 @@ export function ProgressRing({
           strokeDashoffset={dashoffset}
           style={{
             transition:
-              "stroke-dashoffset var(--duration-slow) var(--ease-brand), stroke var(--duration-base)",
+              "stroke-dashoffset var(--duration-fast) var(--ease-brand), stroke var(--duration-base)",
           }}
         />
         {markAngle != null && (

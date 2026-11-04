@@ -54,7 +54,7 @@ export function CoverUpload({
     }
     if (file.size > MAX_BYTES) {
       setError(
-        "That picture is over 2 MB — a cover renders small, so a smaller file is plenty.",
+        "That picture is over 2 MB. A cover renders small, so a smaller file is plenty.",
       );
       return;
     }
@@ -91,7 +91,7 @@ export function CoverUpload({
       onUploaded(`${publicUrl}?v=${Date.now()}`);
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "That didn't upload — try again.",
+        e instanceof Error ? e.message : "That didn't upload. Try again.",
       );
     } finally {
       setBusy(false);
@@ -113,7 +113,7 @@ export function CoverUpload({
         }}
       />
       <Button
-        variant="outline"
+        variant="tonal"
         size="sm"
         className="self-start"
         disabled={busy || disabled}

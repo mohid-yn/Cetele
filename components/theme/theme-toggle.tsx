@@ -117,7 +117,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           >
             <Icon
               className={cn(
-                "size-4 transition-transform duration-[var(--duration-base)] ease-[var(--ease-brand)]",
+                "size-4 shrink-0 transition-transform duration-[var(--duration-base)] ease-[var(--ease-brand)]",
                 active ? "scale-100" : "scale-90",
               )}
             />

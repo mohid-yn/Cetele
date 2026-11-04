@@ -255,7 +255,7 @@ export default async function ProgrammeReportPage({
             <span className="font-semibold text-foreground">
               {roadmap.name}
             </span>{" "}
-            · how far each person has got. Roadmap progress only — nothing from
+            · how far each person has got. Roadmap progress only, nothing from
             their circle.
           </span>
         }

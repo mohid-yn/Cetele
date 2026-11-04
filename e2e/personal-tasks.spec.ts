@@ -150,13 +150,14 @@ test("THE NUMERATOR DOES NOT GROW — counting it fills MY ring and nothing else
   await page.waitForURL("**/count/**");
 
   const pad = page.getByRole("button", { name: "Tap to count" });
+  const wird = page.url();
   for (let i = 0; i < 7; i++) await pad.click();
-  await expect(page.getByText("Completed — tap to keep going")).toBeVisible();
 
-  // Heading back waits for the debounced flush, so the DB has the count before
-  // anything below reads it.
-  await page.click('button:has-text("Back to today")');
-  await page.waitForURL("**/today");
+  // Closing it moves on by itself (D71), and that navigation waits for the flush,
+  // so the DB has the count before anything below reads it. Today is reached
+  // in-app from wherever that landed.
+  await expect.poll(() => page.url()).not.toBe(wird);
+  await page.goto("/today");
 
   // It counted for ME.
   await expect(page.getByRole("main").getByText("7 / 7").first()).toBeVisible();
@@ -213,7 +214,7 @@ test("the member removes it, and their day is the circle's again", async ({
   await openGoals(page);
 
   await page
-    .getByRole("button", { name: "Wird — your own task, edit it" })
+    .getByRole("button", { name: "Wird. Your own task, edit it" })
     .click();
   await expect(
     page.getByRole("dialog").getByText("Your own task"),
@@ -226,7 +227,7 @@ test("the member removes it, and their day is the circle's again", async ({
   // Back to the goals list, same as saving — and the row's door is gone with it.
   await expect(page.getByRole("dialog", { name: "My goals" })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Wird — your own task, edit it" }),
+    page.getByRole("button", { name: "Wird. Your own task, edit it" }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Close" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();

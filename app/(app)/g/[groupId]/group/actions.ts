@@ -214,7 +214,7 @@ export async function leaveGroup(
   if (!data?.length) {
     return {
       error:
-        "You own this circle — transfer ownership or delete it before leaving.",
+        "You own this circle. Transfer ownership or delete it before leaving.",
     };
   }
 

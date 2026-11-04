@@ -49,12 +49,12 @@ export function MemberRow({
               the "you" tint, three rose marks and not an action among them. */}
           {role === "owner" && (
             <Badge variant="primary" size="sm" className="shrink-0">
-              owner
+              Owner
             </Badge>
           )}
           {role === "admin" && (
             <Badge variant="outline" size="sm" className="shrink-0">
-              co-admin
+              Co-admin
             </Badge>
           )}
           {you && (

@@ -8,6 +8,8 @@ import { toConfigVersions, targetOn } from "@/lib/task-config";
 import { toShares, shareOn, effectiveTarget } from "@/lib/shares";
 import { CountClient } from "./count-client";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Count screen, server-first shell (M3). The task + my fortnight of counts
  * load under RLS; the tap pad itself is the optimistic client leaf. The group
@@ -18,12 +20,10 @@ export default async function CountPage({
   searchParams,
 }: {
   params: Promise<{ groupId: string; taskId: string }>;
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; next?: string }>;
 }) {
-  const [{ groupId, taskId }, { date: paramDate }] = await Promise.all([
-    params,
-    searchParams,
-  ]);
+  const [{ groupId, taskId }, { date: paramDate, next: paramNext }] =
+    await Promise.all([params, searchParams]);
 
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
@@ -178,6 +178,23 @@ export default async function CountPage({
       versions={versions}
       shares={shares}
       alsoCounts={alsoCounts}
+      // WHERE A CLOSED RING GOES NEXT, decided by Today and carried in the URL
+      // rather than looked up here. This screen is the hottest in the app and
+      // the note above records what a single extra parallel read cost it; the
+      // question "which of my rings is still open" needs the member's whole
+      // day, which is precisely the query Today has already run. So Today
+      // stamps the answer onto each ring's own link and this page just relays
+      // it. Absent — a deep link, a shared URL, a past day — the fallback is
+      // Today itself, which is always correct.
+      //
+      // It can go stale (the member closes rings in a different order than the
+      // chain assumed) and the cost of that is landing on a ring already shut,
+      // which shows its closed state and a way back. That is the cheap failure;
+      // a slower count screen would be paid on every single tap.
+      // UUIDs only: this value ends up in a path, and it arrived in a URL.
+      nextTaskIds={(paramNext ?? "")
+        .split(",")
+        .filter((id) => id !== taskId && UUID.test(id))}
     />
   );
 }

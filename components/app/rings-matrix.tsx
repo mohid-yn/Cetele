@@ -90,12 +90,22 @@ export function RingDots({ closed, owed }: { closed: number; owed: number }) {
   );
 }
 
+/**
+ * Open on TODAY. The newest days are the ones anyone came to read, and starting
+ * at the far end showed a phone an empty card when the oldest days owed nothing.
+ * Module-level so the ref is stable and a re-render never undoes a member's own
+ * scrolling. `task-grid` opens the same way.
+ */
+function scrollToNewest(el: HTMLDivElement | null) {
+  if (el) el.scrollLeft = el.scrollWidth;
+}
+
 export function RingsMatrix({ rows, days }: { rows: RingRow[]; days: number }) {
   // The 44px tap floor does not apply — these cells are not controls — but the
   // FLOOR-not-size rule still does: a fixed track would keep the phone's width
   // on a 4K monitor. `minmax` bottoms out at a legible square on a phone (where
   // the row scrolls) and spends whatever room a desktop actually has.
-  const cellCols = `repeat(${days}, minmax(1.25rem, 1fr))`;
+  const cellCols = `repeat(${days}, minmax(0.75rem, 1fr))`;
 
   if (rows.length === 0) return null;
 
@@ -129,7 +139,10 @@ export function RingsMatrix({ rows, days }: { rows: RingRow[]; days: number }) {
           <div className="h-4" aria-hidden />
         </div>
 
-        <div className="-m-1 no-scrollbar min-w-0 flex-1 overflow-x-auto p-1">
+        <div
+          ref={scrollToNewest}
+          className="-my-1 -ml-1 no-scrollbar min-w-0 flex-1 overflow-x-auto p-1"
+        >
           <div className="flex w-full max-w-[88rem] min-w-max flex-col gap-1">
             {rows.map((r) => (
               <div
@@ -140,13 +153,16 @@ export function RingsMatrix({ rows, days }: { rows: RingRow[]; days: number }) {
                 {r.cells.map((c) => (
                   <div
                     key={c.date}
-                    title={`${r.name} — ${fmtFull(c.date)}: ${describe(c)}`}
+                    title={`${r.name}. ${fmtFull(c.date)}: ${describe(c)}`}
                     aria-label={`${r.name}, ${fmtFull(c.date)}: ${describe(c)}`}
                     className={cn(
                       // Height from the row, width from the track — an
                       // aspect-square would make a widened desktop cell as TALL
                       // as it is wide and burst the row.
                       "h-full w-full rounded-[3px]",
+                      // The legend's dashed square. Without it a day that owed
+                      // nothing drew no cell at all.
+                      c.owed === 0 && "border border-dashed border-border",
                       dayCellClass(
                         c.owed ? c.closed / c.owed : 0,
                         c.activity,

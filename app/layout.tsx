@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Quicksand } from "next/font/google";
+import { Figtree, Geist } from "next/font/google";
 import "./globals.css";
 import { BRAND_THEME_COLOR, BRAND_SURFACE_COLOR_DARK } from "@/lib/brand";
 import { appleStartupImages } from "@/lib/apple-splash";
@@ -15,9 +15,11 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-// Rounded, friendly display face — echoes the Youth Nexus wordmark.
-const quicksand = Quicksand({
-  variable: "--font-quicksand",
+// Display face: warm and open, and calm enough for a screen someone looks at while
+// doing dhikr. Chosen over Quicksand (2026-11-04), compared live on Today and the
+// counter. Its digits hold one width, so the count does not jitter as it climbs.
+const figtree = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
 });
@@ -80,7 +82,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${quicksand.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${figtree.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <script dangerouslySetInnerHTML={{ __html: THEME_NO_FLASH_SCRIPT }} />

@@ -134,7 +134,7 @@ export default async function GroupsHomePage() {
           <Link
             href={groupHref(g.id, "/group/manage")}
             className={buttonVariants({
-              variant: "outline",
+              variant: "tonal",
               size: "sm",
               className: "mr-1.5",
             })}
@@ -172,7 +172,7 @@ export default async function GroupsHomePage() {
             {isSuperAdmin ? "Your own circles" : "Start your first circle"}
           </h1>
           <p className="mx-auto mt-2 max-w-sm text-sm text-balance text-muted-foreground">
-            Cetele is built around a circle — a small group that keeps a shared
+            Cetele is built around a circle, a small group that keeps a shared
             dhikr goal together. Create one and invite your people, or join one
             you&rsquo;ve been invited to.
           </p>
@@ -182,7 +182,7 @@ export default async function GroupsHomePage() {
           <div className="flex flex-col items-center gap-2">
             <NewGroupButton />
             <span className="text-xs text-muted-foreground">
-              You&rsquo;ll be the owner — invite others afterwards.
+              You&rsquo;ll be the owner. Invite others afterwards.
             </span>
           </div>
 
@@ -225,7 +225,7 @@ export default async function GroupsHomePage() {
         <SectionHeading>My groups ({owned.length})</SectionHeading>
         {owned.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-            You don&rsquo;t own any groups yet — create one, or you&rsquo;re a
+            You don&rsquo;t own any groups yet. Create one, or you&rsquo;re a
             member of the circles below.
           </p>
         ) : (

@@ -93,10 +93,10 @@ export const GARDEN_STAGE_LABEL = [
 ];
 
 export const GARDEN_STAGE_COPY = [
-  "Quiet for now — a few rings today will wake it up. No rush, no guilt.",
+  "Quiet for now. A few rings today will wake it up.",
   "First shoots. The circle is finding its rhythm.",
-  "Coming alive — the garden grows every day you close your rings together.",
-  "MashaAllah — your circle's garden is thriving. Keep tending it.",
+  "Coming alive. The garden grows every day you close your rings together.",
+  "MashaAllah, your circle's garden is thriving. Keep tending it.",
 ];
 
 // ---------------------------------------------------------------------------
@@ -214,12 +214,12 @@ export type Landmark = {
 
 const COPY: Record<LandmarkType, { title: string; body: string }> = {
   comeback: {
-    title: "Welcome back — pick up where you left off",
+    title: "Welcome back. Pick up where you left off",
     body: "Every day is a fresh start. Your circle saved your spot; one task today is all it takes to begin again.",
   },
   month: {
     title: "A new month, a clean slate",
-    body: "Fresh start. Pick one task and begin the chain again today — your circle is right here with you.",
+    body: "Fresh start. Pick one task and begin the chain again today. Your circle is right here with you.",
   },
   week: {
     title: "New week, fresh start",

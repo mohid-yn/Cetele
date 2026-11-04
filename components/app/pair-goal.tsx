@@ -54,7 +54,7 @@ export function NoPairGoal() {
       <p className="text-sm font-semibold text-foreground">No duo this month</p>
       <p className="mt-1 text-xs text-muted-foreground">
         Your circle has an odd number of people, so one person sits out each
-        month — this month that&apos;s you. You&apos;re still in the ranking
+        month. This month that&apos;s you. You&apos;re still in the ranking
         below, and the circle&apos;s goal still counts your rings.
       </p>
     </Card>
@@ -102,11 +102,11 @@ export function PairGoal({ pair }: { pair: Pair }) {
       <p className="mt-1 text-xs text-muted-foreground">
         {met ? (
           <span className="font-medium text-success">
-            MashaAllah — you reached it together.
+            MashaAllah. You reached it together.
           </span>
         ) : (
           <>
-            {remaining} {remaining === 1 ? "day" : "days"} to go — either of you
+            {remaining} {remaining === 1 ? "day" : "days"} to go. Either of you
             can bring it home.
           </>
         )}

@@ -45,7 +45,7 @@ export function NoRoadmap({
           {canFollow && (
             <Link
               href={groupHref(groupId, "/group/manage")}
-              className={cn(buttonVariants({ variant: "outline" }), "mt-1")}
+              className={cn(buttonVariants({ variant: "tonal" }), "mt-1")}
             >
               Open Manage
             </Link>

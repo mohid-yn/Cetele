@@ -252,8 +252,8 @@ test("the roadmap never touches the daily engine", async ({ page }) => {
   await page.waitForURL("**/progress");
 
   await expect(page.getByText("of the last 14 days")).toBeVisible();
-  await expect(page.getByText("every day is a fresh start")).toBeVisible();
-  // `exact`, because "every day is a fresh start" above also contains it —
+  await expect(page.getByText("Every day is a fresh start")).toBeVisible();
+  // `exact`, because "Every day is a fresh start" above also contains it —
   // the strict-mode violation this suite keeps re-learning.
   await expect(page.getByText("Fresh start", { exact: true })).toBeVisible();
 });

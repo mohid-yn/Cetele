@@ -117,7 +117,7 @@ export function RewardsEditor({
         </p>
       ) : (
         <Button
-          variant="outline"
+          variant="tonal"
           className="self-start"
           onClick={() => open("new")}
         >

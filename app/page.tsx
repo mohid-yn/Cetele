@@ -3,8 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Input, cardVariants } from "@/components/ui";
-import { cn } from "@/lib/utils";
+import { Button, Input } from "@/components/ui";
 import { AppIconLogo } from "@/components/ui/logo";
 import { GoogleIcon, MailIcon } from "@/components/app/icons";
 import { createClient } from "@/lib/supabase/client";
@@ -158,7 +157,7 @@ export default function LoginPage() {
               Cetele
             </p>
             <p className="mt-3 max-w-xs text-balance text-primary-100">
-              Track your daily dhikr together — a shared tally that makes
+              Track your daily dhikr together, a shared tally that makes
               remembrance a habit.
             </p>
           </div>
@@ -170,25 +169,20 @@ export default function LoginPage() {
         <div className="w-full max-w-[24rem]">
           {/* Brand */}
           <div className="flex flex-col items-center gap-4 text-center">
-            <AppIconLogo className="size-20 rounded-[1.25rem] shadow-lg" />
+            <AppIconLogo className="size-20 rounded-[1.25rem] shadow-sm" />
             <div>
               <h1 className="font-display text-3xl font-bold tracking-tight text-primary">
                 Cetele
               </h1>
               <p className="mt-2 text-sm text-balance text-muted-foreground">
-                Track your daily dhikr together — a shared tally that makes
+                Track your daily dhikr together, a shared tally that makes
                 remembrance a habit.
               </p>
             </div>
           </div>
 
           {/* Sign-in card */}
-          <div
-            className={cn(
-              cardVariants({ padding: "lg" }),
-              "mt-8 flex flex-col gap-3 shadow-md",
-            )}
-          >
+          <div className="mt-8 flex flex-col gap-3">
             {DEV_LOGIN && (
               <>
                 <Button

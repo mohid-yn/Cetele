@@ -74,12 +74,10 @@ export function DayStrip({
                 "lg:grow lg:basis-0",
                 active
                   ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:bg-muted",
+                  : "border-border bg-card text-muted-foreground hover:bg-muted active:bg-surface-active",
               )}
             >
-              <span className="text-[0.65rem] font-medium tracking-wide uppercase">
-                {label(d, i)}
-              </span>
+              <span className="text-[0.65rem] font-medium">{label(d, i)}</span>
               <span className="font-display text-sm font-bold tabular-nums">
                 {dayNum(d)}
               </span>
@@ -99,6 +97,15 @@ export function DayStrip({
       </div>
     </div>
   );
+}
+
+/** Compact date for a phone header that shares its line with other controls. */
+export function fmtShortDate(date: string): string {
+  return new Date(date + "T00:00:00").toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 }
 
 /** Long human date for the "Logging for …" caption. */

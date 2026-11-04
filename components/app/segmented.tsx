@@ -49,7 +49,7 @@ export function Segmented<T extends string>({
               <motion.div
                 layoutId={layoutId}
                 transition={springGlide}
-                className="absolute inset-0 rounded-lg bg-card shadow-sm"
+                className="absolute inset-0 rounded-lg bg-elevated shadow-sm"
               />
             )}
             <span className="relative z-10">{o.label}</span>

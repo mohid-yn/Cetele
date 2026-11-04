@@ -2,10 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
-import { Badge, Card, Screen, buttonVariants } from "@/components/ui";
+import { Badge, Card, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
-import { FlagIcon, UsersIcon } from "@/components/app/icons";
+import { ChevronRightIcon, FlagIcon, UsersIcon } from "@/components/app/icons";
 import { localDateISO } from "@/lib/local-date";
 import { levelsOf, programmeWindow } from "@/lib/roadmap";
 import { NewProgrammeButton } from "./new-programme";
@@ -179,10 +179,10 @@ export default async function ProgrammeHubPage() {
             <ul className="flex flex-col gap-2">
               {group.rows.map((p) => (
                 <li key={p.id}>
-                  <Card className="flex items-center gap-1 p-1.5">
+                  <Card className="divide-y divide-border overflow-hidden">
                     <Link
                       href={`/programme/${p.id}`}
-                      className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-lg px-2.5 py-1.5 text-left transition-colors duration-[var(--duration-fast)] hover:bg-surface-hover active:bg-surface-active"
+                      className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-hover active:bg-surface-active"
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block font-semibold wrap-anywhere text-foreground">
@@ -205,19 +205,24 @@ export default async function ProgrammeHubPage() {
                             : `${p.circles} ${p.circles === 1 ? "circle" : "circles"}`}
                         </Badge>
                       )}
+                      <ChevronRightIcon
+                        aria-hidden
+                        className="size-5 shrink-0 text-muted-foreground"
+                      />
                     </Link>
                     {/* Only for whoever leads a circle following it (D69). */}
                     {cohortReadable.has(p.id) && (
                       <Link
                         href={`/programme/${p.id}/progress`}
                         aria-label={`Members' progress on ${p.name}`}
-                        className={buttonVariants({
-                          variant: "ghost",
-                          size: "icon",
-                          className: "text-muted-foreground",
-                        })}
+                        className="flex min-h-11 items-center gap-2 px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover active:bg-surface-active"
                       >
-                        <UsersIcon aria-hidden />
+                        <UsersIcon aria-hidden className="size-4 shrink-0" />
+                        <span className="flex-1">Members&rsquo; progress</span>
+                        <ChevronRightIcon
+                          aria-hidden
+                          className="size-5 shrink-0 text-muted-foreground"
+                        />
                       </Link>
                     )}
                   </Card>

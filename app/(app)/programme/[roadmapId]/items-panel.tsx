@@ -202,9 +202,9 @@ export function ItemsPanel({
                   {count} {count === 1 ? "item" : "items"}
                 </span>
                 <Button
-                  variant="ghost"
+                  variant="tonal"
                   size="sm"
-                  className="min-h-11"
+                  className="mr-1.5 shrink-0"
                   aria-label={`Add item to level ${level}`}
                   onClick={() => openSheet(null, level)}
                 >
@@ -251,7 +251,9 @@ export function ItemsPanel({
                                   <LockIcon aria-hidden className="size-3.5" />
                                   {req
                                     ? `Choose ${req.minTotal} ${group[0]?.unit ?? ""}`
-                                    : `Finish all ${group.length}`}
+                                    : group.length === 1
+                                      ? "Finish it"
+                                      : `Finish all ${group.length}`}
                                 </span>
                               ) : (
                                 <Button
@@ -269,7 +271,9 @@ export function ItemsPanel({
                                 >
                                   {req
                                     ? `Choose ${req.minTotal} ${group[0]?.unit ?? ""}`
-                                    : `Finish all ${group.length}`}
+                                    : group.length === 1
+                                      ? "Finish it"
+                                      : `Finish all ${group.length}`}
                                 </Button>
                               )}
                             </div>
@@ -376,7 +380,7 @@ export function ItemsPanel({
 
       {levels.length > 0 && (
         <Button
-          variant="outline"
+          variant="tonal"
           className="self-start"
           onClick={() => openSheet(null, nextLevel)}
         >

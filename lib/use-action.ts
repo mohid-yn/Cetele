@@ -41,7 +41,7 @@ export function useAction() {
       // client, it doesn't throw. Without this catch the rejection escaped as
       // unhandled and `pending` stayed true forever (a button stuck "Saving…").
       setError(
-        e instanceof Error ? e.message : "Something went wrong — try again.",
+        e instanceof Error ? e.message : "Something went wrong. Try again.",
       );
       onError?.();
       return;

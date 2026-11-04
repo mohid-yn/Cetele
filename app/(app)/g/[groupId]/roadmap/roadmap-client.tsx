@@ -235,7 +235,7 @@ export function RoadmapClient({
           <Link
             href={`/programme/${roadmap.id}/progress`}
             className={buttonVariants({
-              variant: "outline",
+              variant: "tonal",
               size: "sm",
               // Split the width on a phone, natural width above it — two
               // 470px buttons carrying three words each is what `flex-1`
@@ -249,7 +249,7 @@ export function RoadmapClient({
           <Link
             href={`/programme/${roadmap.id}`}
             className={buttonVariants({
-              variant: "outline",
+              variant: "tonal",
               size: "sm",
               // Split the width on a phone, natural width above it — two
               // 470px buttons carrying three words each is what `flex-1`
@@ -267,12 +267,7 @@ export function RoadmapClient({
           programme is built in and rewarded on. A single percentage across all
           three levels would be a number nobody is working toward. */}
       <HeroCard
-        medallion={
-          <FlagIcon
-            className="size-8"
-            style={{ color: "var(--gradient-hero-accent)" }}
-          />
-        }
+        medallion={<FlagIcon className="size-4 text-primary" />}
         label={
           current
             ? `Level ${current}`

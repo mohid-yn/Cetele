@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { signIn } from "./helpers";
+import { closesDay, signIn } from "./helpers";
 
 /**
  * Personal stretch goals (D51), end-to-end against the real local stack.
@@ -22,12 +22,6 @@ const STAMP = Date.now();
 const USER = `e2e-goal-${STAMP}@example.com`;
 
 test.describe.configure({ mode: "serial" });
-
-async function closeCelebration(page: Page) {
-  await expect(page.getByText("Ring closed!")).toBeVisible();
-  await page.getByRole("dialog").click();
-  await expect(page.getByRole("dialog")).toBeHidden();
-}
 
 /** Open the circle-wide goals dialog from Today. */
 async function openGoals(page: Page) {
@@ -71,16 +65,10 @@ test("raise my own bar → ring re-opens, streak and circle untouched", async ({
   await pad.click();
   await pad.click();
   await pad.click();
-  await expect(page.getByText("Completed — tap to keep going")).toBeVisible();
-  await closeCelebration(page);
-
-  // Head back IN-APP, never `page.goto`: the tap queue flushes on a 600ms
-  // debounce with a best-effort dispatch on unmount, and a hard navigation
-  // tears the JS context down before either can land — the three taps are then
-  // silently lost and every assertion below fails against a count of 0.
-  // Client-side nav runs the unmount flush, which is also the real user's path.
-  await page.click('button:has-text("Back to today")');
-  await page.waitForURL("**/today");
+  // The ring closing leaves in-app by itself, and that navigation waits on the
+  // flush. A hard `page.goto` here would tear the JS context down first and lose
+  // the three taps silently.
+  await closesDay(page);
   await expect(page.getByText(/All rings closed today/)).toBeVisible();
   await expect(page.getByText("1 day streak")).toBeVisible();
 
@@ -94,7 +82,7 @@ test("raise my own bar → ring re-opens, streak and circle untouched", async ({
   // ---- THE POINT: nothing already earned moved ------------------------------
   await expect(
     page.getByText(
-      /Your circle's share is done — 1 ring left on your own goal/,
+      /Your circle's share is done\. 1 ring left on your own goal/,
     ),
   ).toBeVisible();
   // The streak counted this day at the circle's share and must STAY counted:
@@ -118,7 +106,7 @@ test("raise my own bar → ring re-opens, streak and circle untouched", async ({
   // The ring re-opens against MY number, and says whose number the other one is.
   await expect(page.getByText("of 6")).toBeVisible();
   await expect(page.getByText(/The circle asks/)).toBeVisible();
-  await expect(page.getByText(/done, the rest is yours/)).toBeVisible();
+  await expect(page.getByText(/Done, the rest is yours/)).toBeVisible();
   // Re-opened, so the primary action is back — and it fills to MY goal, not 3.
   await expect(page.getByRole("button", { name: "Mark done" })).toBeVisible();
   // The goal is no longer EDITABLE here: one entry point, on Today.
@@ -139,12 +127,11 @@ test("raise my own bar → ring re-opens, streak and circle untouched", async ({
   await pad.click();
   await pad.click();
   await pad.click();
-  await expect(page.getByText("Completed — tap to keep going")).toBeVisible();
-  await closeCelebration(page);
+  // The day was already closed at the circle's share, so this raises no second
+  // card. It still leaves for Today.
+  await page.waitForURL("**/today");
 
   // ---- and the per-row reset drops back to the circle's share ---------------
-  await page.click('button:has-text("Back to today")');
-  await page.waitForURL("**/today");
   await openGoals(page);
   await page.getByRole("button", { name: /Back to the circle/ }).click();
   await page.getByRole("button", { name: "Save" }).click();
@@ -181,7 +168,7 @@ test("a goal below the circle's share is refused, not stored", async ({
 
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(
-    page.getByText(/The circle asks 3 — you can only aim higher, never lower/),
+    page.getByText(/The circle asks 3\. You can only aim higher, never lower/),
   ).toBeVisible();
 
   // And nothing was written: leaving by Cancel, the ring is still on the
@@ -292,23 +279,22 @@ test("a goal above 500 can still be closed in one press", async ({ page }) => {
   // `delta out of range (1..500)` with the count snapping back. The queue now
   // splits it; this proves the split lands as one total, not a partial write.
   await page.getByRole("button", { name: "Mark done" }).click();
-  await expect(page.getByText("Ring closed!")).toBeVisible();
-  await page.getByRole("dialog").click();
-  await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByText("delta out of range")).toBeHidden();
 
-  // The whole 600 survives a round-trip — so every chunk landed, in order.
-  //
-  // Wait for the queue to DRAIN before reloading. `Mark done` splits 594 into
-  // 500 + 94 and the display is optimistic, so the screen reads 600 while the
-  // second chunk is still in flight — and `page.reload()` is a hard navigation,
-  // which tears the JS context down exactly like the `page.goto()` hazard the
-  // repo already documents. Caught it doing so under load: the page came back
-  // reading **506**, i.e. 6 + one 500-chunk, with the 94 lost. The assertion
-  // below is about the SPLIT, not about how fast it flushes, so the wait
-  // belongs here rather than in a longer timeout.
-  await page.waitForLoadState("networkidle");
-  await page.reload();
+  // This circle has other rings open by now, so closing moves on to the next one
+  // (D71). That navigation waits on the whole queue, so once it has happened every
+  // chunk has landed: the page came back reading 506 before the wait existed.
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Salawat" }),
+  ).toHaveCount(0);
+
+  // The whole 600 survives a round-trip, so every chunk landed, in order.
+  await page.goto("/today");
+  await page
+    .getByRole("link", { name: /Salawat/ })
+    .first()
+    .click();
+  await page.waitForURL("**/count/**");
   await expect(page.getByText("600", { exact: true })).toBeVisible();
   await expect(page.getByText("of 600")).toBeVisible();
 });

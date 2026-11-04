@@ -43,6 +43,20 @@ function admin() {
 }
 
 /** Sign `email` in, creating the account if it doesn't exist yet. */
+/**
+ * The member closed the LAST open ring: the screen leaves for Today on its own
+ * (D71) and the day-closed card waits there until it is answered. Arriving is
+ * also the proof the count reached Postgres, because the navigation waits on the
+ * flush.
+ */
+export async function closesDay(page: Page) {
+  await page.waitForURL("**/today");
+  await page.getByRole("button", { name: "Alhamdulillah" }).click();
+  await page
+    .getByRole("button", { name: "Alhamdulillah" })
+    .waitFor({ state: "hidden" });
+}
+
 export async function signIn(page: Page, email: string) {
   const supabase = admin();
 

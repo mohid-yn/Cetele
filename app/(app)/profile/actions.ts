@@ -158,7 +158,7 @@ export async function sendTestPush(): Promise<
     // No emoji: a notification body is rendered by the OS, in the OS's own
     // emoji font, on a surface this app does not style — the one place a glyph
     // is guaranteed to be off-system. The sentence carries it on its own.
-    body: "Test notification — reminders are working on this device.",
+    body: "Test notification. Reminders are working on this device.",
     url: "/today",
     tag: "cetele-test",
   });
@@ -174,7 +174,7 @@ export async function sendTestPush(): Promise<
     return {
       error:
         dead.length > 0
-          ? "This device's subscription had expired — turn reminders off and on again."
+          ? "This device's subscription had expired. Turn reminders off and on again."
           : "The push service rejected it. Check the VAPID keys on the server.",
     };
   }

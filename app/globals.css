@@ -21,7 +21,7 @@
   /* ---- Type families ---- */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-display:
-    var(--font-quicksand), var(--font-geist-sans), ui-sans-serif, sans-serif;
+    var(--font-figtree), var(--font-geist-sans), ui-sans-serif, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   /* ---- Type scale (size + paired line-height) → text-xs … text-5xl ---- */
@@ -220,6 +220,8 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-container: var(--primary-container);
   --color-on-primary-container: var(--on-primary-container);
+  --color-primary-container-hover: var(--primary-container-hover);
+  --color-primary-container-active: var(--primary-container-active);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-container: var(--accent-container);
@@ -283,9 +285,9 @@
   --muted-foreground: #514247; /* plum — 8.1:1 on card, 4.5+ everywhere */
 
   /* Decorative hairline (cards, dividers) vs the >=3:1 INTERACTIVE boundary. */
-  --border: #d4c1c7;
-  --outline: #867077; /* 4.3:1 page · 4.5:1 card · 3.3:1 chrome */
-  --input: #867077; /* inputs take the interactive boundary, not the hairline */
+  --border: #e4d7c6; /* tan, from the paper's own family */
+  --outline: #87735e; /* tan — 4.3:1 page · 4.4:1 card · 3.7:1 chrome */
+  --input: #87735e; /* inputs take the interactive boundary, not the hairline */
   --ring: #346d3f; /* sage focus ring — 5.9:1 on the page */
 
   /* The unfilled arc of a progress ring / bar. NOT --muted: that is a large-AREA
@@ -302,8 +304,12 @@
      fill-vs-track fell to 1.35:1, so the filled part stopped being tellable
      from the empty part. Re-derived at the pale end of the permitted band, in
      the neutral ramp's own hue: card 3.18:1, page 3.08:1, and fill-vs-track
-     back up to 1.90:1 (v1 managed 1.67:1). Recessive AND legible, not loud. */
-  --progress-track: #a18b77;
+     back up to 1.90:1 (v1 managed 1.67:1). Recessive AND legible, not loud.
+
+     Moved to a grey SAGE, 2026-11-04, at the same measurements: card 3.16:1, page
+     3.05:1, fill-vs-track 1.92:1. Brown beside the sage arc looked muddy, and the
+     thin track under a thick arc now separates them by shape as well. */
+  --progress-track: #7f9582;
   /* The notch a ring draws at a threshold inside its own arc — the circle's
      share, when a member is aiming past it (D51). Judged against what it is
      actually DRAWN ON, which is never the page: the sage fill, the success green
@@ -316,6 +322,9 @@
   --primary-foreground: #f7fff8; /* 6.05:1 */
   --primary-container: #d4ead6;
   --on-primary-container: #112013; /* 13.3:1 */
+  /* The `tonal` button and the circle switcher. 8%/12% of the on-colour. */
+  --primary-container-hover: #c4dac6; /* 11.5:1 */
+  --primary-container-active: #bdd2bf; /* 10.6:1 */
   /* The owner's rose, EXACTLY. It carries a dark label rather than white:
      white-on-rose is 2.98:1 (fails), the tone-10 label is 5.84:1 and still
      clears 4.5 at pressed (4.81) — which is the tightest margin in the system,
@@ -462,9 +471,9 @@
   --card-foreground: #eee0d3;
   --muted-foreground: #d4c1c7; /* 9.6:1 on card */
 
-  --border: #514247; /* visible warm separator (shadows are weak on dark) */
-  --outline: #a08a91; /* 5.8:1 page · 4.9:1 card — clears 1.4.11 */
-  --input: #a08a91;
+  --border: #40362c; /* warm separator (shadows are weak on dark) */
+  --outline: #a28c77; /* tan — 5.8:1 page · 5.3:1 card */
+  --input: #a28c77;
   --ring: #a3d6a9; /* light sage focus — 11.2:1 on the page */
 
   /* Same story on dark, same measurement: --muted as a stroke was 1.10:1 on the
@@ -474,7 +483,7 @@
      "empty bar looks full" failure and dropped fill-vs-track to 1.95:1. Taken
      to the deep end of the permitted band instead: card 3.06:1, page 3.31:1,
      fill-vs-track 3.40:1 — the best of the three versions on every axis. */
-  --progress-track: #756556;
+  --progress-track: #5a7060; /* grey sage, matching light */
   /* INVERTED from light, and measured rather than assumed. Reusing the light
      recipe (the ink) here gives a cream notch on a LIGHT sage fill — in v1 that
      measured 2.10:1 on --primary and 1.59:1 on --success, so the mark all but
@@ -487,6 +496,8 @@
   --primary-foreground: #1f3723; /* 7.8:1 */
   --primary-container: #23522c;
   --on-primary-container: #d4ead6; /* 7.2:1 */
+  --primary-container-hover: #315e3a; /* 5.9:1 */
+  --primary-container-active: #386440; /* 5.4:1 */
   --accent: #e98a9b; /* lightened rose so it won't vibrate on dark */
   --accent-foreground: #482329; /* 5.5:1, holds 4.6 at pressed */
   --accent-container: #702b3a;
@@ -675,6 +686,28 @@
   * {
     border-color: var(--border);
   }
+
+  /* The surfaces nobody draws. On a phone these are what separates an app from a
+     web page: no grey flash on every tap, no double-tap-zoom delay on a counter,
+     and selection and caret in the brand instead of the OS blue. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  a,
+  button,
+  label,
+  summary,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+  ::selection {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+  }
+  input,
+  textarea {
+    caret-color: var(--primary);
+  }
 }
 
 body {
@@ -695,7 +728,7 @@ body {
 @keyframes celebrate-in {
   0% {
     opacity: 0;
-    transform: scale(0.8) translateY(8px);
+    transform: scale(0.96) translateY(4px);
   }
   100% {
     opacity: 1;
@@ -708,7 +741,7 @@ body {
     transform: scale(1);
   }
   40% {
-    transform: scale(1.18);
+    transform: scale(1.06);
   }
   100% {
     transform: scale(1);

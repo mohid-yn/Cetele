@@ -2,7 +2,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The small uppercase section label. Hand-written in several places at slightly
+ * The small section label. Sentence case on purpose: wide-tracked capitals above
+ * every heading read as a template. Hand-written in several places at slightly
  * different weights, which read as drift rather than intent — extracted so every
  * section label in the app is the same object.
  *
@@ -17,10 +18,7 @@ export function Eyebrow({ as = "p", className, ...props }: EyebrowProps) {
   const Tag = as;
   return (
     <Tag
-      className={cn(
-        "text-xs font-semibold tracking-wide text-muted-foreground uppercase",
-        className,
-      )}
+      className={cn("text-xs font-medium text-muted-foreground", className)}
       {...props}
     />
   );

@@ -36,7 +36,7 @@ export function IosInstallGuide() {
         Add Cetele to your Home Screen first
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        On iPhone and iPad, reminders can only reach an installed app — Apple
+        On iPhone and iPad, reminders can only reach an installed app. Apple
         does not deliver them to a Safari tab. It takes about ten seconds.
       </p>
       <ol className="mt-3 flex flex-col gap-2">
@@ -45,8 +45,8 @@ export function IosInstallGuide() {
           (Chrome and Firefox on iPhone cannot install it).
         </Step>
         <Step n={2}>
-          Tap the <strong className="text-foreground">Share</strong> button —
-          the square with an arrow pointing up, in the toolbar.
+          Tap the <strong className="text-foreground">Share</strong> button. The
+          square with an arrow pointing up, in the toolbar.
         </Step>
         <Step n={3}>
           Scroll down and tap{" "}
@@ -54,7 +54,7 @@ export function IosInstallGuide() {
           <strong className="text-foreground">Add</strong>.
         </Step>
         <Step n={4}>
-          Open Cetele from the new Home Screen icon and come back here — the
+          Open Cetele from the new Home Screen icon and come back here. The
           reminder switch will be waiting.
         </Step>
       </ol>
@@ -80,7 +80,7 @@ export function UnsupportedBrowserNote() {
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
         Reminders need Web Push, which this browser doesn&apos;t support.
-        Chrome, Edge or Firefox — on Android or desktop — will work, as will an
+        Chrome, Edge or Firefox, on Android or desktop, will work, as will an
         iPhone with Cetele added to the Home Screen. Times you set below are
         saved to your account, so they will start arriving once a device that
         can receive them is turned on.
@@ -97,7 +97,7 @@ export function PushUnconfiguredNote() {
         Reminders are temporarily unavailable
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        This one is on us, not your device — reminder delivery isn&apos;t
+        This one is on us, not your device. Reminder delivery isn&apos;t
         configured on the server. Times you set below are still saved.
       </p>
     </Card>

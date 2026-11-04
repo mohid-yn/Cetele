@@ -34,7 +34,7 @@ export function JoinByCode() {
         aria-label="Invite link or code"
         className="flex-1"
       />
-      <Button variant="outline" onClick={submit} disabled={!value.trim()}>
+      <Button variant="tonal" onClick={submit} disabled={!value.trim()}>
         Join
       </Button>
     </div>

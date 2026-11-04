@@ -21,7 +21,12 @@ import { PageHeader } from "@/components/app/page-header";
 import { GroupSwitcher } from "@/components/app/group-switcher";
 import { SectionHeading } from "@/components/app/section-heading";
 import { StreakChip } from "@/components/app/streak-chip";
-import { DayStrip, fmtLongDate } from "@/components/app/day-strip";
+import { useCelebration } from "@/components/app/celebration";
+import {
+  DayStrip,
+  fmtLongDate,
+  fmtShortDate,
+} from "@/components/app/day-strip";
 import {
   CheckIcon,
   PlusIcon,
@@ -35,7 +40,6 @@ import { usePropState } from "@/lib/use-prop-state";
 import { hapticCelebrate, hapticTick } from "@/lib/haptics";
 import { milestoneCrossed } from "@/lib/quick-count";
 import { playComplete } from "@/lib/sound";
-import { useCelebration } from "@/components/app/celebration";
 import { useQuickCount } from "./use-quick-count";
 import { GoalsDialog } from "./goals-dialog";
 import type { LinkableTask, LinkedSibling } from "@/lib/task-links";
@@ -325,30 +329,125 @@ export function TodayClient({
     rings.length === 0
       ? "No tasks yet"
       : dueRings.length === 0
-        ? `Nothing due${isToday ? " today" : ""} — rest is part of it`
+        ? `Nothing due${isToday ? " today" : ""}. Rest is part of it`
         : left === 0
-          ? `All rings closed${isToday ? " today" : ""} — mashaAllah`
+          ? `All rings closed${isToday ? " today" : ""}. MashaAllah`
           : sharesLeft === 0
-            ? `Your circle's share is done — ${left} ring${left === 1 ? "" : "s"} left on your own goal`
+            ? `Your circle's share is done. ${left} ring${left === 1 ? "" : "s"} left on your own goal`
             : closed === 0
-              ? "A fresh page — start with one ring"
-              : `${left} ring${left === 1 ? "" : "s"} to close — you're almost there`;
+              ? "A fresh page. Start with one ring"
+              : `${left} ring${left === 1 ? "" : "s"} to close`;
 
   // The one state that earns a mark beside the glance: everything due is done.
   // Not "nothing was due" — resting is fine, but it is not an achievement.
   const allClosed = dueRings.length > 0 && left === 0;
+
+  // THE DAY CLOSING — the rare moment, and now the only one that gets a card
+  // (owner's call). Closing one ring is frequent and gets confetti on the count
+  // screen; closing the LAST one is once a day at most, so it can afford to
+  // interrupt and be worth the interruption.
+  //
+  // FIRED ON THE TRANSITION, NEVER ON THE STATE. This is the invariant the
+  // count screen learned the hard way: a member who returns to a finished day
+  // must not be congratulated again, or the reward becomes something you can
+  // summon and stops meaning anything. Two guards, because one is not enough:
+  //
+  //   the REF catches re-renders inside this mount (a refresh, a tab back), and
+  //   localStorage catches a NEW mount — the member navigating here from the
+  //     count screen is a fresh mount every time, which is exactly the path
+  //     that closes the day, so a ref alone would re-fire on every later visit.
+  //
+  // Keyed by circle AND day, so tomorrow celebrates again and each circle keeps
+  // its own answer. Wrapped, because a browser with site data blocked throws on
+  // access rather than returning null — and a celebration is never worth a
+  // blank screen. When it does throw, the ref alone still prevents a loop
+  // within the mount, which is the visible failure.
+  const celebratedRef = React.useRef(false);
+  const wasClosedRef = React.useRef(allClosed);
+  React.useEffect(() => {
+    const wasClosed = wasClosedRef.current;
+    wasClosedRef.current = allClosed;
+    if (!isToday) {
+      // Looking at a past day says nothing about today. Coming back to a day that
+      // already reads as closed is not a transition.
+      wasClosedRef.current = true;
+      return;
+    }
+    if (!allClosed || celebratedRef.current) return;
+    // Earned here (the last tap landed on this screen) or just before arriving
+    // (the count screen left a note). Without one of those, this is someone
+    // opening a day already finished, perhaps on another device: no card.
+    let earned = !wasClosed;
+    let already = false;
+    const key = `cetele:day-closed:${groupId}:${todayISO}`;
+    try {
+      earned ||=
+        window.sessionStorage.getItem(`cetele:ring-closed:${groupId}`) ===
+        todayISO;
+      already = window.localStorage.getItem(key) === "1";
+    } catch {
+      // Storage unavailable: fall through on what this mount saw for itself.
+    }
+    if (!earned) return;
+    celebratedRef.current = true;
+    if (already) return;
+    try {
+      window.localStorage.setItem(key, "1");
+    } catch {
+      // Best effort. A repeat tomorrow is a far smaller cost than a crash.
+    }
+    celebrate({
+      title: "Your day is closed",
+      message:
+        "Every ring your circle asked of you today, done. \u201CThe most beloved deeds to Allah are those done consistently, even if small.\u201D",
+    });
+  }, [allClosed, isToday, groupId, todayISO, celebrate]);
 
   // One primary action (goal-gradient): continue the ring closest to done.
   const next = dueRings
     .filter((r) => !r.done)
     .sort((a, b) => b.count / b.goal - a.count / a.goal)[0];
 
+  // WHERE A CLOSED RING SENDS THE MEMBER NEXT (owner's call). Closing a ring
+  // now leaves the count screen on its own, so somebody has to answer "which
+  // one after this" — and this screen is the only one that cheaply can. The
+  // count page has the member's ONE task loaded and its own note records what a
+  // single extra parallel read cost the hottest screen in the app; the answer
+  // needs the whole day, which is the query already run here. So the chain is
+  // stamped onto each ring's link and the count screen just follows it.
+  //
+  // WRAPPING, and unfinished only: from the last ring, the next open one is
+  // earlier in the list, and a chain that stopped at the end would drop the
+  // member on Today with rings still open. Itself excluded — it is about to be
+  // closed, which is the whole reason we are choosing a successor.
+  //
+  // Only for TODAY. A past day is a correction, and there is no session to
+  // carry forward through it.
+  const chainAfter = (taskId: string): string[] => {
+    if (!isToday) return [];
+    const from = dueRings.findIndex((r) => r.task.id === taskId);
+    return dueRings
+      .slice(from + 1)
+      .concat(dueRings.slice(0, Math.max(from, 0)))
+      .filter((r) => !r.done && r.task.id !== taskId)
+      .map((r) => r.task.id);
+  };
+  /** A ring's own link, carrying the day being counted and the rings after it.
+   *  The WHOLE queue: carrying only the next one stopped the chain after one
+   *  step, dropping the member on Today with rings still open. */
+  const ringHref = (taskId: string) => {
+    const params = new URLSearchParams();
+    if (!isToday) params.set("date", date);
+    const queue = chainAfter(taskId);
+    if (queue.length > 0) params.set("next", queue.join(","));
+    const qs = params.toString();
+    return `${groupHref(groupId, `/count/${taskId}`)}${qs ? `?${qs}` : ""}`;
+  };
+
   // Where a banner's "Begin today" sends you: the nearest-to-done ring, else the
   // first task. Null when the circle has no tasks yet (nothing to begin).
   const beginTask = next?.task ?? dueRings[0]?.task ?? tasks[0];
-  const beginHref = beginTask
-    ? groupHref(groupId, `/count/${beginTask.id}`)
-    : null;
+  const beginHref = beginTask ? ringHref(beginTask.id) : null;
 
   return (
     <Screen>
@@ -359,7 +458,8 @@ export function TodayClient({
             <h1 className="font-display text-2xl font-bold text-foreground">
               {firstName}
             </h1>
-            {/* WHICH CIRCLE, and a way out of it. Today is where a member
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+              {/* WHICH CIRCLE, and a way out of it. Today is where a member
                 actually lives, and switching used to mean going to Group and
                 using the switcher that IS its title — three taps to change
                 context on the screen you are on. Quiet and secondary here: the
@@ -369,20 +469,26 @@ export function TodayClient({
                 is a control that does not work, and most members have one
                 circle. It is NOT the page title here, so it can simply be
                 absent — the reason /group's copy cannot do the same. */}
-            <GroupSwitcher
-              onlyWhenMultiple
-              initialName={groupName}
-              initialGroupId={groupId}
-              /* lg:hidden — the desktop SIDEBAR already carries a switcher,
+              <GroupSwitcher
+                onlyWhenMultiple
+                initialName={groupName}
+                initialGroupId={groupId}
+                /* lg:hidden — the desktop SIDEBAR already carries a switcher,
                  prominently. Two controls doing the same job on one screen is
                  clutter, and it makes "the group switcher" ambiguous to anyone
                  (or any test) reaching for it by name. Phones have no sidebar,
                  which is where the complaint came from. */
-              className="mt-0.5 -ml-2 px-2 text-sm lg:hidden"
-            />
-            {/* The date is the member's OWN today (useLocalToday, D34) — not the
+                className="text-sm font-medium lg:hidden"
+              />
+              {/* The date is the member's OWN today (useLocalToday, D34) — not the
                 selected day, which the day-strip note below already names. */}
-            <Eyebrow className="mt-0.5">{fmtLongDate(todayISO)}</Eyebrow>
+              <Eyebrow>
+                <span className="lg:hidden">{fmtShortDate(todayISO)}</span>
+                <span className="hidden lg:inline">
+                  {fmtLongDate(todayISO)}
+                </span>
+              </Eyebrow>
+            </div>
           </div>
         }
         /* The 🎉 that used to end this sentence was the screen's one
@@ -463,7 +569,7 @@ export function TodayClient({
       {/* Primary action — one accent CTA, the nearest-to-done ring */}
       {next && (
         <Link
-          href={`${groupHref(groupId, `/count/${next.task.id}`)}${isToday ? "" : `?date=${date}`}`}
+          href={ringHref(next.task.id)}
           className={buttonVariants({ variant: "accent", className: "w-full" })}
         >
           Continue {next.task.label} ·{" "}
@@ -494,7 +600,7 @@ export function TodayClient({
             // would get an empty action div.
             tasks.length > 0 ? (
               <Button
-                variant="outline"
+                variant="tonal"
                 size="sm"
                 leadingIcon={<TargetIcon />}
                 onClick={() => setGoalsOpen(true)}
@@ -506,7 +612,18 @@ export function TodayClient({
         >
           {isToday ? "Your rings today" : "Your rings"}
         </SectionHeading>
-        <Grid as="ul" cols="cards" gap="md">
+        {/* ONE list on a phone, not a stack of slabs: rings are rows of the same
+            thing, and a hairline between them says so with far less ink. The
+            cards come back at lg, where they sit side by side. */}
+        <Grid
+          as="ul"
+          cols="cards"
+          gap="md"
+          className={cn(
+            rings.length > 0 &&
+              "max-lg:gap-0 max-lg:divide-y max-lg:divide-border max-lg:overflow-hidden max-lg:rounded-xl max-lg:border max-lg:border-border max-lg:bg-card",
+          )}
+        >
           {rings.map(
             ({
               task: t,
@@ -526,7 +643,7 @@ export function TodayClient({
               // next one implies a sequence that does not exist, and the member
               // decides what to reach for. Every ring is offered equally; the
               // rings themselves already show where the progress is.
-              const ringLink = `${groupHref(groupId, `/count/${t.id}`)}${isToday ? "" : `?date=${date}`}`;
+              const ringLink = ringHref(t.id);
               const ringGraphic = (
                 <ProgressRing
                   value={due ? count : 0}
@@ -589,12 +706,6 @@ export function TodayClient({
                   )}
                   {due ? (
                     <>
-                      <ProgressBar
-                        value={count}
-                        max={goal}
-                        tone={done || shareDone ? "success" : "primary"}
-                        className="mt-2 h-1.5"
-                      />
                       <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                         {count.toLocaleString()} / {goal.toLocaleString()}
                         {stretched && (
@@ -639,7 +750,7 @@ export function TodayClient({
                     <div
                       className={cn(
                         cardVariants({ padding: "compact" }),
-                        "flex items-center gap-2",
+                        "flex items-center gap-2 max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent",
                       )}
                     >
                       {done ? (
@@ -691,14 +802,14 @@ export function TodayClient({
                       href={ringLink}
                       className={cn(
                         cardVariants({ padding: "compact" }),
-                        "flex items-center gap-4 transition-[box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-md motion-reduce:transform-none",
+                        "flex items-center gap-4 transition-colors duration-[var(--duration-fast)] hover:bg-surface-hover active:bg-surface-active max-lg:rounded-none max-lg:border-0",
+                        due && "max-lg:bg-transparent",
                         // The BORDER does the work, not the fill. v1 used
                         // `bg-muted/40`, which composited to 1.01:1 against the
                         // page with a 1.23:1 edge — the card vanished. A recessed
                         // surface should be quiet; what makes it legible as a
                         // *thing* is a boundary at the 3:1 non-text floor.
-                        !due &&
-                          "border-dashed border-outline bg-muted shadow-none",
+                        !due && "border-dashed border-outline bg-muted",
                       )}
                     >
                       {ringGraphic}
@@ -711,13 +822,13 @@ export function TodayClient({
             },
           )}
           {quick.error && (
-            <li role="alert" className="text-sm text-danger">
+            <li role="alert" className="p-3 text-sm text-danger">
               {quick.error}
             </li>
           )}
           {rings.length === 0 && (
             <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-              No tasks yet — the group&rsquo;s admin sets the shared list under{" "}
+              No tasks yet. The group&rsquo;s admin sets the shared list under{" "}
               <Link
                 href={groupHref(groupId, "/group/manage")}
                 className="font-medium text-primary underline"
@@ -728,12 +839,13 @@ export function TodayClient({
             </li>
           )}
         </Grid>
-        {isToday && tasks.length > 0 && (
+        {isToday && dueRings.some((r) => !r.done) && (
           <p className="mt-2.5 text-xs text-muted-foreground">
-            <span
-              aria-hidden
-              className="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-success align-middle"
-            />
+            Tap a ring to add one. Tap its name for the full counter.
+          </p>
+        )}
+        {isToday && tasks.length > 0 && (
+          <p className="mt-1 text-xs text-muted-foreground">
             Your circle is{" "}
             <span className="font-medium text-foreground tabular-nums">
               {collectivePct}%

@@ -36,7 +36,7 @@ export const navItemVariants = cva(
     variants: {
       layout: {
         /** Bottom bar: icon over label, filling its grid cell. */
-        stack: "flex-col justify-center gap-1 px-1 py-2 text-xs",
+        stack: "flex-col justify-center gap-0.5 px-1 py-1 text-xs",
         /** Sidebar: icon beside label, full width. */
         row: "gap-3 px-3 py-2.5 text-sm",
       },

@@ -57,7 +57,7 @@ export function NewGroupButton() {
         open={open}
         onClose={() => setOpen(false)}
         title="New group"
-        description="You'll be the owner — you can share it with co-admins afterwards."
+        description="You'll be the owner. You can share it with co-admins afterwards."
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>

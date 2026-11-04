@@ -255,7 +255,7 @@ export function TaskGrid({
     }
 
     if (failed.length > 0) {
-      setError(`Couldn't save ${failed.join(", ")} — try again in a moment.`);
+      setError(`Couldn't save ${failed.join(", ")}. Try again in a moment.`);
       return;
     }
     router.refresh();
@@ -318,7 +318,7 @@ export function TaskGrid({
 
         <div
           ref={scrollRef}
-          className="-m-1 no-scrollbar min-w-0 flex-1 overflow-x-auto p-1"
+          className="-my-1 -ml-1 no-scrollbar min-w-0 flex-1 overflow-x-auto p-1"
         >
           {/* `min-w-max` keeps the phone contract (never squeeze a day below the
               44px floor — overflow and scroll instead) and `w-full` lets a
@@ -346,8 +346,8 @@ export function TaskGrid({
                       onClick={() => pick(c.date)}
                       title={
                         c.owed
-                          ? `${fmtFull(c.date)} — ${c.count.toLocaleString()} / ${c.target.toLocaleString()}`
-                          : `${fmtFull(c.date)} — not assigned`
+                          ? `${fmtFull(c.date)}. ${c.count.toLocaleString()} / ${c.target.toLocaleString()}`
+                          : `${fmtFull(c.date)}. Not assigned`
                       }
                       aria-label={
                         c.owed
@@ -359,7 +359,7 @@ export function TaskGrid({
                         // Height comes from the ROW, width from the track — an
                         // `aspect-square` here would make a widened desktop cell
                         // as TALL as it is wide and burst the row.
-                        "grid h-full w-full place-items-center rounded-md transition-transform hover:scale-105",
+                        "grid h-full w-full place-items-center rounded-md transition-transform hover:bg-surface-hover",
                         dayCellClass(c.pct, c.count, c.owed),
                         // The whole COLUMN wears the selection now, so the ring
                         // reads as "this day" rather than "this square".
@@ -509,7 +509,7 @@ export function TaskGrid({
                           SAVES — the old "Mark done" only filled the input, so
                           the common act still needed a second, findable tap. */}
                       <Button
-                        variant="outline"
+                        variant="tonal"
                         size="sm"
                         disabled={saving || dayComplete}
                         onClick={markDayDone}
@@ -540,7 +540,7 @@ export function TaskGrid({
               className="text-muted-foreground"
             >
               Tap any square to see that day
-              {editable ? " — or to log it" : ""}.
+              {editable ? ", or to log it" : ""}.
             </motion.p>
           )}
         </AnimatePresence>

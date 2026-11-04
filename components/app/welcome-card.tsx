@@ -47,7 +47,7 @@ export function WelcomeCard({
               the same sentence twice on one screen reads as a bug, not a
               welcome. This frames the same truth for THEM: you arrived mid-flow. */}
           <p className="mt-0.5 text-sm text-balance text-muted-foreground">
-            You&apos;re not starting from zero — the circle has already covered{" "}
+            You&apos;re not starting from zero. The circle has already covered{" "}
             <span className="font-semibold text-foreground tabular-nums">
               {collectivePct}%
             </span>{" "}
@@ -65,7 +65,7 @@ export function WelcomeCard({
         </>
       ) : (
         <p className="mt-0.5 text-sm text-balance text-muted-foreground">
-          The circle&apos;s day is just beginning — close the first ring and set
+          The circle&apos;s day is just beginning. Close the first ring and set
           the pace for everyone.
         </p>
       )}

@@ -96,6 +96,7 @@ export function CountClient({
   versions,
   shares,
   alsoCounts,
+  nextTaskIds,
 }: {
   groupId: string;
   /** The viewer — set_count's target, so a correction is always a self-edit. */
@@ -125,6 +126,9 @@ export function CountClient({
   /** The other tasks I have called the same act (D64) — already filtered to the
    *  circles I am still in, which is where the fan-out will actually land. */
   alsoCounts: { label: string; groupName: string }[];
+  /** The open rings still to come, in order; empty means "back to Today".
+   *  Chosen by Today and carried in the URL, see the note on the page. */
+  nextTaskIds: string[];
 }) {
   const router = useRouter();
   const { celebrate } = useCelebration();
@@ -259,14 +263,14 @@ export function CountClient({
             ? await incrementCount(groupId, task.id, op.date, op.delta)
             : await setCount(groupId, userId, task.id, op.date, op.value);
       } catch {
-        res = { count: null, error: "Couldn't save — try again" };
+        res = { count: null, error: "Couldn't save. Try again" };
       }
       queue.current = queue.current.filter((o) => o !== op);
       // `res` is undefined when the action redirected (stale session) — the
       // navigation is already happening; leave state untouched.
       if (!res) return;
       if (res.error || res.count == null) {
-        setError(res.error ?? "Couldn't save — try again");
+        setError(res.error ?? "Couldn't save. Try again");
         recompute(op.date); // drop this op's optimistic effect
         return;
       }
@@ -372,10 +376,63 @@ export function CountClient({
       else if (closing) {
         justCompleted.current = true;
         if (sound) playComplete();
-        celebrate({ title: "Ring closed!" });
+        // CONFETTI, NOT A CARD (owner's call). A card here was a full-screen
+        // backdrop the member had to dismiss to carry on — an interruption
+        // charging a tap for a reward they did not ask to be handed. Closing
+        // one ring is a frequent event, several times a day, and the frequent
+        // event gets the cheap, non-blocking mark. The CARD is now spent on the
+        // rare one: the whole day closing, on Today.
+        celebrate({ confettiOnly: true });
+        // ...AND THIS RING IS DONE, SO LEAVE IT. Reverses the 2026-07-25 call
+        // ("Mark done no longer navigates away"), which was made to protect
+        // counting past the target — real, but it cost every member an extra
+        // deliberate tap on every ring they closed, to leave a screen with
+        // nothing left to do on it. Counting past a closed ring is still
+        // possible; it is simply no longer the default the flow is shaped
+        // around. Re-open the ring and keep tapping.
+        //
+        // `dispatch()` FIRST, exactly as "Back to today" does: taps are
+        // debounced and optimistic, so navigating on the render that closed the
+        // ring would race the flush and drop the count that closed it.
+        //
+        // Only on TODAY. Back-filling a past day is a correction, not a
+        // session — being thrown forward mid-repair is wrong, and there is no
+        // "next ring" for a day already gone.
+        if (isToday) {
+          // A note for Today: this is how it tells "you just closed your day"
+          // from "you opened a day that was already closed".
+          try {
+            window.sessionStorage.setItem(
+              `cetele:ring-closed:${groupId}`,
+              todayISO,
+            );
+          } catch {
+            // Best effort. Today simply skips the card.
+          }
+          const [following, ...rest] = nextTaskIds;
+          void dispatch().then(() =>
+            router.push(
+              following
+                ? `${groupHref(groupId, `/count/${following}`)}${rest.length ? `?next=${rest.join(",")}` : ""}`
+                : groupHref(groupId, "/today"),
+            ),
+          );
+        }
       }
     },
-    [goal, share, stretched, sound, celebrate],
+    [
+      goal,
+      share,
+      stretched,
+      sound,
+      celebrate,
+      dispatch,
+      router,
+      groupId,
+      nextTaskIds,
+      isToday,
+      todayISO,
+    ],
   );
 
   // Set the day to an exact number (undo a stray tap, or fix it outright).
@@ -546,7 +603,7 @@ export function CountClient({
               {share.toLocaleString()}
             </span>
             {count >= share && (
-              <span className="text-success"> — done, the rest is yours</span>
+              <span className="text-success"> . Done, the rest is yours</span>
             )}
           </p>
         )}
@@ -557,7 +614,7 @@ export function CountClient({
             an undo must be findable without competing with either. Segments are
             44px so they stay thumb-sized on a phone at any viewport. Undo is
             optimistic like a tap now — no hold, the number just drops. */}
-        <div className="inline-flex items-center overflow-hidden rounded-full border border-border bg-card shadow-sm">
+        <div className="inline-flex items-center overflow-hidden rounded-full border border-border bg-card">
           {count > 0 && (
             <>
               <Button
@@ -619,7 +676,7 @@ export function CountClient({
           >
             {remaining > 10 && (
               <Button
-                variant="outline"
+                variant="tonal"
                 onClick={() => {
                   if (sound) playTen();
                   addCapped(10);
@@ -628,18 +685,12 @@ export function CountClient({
                 +10
               </Button>
             )}
-            {/* One tap to finish: fill to the target and celebrate — then STAY.
-              Counting past a closed ring is normal (extra dhikr is welcome, and
-              manual taps have always been uncapped), so finishing shouldn't be
-              the one path that ends the session for you. The closed state
-              offers "Back to today", and the header keeps its way out. */}
-            <Button
-              variant="accent"
-              onClick={() => {
-                addCapped(remaining);
-                void dispatch();
-              }}
-            >
+            {/* One tap to finish: fill to the ring, and let closing do the
+              rest. The flush and the move on are `syncMilestones`' — this is
+              the same completion a last tap makes, so it must not be a second
+              path with its own timing. Calling `dispatch()` here too would race
+              the one that navigates. */}
+            <Button variant="accent" onClick={() => addCapped(remaining)}>
               Mark done
             </Button>
           </div>

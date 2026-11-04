@@ -2,20 +2,11 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The one emphasis surface per screen (Progress' streak block, the Today
- * banners). Deep sage gradient + a sheen layer, so the screen has a single
- * clear focal point rather than a row of equal-weight cards.
- *
- * Text colour is `--gradient-hero-foreground`, NOT `text-primary-foreground`:
- * on dark, `--primary` is the light sage, so `--primary-foreground` is
- * near-black and would vanish against these deep stops. The dedicated token is
- * ≥5.26:1 against every stop in both themes — measured under the sheen, not on
- * the bare stop, because the sheen is what text at the top-right actually sits
- * on (bare, the worst case is 7.02:1). See DESIGN_SYSTEM.md §Depth.
- *
- * The gradient carries the emphasis on its own — this is not an accent surface.
- * Rose stays scarce (D25): if a hero needs an action, that action can be the
- * screen's one accent, but the hero itself never is.
+ * The one number a screen is about (Progress' streak, a roadmap's level). It is
+ * type on the page, with no box around it: the size and the position carry the
+ * emphasis. This was a gradient card with a sheen, an icon tile, an uppercase
+ * label and a pill, which is the stock "hero metric" every generated dashboard
+ * opens with, and the one screen that wore it looked borrowed from another app.
  */
 export interface HeroCardProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Small icon tile, top-left — a flame, a ring, a crescent. */
@@ -41,84 +32,39 @@ export function HeroCard({
   ...props
 }: HeroCardProps) {
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-3xl p-6 shadow-lg",
-        className,
-      )}
-      style={{
-        backgroundImage: "var(--gradient-hero)",
-        color: "var(--gradient-hero-foreground)",
-      }}
-      {...props}
-    >
-      {/* The sheen is its own layer so the gradient stays a single stop list. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{ backgroundImage: "var(--gradient-hero-sheen)" }}
-      />
-
-      <div className="relative flex items-start gap-4">
-        {medallion != null && (
-          <div
-            className="grid size-14 shrink-0 place-items-center rounded-2xl"
-            style={{
-              backgroundColor:
-                "color-mix(in oklab, var(--gradient-hero-foreground) 12%, transparent)",
-            }}
-          >
-            {medallion}
-          </div>
-        )}
-
-        <div className="min-w-0 flex-1">
+    <div className={cn("pt-1", className)} {...props}>
+      <div className="flex items-end justify-between gap-4">
+        <div className="min-w-0">
           {label != null && (
-            <p className="text-xs font-semibold tracking-wide uppercase opacity-80">
+            <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+              {medallion}
               {label}
             </p>
           )}
           {stat != null && (
-            <p className="font-display text-4xl font-bold tabular-nums">
+            <p className="mt-1 font-display text-6xl leading-none font-bold text-foreground tabular-nums">
               {stat}
             </p>
           )}
           {caption != null && (
-            <p className="mt-1 text-sm opacity-90">{caption}</p>
+            <p className="mt-2 text-sm text-foreground">{caption}</p>
           )}
         </div>
-
-        {trailing != null && <div className="shrink-0">{trailing}</div>}
+        {trailing != null && <div className="shrink-0 pb-0.5">{trailing}</div>}
       </div>
-
-      {children != null && <div className="relative mt-4">{children}</div>}
+      {children != null && <div className="mt-4">{children}</div>}
     </div>
   );
 }
 
-/**
- * A chip for use INSIDE HeroCard — typically the `trailing` slot.
- *
- * Do not reach for `<Badge variant="outline">` here: it sets `text-foreground`,
- * which is the near-black `#1c1814` in light theme and lands at ~1.7:1 on the
- * emerald gradient. It reads as fine at a glance, which is exactly why it is
- * worth stating. This chip draws from `currentColor` instead, so it inherits
- * `--gradient-hero-foreground` and keeps the hero's measured contrast.
- */
+/** The quiet secondary fact beside the number, such as "Longest 5". */
 export function HeroChip({
   className,
   ...props
 }: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold",
-        className,
-      )}
-      style={{
-        borderColor: "color-mix(in oklab, currentColor 35%, transparent)",
-        backgroundColor: "color-mix(in oklab, currentColor 12%, transparent)",
-      }}
+      className={cn("text-sm text-muted-foreground tabular-nums", className)}
       {...props}
     />
   );

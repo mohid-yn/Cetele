@@ -74,7 +74,7 @@ async function openLinks(page: Page, groupId: string, task: string) {
   await openGoals(page, groupId);
   await page
     .getByRole("button", {
-      name: new RegExp(`^${task} — (counts in \\d+ circles, manage|link)`),
+      name: new RegExp(`^${task}\\. (Counts in \\d+ circles, manage|Link)`),
     })
     .click();
   await expect(

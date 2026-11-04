@@ -22,7 +22,9 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Badge, Eyebrow } from "@/components/ui";
+import { motion } from "motion/react";
+import { Avatar } from "@/components/ui";
+import { DURATION, EASE_BRAND } from "@/lib/motion";
 import { ChevronDownIcon, CheckIcon, GridIcon } from "@/components/app/icons";
 import { groupHref, groupSubPath } from "@/lib/group-href";
 import { useActiveGroupId } from "@/lib/use-active-group";
@@ -120,13 +122,22 @@ export function GroupSwitcher({
     r === "owner" ? "Owner" : r === "admin" ? "Co-admin" : "Member";
 
   const menu = open && coords && typeof document !== "undefined" && (
-    <div
+    <motion.div
       ref={menuRef}
       role="listbox"
-      style={{ position: "fixed", top: coords.top, left: coords.left }}
-      className="z-[var(--z-modal)] min-w-[14rem] rounded-xl border border-border bg-card p-1 shadow-lg"
+      // From the control it came out of, quick and small. Used a few times a
+      // week at most, so it can afford to move, but never to make anyone wait.
+      initial={{ opacity: 0, scale: 0.97, y: -4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: DURATION.fast, ease: EASE_BRAND }}
+      style={{
+        position: "fixed",
+        top: coords.top,
+        left: coords.left,
+        transformOrigin: "top left",
+      }}
+      className="z-[var(--z-modal)] w-72 max-w-[calc(100vw-2.5rem)] rounded-xl border border-border bg-elevated p-1.5 shadow-lg"
     >
-      <Eyebrow className="px-2.5 py-1.5">Switch group</Eyebrow>
       {groups.map((g) => {
         const activeOne = g.id === activeId;
         return (
@@ -142,26 +153,36 @@ export function GroupSwitcher({
               writeActiveGroupCookie(g.id);
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-muted"
+            className={cn(
+              "flex min-h-14 w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors",
+              activeOne
+                ? "bg-primary-container text-on-primary-container"
+                : "text-foreground hover:bg-surface-hover active:bg-surface-active",
+            )}
           >
-            <span className="grid size-4 shrink-0 place-items-center">
-              {activeOne && <CheckIcon className="size-4 text-primary" />}
-            </span>
-            <span className="min-w-0 flex-1 truncate font-medium text-foreground">
-              {g.name}
-            </span>
-            <Badge
-              variant={
-                g.role === "member"
-                  ? "neutral"
-                  : g.role === "owner"
-                    ? "accent"
-                    : "primary"
-              }
+            {/* The current row is already sage, so its initial sits on the card
+                colour rather than disappearing into the same fill. */}
+            <Avatar
+              name={g.name}
               size="sm"
-            >
-              {roleLabel(g.role)}
-            </Badge>
+              className={activeOne ? "bg-card text-foreground" : undefined}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold">
+                {g.name}
+              </span>
+              <span
+                className={cn(
+                  "block text-xs",
+                  activeOne
+                    ? "text-on-primary-container"
+                    : "text-muted-foreground",
+                )}
+              >
+                {roleLabel(g.role)}
+              </span>
+            </span>
+            {activeOne && <CheckIcon aria-hidden className="size-5 shrink-0" />}
           </Link>
         );
       })}
@@ -172,17 +193,19 @@ export function GroupSwitcher({
       )}
 
       {/* Drive-style "My Drive" entry — manage / create groups */}
-      <div className="mt-1 border-t border-border pt-1">
+      <div className="mt-1.5 border-t border-border pt-1.5">
         <Link
           href="/groups"
           onClick={() => setOpen(false)}
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-muted"
+          className="flex min-h-11 w-full items-center gap-3 rounded-lg px-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-surface-hover active:bg-surface-active"
         >
-          <GridIcon className="size-4" />
+          <span className="grid size-8 shrink-0 place-items-center text-primary">
+            <GridIcon aria-hidden className="size-5" />
+          </span>
           All my groups
         </Link>
       </div>
-    </div>
+    </motion.div>
   );
 
   if (hidden) return null;
@@ -200,12 +223,20 @@ export function GroupSwitcher({
           // them the button grows past the header's title column and a long circle
           // name runs underneath the header actions.
           // min-h-11 = 44px tap target; the text-2xl title only stood 36px tall.
-          "inline-flex min-h-11 max-w-full min-w-0 items-center gap-1.5 rounded-lg text-foreground transition-colors hover:bg-muted",
+          // A dropdown has to look like one before anyone touches it: a filled sage
+          // pill and a solid chevron. Text with a faded caret read as a label.
+          "tap-area-44 inline-flex min-h-9 max-w-full min-w-0 items-center gap-1 rounded-full bg-primary-container pr-2.5 pl-3.5 text-on-primary-container transition-colors hover:bg-primary-container-hover active:bg-primary-container-active",
           className,
         )}
       >
         <span className="truncate">{activeName}</span>
-        <ChevronDownIcon className="size-[0.7em] shrink-0 opacity-60" />
+        <ChevronDownIcon
+          aria-hidden
+          className={cn(
+            "size-4 shrink-0 transition-transform duration-[var(--duration-fast)] ease-[var(--ease-brand)]",
+            open && "rotate-180",
+          )}
+        />
       </button>
       {menu && createPortal(menu, document.body)}
     </>

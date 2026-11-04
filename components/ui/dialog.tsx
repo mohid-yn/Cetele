@@ -98,7 +98,7 @@ export function Dialog({
           className="fixed inset-0 z-[var(--z-modal)] grid place-items-center p-4"
         >
           <motion.div
-            className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-foreground/40"
             onClick={onClose}
             aria-hidden
             initial={{ opacity: 0 }}
@@ -112,6 +112,11 @@ export function Dialog({
             aria-modal="true"
             aria-label={title}
             tabIndex={-1}
+            // The card takes focus so a screen reader lands inside it, but it is
+            // not a control, so no ring: the global :focus-visible rule drew a
+            // thick green frame around every dialog. Inline because that rule is
+            // unlayered, and a utility class cannot beat it.
+            style={{ outline: "none" }}
             // A dialog can never grow past the viewport. Capped at the screen
             // minus the container's own p-4, laid out as a column so the title
             // and the ACTION ROW are always on screen and only the body
@@ -125,7 +130,7 @@ export function Dialog({
             // 6-task circle was 901px on a 844px phone, with Save at y=852-896
             // and `elementFromPoint` at its centre returning nothing.
             className={cn(
-              "relative flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col rounded-2xl border border-border bg-card p-5 shadow-xl outline-none",
+              "relative flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col rounded-2xl border border-border bg-card p-5 shadow-xl",
               className,
             )}
             initial={{ opacity: 0, scale: 0.94, y: 8 }}

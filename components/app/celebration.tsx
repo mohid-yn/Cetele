@@ -10,7 +10,7 @@
  */
 
 import * as React from "react";
-import { Card } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { prefersReducedMotion } from "@/lib/motion";
 import { hapticCelebrate } from "@/lib/haptics";
 import { SparkIcon } from "./icons";
@@ -29,41 +29,29 @@ interface CelebrationValue {
 const CelebrationContext = React.createContext<CelebrationValue | null>(null);
 
 // Variable-reward copy — a surprise du'a / encouragement on milestones.
+//
+// Only the two sourced lines remain. "Every count is a tree planted for you in
+// Jannah" and the "1,000 good deeds" line made specific religious claims nobody
+// here could source, and "Barakah unlocked" / "On fire" framed worship as a game.
+// Have someone qualified check anything added to this list.
 const MILESTONES: { title: string; message: string }[] = [
   {
-    title: "Ring closed!",
-    message:
-      "“The most beloved deeds to Allah are those done consistently, even if small.”",
-  },
-  {
     title: "MashaAllah",
-    message: "Every count is a tree planted for you in Jannah. Keep going.",
-  },
-  {
-    title: "Barakah unlocked",
     message:
-      "“Whoever says SubhanAllah 100 times, a thousand good deeds are recorded.”",
-  },
-  {
-    title: "On fire",
-    message: "Your circle felt that. The whole group total just jumped.",
+      "\u201CThe most beloved deeds to Allah are those done consistently, even if small.\u201D",
   },
   {
     title: "Beautiful",
-    message: "“Remember Me, and I will remember you.” (2:152)",
+    message: "\u201CRemember Me, and I will remember you.\u201D (2:152)",
   },
 ];
 
 function readPalette(): string[] {
   if (typeof window === "undefined") return [];
   const css = getComputedStyle(document.documentElement);
-  return [
-    "--accent",
-    "--primary",
-    "--success",
-    "--warning",
-    "--accent-foreground",
-  ]
+  // Sage and rose only. --warning and --accent-foreground threw brown and
+  // near-black squares into a moment that should look like the app.
+  return ["--accent", "--primary", "--success", "--primary-container"]
     .map((v) => css.getPropertyValue(v).trim())
     .filter(Boolean);
 }
@@ -91,7 +79,6 @@ export function CelebrationProvider({
     title: string;
     message: string;
   } | null>(null);
-  const dismissRef = React.useRef<number | null>(null);
 
   // The whole confetti engine lives in one effect — local closures avoid the
   // hook ordering/immutability pitfalls of a recursive useCallback.
@@ -143,7 +130,7 @@ export function CelebrationProvider({
       if (!colors.length) return;
       const originX = canvas.width / 2;
       const originY = canvas.height * 0.42;
-      for (let i = 0; i < 120; i++) {
+      for (let i = 0; i < 70; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = 4 + Math.random() * 9;
         particles.push({
@@ -176,16 +163,24 @@ export function CelebrationProvider({
         title: opts?.title ?? pick.title,
         message: opts?.message ?? pick.message,
       });
-      if (dismissRef.current) window.clearTimeout(dismissRef.current);
-      dismissRef.current = window.setTimeout(() => setCard(null), 4200);
+      // NO AUTO-DISMISS, and no timer to tear down. This card is now spent
+      // only on the day closing — once a day at most — so a 4.2s countdown
+      // would snatch the one moment the app actually stops to mark. It was
+      // right while a ring closing raised this too: several a day of that had
+      // to clear itself. The member closes it now, with the button below.
     }
   }, []);
 
+  // The card has a button and a backdrop, and a keyboard needs its way out too.
+  const cardOpen = card != null;
   React.useEffect(() => {
-    return () => {
-      if (dismissRef.current) window.clearTimeout(dismissRef.current);
+    if (!cardOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCard(null);
     };
-  }, []);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [cardOpen]);
 
   return (
     <CelebrationContext.Provider value={{ celebrate }}>
@@ -193,16 +188,21 @@ export function CelebrationProvider({
       <canvas
         ref={canvasRef}
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-[var(--z-toast)]"
+        // Same layer as the card and earlier in the DOM, so confetti falls BEHIND
+        // it. Above, it was painting across the words it was celebrating.
+        className="pointer-events-none fixed inset-0 z-[var(--z-modal)]"
       />
       {card && (
         <div
-          className="fixed inset-0 z-[var(--z-modal)] grid place-items-center bg-primary-950/30 p-6 backdrop-blur-sm"
+          className="fixed inset-0 z-[var(--z-modal)] grid place-items-center bg-primary-950/30 p-6"
           onClick={() => setCard(null)}
           role="dialog"
+          aria-modal
+          aria-labelledby="day-card-title"
           aria-live="assertive"
         >
           <Card
+            onClick={(e) => e.stopPropagation()}
             className="w-full max-w-xs border-accent-200 p-6 text-center shadow-xl"
             style={{
               animation:
@@ -212,15 +212,27 @@ export function CelebrationProvider({
             <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-accent-100 text-accent-700">
               <SparkIcon className="size-7" />
             </div>
-            <h2 className="font-display text-xl font-bold text-foreground">
+            <h2
+              id="day-card-title"
+              className="font-display text-xl font-bold text-foreground"
+            >
               {card.title}
             </h2>
             <p className="mt-2 text-sm text-balance text-muted-foreground">
               {card.message}
             </p>
-            <p className="mt-4 text-xs text-muted-foreground/70">
-              tap to dismiss
-            </p>
+            {/* A REAL CONTROL, not a dismiss gesture. "tap to dismiss" asked
+                the member to click the backdrop — which on a phone is whatever
+                slice of screen the card leaves, the same trap D68 fixed in
+                `Dialog`. The backdrop still closes it; this is what makes that
+                discoverable and what a thumb actually reaches for. */}
+            <Button
+              className="mt-5 w-full"
+              autoFocus
+              onClick={() => setCard(null)}
+            >
+              Alhamdulillah
+            </Button>
           </Card>
         </div>
       )}

@@ -320,7 +320,7 @@ export default function DesignSystemPage() {
         <Section
           id="typography"
           title="Typography"
-          description="Quicksand (rounded, friendly) for display & headings — echoing the wordmark. Geist Sans for body and UI."
+          description="Figtree (warm, open) for display & headings. Geist Sans for body and UI."
         >
           <Card>
             <CardContent className="divide-y divide-border pt-6">
@@ -469,6 +469,7 @@ export default function DesignSystemPage() {
                 <Button variant="accent">Accent</Button>
                 <Button variant="primary">Primary</Button>
                 <Button variant="subtle">Subtle</Button>
+                <Button variant="tonal">Tonal</Button>
                 <Button variant="outline">Outline</Button>
                 <Button variant="ghost">Ghost</Button>
                 <Button variant="link">Link</Button>
@@ -774,7 +775,7 @@ export default function DesignSystemPage() {
             <div className="space-y-3">
               <Eyebrow>Eyebrow — the section label itself</Eyebrow>
               <p className="text-sm text-muted-foreground">
-                Every small uppercase label above is this component.
+                Every small label above is this component.
               </p>
             </div>
           </div>

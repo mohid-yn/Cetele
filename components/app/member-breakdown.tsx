@@ -80,26 +80,25 @@ export function MemberBreakdownDialog({
       className="max-w-[min(95vw,48rem)]"
     >
       <div className="flex flex-col gap-4">
-        {/* Summary chips */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Facts, so they read as text. These were filled pills, which on a phone
+            look like controls and did nothing when tapped. */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground tabular-nums">
           {member.role === "owner" && (
             <Badge variant="primary" size="sm">
-              owner
+              Owner
             </Badge>
           )}
           {member.role === "admin" && (
-            <Badge variant="primary" size="sm">
-              co-admin
+            <Badge variant="outline" size="sm">
+              Co-admin
             </Badge>
           )}
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground tabular-nums">
-            {member.score}% fully complete
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground tabular-nums">
+          <span>{member.score}% fully complete</span>
+          <span>
             {member.daysFull}/{days} full days
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground tabular-nums">
-            <FlameIcon className="size-3.5 text-accent" />
+          <span className="inline-flex items-center gap-1">
+            <FlameIcon aria-hidden className="size-3.5 text-primary" />
             {member.streak}d streak
           </span>
         </div>

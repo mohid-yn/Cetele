@@ -88,7 +88,7 @@ export function MemberShares({
     if (raw === "") {
       setErrors((e) => ({
         ...e,
-        [s.taskId]: `Enter a number — ${s.circleTarget.toLocaleString()} puts them back on the circle's.`,
+        [s.taskId]: `Enter a number. ${s.circleTarget.toLocaleString()} puts them back on the circle's.`,
       }));
       return;
     }
@@ -119,7 +119,7 @@ export function MemberShares({
     if (value < s.circleTarget) {
       setErrors((e) => ({
         ...e,
-        [s.taskId]: `The circle asks ${s.circleTarget.toLocaleString()} — a share can only be higher, never lower.`,
+        [s.taskId]: `The circle asks ${s.circleTarget.toLocaleString()}. A share can only be higher, never lower.`,
       }));
       return;
     }
@@ -140,7 +140,7 @@ export function MemberShares({
     if (!res || res.error || res.target == null) {
       setErrors((e) => ({
         ...e,
-        [s.taskId]: res?.error ?? "Couldn't save — try again in a moment.",
+        [s.taskId]: res?.error ?? "Couldn't save. Try again in a moment.",
       }));
       return;
     }
@@ -167,7 +167,7 @@ export function MemberShares({
       <p className="text-sm text-muted-foreground">
         The circle&rsquo;s goal is split between its members. You can ask{" "}
         <span className="font-medium text-foreground">more</span>
-        {` of ${memberName} than the circle’s default — never less. This is what their day, their streak and the circle’s total are measured against.`}
+        {` of ${memberName} than the circle’s default. Never less. This is what their day, their streak and the circle’s total are measured against.`}
       </p>
 
       <ul className="mt-3 divide-y divide-border border-y border-border">

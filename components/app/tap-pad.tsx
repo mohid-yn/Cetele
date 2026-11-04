@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "motion/react";
 import { ProgressRing } from "@/components/ui";
 import { playTap } from "@/lib/sound";
 import { hapticTick } from "@/lib/haptics";
-import { DURATION, EASE_BRAND } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 interface TapPadProps {
@@ -38,7 +36,6 @@ export function TapPad({
   const [popKey, setPopKey] = React.useState(0);
   const lastFeedbackAt = React.useRef(0);
   const done = value >= max;
-  const pct = max > 0 ? Math.min(Math.max(value / max, 0), 1) : 0;
 
   // The pad plays ONE tick per tap, always — the tasbih-bead feel. It used to
   // branch to a "celebratory" pattern whenever `done`, but `done` is the
@@ -87,34 +84,13 @@ export function TapPad({
           day strip and the action bar — so the ring yields to viewport height
           instead of pushing the primary action off the screen. Tall screens are
           unaffected (the cap wins). */}
-      {/* The glow is a sibling BEHIND the ring, not a wrapper, so its opacity
-          ramps without fading the ring with it. It grows with proximity to the
-          target and is fullest at 100% — an earned moment, where the
-          celebration already fires. */}
+      {/* One answer to a tap: the number, the arc, the haptic. This fires hundreds
+            of times a session, so it stays small. It used to add an expanding
+            ripple and a glow as well, which at that frequency read as noise. */}
       <div
         className="relative grid place-items-center"
         style={{ width: "min(16rem, 28dvh)", height: "min(16rem, 28dvh)" }}
       >
-        <div
-          aria-hidden
-          className="absolute inset-0 rounded-full glow-primary transition-opacity duration-[var(--duration-slow)] ease-[var(--ease-brand)]"
-          style={{ opacity: pct }}
-        />
-
-        {/* One ripple per tap — FEEDBACK, not celebration, so it eases out
-            (ease-brand), never the emphasis register. Keyed by popKey so each tap
-            spawns its own; MotionConfig reducedMotion="user" collapses it. */}
-        <AnimatePresence>
-          <motion.span
-            key={popKey}
-            aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-full bg-primary/20"
-            initial={{ scale: 0.6, opacity: 0.25 }}
-            animate={{ scale: 1, opacity: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: DURATION.base, ease: EASE_BRAND }}
-          />
-        </AnimatePresence>
         <ProgressRing
           value={value}
           max={max}
@@ -163,7 +139,7 @@ export function TapPad({
         </ProgressRing>
       </div>
       <span className="mt-4 text-xs text-muted-foreground">
-        {done ? "Completed — tap to keep going" : "Tap anywhere to count"}
+        {done ? "Completed. Tap to keep going" : "Tap anywhere to count"}
       </span>
     </button>
   );

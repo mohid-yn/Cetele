@@ -34,7 +34,7 @@ export default async function JoinPage({
           It may have been revoked, already used, or mistyped. Ask the person
           who shared it for a fresh link.
         </p>
-        <Link href="/groups" className={buttonVariants({ variant: "outline" })}>
+        <Link href="/groups" className={buttonVariants({ variant: "tonal" })}>
           Go to your groups
         </Link>
       </>
@@ -46,7 +46,7 @@ export default async function JoinPage({
           You&rsquo;re already in {invite.group_name}
         </p>
         <p className="text-xs text-muted-foreground">
-          Nothing to do — you&rsquo;re a member of this group.
+          Nothing to do. You&rsquo;re a member of this group.
         </p>
         <Link href="/groups" className={buttonVariants({ variant: "primary" })}>
           Open your groups
@@ -63,7 +63,7 @@ export default async function JoinPage({
           Sign in with the email address the invite was created for, or ask for
           an open invite link.
         </p>
-        <Link href="/groups" className={buttonVariants({ variant: "outline" })}>
+        <Link href="/groups" className={buttonVariants({ variant: "tonal" })}>
           Go to your groups
         </Link>
       </>
@@ -76,7 +76,7 @@ export default async function JoinPage({
         </p>
         <p className="text-xs text-muted-foreground">
           {invite.invite_role === "admin"
-            ? "You'll join as a co-admin — helping run the group's tasks and members."
+            ? "You'll join as a co-admin, helping run the group's tasks and members."
             : "You'll join as a member and follow the group's shared daily tasks."}
         </p>
         <AcceptButton code={code} />

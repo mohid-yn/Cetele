@@ -51,7 +51,7 @@ export function BottomNav({
       // `bg-chrome`, not `bg-card`: the nav is the FRAME, not content. Sharing
       // --card made it pure white at 1.08:1 against the page, which is why it
       // read as a blank slab. Chrome recedes below the page in both themes.
-      className="shrink-0 border-t border-border bg-chrome shadow-up lg:hidden"
+      className="shrink-0 border-t border-border bg-chrome lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul
@@ -80,21 +80,21 @@ export function BottomNav({
                 aria-current={active ? "page" : undefined}
                 className={navItemVariants({ layout: "stack", active })}
               >
-                {/* The pill itself is what slides between tabs. It used to be a
-                    2px bar pinned to the top edge, which reads as a ruler on
-                    the frame rather than as the tab being selected — and it
-                    left the item with no filled state to press against. It sits
-                    BEHIND the content (-z-10 + a stacking context) so the label
-                    never has to fight it. */}
-                {active && (
-                  <motion.span
-                    aria-hidden
-                    layoutId="bottom-nav-active"
-                    transition={springGlide}
-                    className="absolute inset-0 -z-10 rounded-lg bg-primary-container"
-                  />
-                )}
-                <Icon className={cn("size-6", active && "stroke-[2.4]")} />
+                {/* The pill sits behind the ICON, the way a native tab bar marks
+                    its tab, and it is what slides between tabs. A filled block
+                    around icon and label both ran into the bar's top edge and
+                    changed visual weight with the label's width. */}
+                <span className="relative isolate grid h-8 w-14 place-items-center">
+                  {active && (
+                    <motion.span
+                      aria-hidden
+                      layoutId="bottom-nav-active"
+                      transition={springGlide}
+                      className="absolute inset-0 -z-10 rounded-full bg-primary-container"
+                    />
+                  )}
+                  <Icon className={cn("size-6", active && "stroke-[2.4]")} />
+                </span>
                 {shortLabel}
               </Link>
             </li>

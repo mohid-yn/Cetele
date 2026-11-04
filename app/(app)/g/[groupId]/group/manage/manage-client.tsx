@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Avatar,
-  Badge,
   Button,
   buttonVariants,
   Card,
@@ -98,7 +97,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
         </code>
         <Button
           size="sm"
-          variant="outline"
+          variant="tonal"
           onClick={() => {
             navigator.clipboard?.writeText(value);
             setCopied(true);
@@ -169,7 +168,7 @@ function TaskRow({
 
   if (editing) {
     return (
-      <li className="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <li className="rounded-xl border border-border bg-card p-3">
         <div className="flex flex-col gap-2">
           {/* aria-label, not placeholder alone: a placeholder is not an
               accessible name, and it vanishes the moment you start typing —
@@ -232,7 +231,7 @@ function TaskRow({
     : null;
 
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm">
+    <li className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5">
       <div className="min-w-0 flex-1">
         <p className="font-medium text-foreground">{task.label}</p>
         {/* `truncate` already contains the overflow here (one line, ellipsis,
@@ -454,7 +453,7 @@ export function ManageClient({
           <p className="mt-1 text-xs text-muted-foreground">
             {owner?.name ?? "The owner"} hasn&rsquo;t been active in a while. As
             a co-admin you can take over ownership so the circle isn&rsquo;t
-            left without one — they stay on as a co-admin.
+            left without one. They stay on as a co-admin.
           </p>
           <Button
             size="sm"
@@ -481,7 +480,7 @@ export function ManageClient({
             return (
               <li
                 key={m.userId}
-                className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm"
+                className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-card px-3 py-2.5"
               >
                 <Avatar name={m.name} size="sm" />
                 {/* `min-w-0 flex-1` alone let the name shrink to ~31px so the
@@ -501,15 +500,11 @@ export function ManageClient({
                   </p>
                   {isOwnerRow && (
                     <p className="text-xs text-muted-foreground">
-                      Owner — change via Transfer ownership below
+                      Owner. Change via Transfer ownership below
                     </p>
                   )}
                 </div>
-                {isOwnerRow ? (
-                  <Badge variant="primary" size="sm">
-                    owner
-                  </Badge>
-                ) : (
+                {isOwnerRow ? null : (
                   // One wrapping unit: the toggle and Remove travel together to
                   // a second line rather than splitting across the row.
                   <div className="ml-auto flex items-center gap-2">
@@ -561,7 +556,7 @@ export function ManageClient({
           <div>
             <p className="text-sm font-semibold text-foreground">Add people</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Share this link yourself (WhatsApp, in person) — nothing is
+              Share this link yourself (WhatsApp, in person). Nothing is
               emailed. Anyone who opens it joins as a member; co-admins are made
               in the members list above, never by a link.
             </p>
@@ -592,7 +587,7 @@ export function ManageClient({
             <div>
               <Eyebrow>Invite one person</Eyebrow>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                A single-use link locked to one email — it stops working the
+                A single-use link locked to one email. It stops working the
                 moment they join.
               </p>
             </div>
@@ -691,7 +686,7 @@ export function ManageClient({
           ))}
           {tasks.length === 0 && (
             <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-              No tasks yet — add the group&rsquo;s first one below.
+              No tasks yet. Add the group&rsquo;s first one below.
             </li>
           )}
         </ul>
@@ -752,7 +747,7 @@ export function ManageClient({
                 onChange={(e) => setName(e.target.value)}
               />
               <Button
-                variant="outline"
+                variant="tonal"
                 disabled={
                   !name.trim() ||
                   name.trim() === group.name ||
@@ -878,7 +873,7 @@ export function ManageClient({
                     : "/programme"
                 }
                 className={buttonVariants({
-                  variant: "outline",
+                  variant: "tonal",
                   className: "mt-3 w-full",
                 })}
               >
@@ -981,7 +976,7 @@ export function ManageClient({
           )
         }
         title="Make a new invite link?"
-        description="The current link stops working immediately — anyone you already sent it to will need the new one. People who have already joined are unaffected."
+        description="The current link stops working immediately. Anyone you already sent it to will need the new one. People who have already joined are unaffected."
         confirmLabel="Regenerate link"
       />
       <ConfirmDialog
@@ -1003,7 +998,7 @@ export function ManageClient({
             );
         }}
         title={`Make ${transferName ?? "this member"} the owner?`}
-        description="They gain full control of the group — including the ability to delete it. You'll stay on as a co-admin."
+        description="They gain full control of the group, including the ability to delete it. You'll stay on as a co-admin."
         confirmLabel="Transfer ownership"
       />
       <ConfirmDialog

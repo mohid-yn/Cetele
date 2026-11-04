@@ -61,12 +61,12 @@ export function ProgressClient({
 }) {
   const tone =
     daysFull >= days * 0.8
-      ? "steadfast, mashaAllah"
+      ? "Steadfast, mashaAllah"
       : daysFull >= days * 0.4
-        ? "a strong rhythm — keep building"
+        ? "A strong rhythm. Keep building"
         : daysFull > 0
-          ? "you're finding your rhythm"
-          : "every day is a fresh start";
+          ? "You're finding your rhythm"
+          : "Every day is a fresh start";
 
   return (
     <Screen>
@@ -77,27 +77,15 @@ export function ProgressClient({
             You&apos;ve fully completed{" "}
             <span className="font-semibold text-foreground">
               {daysFull} of the last {days} days
-            </span>{" "}
-            — {tone}.
+            </span>
+            . {tone}.
           </span>
         }
       />
 
-      {/* Streak hero — the motivational anchor, and this screen's ONE hero.
-          The flat bg-primary card becomes the gradient + sheen surface; the
-          flame keeps the accent (a celebration hue, and the only accent here),
-          but in the hero's own accent token — plain --accent measured 1.80:1
-          on the medallion tile. See globals.css --gradient-hero-accent.
-          `longest` moves into the trailing slot as a HeroChip — NOT a Badge:
-          Badge sets text-foreground, which is near-black on this gradient in
-          light theme (~1.7:1). See components/ui/hero-card.tsx. */}
+      {/* The streak: this screen's one number. See components/ui/hero-card.tsx. */}
       <HeroCard
-        medallion={
-          <FlameIcon
-            className="size-8"
-            style={{ color: "var(--gradient-hero-accent)" }}
-          />
-        }
+        medallion={<FlameIcon className="size-4 text-primary" />}
         label="Current streak"
         stat={current.toLocaleString()}
         caption={`day${current === 1 ? "" : "s"} in a row`}
@@ -131,7 +119,7 @@ export function ProgressClient({
       {/* Never miss twice — forgiveness */}
       <Card className="p-4">
         <div className="flex items-start gap-3">
-          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-success-500/15 text-success">
+          <div className="shrink-0 pt-0.5 text-success">
             <ShieldIcon className="size-5" />
           </div>
           <div className="flex-1">
@@ -142,8 +130,7 @@ export function ProgressClient({
               </Badge>
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Miss a day and a streak-freeze keeps your streak alive — once. The
-              point is to come back, not to be perfect.
+              Miss a day and a streak-freeze keeps your streak alive, once.
             </p>
           </div>
         </div>

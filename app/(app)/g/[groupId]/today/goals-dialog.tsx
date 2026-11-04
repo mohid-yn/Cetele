@@ -246,9 +246,7 @@ export function GoalsDialog({
       // `res` is typed non-null but the action redirects on a stale session,
       // which resolves the call to nothing — this dialog's standing guard.
       if (!res || res.error) {
-        setOwnError(
-          res?.error ?? "Couldn't save that — try again in a moment.",
-        );
+        setOwnError(res?.error ?? "Couldn't save that. Try again in a moment.");
         return;
       }
       // `revalidatePath` alone does not reach a client that stays mounted
@@ -258,7 +256,7 @@ export function GoalsDialog({
       router.refresh();
       setOwn(null);
     } catch {
-      setOwnError("Couldn't save that — try again in a moment.");
+      setOwnError("Couldn't save that. Try again in a moment.");
     } finally {
       setOwnSaving(false);
     }
@@ -273,14 +271,14 @@ export function GoalsDialog({
       const res = await deletePersonalTask(groupId, own.taskId);
       if (!res || res.error) {
         setOwnError(
-          res?.error ?? "Couldn't remove that — try again in a moment.",
+          res?.error ?? "Couldn't remove that. Try again in a moment.",
         );
         return;
       }
       router.refresh();
       setOwn(null);
     } catch {
-      setOwnError("Couldn't remove that — try again in a moment.");
+      setOwnError("Couldn't remove that. Try again in a moment.");
     } finally {
       setOwnSaving(false);
       setConfirmRemove(false);
@@ -306,7 +304,7 @@ export function GoalsDialog({
       const raw = (draft[t.id] ?? "").trim();
       if (raw === "") {
         nextErrors[t.id] =
-          `Enter a number — ${t.target.toLocaleString()} puts you back on the circle's.`;
+          `Enter a number. ${t.target.toLocaleString()} puts you back on the circle's.`;
         continue;
       }
       const parsed = Number(raw);
@@ -332,7 +330,7 @@ export function GoalsDialog({
       // often", and the count axis simply never did. (D51)
       if (value < t.target) {
         nextErrors[t.id] =
-          `The circle asks ${t.target.toLocaleString()} — you can only aim higher, never lower.`;
+          `The circle asks ${t.target.toLocaleString()}. You can only aim higher, never lower.`;
         continue;
       }
       // Exactly the circle's share is a CLEAR, not a lower goal — sent as null
@@ -426,7 +424,7 @@ export function GoalsDialog({
         ),
       }));
       setFormError(
-        `Couldn't save ${failed.join(", ")} — try again in a moment.`,
+        `Couldn't save ${failed.join(", ")}. Try again in a moment.`,
       );
       return;
     }
@@ -532,7 +530,7 @@ export function GoalsDialog({
         <>
           <p className="text-sm text-muted-foreground">
             This circle has no tasks yet. Once an admin adds one, you can aim
-            higher than the share it sets — and you can already add one of your
+            higher than the share it sets, and you can already add one of your
             own.
           </p>
           <AddOwnButton disabled={saving} onClick={() => openOwn(null)} />
@@ -544,7 +542,7 @@ export function GoalsDialog({
               control BEFORE it refuses them — an error is the second-best place
               to explain a rule and the only place this one used to appear. */}
           <p className="text-sm text-muted-foreground">
-            Your circle&rsquo;s share is the floor — you can aim{" "}
+            Your circle&rsquo;s share is the floor. You can aim{" "}
             <span className="font-medium text-foreground">above</span> it, never
             below. Your goal moves your ring and your celebration; never your
             streak, your consistency, or what the circle counts.
@@ -577,7 +575,7 @@ export function GoalsDialog({
                         size="inline"
                         disabled={saving}
                         onClick={() => openOwn(t)}
-                        aria-label={`${t.label} — your own task, edit it`}
+                        aria-label={`${t.label}. Your own task, edit it`}
                         className="tap-area-44 shrink-0 text-xs font-medium underline"
                       >
                         Yours &middot; edit
@@ -623,7 +621,7 @@ export function GoalsDialog({
                       />
                       <p className="mt-2 text-xs text-muted-foreground">
                         Your circle asks for this{" "}
-                        {frequencyLabel(t.frequencyDays).toLowerCase()} — you
+                        {frequencyLabel(t.frequencyDays).toLowerCase()} . You
                         can only go more often.
                       </p>
                     </div>
@@ -811,7 +809,7 @@ function OwnTaskPane({
         <Field
           label="Note"
           htmlFor="own-subtitle"
-          hint="Optional — a word about what it is."
+          hint="Optional. A word about what it is."
         >
           <Input
             id="own-subtitle"
@@ -825,7 +823,7 @@ function OwnTaskPane({
         <Field
           label="How many"
           htmlFor="own-target"
-          hint="What one full go looks like — the number that closes the ring."
+          hint="What one full go looks like. The number that closes the ring."
         >
           <Input
             id="own-target"
@@ -945,10 +943,10 @@ function TaskLinkSummary({
       // is a box in its own right, so the 44px IS the control.
       aria-label={
         counting
-          ? `${task.label} — counts in ${circles} circles, manage`
+          ? `${task.label}. Counts in ${circles} circles, manage`
           : dormant > 0
-            ? `${task.label} — linked to ${dormant === 1 ? "a circle" : `${dormant} circles`} you have left, manage`
-            : `${task.label} — link to another circle`
+            ? `${task.label}. Linked to ${dormant === 1 ? "a circle" : `${dormant} circles`} you have left, manage`
+            : `${task.label}. Link to another circle`
       }
       className={cn(
         "mt-3 flex min-h-11 w-full items-center gap-2 rounded-lg border px-3 py-2 text-left",
@@ -1108,7 +1106,7 @@ function LinkPane({
       // `res` is typed non-null but the action redirects on a stale session,
       // which resolves the call to nothing — this dialog's standing guard.
       if (!res || res.error) {
-        setError(res?.error ?? "Couldn't do that — try again in a moment.");
+        setError(res?.error ?? "Couldn't do that. Try again in a moment.");
         return;
       }
       // The action's `revalidatePath` is NOT enough on its own to reach a
@@ -1119,7 +1117,7 @@ function LinkPane({
       // exactly that stale row.
       router.refresh();
     } catch {
-      setError("Couldn't do that — try again in a moment.");
+      setError("Couldn't do that. Try again in a moment.");
     } finally {
       setPending(null);
     }
@@ -1151,12 +1149,12 @@ function LinkPane({
           asks for. */}
       <p className="text-sm text-muted-foreground">
         Do it once, count it everywhere. Tapping this in any of these circles
-        records the same number in all of them — each circle keeps its own
+        records the same number in all of them. Each circle keeps its own
         target, so one that asks for more just shows you part-way there.
       </p>
 
       <section>
-        <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <h3 className="text-xs font-semibold text-muted-foreground">
           Counts in {circles} {circles === 1 ? "circle" : "circles"}
         </h3>
         <ul className="mt-2 divide-y divide-border border-y border-border">
@@ -1213,14 +1211,14 @@ function LinkPane({
         {task.links.some((s) => s.dormant) && (
           <p className="mt-2 text-xs text-muted-foreground">
             A dormant circle is one you&rsquo;ve left. Nothing is counted there
-            any more, so it isn&rsquo;t in the count above — the link is kept in
+            any more, so it isn&rsquo;t in the count above. The link is kept in
             case you rejoin, and you can clear it whenever you like.
           </p>
         )}
       </section>
 
       <section>
-        <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <h3 className="text-xs font-semibold text-muted-foreground">
           Add a circle
         </h3>
         {atCap ? (
@@ -1254,7 +1252,7 @@ function LinkPane({
                   }
                   action={
                     <Button
-                      variant="outline"
+                      variant="tonal"
                       size="sm"
                       aria-label={`Also count ${task.label} in ${c.task.groupName} as ${c.task.label}`}
                       disabled={busy}
@@ -1272,7 +1270,7 @@ function LinkPane({
             </ul>
             <p className="mt-2 text-xs text-muted-foreground">
               Only you can see this, and you can link as many circles as you
-              genuinely do this in — up to {MAX_CLUSTER_SIZE}.
+              genuinely do this in, up to {MAX_CLUSTER_SIZE}.
             </p>
           </>
         )}

@@ -213,7 +213,7 @@ export function GroupClient({
           // its own h1 inside the node, so this can't move into PageHeader.)
           <h1>
             <GroupSwitcher
-              className="-ml-2 px-2 py-0.5 font-display text-2xl font-bold"
+              className="min-h-11 font-display text-xl font-bold"
               initialName={groupName}
             />
           </h1>
@@ -228,25 +228,24 @@ export function GroupClient({
             <Link
               href="/groups"
               aria-label="Groups"
-              className={buttonVariants({ variant: "outline", size: "sm" })}
+              // Phones reach this through the switcher's "All my groups". A bare grid
+              // icon said nothing, and the space goes to a word on Manage.
+              className={cn(
+                buttonVariants({ variant: "tonal", size: "sm" }),
+                "hidden sm:inline-flex",
+              )}
             >
               <GridIcon aria-hidden className="size-4" />
-              {/* Icon-only on a phone, where the label was truncating the
-                  circle's own name beside it. */}
-              <span className="hidden sm:inline">Groups</span>
+              <span>Groups</span>
             </Link>
             {canManage && (
               <Link
                 href={groupHref(groupId, "/group/manage")}
                 aria-label="Manage group"
-                // `icon-sm` (36px), not `icon` (44px): its neighbour is a `sm`
-                // button, and the two sat side by side with an 8px height step.
-                className={buttonVariants({
-                  variant: "outline",
-                  size: "icon-sm",
-                })}
+                className={buttonVariants({ variant: "tonal", size: "sm" })}
               >
-                <SettingsIcon className="size-5" />
+                <SettingsIcon aria-hidden className="size-4" />
+                Manage
               </Link>
             )}
           </div>
@@ -309,10 +308,6 @@ export function GroupClient({
                     />
                     <div className="min-w-0">
                       <p className="text-sm text-muted-foreground">
-                        <span
-                          aria-hidden
-                          className="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-success align-middle"
-                        />
                         The circle today
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground tabular-nums">
@@ -400,7 +395,7 @@ export function GroupClient({
                       Steadfast together · 90 days
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      The circle&rsquo;s share of fully-completed days — the
+                      The circle&rsquo;s share of fully-completed days. The
                       number we grow.
                     </p>
                   </div>
@@ -425,7 +420,7 @@ export function GroupClient({
               {pairless && <NoPairGoal />}
 
               <p className="text-xs text-muted-foreground">
-                The weekly ranking is for fun — showing up matters more than the
+                The weekly ranking is for fun. Showing up matters more than the
                 number. Ranked by days active this week, then total count.
               </p>
               <ol className="flex flex-col gap-2">
@@ -433,7 +428,7 @@ export function GroupClient({
                   <li
                     key={row.userId}
                     className={cn(
-                      "rounded-2xl border p-3 shadow-sm",
+                      "rounded-xl border p-3",
                       // "This row is you" is the same idea as "this tab is
                       // where you are", so it takes the same sage container
                       // the nav's active pill uses — not the rose accent,
@@ -448,7 +443,7 @@ export function GroupClient({
                       // light-sage fill would therefore meet near-white text
                       // on dark. The container role is a PAIR and flips.
                       row.isMe
-                        ? "border-primary bg-primary-container"
+                        ? "border-primary bg-[var(--surface-raised)]"
                         : "border-border bg-card",
                     )}
                   >
@@ -535,21 +530,12 @@ export function GroupClient({
                   canManage ? (
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="outline"
+                        variant="tonal"
                         size="sm"
                         onClick={() => setGroupLogOpen(true)}
                       >
                         Log for group
                       </Button>
-                      <Link
-                        href={groupHref(groupId, "/group/manage")}
-                        className={buttonVariants({
-                          variant: "outline",
-                          size: "sm",
-                        })}
-                      >
-                        Manage
-                      </Link>
                     </div>
                   ) : undefined
                 }
@@ -639,15 +625,15 @@ export function GroupClient({
                 })}
               </ul>
               {canManage && (
-                <div className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                <div className="mt-3 text-sm text-muted-foreground">
                   Add members from{" "}
                   <Link
                     href={groupHref(groupId, "/group/manage")}
-                    className="font-medium text-primary"
+                    className="font-medium text-primary underline underline-offset-2"
                   >
                     Manage
-                  </Link>{" "}
-                  — share an invite link or code.
+                  </Link>
+                  . Share an invite link or code.
                 </div>
               )}
 
@@ -661,7 +647,7 @@ export function GroupClient({
                 <div className="mt-6">
                   <SectionHeading>Last {days} days</SectionHeading>
                   <p className="mb-3 text-xs text-muted-foreground">
-                    Each square is one member&apos;s day — how many of the rings
+                    Each square is one member&apos;s day: how many of the rings
                     it asked of them closed.
                   </p>
                   <div className={cardVariants({ padding: "md" })}>
@@ -684,14 +670,14 @@ export function GroupClient({
               open Manage, and leaving is the one group action every role has.
               The owner can't leave (RLS): they must hand the circle over or
               close it, so nobody walks out and strands it. */}
-              <div className="mt-6 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3">
+              <div className="mt-6 border-t border-border pt-4">
                 {myRole === "owner" ? (
                   <p className="text-sm text-muted-foreground">
                     You own this circle. To leave, transfer ownership to someone
-                    else — or delete the circle — from{" "}
+                    else, or delete the circle, from{" "}
                     <Link
                       href={groupHref(groupId, "/group/manage")}
-                      className="font-medium text-primary"
+                      className="font-medium text-primary underline underline-offset-2"
                     >
                       Manage
                     </Link>
@@ -715,7 +701,7 @@ export function GroupClient({
                     </Button>
                     <p className="mt-1 text-xs text-muted-foreground">
                       You&apos;ll stop counting toward the circle&apos;s goals.
-                      The dhikr you logged stays — rejoin and it counts again.
+                      The dhikr you logged stays. Rejoin and it counts again.
                     </p>
                     <InlineAlert className="mt-2">{leaveAct.error}</InlineAlert>
                   </>
@@ -755,7 +741,7 @@ export function GroupClient({
           open={groupLogOpen}
           onClose={() => setGroupLogOpen(false)}
           title="Log for the group"
-          description="Mark a task done for everyone today — for an in-person session. Each entry is recorded as logged by you."
+          description="Mark a task done for everyone today, for an in-person session. Each entry is recorded as logged by you."
           className="max-w-md"
         >
           <ul className="flex flex-col gap-2">
@@ -784,7 +770,7 @@ export function GroupClient({
                   ) : (
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="tonal"
                       disabled={logging === t.id}
                       onClick={() => markGroupTaskDone(t.id, t.target)}
                     >

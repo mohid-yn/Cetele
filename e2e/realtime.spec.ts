@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { signIn } from "./helpers";
+import { test, expect } from "@playwright/test";
+import { closesDay, signIn } from "./helpers";
 
 /**
  * M4 (CET-7) — the live collective counter, end-to-end against the real local
@@ -13,18 +13,6 @@ const A = `e2e-rt-a-${STAMP}@example.com`;
 const B = `e2e-rt-b-${STAMP}@example.com`;
 
 /** Magic-link sign-in via Mailpit (same flow the other specs verify). */
-/**
- * Wait for the ring-close celebration, then tap it away. It's a full-screen
- * modal that only self-dismisses after 4.2s, so clicking straight through to
- * the page underneath just races that timer (the click gets intercepted and
- * retried until the card clears) — which is what made these specs flaky.
- */
-async function closeCelebration(page: Page) {
-  await expect(page.getByText("Ring closed!")).toBeVisible();
-  await page.getByRole("dialog").click();
-  await expect(page.getByRole("dialog")).toBeHidden();
-}
-
 test("collective counter climbs live when a peer taps", async ({ browser }) => {
   const ctxA = await browser.newContext();
   const ctxB = await browser.newContext();
@@ -69,9 +57,7 @@ test("collective counter climbs live when a peer taps", async ({ browser }) => {
   await pageB.waitForURL("**/count/**");
   const pad = pageB.getByRole("button", { name: "Tap to count" });
   for (let i = 0; i < 10; i++) await pad.click();
-  await closeCelebration(pageB);
-  await pageB.click('button:has-text("Back to today")');
-  await pageB.waitForURL("**/today");
+  await closesDay(pageB);
 
   // A never touched their tab — the counter climbs to 10/20 = 50% LIVE.
   await expect(pageA.getByText("Your circle is")).toContainText("50%", {

@@ -11,7 +11,7 @@ const buttonVariants = cva(
   // label and the killed shadow are shared here so ghost/link degrade correctly.
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium " +
     "transition-[background-color,border-color,box-shadow,transform] duration-[var(--duration-fast)] " +
-    "ease-[var(--ease-brand)] active:translate-y-px " +
+    "ease-[var(--ease-brand)] active:scale-[0.97] " +
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring " +
     "disabled:pointer-events-none disabled:text-disabled-foreground disabled:shadow-none " +
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:size-[1.1em]",
@@ -22,32 +22,37 @@ const buttonVariants = cva(
       // new one must be checked at ACTIVE, not at rest.
       variant: {
         primary:
-          "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover " +
+          "bg-primary text-primary-foreground hover:bg-primary-hover " +
           "active:bg-primary-active disabled:bg-disabled-fill",
         accent:
-          "bg-accent text-accent-foreground shadow-sm hover:bg-accent-hover " +
+          "bg-accent text-accent-foreground hover:bg-accent-hover " +
           "active:bg-accent-active disabled:bg-disabled-fill",
+        // The everyday secondary action: opens, adds or moves something forward.
+        // Sage carries interaction across the app, so these read as one family
+        // with the tab bar and the circle switcher. `outline` stays for the
+        // neutral way out (Cancel, Sign out) and `accent` for the one earned action.
+        tonal:
+          "bg-primary-container text-on-primary-container hover:bg-primary-container-hover " +
+          "active:bg-primary-container-active disabled:bg-disabled-fill",
         // Transparent, not `bg-background`: a cream fill on a card reads as a
         // stray box. The boundary is --outline (>=3:1), not the decorative
         // hairline — v1's `border-border` measured 1.31:1 and failed 1.4.11.
         outline:
           "border border-outline bg-transparent text-foreground " +
           "hover:bg-surface-hover active:bg-surface-active disabled:border-border",
-        // Ghost is the quiet tier, but it must still LOOK like a control the
-        // moment you reach for it. The border is transparent at rest (so it
-        // stays quiet beside a filled primary — a dialog's Cancel) and resolves
-        // to --outline on hover/focus. Declared at rest rather than added on
-        // hover so the box never changes size; `border-box` means the edge
-        // costs no layout either way.
+        // Ghost is the quiet tier, but it must look like a control AT REST. It used
+        // to show its border only on hover, and a phone has no hover, so Remove,
+        // Edit and Back all read as plain text. Hairline at rest, stronger when
+        // pressed or hovered.
         ghost:
-          "border border-transparent text-foreground hover:border-outline " +
+          "border border-border text-foreground hover:border-outline " +
           "hover:bg-surface-hover active:bg-surface-active",
         subtle:
           "bg-muted text-foreground hover:bg-surface-active " +
           "active:bg-chrome disabled:bg-disabled-fill",
         link: "text-primary underline-offset-4 hover:underline",
         destructive:
-          "bg-danger text-danger-foreground shadow-sm hover:bg-danger-hover " +
+          "bg-danger text-danger-foreground hover:bg-danger-hover " +
           "active:bg-danger-active disabled:bg-disabled-fill",
         // A destructive action that is NOT the screen's main event — "Leave
         // this circle" sits in a quiet informational box, and a filled red

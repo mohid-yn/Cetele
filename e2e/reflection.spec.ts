@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { signIn } from "./helpers";
+import { closesDay, signIn } from "./helpers";
 
 /**
  * M5 (CET-9/CET-16) — the reflection surfaces, end-to-end against the real
@@ -17,18 +17,6 @@ const B = `e2e-m5-b-${STAMP}@example.com`;
 const bName = B.split("@")[0];
 
 /** Magic-link sign-in via Mailpit (same flow the other specs verify). */
-/**
- * Wait for the ring-close celebration, then tap it away. It's a full-screen
- * modal that only self-dismisses after 4.2s, so clicking straight through to
- * the page underneath just races that timer (the click gets intercepted and
- * retried until the card clears) — which is what made this spec flaky.
- */
-async function closeCelebration(page: Page) {
-  await expect(page.getByText("Ring closed!")).toBeVisible();
-  await page.getByRole("dialog").click();
-  await expect(page.getByRole("dialog")).toBeHidden();
-}
-
 /** Create a group + one task via the real UI (owner flow). */
 async function createGroupWithTask(
   page: Page,
@@ -88,9 +76,7 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
   await pageB.waitForURL("**/count/**");
   const pad = pageB.getByRole("button", { name: "Tap to count" });
   for (let i = 0; i < 10; i++) await pad.click();
-  await closeCelebration(pageB);
-  await pageB.click('button:has-text("Back to today")');
-  await pageB.waitForURL("**/today");
+  await closesDay(pageB);
 
   // B's personal /progress reads their real streak + 14-day grid.
   // The streak hero moved onto HeroCard, which splits the old "N day streak"

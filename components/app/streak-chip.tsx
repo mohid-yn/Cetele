@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { FlameIcon } from "./icons";
 
@@ -22,13 +21,14 @@ export function StreakChip({
   className?: string;
 }) {
   return (
-    <Badge
-      variant="primary"
-      size="md"
-      className={cn("gap-1 px-3 py-1.5 text-sm", className)}
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 text-sm font-semibold text-primary tabular-nums",
+        className,
+      )}
     >
       <FlameIcon className="size-4" />
       {current} day streak
-    </Badge>
+    </span>
   );
 }

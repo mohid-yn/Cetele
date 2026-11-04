@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { signIn } from "./helpers";
+import { test, expect } from "@playwright/test";
+import { closesDay, signIn } from "./helpers";
 
 /**
  * The v2 retention layer, end-to-end against the real local stack (CET-17…22).
@@ -15,12 +15,6 @@ import { signIn } from "./helpers";
 const STAMP = Date.now();
 const A = `e2e-v2-a-${STAMP}@example.com`;
 const B = `e2e-v2-b-${STAMP}@example.com`;
-
-async function closeCelebration(page: Page) {
-  await expect(page.getByText("Ring closed!")).toBeVisible();
-  await page.getByRole("dialog").click();
-  await expect(page.getByRole("dialog")).toBeHidden();
-}
 
 test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   browser,
@@ -74,9 +68,7 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   await pad.click();
   await pad.click();
   await pad.click();
-  await closeCelebration(pageB);
-  await pageB.click('button:has-text("Back to today")');
-  await pageB.waitForURL("**/today");
+  await closesDay(pageB);
 
   // ---- CET-18: one-tap peer reactions ---------------------------------------
   // A sees B finished, and can cheer them. (A has closed nothing, so A gets no
@@ -168,7 +160,7 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   // active days BETWEEN YOU") had an obvious subject whenever the partner was
   // the reason for it, which is the framing D8 forbids everywhere else.
   await expect(
-    pageA.getByText(/days? to go — either of you can bring it home/),
+    pageA.getByText(/days? to go\. Either of you can bring it home/),
   ).toBeVisible();
   // The rule is stated, so a changed name next month is explainable.
   await expect(pageA.getByText(/pairs everyone up each month/)).toBeVisible();

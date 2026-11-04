@@ -27,9 +27,9 @@ export function SteadfastnessBoard({
     <section>
       <SectionHeading>Steadfastness · last 90 days</SectionHeading>
       <p className="mb-3 text-xs text-muted-foreground">
-        Recent consistency as a rate — average daily completion over a rolling
-        90 days, so it rewards showing up lately, not seniority or volume. Only
-        you (owner&nbsp;/&nbsp;admin) can see this.
+        Recent consistency as a rate. Average daily completion over a rolling 90
+        days, so it rewards showing up lately, not seniority or volume. Only you
+        (owner&nbsp;/&nbsp;admin) can see this.
       </p>
       <Card>
         <CardContent className="flex flex-col gap-3 pt-6">
@@ -74,7 +74,7 @@ export function SteadfastnessBoard({
             <span className="font-medium text-foreground">
               ≥ {bar}% = could be recognised
             </span>{" "}
-            ({eligibleCount} {eligibleCount === 1 ? "member" : "members"}) — a
+            ({eligibleCount} {eligibleCount === 1 ? "member" : "members"}), a
             bar, not a single winner; needs ≥ 14 logged days to qualify. Any
             reward is the group&rsquo;s own, handled outside the app.
           </p>

@@ -110,10 +110,15 @@ const subscribe = (cb: () => void) => {
   };
 };
 
+const SERVER_STATE: State = { groups: [], loaded: false };
+
 export function useGroupsSnapshot(): State {
   return React.useSyncExternalStore(
     subscribe,
     () => state,
-    () => state,
+    // The HYDRATION snapshot has to be what the server rendered, not what the
+    // store holds by then: a boundary that hydrates after the first fetch landed
+    // saw "loaded", rendered Today's switcher, and React threw the tree away.
+    () => SERVER_STATE,
   );
 }

@@ -407,8 +407,8 @@ export function GroupGarden({
           <p className="mt-1.5 text-xs font-medium text-foreground/80">
             {closedToday ? (
               <>
-                <span className="text-primary">All rings closed today</span> —
-                the sun is out over your garden.
+                <span className="text-primary">All rings closed today</span> .
+                The sun is out over your garden.
               </>
             ) : tendedToday > 0 ? (
               <>
@@ -420,7 +420,7 @@ export function GroupGarden({
             ) : (
               // Zero is stated as an open invitation, never as a scoreboard of
               // absence: nobody is named, and the sentence points forward (D8).
-              <>Nobody has tended it yet today — the first bloom is yours.</>
+              <>Nobody has tended it yet today. The first bloom is yours.</>
             )}
           </p>
         )}

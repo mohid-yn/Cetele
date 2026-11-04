@@ -150,7 +150,7 @@ export function AssigneesDialog({
 
         {emptyPick && (
           <p role="alert" className="text-xs text-danger">
-            Pick at least one person, or choose Everyone — a task nobody carries
+            Pick at least one person, or choose Everyone. A task nobody carries
             would sit on no one&apos;s Today.
           </p>
         )}

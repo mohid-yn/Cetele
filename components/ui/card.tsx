@@ -3,7 +3,10 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 /**
- * The card surface. `padding` is a named ladder rather than a free choice —
+ * The card surface. ONE elevation cue: a hairline, no shadow. A border under a
+ * soft shadow on every card is the most recognisable generated-UI look there
+ * is, and at this density it made every screen a stack of equal slabs.
+ * `padding` is a named ladder rather than a free choice —
  * the same treatment had been hand-written at p-3/p-4/p-5/p-6 across eleven
  * call sites, which is how a design system stops looking designed.
  *
@@ -12,7 +15,7 @@ import { cn } from "@/lib/utils";
  * `buttonVariants` already has.
  */
 const cardVariants = cva(
-  "rounded-2xl border border-border bg-card text-card-foreground shadow-sm",
+  "rounded-xl border border-border bg-card text-card-foreground",
   {
     variants: {
       padding: {

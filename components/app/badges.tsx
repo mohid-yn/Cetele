@@ -86,11 +86,11 @@ export function BadgesGrid({ badges }: { badges: EarnedBadge[] }) {
                 className={cn(
                   "grid size-14 place-items-center rounded-2xl transition-transform",
                   // An earned badge gets the accent rim — a sanctioned accent use
-                  // (earned, D25) and the only one on this screen. Locked ones
-                  // stay muted and flat, so the difference is the reward.
+                  // (earned, D25) and the only one on this screen. A locked one is an
+                  // empty dashed slot: a filled tile looked like a button.
                   b.earnedOn
                     ? "bg-[var(--surface-raised)] text-primary glow-accent hover:-translate-y-0.5 motion-reduce:transform-none"
-                    : "bg-muted text-muted-foreground",
+                    : "border border-dashed border-outline text-muted-foreground",
                 )}
               >
                 {/* A locked badge is quiet by being NEUTRAL, not by being faint —

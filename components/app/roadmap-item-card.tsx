@@ -204,7 +204,7 @@ export function RoadmapItemCard({
             edge. */}
         {binary ? (
           <Button
-            variant="outline"
+            variant="tonal"
             size="sm"
             // `item.target`, not 1: a lecture is recorded all-or-nothing but is
             // WORTH its minutes, and writing 1 would credit a 555-minute

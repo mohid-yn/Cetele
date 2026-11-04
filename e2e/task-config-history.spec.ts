@@ -26,12 +26,6 @@ test.describe.configure({ mode: "serial" });
 
 let manageUrl = "";
 
-async function closeCelebration(page: Page) {
-  await expect(page.getByText("Ring closed!")).toBeVisible();
-  await page.getByRole("dialog").click();
-  await expect(page.getByRole("dialog")).toBeHidden();
-}
-
 /** The day-strip cell for a given label ("Yesterday", "Today"). */
 function day(page: Page, name: RegExp) {
   return page.getByRole("button", { name });
@@ -68,7 +62,7 @@ test("a circle, a task at 3, and yesterday closed at 3", async ({ page }) => {
   await pad.click();
   await pad.click();
   await pad.click();
-  await closeCelebration(page);
+  await expect(page.getByText("Completed. Tap to keep going")).toBeVisible();
 
   // Yesterday now carries its tick — one `svg` inside that cell.
   await expect(day(page, /Yest\./).locator("svg")).toHaveCount(1);

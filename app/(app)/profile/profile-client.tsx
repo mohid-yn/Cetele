@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Avatar,
-  Badge,
   Button,
   Card,
   Input,
@@ -14,7 +13,7 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { FlameIcon, ChevronRightIcon } from "@/components/app/icons";
+import { FlameIcon, ChevronRightIcon, GridIcon } from "@/components/app/icons";
 import {
   IosInstallGuide,
   UnsupportedBrowserNote,
@@ -171,43 +170,43 @@ export function ProfileClient({
   return (
     <Screen>
       {/* Identity */}
-      <header className="flex flex-col items-center gap-2 pt-2 text-center">
-        <Avatar name={name} size="xl" />
-        <div>
+      <header className="flex items-center gap-4 pt-2">
+        <Avatar name={name} size="lg" />
+        <div className="min-w-0 flex-1">
           <NameEditor name={name} onSaved={setName} />
-          <div className="mt-1 flex flex-wrap justify-center gap-1.5">
-            {role === "owner" && <Badge variant="primary">Owner</Badge>}
-            {role === "admin" && <Badge variant="outline">Co-admin</Badge>}
-            {groupName && <Badge variant="neutral">{groupName}</Badge>}
-          </div>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            You&apos;re someone who does dhikr daily.
+          </p>
         </div>
-        <p className="text-sm text-balance text-muted-foreground">
-          You&apos;re someone who does dhikr daily.
-        </p>
       </header>
 
-      <Link
-        href="/progress"
-        className={cn(
-          cardVariants({ padding: "md" }),
-          "flex items-center justify-between gap-3 transition-colors hover:bg-muted/50",
-        )}
+      {/* Where you can go from here. Role and circle used to be coloured pills
+          that looked pressable and did nothing, so they are now the row that
+          does something with them. */}
+      <div
+        className={cn(cardVariants(), "divide-y divide-border overflow-hidden")}
       >
-        <div className="flex items-center gap-3">
-          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-primary-700">
-            <FlameIcon className="size-5" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              Streak, badges &amp; consistency
-            </p>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {streak}-day streak · view your Progress
-            </p>
-          </div>
-        </div>
-        <ChevronRightIcon className="size-5 text-muted-foreground" />
-      </Link>
+        <ProfileRow
+          href="/progress"
+          Icon={FlameIcon}
+          title={`${streak}-day streak`}
+          detail="Badges and consistency"
+        />
+        <ProfileRow
+          href="/groups"
+          Icon={GridIcon}
+          title="Your circles"
+          detail={
+            groupName
+              ? role === "owner"
+                ? `Owner of ${groupName}`
+                : role === "admin"
+                  ? `Co-admin of ${groupName}`
+                  : groupName
+              : "Join or create a circle"
+          }
+        />
+      </div>
 
       {/* Reminders (D30) + push delivery (D10) */}
       <section>
@@ -278,14 +277,14 @@ export function ProfileClient({
           <p className="mt-2 text-xs text-muted-foreground">
             No device can receive reminders yet, so these are switched off until
             one can. Finish the steps above, open Cetele from your Home Screen,
-            and turn reminders on there — your times are kept.
+            and turn reminders on there. Your times are kept.
           </p>
         ) : (
           env !== null &&
           !canReceiveHere && (
             <p className="mt-2 text-xs text-muted-foreground">
-              These times are saved to your account, not to this browser —
-              they&apos;ll arrive on the{" "}
+              These times are saved to your account, not to this browser.
+              They&apos;ll arrive on the{" "}
               {devices === 1 ? "device" : `${devices} devices`} where
               you&apos;ve turned reminders on.
             </p>
@@ -293,15 +292,14 @@ export function ProfileClient({
         )}
 
         {reminders.length === 0 && !adding ? (
-          <div className="mt-2 rounded-xl border border-dashed border-border px-3 py-6 text-center">
+          <div className="mt-3">
             <p className="text-sm text-muted-foreground">
-              No reminders yet. Add one and name it whatever you&apos;ll
-              recognise at a glance — &ldquo;Evening dhikr&rdquo;.
+              No reminders yet. Name each one something you&apos;ll recognise,
+              like &ldquo;Evening dhikr&rdquo;.
             </p>
             <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
+              variant="tonal"
+              className="mt-3 w-full"
               disabled={!remindersReachable}
               onClick={() => setAdding(true)}
             >
@@ -330,9 +328,8 @@ export function ProfileClient({
             </ul>
             {!adding && (
               <Button
-                variant="outline"
-                size="sm"
-                className="mt-2"
+                variant="tonal"
+                className="mt-2 w-full"
                 disabled={!remindersReachable}
                 onClick={() => setAdding(true)}
               >
@@ -349,12 +346,7 @@ export function ProfileClient({
           Appearance
         </h2>
         <Card className="flex items-center justify-between gap-3 p-4">
-          <div>
-            <p className="text-sm font-medium text-foreground">Theme</p>
-            <p className="text-xs text-muted-foreground">
-              Easier on the eyes for night dhikr
-            </p>
-          </div>
+          <p className="text-sm font-medium text-foreground">Theme</p>
           <ThemeToggle />
         </Card>
       </section>
@@ -365,6 +357,40 @@ export function ProfileClient({
         </Button>
       </form>
     </Screen>
+  );
+}
+
+/** One tappable row: icon, what it is, what it says now, and where it goes. */
+function ProfileRow({
+  href,
+  Icon,
+  title,
+  detail,
+}: {
+  href: string;
+  Icon: typeof FlameIcon;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-hover active:bg-surface-active"
+    >
+      <Icon aria-hidden className="size-5 shrink-0 text-primary" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-foreground tabular-nums">
+          {title}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {detail}
+        </span>
+      </span>
+      <ChevronRightIcon
+        aria-hidden
+        className="size-5 shrink-0 text-muted-foreground"
+      />
+    </Link>
   );
 }
 
@@ -424,13 +450,13 @@ function NameEditor({
 
   if (!editing) {
     return (
-      <div className="flex items-center justify-center gap-2">
-        <h1 className="font-display text-xl font-bold text-foreground">
+      <div className="flex items-center gap-2">
+        <h1 className="min-w-0 truncate font-display text-xl font-bold text-foreground">
           {name}
         </h1>
         <Button
           ref={editButton}
-          variant="outline"
+          variant="tonal"
           size="sm"
           onClick={() => {
             setDraft(name);
@@ -444,7 +470,7 @@ function NameEditor({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col items-center gap-2">
+    <form onSubmit={submit} className="flex flex-col items-start gap-2">
       <Input
         ref={field}
         value={draft}
@@ -456,7 +482,7 @@ function NameEditor({
         onKeyDown={(e) => {
           if (e.key === "Escape") close();
         }}
-        className="max-w-64 text-center"
+        className="max-w-64"
       />
       <div className="flex items-center gap-2">
         <Button type="submit" size="sm" disabled={act.pending}>
@@ -499,7 +525,7 @@ function TestPushCard() {
         </p>
         <p className="mt-0.5 text-xs text-muted-foreground">
           {act.pending
-            ? "Arriving in ~10 seconds — lock your phone and wait."
+            ? "Arriving in ~10 seconds. Lock your phone and wait."
             : sent
               ? "Sent. If it didn't appear, check notifications are allowed for Cetele."
               : "Arrives in 10 seconds, so you can lock your phone and watch it land."}
@@ -511,7 +537,7 @@ function TestPushCard() {
         )}
       </div>
       <Button
-        variant="outline"
+        variant="tonal"
         size="sm"
         disabled={act.pending}
         onClick={() => {
@@ -558,7 +584,7 @@ function ReminderFields({
   autoFocus?: boolean;
 }) {
   return (
-    <>
+    <div className="flex min-w-0 flex-1 flex-col gap-2">
       <Input
         value={label}
         disabled={disabled}
@@ -588,9 +614,9 @@ function ReminderFields({
         onChange={(e) => onTime(e.target.value)}
         // The controls carry their own disabled treatment — token pair,
         // matching Input — because the row recedes by SURFACE, not opacity.
-        className="h-9 shrink-0 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground tabular-nums disabled:cursor-not-allowed disabled:border-border disabled:bg-disabled-fill disabled:text-disabled-foreground"
+        className="h-9 w-fit rounded-lg border border-outline bg-background px-2.5 text-sm text-foreground tabular-nums disabled:cursor-not-allowed disabled:border-border disabled:bg-disabled-fill disabled:text-disabled-foreground"
       />
-    </>
+    </div>
   );
 }
 
@@ -667,7 +693,7 @@ function ReminderRow({
         disabled && "bg-muted/60",
       )}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         <ReminderFields
           label={label}
           time={time}
@@ -685,8 +711,10 @@ function ReminderRow({
           disabled={disabled}
           onClick={() => save(label, time, !enabled)}
           className={cn(
-            "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed",
-            enabled ? "bg-primary" : "bg-muted",
+            // The off state needs a visible body, not a faint smudge, and the 24px
+            // height needs a full-size target around it.
+            "tap-area-44-box relative mt-1.5 h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed",
+            enabled ? "bg-primary" : "bg-outline",
             disabled && "bg-disabled-fill",
           )}
         >
@@ -705,14 +733,16 @@ function ReminderRow({
               ? to12h(time)
               : "off"}
         </p>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
+          className="shrink-0"
           disabled={del.pending}
           onClick={() => del.run(() => deleteReminder(reminder.id))}
-          className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-danger disabled:cursor-not-allowed"
         >
           {del.pending ? "Removing…" : "Remove"}
-        </button>
+        </Button>
       </div>
       {(act.error || del.error) && (
         <p role="alert" className="mt-0.5 text-xs text-danger">
@@ -744,7 +774,7 @@ function NewReminderRow({
 
   return (
     <li className="rounded-xl border border-primary bg-card px-3 py-2.5">
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         <ReminderFields
           label={label}
           time={time}

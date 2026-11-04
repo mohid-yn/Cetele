@@ -52,7 +52,7 @@ export function Organisers({
         <h3 className="text-sm font-semibold text-foreground">Organisers</h3>
         <p className="mt-1 text-xs text-muted-foreground">
           Organisers see how far everyone has got on a roadmap. They see nothing
-          else — no circle&rsquo;s dhikr, no streaks, no daily figures.
+          else. No circle&rsquo;s dhikr, no streaks, no daily figures.
         </p>
       </div>
 
@@ -90,9 +90,8 @@ export function Organisers({
 
       {last && (
         <p className="text-xs text-muted-foreground">
-          This is the only organiser, so they cannot be removed — appoint
-          another first. An app with no organiser can only be recovered from
-          Supabase.
+          This is the only organiser, so they cannot be removed. Appoint another
+          first. An app with no organiser can only be recovered from Supabase.
         </p>
       )}
 
@@ -109,7 +108,7 @@ export function Organisers({
         <Field
           label="Appoint an organiser"
           htmlFor="organiser-email"
-          hint="Their exact email address — there is no directory to search."
+          hint="Their exact email address. There is no directory to search."
         >
           <Input
             id="organiser-email"
@@ -151,7 +150,7 @@ export function Organisers({
           pendingRemoval
             ? `${pendingRemoval.name ?? pendingRemoval.email} will stop being an organiser and will no longer see the roadmap report.${
                 pendingRemoval.userId === me
-                  ? " This is you — you will lose access as soon as it is done."
+                  ? " This is you. You will lose access as soon as it is done."
                   : ""
               }`
             : ""
