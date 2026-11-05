@@ -5,7 +5,7 @@
 > Full historical detail (every decision D1–D48 in full, every shipped milestone, every review) lives in
 > [`.claude/history/STATUS-2026-07-16-full.md`](history/STATUS-2026-07-16-full.md). This file is the onboarding doc; that one is the archive.
 
-_Last updated: 2026-11-05 · Phase: **live in production; the Next 16.4.5 upgrade and the CI repairs are on staging, awaiting the owner's go-ahead.**_
+_Last updated: 2026-11-05 · Phase: **live in production; the Next 16.4.5 upgrade and the CI repairs are on production (`67a853a`, 2026-11-05).**_
 
 > **2026-07-28 — the release process changed.** `main` is production and is now gated; `staging` is the soak branch
 > everything lands on first. **Read §3 "Branching" before pushing anything.** (D50)
@@ -44,7 +44,7 @@ review_ — is **met**.
 | 0033 on prod | **MEASURED, not hypothetical: prod holds 15 reminders, 7 enabled, across 5 members, and one fired on 2026-08-14.** 0033 drops the table, so those five people lose live reminders with no notice and must set new ones up. **There is also no clean deploy order** — old code reads `reminders.task_id` + `claim_due_reminders().task_label`, new code reads `reminders.label` + `set_reminder(p_id, p_label, …)`. Either order leaves Profile listing nothing for one deploy (it degrades quietly — `q()` does not throw on a PostgREST error, so the list falls back to empty) and can push a notification with an undefined title. Deploy-first is the marginally safer half.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Working tree | **See the 2026-11-04 section below for the current state.** Before that: **NOT clean — D69 + D70 are committed on `mohidkhanzada/document-dialog-and-d68` and have NOT been merged, pushed or promoted (2026-08-28). Two migrations, `0035` and `0036`, are applied LOCALLY only; prod is still at 34.** Before that: **CLEAN — everything was ON PRODUCTION (2026-08-21).** `main` fast-forwarded from `staging` and pushed with `ALLOW_MAIN_PUSH=1`; the feature branch is deleted, local and remote. **No migration** — the 2026-08-21 promotion is client-only (D68 + the dialog close button) and carried the 2026-08-17 PRD docs commit with it, so prod's schema is unchanged and still at 34. History of earlier promotions is in the resuming blocks below.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
-### RESUMING? READ THIS FIRST (2026-11-05): BLANK COUNT SCREEN FIXED ON STAGING, NOT YET ON PRODUCTION
+### RESUMING? READ THIS FIRST (2026-11-05): BLANK COUNT SCREEN FIX ON PRODUCTION, NOT YET CONFIRMED ON A PHONE
 
 | Item                   | State                                                                                                                                                                   |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -55,7 +55,9 @@ review_ — is **met**.
 | Full CI on the upgrade | 5 of 5 runs green, 82 passed, no flaky tests.                                                                                                                           |
 | CI repairs             | Runner pinned to `ubuntu-26.04`, Supabase CLI to 3.0.0, `scripts/ci-build.sh` retries only the `next/font/google` build error.                                          |
 | Not confirmed          | Whether members hit this on phones. The owner's phone check was not reported.                                                                                           |
-| Next                   | Owner approves, then fast-forward `main` from `staging`. Re-measure on phone after release.                                                                             |
+| Released               | Owner approved. `main` fast-forwarded to `67a853a`, no migrations. `main` CI and the Vercel build green; production returns 200.                                        |
+| Not checked            | Real Google sign-in and a real phone. The staging deployment was not clicked through either: it is behind Vercel login.                                                 |
+| Next                   | Re-measure on phone.                                                                                                                                                    |
 
 ### RESUMING? READ THIS FIRST (2026-11-04): ON STAGING, AWAITING THE GO-AHEAD FOR PRODUCTION (D71, D72)
 
