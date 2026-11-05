@@ -124,7 +124,6 @@ Also open: should later levels genuinely lock (D57)? Does neglecting a newly joi
 
 **Tests and performance**
 
-- `roadmap` e2e, line 191: taps +1 three times and reloads at once, so the reload can abort a save in flight. It failed both attempts in one CI run (2 of 15, then 0 of 15) and passed on rerun. Saw it in the trace (`status -1`). Fix the test by waiting for the writes. The same race could lose a member's last tap if they reload that fast, which is untested.
 - `task-links` link pane: after Link, the heading can keep the old count though the row is saved. Timing, not fixed: the dialog relies on `router.refresh()`.
 - A loading skeleton held for 30s once in `task-config-history`. Not reproduced in 12 repeats. Unexplained.
 - `roadmap` e2e picks the first "Roadmap Circle", so it fails on an unreset database.

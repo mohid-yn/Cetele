@@ -181,6 +181,7 @@ export default async function RoadmapPage({
 
   return (
     <RoadmapClient
+      userId={me}
       roadmap={model}
       todayISO={todayISO}
       programmes={followed.map((f) => ({ id: f.id, name: f.name }))}

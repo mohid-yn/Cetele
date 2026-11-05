@@ -23,6 +23,7 @@ import { RewardLadder } from "@/components/app/roadmap-rewards";
 import { RoadmapItemCard } from "@/components/app/roadmap-item-card";
 import { RoadmapSwitcher } from "@/components/app/roadmap-switcher";
 import { usePropState } from "@/lib/use-prop-state";
+import { forgetSave, rememberSave, takePending } from "@/lib/roadmap-outbox";
 import { cn } from "@/lib/utils";
 import {
   CATEGORY_LABEL,
@@ -58,11 +59,14 @@ const fmtDate = (iso: string, todayISO: string) =>
   });
 
 export function RoadmapClient({
+  userId,
   roadmap,
   todayISO,
   programmes,
   canAdminister,
 }: {
+  /** Whose device outbox to use, so a shared phone cannot mix up two people. */
+  userId: string;
   roadmap: Roadmap;
   /** The member's own today (D34) — the window is counted on their calendar. */
   todayISO: string;
@@ -117,13 +121,25 @@ export function RoadmapClient({
 
     const target = Math.max(0, Math.min(item.target, next));
     latest.current.set(id, target);
+    // Before anything else can go wrong: from here the tap survives a reload.
+    rememberSave(userId, id, target);
     setItems((prev) =>
       prev.map((i) => (i.id === id ? { ...i, done: target } : i)),
     );
     setError(null);
 
     const run = async () => {
-      const res = await setRoadmapProgress(id, target);
+      let res: Awaited<ReturnType<typeof setRoadmapProgress>>;
+      try {
+        res = await setRoadmapProgress(id, target);
+      } catch {
+        // It never reached an answer: offline, or the page is going away. The
+        // save stays on the device and goes out when this screen next opens.
+        return;
+      }
+      // Answered either way, so there is nothing left to resend. A refusal is
+      // final, and retrying it on every visit would only repeat the error.
+      forgetSave(userId, id, target);
       if (latest.current.get(id) !== target) return; // a newer tap won
 
       if (!res || res.error || res.done == null) {
@@ -147,6 +163,23 @@ export function RoadmapClient({
     const prev = chains.current.get(id) ?? Promise.resolve();
     chains.current.set(id, prev.then(run, run));
   };
+  // The latest closure, for the resend below, which runs after commit.
+  const setDoneRef = React.useRef(setDone);
+  React.useEffect(() => {
+    setDoneRef.current = setDone;
+  });
+
+  // Send whatever a reload or a closed app left behind. Keyed on the roadmap
+  // because this component stays mounted when the switcher changes programme.
+  const roadmapId = roadmap.id;
+  React.useEffect(() => {
+    const onScreen = new Map(roadmap.items.map((i) => [i.id, i.done]));
+    for (const { id, done } of takePending(userId, new Set(onScreen.keys()))) {
+      if (onScreen.get(id) === done) forgetSave(userId, id, done);
+      else setDoneRef.current(id, done);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per roadmap
+  }, [roadmapId, userId]);
 
   const reqs = roadmap.requirements;
   const levels = levelsOf(items);

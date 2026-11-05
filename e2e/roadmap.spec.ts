@@ -916,6 +916,25 @@ test("the Roadmap tab follows the member, not the selected circle", async ({
   await page.getByRole("button", { name: /^Book/ }).click();
   await expect(book.getByRole("button", { name: "Undo" })).toBeVisible();
 
+  // A SAVE THE SERVER NEVER GOT IS NOT LOST. The write is refused at the network,
+  // standing in for a reload or a closed app, and the screen sends it itself the
+  // next time it opens. The second reload proves the server has it, and not just
+  // this device.
+  const isWrite = (r: import("@playwright/test").Request) =>
+    r.method() === "POST" && new URL(r.url()).pathname === "/roadmap";
+  await page.route("**/roadmap*", (route) =>
+    isWrite(route.request()) ? route.abort() : route.continue(),
+  );
+  await book.getByRole("button", { name: "Undo" }).click();
+  await expect(book.getByRole("button", { name: "Mark done" })).toBeVisible();
+  await page.unroute("**/roadmap*");
+  const resent = page.waitForResponse((r) => isWrite(r.request()) && r.ok());
+  await page.reload();
+  await resent;
+  await page.reload();
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(book.getByRole("button", { name: "Mark done" })).toBeVisible();
+
   // Opening it did not change the selected circle.
   await expect(
     page.getByRole("link", { name: "Today", exact: true }).first(),
