@@ -29,9 +29,11 @@ import { isAdminZone } from "@/lib/admin-zone";
 export function Sidebar({
   initialHasGroups,
   initialGroupId,
+  initialIsOrganiser,
 }: {
   initialHasGroups: boolean;
   initialGroupId: string | null;
+  initialIsOrganiser: boolean;
 }) {
   const pathname = usePathname();
   const groupId = useActiveGroupId(initialGroupId);
@@ -41,7 +43,7 @@ export function Sidebar({
   // navigations depending on viewport width.
   const hasRoadmap = useGroupHasRoadmap(groupId);
   // The flag is fetched client-side because the shell does no server work (§4).
-  const isOrganiser = useIsSuperAdmin();
+  const isOrganiser = useIsSuperAdmin(initialIsOrganiser);
   // …and the same collapse on the picker itself, where no circle is selected.
   const inAdmin = isAdminZone(pathname, isOrganiser);
   const items = inAdmin

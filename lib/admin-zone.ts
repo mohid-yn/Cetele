@@ -1,4 +1,14 @@
 /**
+ * A hint for the nav's first paint: this browser last read an organiser.
+ *
+ * The app shell does no auth or DB work (§4), so without this a full load of
+ * /programme paints the member's tabs until the viewer store's read comes back.
+ * It only chooses which tabs to draw. It grants nothing: every page and RPC asks
+ * the database, and the viewer store corrects this on every load.
+ */
+export const ORGANISER_HINT_COOKIE = "cetele-organiser-hint";
+
+/**
  * Is this screen part of the organiser's administration workspace?
  *
  * `/admin` belongs to organisers outright: its pages refuse anyone else on the

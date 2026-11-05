@@ -24,9 +24,11 @@ import { useIsSuperAdmin } from "@/lib/viewer-store";
 export function BottomNav({
   initialHasGroups,
   initialGroupId,
+  initialIsOrganiser,
 }: {
   initialHasGroups: boolean;
   initialGroupId: string | null;
+  initialIsOrganiser: boolean;
 }) {
   const pathname = usePathname();
   const groupId = useActiveGroupId(initialGroupId);
@@ -40,7 +42,7 @@ export function BottomNav({
   // An organiser is in no circle by role (D27), so their Admin tab is the one
   // thing in this bar that no group page can publish — it comes from the
   // client-side viewer store instead.
-  const isOrganiser = useIsSuperAdmin();
+  const isOrganiser = useIsSuperAdmin(initialIsOrganiser);
   // …and the same collapse on the picker itself, where no circle is selected.
   if (isAdminZone(pathname, isOrganiser)) {
     return <AdminTabBar pathname={pathname} />;

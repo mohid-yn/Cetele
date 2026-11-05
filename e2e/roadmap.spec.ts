@@ -308,6 +308,9 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   await page.goto("/groups");
   await expect(page.getByText("Administration")).toHaveCount(0);
   await expect(page.getByRole("link", { name: /^Roadmaps/ })).toHaveCount(0);
+  // And a circle owner reading the hub keeps their own tabs from first paint.
+  const memberFirstPaint = await (await page.request.get("/programme")).text();
+  expect(memberFirstPaint).not.toContain('aria-label="Administration"');
 
   // The gap this closes: a super admin is deliberately in no circle, and the
   // report's ONLY link lived inside a circle's Manage screen — gated on leading
@@ -336,6 +339,10 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
     page.getByRole("heading", { level: 1, name: "Roadmap" }),
   ).toBeVisible();
   const adminNav = page.getByRole("navigation", { name: "Administration" });
+  // The server's own HTML already carries the workspace's bar, so a full load
+  // never paints the member's tabs first.
+  const firstPaint = await (await page.request.get("/programme")).text();
+  expect(firstPaint).toContain('aria-label="Administration"');
   await expect(
     adminNav.getByRole("link", { name: "Roadmaps" }),
   ).toHaveAttribute("aria-current", "page");

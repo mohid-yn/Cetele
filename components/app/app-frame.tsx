@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cookies } from "next/headers";
 import { ACTIVE_GROUP_COOKIE } from "@/lib/group-href";
+import { ORGANISER_HINT_COOKIE } from "@/lib/admin-zone";
 import { APP_SCROLL_ID } from "@/lib/app-scroll";
 import { BottomNav } from "./bottom-nav";
 import { Sidebar } from "./sidebar";
@@ -23,8 +24,9 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
   // just-left user has none → pristine "no circle" front door from frame one.
   // The client store (useHasGroups) confirms/corrects it after mount; the id also
   // seeds the group-tab hrefs so they're right at SSR, not only after hydration.
-  const initialGroupId =
-    (await cookies()).get(ACTIVE_GROUP_COOKIE)?.value ?? null;
+  const jar = await cookies();
+  const initialGroupId = jar.get(ACTIVE_GROUP_COOKIE)?.value ?? null;
+  const initialIsOrganiser = jar.has(ORGANISER_HINT_COOKIE);
   const initialHasGroups = initialGroupId !== null;
 
   return (
@@ -39,6 +41,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
       <Sidebar
         initialHasGroups={initialHasGroups}
         initialGroupId={initialGroupId}
+        initialIsOrganiser={initialIsOrganiser}
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -53,6 +56,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
         <BottomNav
           initialHasGroups={initialHasGroups}
           initialGroupId={initialGroupId}
+          initialIsOrganiser={initialIsOrganiser}
         />
       </div>
     </div>

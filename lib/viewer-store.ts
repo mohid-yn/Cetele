@@ -3,6 +3,7 @@
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { q } from "@/lib/db-log";
+import { ORGANISER_HINT_COOKIE } from "@/lib/admin-zone";
 
 /**
  * Is the signed-in person an organiser? — for the nav's permanent Roadmap tab.
@@ -28,9 +29,10 @@ import { q } from "@/lib/db-log";
  * screen's own work. Client navigations already cost nothing: the module
  * snapshot survives them, so this runs once per document, not once per screen.
  *
- * The snapshot starts `false`, so SSR and the first client render agree and the
- * tab simply arrives when the answer does. It never flashes AWAY: nothing here
- * ever goes true → false within a load.
+ * THE COOKIE IS NOT THAT CACHE. It remembers only the positive, as a first-paint
+ * hint (`ORGANISER_HINT_COOKIE`), and this read overwrites it on every load. So a
+ * new appointee's tab still arrives with the answer, and someone stood down
+ * elsewhere sees the old tabs for one read at most, then never again.
  */
 type State = { isSuperAdmin: boolean; loaded: boolean };
 
@@ -38,7 +40,14 @@ let state: State = { isSuperAdmin: false, loaded: false };
 const listeners = new Set<() => void>();
 let inFlight = false;
 
+function writeHint(isSuperAdmin: boolean): void {
+  document.cookie = isSuperAdmin
+    ? `${ORGANISER_HINT_COOKIE}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
+    : `${ORGANISER_HINT_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+}
+
 function publish(isSuperAdmin: boolean): void {
+  writeHint(isSuperAdmin);
   const next: State = { isSuperAdmin, loaded: true };
   if (next.isSuperAdmin !== state.isSuperAdmin || !state.loaded) {
     state = next;
@@ -80,8 +89,11 @@ const subscribe = (cb: () => void) => {
 /**
  * Whether the viewer is an organiser. Triggers the one fetch on first mount;
  * every later caller and every client navigation reads the cached snapshot.
+ *
+ * `initial` is the server's reading of the hint cookie, and stands in until the
+ * read comes back. Server and first client render both use it, so they agree.
  */
-export function useIsSuperAdmin(): boolean {
+export function useIsSuperAdmin(initial = false): boolean {
   const snapshot = React.useSyncExternalStore(
     subscribe,
     () => state,
@@ -96,5 +108,5 @@ export function useIsSuperAdmin(): boolean {
     });
   }, []);
 
-  return snapshot.isSuperAdmin;
+  return snapshot.loaded ? snapshot.isSuperAdmin : initial;
 }
