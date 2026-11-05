@@ -3,7 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { Screen, buttonVariants } from "@/components/ui";
-import { ArrowLeftIcon, EyeIcon, UsersIcon } from "@/components/app/icons";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  EyeIcon,
+  UsersIcon,
+} from "@/components/app/icons";
 import { Segmented } from "@/components/app/segmented";
 import { programmeReach, programmeReadiness } from "@/lib/programme-readiness";
 import {
@@ -49,6 +54,7 @@ export function ProgrammeBuilder({
   recordedIds,
   sortOrders,
   canReadCohort,
+  myProgressHref,
   todayISO,
   initialTab,
 }: {
@@ -68,6 +74,8 @@ export function ProgrammeBuilder({
   recordedIds: string[];
   sortOrders: [string, number][];
   canReadCohort: boolean;
+  /** Their own roadmap screen, when a circle of theirs follows this one. */
+  myProgressHref: string | null;
   todayISO: string;
   initialTab: BuilderTab;
 }) {
@@ -116,6 +124,15 @@ export function ProgrammeBuilder({
           {fmtDate(roadmap.startsOn)} to {fmtDate(roadmap.endsOn)}
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
+          {myProgressHref && (
+            <Link
+              href={myProgressHref}
+              className={buttonVariants({ variant: "tonal", size: "sm" })}
+            >
+              <CheckIcon aria-hidden />
+              Log my progress
+            </Link>
+          )}
           {canReadCohort && following.length > 0 && (
             <Link
               href={`/programme/${roadmap.id}/progress`}

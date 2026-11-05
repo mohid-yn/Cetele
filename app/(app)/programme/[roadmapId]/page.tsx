@@ -1,10 +1,18 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
 import { localDateISO } from "@/lib/local-date";
 import { buttonVariants, Card, Screen } from "@/components/ui";
-import { ArrowLeftIcon, FlagIcon, UsersIcon } from "@/components/app/icons";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  FlagIcon,
+  UsersIcon,
+} from "@/components/app/icons";
+import { ACTIVE_GROUP_COOKIE, groupHref } from "@/lib/group-href";
+import { myProgressCircle } from "@/lib/my-progress-circle";
 import { CatalogueView } from "./catalogue-view";
 import { BUILDER_TABS, type BuilderTab } from "./builder-tabs";
 import { ProgrammeBuilder } from "./programme-builder";
@@ -178,6 +186,27 @@ export default async function ProgrammeCataloguePage({
     supabase.rpc("can_read_roadmap_cohort", { p_roadmap: roadmapId }),
   );
 
+  // THE WAY TO THE VIEWER'S OWN RECORD. This screen never records progress, and
+  // the Roadmap tab depends on which circle is active, so without this someone
+  // in a following circle has no route from here to logging.
+  const { data: myCircles } = await q(
+    "catalogue.my circles (log my progress)",
+    supabase
+      .from("memberships")
+      .select("group_id, groups(name, group_roadmaps(roadmap_id))")
+      .eq("user_id", me),
+  );
+  const myCircle = roadmap.published
+    ? myProgressCircle(
+        myCircles ?? [],
+        roadmapId,
+        (await cookies()).get(ACTIVE_GROUP_COOKIE)?.value ?? null,
+      )
+    : null;
+  const myProgressHref = myCircle
+    ? `${groupHref(myCircle.groupId, "/roadmap")}?r=${roadmapId}`
+    : null;
+
   // Who may edit. Only decides which screen renders: every RPC behind the builder
   // refuses a non-organiser on its own.
   if (canEdit && view !== "member") {
@@ -223,6 +252,7 @@ export default async function ProgrammeCataloguePage({
         recordedIds={[...recorded]}
         sortOrders={[...sortOrderOf]}
         canReadCohort={Boolean(canReadCohort)}
+        myProgressHref={myProgressHref}
         todayISO={localDateISO(profile?.timezone ?? "UTC")}
         initialTab={
           BUILDER_TABS.includes(tab as BuilderTab)
@@ -260,6 +290,20 @@ export default async function ProgrammeCataloguePage({
           {items.length} {items.length === 1 ? "item" : "items"}
         </p>
       </div>
+
+      {myProgressHref && (
+        <Link
+          href={myProgressHref}
+          className={buttonVariants({
+            variant: "tonal",
+            size: "sm",
+            className: "self-start",
+          })}
+        >
+          <CheckIcon aria-hidden className="size-4" />
+          Log my progress
+        </Link>
+      )}
 
       {/* For whoever leads a circle, and nobody else (D69). The cohort is an
           administrative reading, so the door to it is administrative too. */}

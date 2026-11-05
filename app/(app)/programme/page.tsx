@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
@@ -6,12 +7,15 @@ import { Badge, Card, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import {
+  CheckIcon,
   ChevronRightIcon,
   FlagIcon,
   LinkIcon,
   UsersIcon,
 } from "@/components/app/icons";
+import { ACTIVE_GROUP_COOKIE, groupHref } from "@/lib/group-href";
 import { localDateISO } from "@/lib/local-date";
+import { myProgressCircle } from "@/lib/my-progress-circle";
 import { readMcpConfig } from "@/lib/mcp-policy";
 import { levelsOf, programmeWindow } from "@/lib/roadmap";
 import { NewProgrammeButton } from "./new-programme";
@@ -51,31 +55,44 @@ export default async function ProgrammeHubPage() {
   const me = claims?.claims.sub as string | undefined;
   if (!me) redirect("/");
 
-  const [{ data: roadmaps }, { data: viewer }] = await Promise.all([
-    q(
-      "programmeHub.roadmaps",
-      supabase
-        .from("roadmaps")
-        // `level` alone — this screen counts the shape of a programme, it never
-        // renders an item. Pulling titles and cover art here would be a page of
-        // data for a line of text.
-        .select(
-          "id, name, starts_on, ends_on, published, roadmap_items(level), group_roadmaps(group_id)",
-        )
-        .order("starts_on", { ascending: false }),
-    ),
-    // WHICH READER this is, for the empty state and the footer — never as a
-    // filter. Read off `profiles` because the private schema is not exposed to
-    // PostgREST (0002), exactly as the report and the catalogue do it.
-    q(
-      "programmeHub.viewer (is_super_admin — copy only)",
-      supabase
-        .from("profiles")
-        .select("is_super_admin, timezone")
-        .eq("id", me)
-        .maybeSingle(),
-    ),
-  ]);
+  const [{ data: roadmaps }, { data: viewer }, { data: myCircles }] =
+    await Promise.all([
+      q(
+        "programmeHub.roadmaps",
+        supabase
+          .from("roadmaps")
+          // `level` alone — this screen counts the shape of a programme, it never
+          // renders an item. Pulling titles and cover art here would be a page of
+          // data for a line of text.
+          .select(
+            "id, name, starts_on, ends_on, published, roadmap_items(level), group_roadmaps(group_id)",
+          )
+          .order("starts_on", { ascending: false }),
+      ),
+      // WHICH READER this is, for the empty state and the footer — never as a
+      // filter. Read off `profiles` because the private schema is not exposed to
+      // PostgREST (0002), exactly as the report and the catalogue do it.
+      q(
+        "programmeHub.viewer (is_super_admin — copy only)",
+        supabase
+          .from("profiles")
+          .select("is_super_admin, timezone")
+          .eq("id", me)
+          .maybeSingle(),
+      ),
+      // The viewer's own circles, for the way to their own record on each row. The
+      // Roadmap tab depends on which circle is active, so this screen cannot
+      // assume it is there.
+      q(
+        "programmeHub.my circles (log my progress)",
+        supabase
+          .from("memberships")
+          .select("group_id, groups(name, group_roadmaps(roadmap_id))")
+          .eq("user_id", me),
+      ),
+    ]);
+  const activeGroupId =
+    (await cookies()).get(ACTIVE_GROUP_COOKIE)?.value ?? null;
 
   const isSuperAdmin = viewer?.is_super_admin ?? false;
   const todayISO = localDateISO(viewer?.timezone ?? "UTC");
@@ -147,6 +164,30 @@ export default async function ProgrammeHubPage() {
     }))
     .filter((g) => g.rows.length > 0);
 
+  const myProgressLink = (p: (typeof programmes)[number]) => {
+    const circle = p.published
+      ? myProgressCircle(myCircles ?? [], p.id, activeGroupId)
+      : null;
+    if (!circle) return null;
+    return (
+      <Link
+        href={`${groupHref(circle.groupId, "/roadmap")}?r=${p.id}`}
+        aria-label={`Log my progress on ${p.name}`}
+        className="flex min-h-11 items-center gap-2 px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover active:bg-surface-active"
+      >
+        <CheckIcon aria-hidden className="size-4 shrink-0" />
+        <span className="flex-1">Log my progress</span>
+        <span className="max-w-[40%] truncate text-xs font-normal text-muted-foreground">
+          {circle.name}
+        </span>
+        <ChevronRightIcon
+          aria-hidden
+          className="size-5 shrink-0 text-muted-foreground"
+        />
+      </Link>
+    );
+  };
+
   const years = (p: (typeof programmes)[number]) =>
     p.startsOn.slice(0, 4) === p.endsOn.slice(0, 4)
       ? p.startsOn.slice(0, 4)
@@ -217,6 +258,7 @@ export default async function ProgrammeHubPage() {
                         className="size-5 shrink-0 text-muted-foreground"
                       />
                     </Link>
+                    {myProgressLink(p)}
                     {/* Only for whoever leads a circle following it (D69). */}
                     {cohortReadable.has(p.id) && (
                       <Link

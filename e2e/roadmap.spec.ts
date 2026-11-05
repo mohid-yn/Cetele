@@ -870,3 +870,73 @@ test("an organiser sees who a roadmap reaches, and puts a circle on it", async (
     .click();
   await page.waitForURL("**/programme");
 });
+
+test("an organiser in a following circle can get from the hub to logging", async ({
+  page,
+}) => {
+  // The tab depends on the ACTIVE circle, so an organiser standing in a circle
+  // that follows nothing reaches the editor and a read-only preview. Those
+  // screens have to lead to the member's screen, which is the only place
+  // progress is recorded.
+  const organiser = `e2e-roadmap-org-member-${STAMP}@example.com`;
+  await signIn(page, organiser);
+  await makeSuperAdmin(organiser);
+
+  const following = await newCircle(page, `Following ${STAMP}`);
+  const optIn = page.getByRole("checkbox", {
+    name: "Islamic Development Program",
+  });
+  await expect(optIn).toBeVisible();
+  const written = page.waitForResponse(
+    (r) => r.request().method() === "POST" && r.ok(),
+  );
+  await optIn.check();
+  await written;
+  const followingId = following.match(/\/g\/([^/]+)\//)![1];
+
+  // A second circle, following nothing, is now the active one.
+  await newCircle(page, `Not following ${STAMP}`);
+
+  await page.goto("/programme");
+  await expect(
+    page.getByRole("link", { name: "Log my progress on Islamic Development" }),
+  ).toHaveAttribute("href", `/g/${followingId}/roadmap?r=${IDP}`);
+
+  await page.goto(`/programme/${IDP}`);
+  await page.getByRole("link", { name: "Log my progress" }).click();
+  await page.waitForURL(`**/g/${followingId}/roadmap?r=${IDP}`);
+
+  // And it is the real thing: the write lands, and survives a reload.
+  await page.getByRole("button", { name: /^Book/ }).click();
+  const book = page
+    .locator("ul > li")
+    .filter({ hasText: "Calling to Good" })
+    .first();
+  const saved = page.waitForResponse(
+    (r) => r.request().method() === "POST" && r.ok(),
+  );
+  await book.getByRole("button", { name: "Mark done" }).click();
+  await saved;
+  await page.reload();
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(book.getByRole("button", { name: "Undo" })).toBeVisible();
+
+  // The preview leads to the same place.
+  await page.goto(`/programme/${IDP}?view=member`);
+  await expect(
+    page.getByRole("link", { name: "Log my progress" }),
+  ).toHaveAttribute("href", `/g/${followingId}/roadmap?r=${IDP}`);
+
+  // An organiser in no following circle is offered nothing that cannot work.
+  await page.goto("/groups");
+  const elsewhere = `e2e-roadmap-org-solo-${STAMP}@example.com`;
+  await signIn(page, elsewhere);
+  await makeSuperAdmin(elsewhere);
+  await page.goto(`/programme/${IDP}`);
+  await expect(
+    page.getByRole("heading", { name: "Islamic Development Program" }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Log my progress" })).toHaveCount(
+    0,
+  );
+});

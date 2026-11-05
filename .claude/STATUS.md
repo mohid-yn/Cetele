@@ -112,6 +112,7 @@ Also open: should later levels genuinely lock (D57)? Does neglecting a newly joi
 
 **Known gaps in the product**
 
+- An organiser in no circle following a roadmap cannot log against it. They would have to join or create one. A direct "Take part" is an open idea and needs a migration.
 - Taps batch for 300ms on Today and 600ms on the count screen, so force-closing the app inside that window can lose the last tap.
 - A tap in the first moments of an account's very first visit belongs to the UTC day until the timezone sync finishes.
 - "Turn on" for reminders looks disabled in `pnpm dev` because no worker exists there. If a worker ever failed to register in production, it would stay disabled with no explanation.
