@@ -59,6 +59,8 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: "http://localhost:3000",
+    // EXPERIMENT: does the blank-screen failure need a service worker?
+    serviceWorkers: process.env.CI ? "block" : "allow",
     // CI keeps every failure's trace, including first tries: the stalls this
     // suite hits are intermittent, so a retry that passes shows nothing.
     trace: process.env.CI ? "retain-on-failure" : "on-first-retry",
