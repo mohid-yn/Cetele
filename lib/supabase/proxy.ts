@@ -102,9 +102,13 @@ export async function updateSession(request: NextRequest) {
     // /today is already the default post-sign-in landing — skip the noise.
     const url = request.nextUrl.clone();
     const dest = request.nextUrl.pathname;
+    // The approval page is the one destination that is useless without its query:
+    // `authorization_id` is the request being approved.
+    const next =
+      dest === "/oauth/consent" ? `${dest}${request.nextUrl.search}` : dest;
     url.pathname = "/";
     url.search = "";
-    if (dest !== "/" && dest !== "/today") url.searchParams.set("next", dest);
+    if (dest !== "/" && dest !== "/today") url.searchParams.set("next", next);
     return NextResponse.redirect(url);
   }
 

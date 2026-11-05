@@ -1,133 +1,148 @@
-# Cetele MCP server — plan
+# Cetele MCP server — plan and go-live runbook
 
-**Status (2026-11-06): step 2 done, step 3 not started, on branch `mohidkhanzada/mcp-server`.** The owner reached the
-fake-data route at `/api/mcp` from normal Claude, and it answered correctly. No Supabase setting has changed. **Do not add
-real data to the route until sign-in is in place, and ask the owner before turning on OAuth.**
+**Status (2026-11-06): built and on `staging`, OFF by default. Not on production.** Nothing has been tested with a real
+sign-in or a real database write, because neither is possible before go-live (§4). No Supabase setting has changed.
 
 Goal: an organiser asks Claude to build a roadmap, and Claude creates a **draft** programme in Cetele with its items and
 descriptions. A person reviews and publishes it in the app.
 
-The owner is new to MCP and asked to learn as it is built, so **explain each piece while building it, one step at a time.**
+The owner is new to MCP and asked to learn as it is built, so **explain each piece as you work on it.**
 
 ---
 
 ## 1. Decisions
 
-| Decision               | Choice                                                            | State                  |
-| ---------------------- | ----------------------------------------------------------------- | ---------------------- |
-| Where operators use it | Normal Claude and Cowork, no terminal                             | Owner's requirement    |
-| Hosting                | Remote server, a route in the existing Next app                   | Follows from the above |
-| Login                  | Browser sign-in and approval, like Vercel's MCP                   | Owner's idea, agreed   |
-| Auth system            | Supabase OAuth 2.1 server, with existing Google sign-in behind it | Owner agreed           |
-| What the AI can change | Drafts only, with no publish tool                                 | Proposed               |
-| Learning path          | Toy server first, before any real data                            | Proposed               |
+| Decision               | Choice                                                              | State                |
+| ---------------------- | ------------------------------------------------------------------- | -------------------- |
+| Where operators use it | Normal Claude and Cowork, no terminal                               | Owner's requirement  |
+| Hosting                | A route in the existing Next app (`/api/mcp`)                       | Follows from above   |
+| Login                  | Browser sign-in and approval                                        | Owner's idea         |
+| Auth system            | Supabase OAuth 2.1 server, with existing Google sign-in behind it   | Owner agreed         |
+| Rollout                | Real tools, shipped behind flags and tested on production           | Owner's decision     |
+| What the AI can change | Drafts only, with no publish tool. It can remove items from a draft | Built, not confirmed |
+| Client registration    | One pre-registered client, with open registration off               | Built, not confirmed |
 
-**Why a remote server:** Claude connects to connectors from Anthropic's cloud, including in Desktop and Cowork. A server on
-someone's laptop cannot be reached that way.
+**Why a remote server:** Claude connects to connectors from Anthropic's cloud, including in Desktop and Cowork.
 
-**Why Supabase OAuth and not GCP:** they do different jobs. Google proves who the person is. Supabase issues the token that
-Cetele's database accepts, because every rule depends on the Supabase identity (`auth.uid()`). Using Google alone would
-mean building our own token system. Moving auth to GCP was already rejected on 2026-08-15, see
-[`HOSTING_MIGRATION.md`](HOSTING_MIGRATION.md) §1. No Google Cloud change is expected.
+**Why Supabase OAuth and not GCP:** Google proves who the person is. Supabase issues the token that Cetele's database
+accepts, because every rule depends on the Supabase identity (`auth.uid()`). Moving auth to GCP was already rejected on
+2026-08-15, see [`HOSTING_MIGRATION.md`](HOSTING_MIGRATION.md) §1. No Google Cloud change is expected.
 
 ---
 
 ## 2. How it works
 
 ```
-1. Operator adds the Cetele URL in Claude: Customize > Connectors, then Connect
-2. A browser tab opens on Cetele's approval page (Google sign-in first if needed)
-3. Operator approves. Supabase issues a token, and Claude stores and renews it
+1. Operator adds the Cetele URL in Claude and clicks Connect
+2. A browser tab opens on /oauth/consent (Google sign-in first if needed)
+3. Operator clicks Allow. Supabase issues a token, and Claude stores and renews it
 4. Each tool call reaches /api/mcp with that token
-5. The route calls the existing database function as that operator
-6. The function applies its rules and writes the audit log
+5. The route checks the token and the organiser flag, then calls the RPC as that person
+6. The RPC applies its rules and writes the audit log
 ```
 
-**The route stays a thin relay, like `authoring-actions.ts`.** Rules stay in the RPCs. Never use the service-role key here:
-it would bypass the organiser check and lose the real actor in the audit log.
+| File                                            | Job                                                 |
+| ----------------------------------------------- | --------------------------------------------------- |
+| `lib/mcp-policy.ts`                             | Flags and refusal rules. Pure, and unit tested      |
+| `lib/mcp-tools.ts`                              | The tools. Thin relays to the RPCs, and unit tested |
+| `lib/mcp-auth.ts`                               | Token and organiser check on every request          |
+| `app/api/mcp/route.ts`                          | The MCP endpoint                                    |
+| `app/api/mcp/oauth-protected-resource/route.ts` | Tells Claude which login system to use              |
+| `app/oauth/consent/`                            | The approval page                                   |
+
+**Never use the service-role key here.** It would bypass the organiser check and lose the real actor in the audit log.
+
+### Tools
+
+| Tool                    | Calls                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| `list_programmes`       | Reads `roadmaps`                                                                   |
+| `get_programme`         | Reads items, requirements and rewards, and reports `programmeReadiness`            |
+| `create_programme`      | `create_roadmap`                                                                   |
+| `save_item`             | `create_roadmap_item` or `set_roadmap_item_shape`, then `set_roadmap_item_content` |
+| `delete_item`           | `delete_roadmap_item`                                                              |
+| `set_level_requirement` | `set_roadmap_level_requirement`                                                    |
+| `save_reward`           | `upsert_roadmap_reward`                                                            |
+
+**Left out on purpose:** publish, delete programme, circle assignment, and anything that reads progress, members or circles.
 
 ---
 
-## 3. Planned tools
+## 3. Flags and blocks
 
-| Tool                    | Calls                                                                              | Notes                                                                                                     |
-| ----------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `list_programmes`       | read `roadmaps`                                                                    | Programme details only                                                                                    |
-| `get_programme`         | read items, requirements and rewards                                               | Lets Claude check its own work                                                                            |
-| `create_programme`      | `create_roadmap`                                                                   | Always starts unpublished                                                                                 |
-| `save_item`             | `create_roadmap_item` or `set_roadmap_item_shape`, then `set_roadmap_item_content` | Same order as `saveRoadmapItem`. Must return the id even on failure, so a retry cannot duplicate the item |
-| `set_level_requirement` | `set_roadmap_level_requirement`                                                    | Minimum total for a budgeted category                                                                     |
-| `save_reward`           | `upsert_roadmap_reward`                                                            | Threshold, label and description                                                                          |
-| `check_readiness`       | `programmeReadiness` in `lib/programme-readiness.ts`                               | Reports what would block publishing                                                                       |
+All server-only environment variables. Each fails closed, and a change needs a redeploy.
 
-**Left out on purpose:** publish, delete programme, circle assignment, and anything that reads progress, members or
-circles. This also keeps member data away from the AI provider.
+| Flag                     | Effect                                                                   |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `MCP_ENABLED`            | Must be exactly `true`, or the routes return 404 and approval is refused |
+| `MCP_WRITES_ENABLED`     | Must be exactly `true` as well, or write tools are not offered           |
+| `MCP_ALLOWED_CLIENT_IDS` | Comma list of Supabase OAuth client ids. Empty refuses everyone          |
 
-**Input rules Claude must be told**, in the tool descriptions:
+| Block                                                                | Stops                                                 | Enforced in         |
+| -------------------------------------------------------------------- | ----------------------------------------------------- | ------------------- |
+| Signature and expiry check on every request                          | Forged or expired tokens                              | `lib/mcp-auth.ts`   |
+| `client_id` must be on the allowlist                                 | App session tokens and other OAuth clients            | `lib/mcp-policy.ts` |
+| Organiser check on every request                                     | Members, and organisers who have since lost the role  | `lib/mcp-auth.ts`   |
+| Approval only for organisers                                         | Members being issued a token through the page         | `app/oauth/consent` |
+| Approval only for the allowlisted client and Claude's exact callback | Lookalike apps and redirects                          | `lib/mcp-policy.ts` |
+| Writes refuse a published programme, and an item from one            | AI changes reaching members                           | `lib/mcp-tools.ts`  |
+| No publish tool                                                      | Claude publishing                                     | `lib/mcp-tools.ts`  |
+| Input limits, and http(s) links only                                 | Malformed or oversized input                          | `lib/mcp-tools.ts`  |
+| Existing RPC rules                                                   | Non-organisers, frozen fields, deleting recorded work | Database            |
 
-- `category` is one of `book`, `quran`, `quran_studies`, `memorisation`, `listening`.
-- `level` and `target` are above 0, and a target of 1 means a yes/no item.
-- `unit` is a plural such as "minutes" or "juz", and must agree across a budgeted category.
-- `url` must be `http://` or `https://`.
+### Remaining risks
 
----
-
-## 4. Build steps
-
-| #   | Step            | What happens                                                                  | Done when                                          |
-| --- | --------------- | ----------------------------------------------------------------------------- | -------------------------------------------------- |
-| 1   | Toy server      | Local, one fake tool, connected to Claude Code. Throwaway, for learning       | Owner has watched Claude call the tool             |
-| 2   | Hosted test     | Same fake tool on a preview URL                                               | Works from normal Claude                           |
-| 3   | Login           | Turn on OAuth, build the approval page at `/oauth/consent`, wire token checks | A real sign-in reaches the route as that user      |
-| 4   | Security checks | Answer §5 "Check during the build"                                            | Each one answered and written down here            |
-| 5   | Read tools      | `list_programmes`, `get_programme`                                            | Claude reads a real programme                      |
-| 6   | Write tools     | The rest of §3                                                                | A draft is created, and a non-organiser is refused |
-| 7   | Operator trial  | A real operator builds a draft in Cowork or normal Claude                     | Draft reviewed and published in the app            |
-
-**Before step 3, ask the owner.** Turning on OAuth changes the production Supabase project, because staging shares that database.
-
-Normal process applies: a Linear issue, a feature branch off `staging`, and green checks. Linear needs the owner to
-re-authenticate through `/mcp` first. Pure logic gets `test:unit` tests.
-
-**Known code touchpoints**
-
-- `lib/supabase/proxy.ts`: add `/api/mcp` and the discovery path to `PUBLIC_PATHS`. Otherwise an unauthenticated call is
-  sent to the login page, and Claude never sees the 401 that starts sign-in. Also check `proxy.ts`'s matcher.
-- `/oauth/consent`: a signed-out operator must return to this page after Google sign-in, with the request intact. Build it
-  from `components/ui` and the design tokens, and judge it at 390px.
-- `supabase/config.toml`: `[auth.oauth_server]` exists with `enabled = false`, and its path is already `/oauth/consent`.
-- New packages: the MCP SDK, and `zod` (not currently a direct dependency).
-- Writes should refresh the programme screens, like `revalidateProgramme()` does.
+| Risk                                               | Position                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **The token also works against Supabase directly** | It carries the person's normal permissions, and scopes do not limit database access. So the drafts-only rule binds Claude's tools, not a stolen token, which could publish as that organiser. Exposure matches a stolen app session, held by Anthropic rather than a browser. A database-level limit on `client_id` is possible, but it is a production migration on every request and could not be tested here (no Docker), so it was not built |
+| Token audience                                     | Tokens carry `aud: authenticated`, so the spec's audience check cannot be met as written. `client_id` is the substitute. Forwarding the token to Supabase follows Supabase's own recommended setup                                                                                                                                                                                                                                               |
+| AI invents a hadith, source or citation            | Server instructions forbid it, and a person reviews before publishing. This is guidance, not a technical block, so **review matters**                                                                                                                                                                                                                                                                                                            |
+| Beta                                               | Supabase's OAuth server is in beta, so behaviour or pricing may change                                                                                                                                                                                                                                                                                                                                                                           |
+| Hosting move to Cloudflare (D65)                   | The route moves with the app. Re-test if that goes ahead                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ---
 
-## 5. Risks and open questions
+## 4. Tested so far (2026-11-06)
 
-**Check during the build**
+| Check                                                                                          | Result                                |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------- |
+| Policy and tool unit tests (`pnpm test:unit`), with a fake database                            | Pass                                  |
+| Production build, flags off: route and metadata                                                | 404                                   |
+| Production build, flags on: no token, Basic auth, garbage                                      | 401, with sign-in pointer on no token |
+| Signed-out `/oauth/consent` keeps `authorization_id`, and other routes are unchanged           | Pass                                  |
+| Six forged tokens against production's real public keys, including one signed with a wrong key | All refused                           |
+| Approval page at 390px, ask state                                                              | Checked by eye                        |
+| Normal Claude reaching a preview, using an earlier fake tool and a bypass secret               | Worked (owner)                        |
 
-| Question                                           | Why it matters                                                                                                                                                                                                                                                                                                                            |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| How powerful is the issued token?                  | It probably carries the operator's full permissions, so leaving out a tool is not a hard limit. `client_id` checks in the database may narrow it                                                                                                                                                                                          |
-| How does Supabase's setup fit the MCP token rules? | The spec requires tokens issued for this server and forbids passing them on. Supabase's MCP page does not address audience                                                                                                                                                                                                                |
-| Does Supabase's OAuth server still count as beta?  | Its docs described it that way when checked, so behaviour may change                                                                                                                                                                                                                                                                      |
-| Where can the real sign-in be tested?              | Claude cannot reach previews or staging without a bypass secret, and the approval page is built from the Site URL plus a path, so sign-in probably lands on production. Proposed: ship the page and a login-required route (still fake data) through staging to production, then turn on OAuth and test there. Needs the owner's approval |
-| Which client method does Claude use with Supabase? | Claude offers its published identity, automatic registration, or our own client. Prefer the narrowest that works                                                                                                                                                                                                                          |
+**Not tested, and only testable at go-live:** a real sign-in, the approve and deny calls, any real database read or write
+through the tools, a non-organiser being refused with a real token, and a real app session being refused. Treat these as
+unproven until §5 is complete.
 
-**Known risks**
+---
 
-| Risk                                            | Handling                                                                                                    |
-| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| AI invents a hadith, source or citation         | Manual publishing, and tool descriptions telling Claude to use only sources the operator provides           |
-| Automatic registration lets any client register | Clear approval page and a way to revoke. Writes still need an organiser                                     |
-| Test data lands in production                   | Staging and previews use the production database, so label test drafts and delete them afterwards           |
-| Editing a live programme                        | Proposed: tools refuse published programmes in v1. This guards against mistakes and is not a security limit |
-| Hosting move to Cloudflare (D65)                | The route moves with the app. Re-test if that move goes ahead                                               |
+## 5. Go-live runbook
 
-**Owner questions, none blocking step 1**
+Each step needs the owner. Stop and turn `MCP_ENABLED` off if anything looks wrong. Claude cannot reach previews or
+staging without a bypass secret, which is why the real test happens on production.
 
-1. Who are the operators, and which Claude plan are they on? This decides who adds the connector (table below).
-2. Should Claude be able to remove an item from a draft? Proposed: yes for drafts only, as it will make mistakes.
-3. Is drafts-only right for v1?
+| #   | Step                                                                                                                                                                                   | Check                                              |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| 1   | **Promote to `main`.** Flags are unset, so the feature stays off                                                                                                                       | `/api/mcp` returns 404 on production               |
+| 2   | **Supabase:** Authentication > OAuth Server. Enable it, set the path to `/oauth/consent`, and leave dynamic registration **off**. Confirm the Site URL is the production URL           | Normal Google sign-in still works                  |
+| 3   | **Supabase:** Authentication > OAuth Apps > Add. Name `Claude`, type **Public**, redirect URI `https://claude.ai/api/mcp/auth_callback`. Copy the client id                            | Discovery URL stops returning 404                  |
+| 4   | **Vercel production env:** `MCP_ALLOWED_CLIENT_IDS=<client id>` and `MCP_ENABLED=true`. Redeploy. Leave writes off                                                                     | `/api/mcp` POST with no token returns 401          |
+| 5   | **Claude:** add a custom connector with `https://cetele-sable.vercel.app/api/mcp`, choose **Use your own OAuth client**, and enter the client id. Connect as an organiser, and approve | Claude lists the real programmes                   |
+| 6   | **Refusal tests:** connect with a non-organiser account                                                                                                                                | Refused at the page, with no way to approve        |
+| 7   | **Vercel:** `MCP_WRITES_ENABLED=true`. Redeploy                                                                                                                                        | Write tools appear after reconnecting              |
+| 8   | **Ask Claude to build a test draft.** Check it in `/programme`, try to get Claude to edit a published programme, then delete the draft in the app                                      | Draft is unpublished and refused edits are refused |
+| 9   | **Operator trial** in Cowork or normal Claude                                                                                                                                          | Draft reviewed and published in the app            |
+
+**To turn it off:** set `MCP_ENABLED` to anything else and redeploy. Supabase's OAuth server can also be disabled.
+
+**Owner questions**
+
+1. Who are the operators, and which Claude plan are they on? On Team or Enterprise, an org owner adds the connector.
+2. Confirm drafts-only and draft item removal.
 
 | Claude plan      | Normal Claude             | Cowork                          | Who adds the connector                    |
 | ---------------- | ------------------------- | ------------------------------- | ----------------------------------------- |
@@ -135,29 +150,16 @@ re-authenticate through `/mcp` first. Pure logic gets `test:unit` tests.
 | Pro, Max, Ultra  | Yes                       | Yes                             | The operator                              |
 | Team, Enterprise | Yes                       | Yes (Enterprise: owner enables) | An org owner, then each operator connects |
 
-**Fallback if login stalls:** use a temporary personal key to build and test the tools. Claude's custom request headers are in
-limited beta, so this may only work in Claude Code. It is not the final setup for operators.
+**Not set up yet:** Claude Code as a client. Its callback is a local address on a varying port, which the approval page refuses.
 
 ---
 
-## 6. Already checked (2026-11-05)
-
-| Item                       | Result                                                                                                                                                                                                                                                                                                                       |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Project token signing      | ES256 on the public JWKS, which the OAuth server needs                                                                                                                                                                                                                                                                       |
-| Vercel preview access      | Previews are behind Vercel Authentication: a POST to `/api/mcp` on the branch URL returns 401, and staging also refuses (302). Claude connects from the cloud, so it is blocked too. Do not turn protection off, as staging reads the production database. Testing needs a bypass secret, using `x-vercel-protection-bypass` |
-| Normal Claude to preview   | Works with the secret in the connector URL as a query parameter. Tested 2026-11-06 by the owner, with a dedicated secret meant to be deleted afterwards                                                                                                                                                                      |
-| OAuth server on production | Not on: `/.well-known/oauth-authorization-server/auth/v1` returns 404                                                                                                                                                                                                                                                        |
-| Authoring RPCs             | Organiser-only and audited, granted to `authenticated` (migration 0030)                                                                                                                                                                                                                                                      |
-| Drafts                     | `create_roadmap` always inserts `published = false`                                                                                                                                                                                                                                                                          |
-| Readiness                  | Client-only rule. `set_roadmap_published` accepts an empty roadmap                                                                                                                                                                                                                                                           |
-
-## 7. References
+## 6. References
 
 - [Claude: add a connector by URL](https://claude.com/docs/connectors/custom/remote-mcp)
-- [Claude: build an MCP server](https://claude.com/docs/connectors/building/index.md)
 - [Claude: connector authentication](https://claude.com/docs/connectors/building/authentication.md)
 - [Supabase: MCP authentication](https://supabase.com/docs/guides/auth/oauth-server/mcp-authentication)
 - [Supabase: OAuth 2.1 server, getting started](https://supabase.com/docs/guides/auth/oauth-server/getting-started)
+- [Supabase: token security](https://supabase.com/docs/guides/auth/oauth-server/token-security)
 - [Supabase: deploy MCP servers](https://supabase.com/docs/guides/ai-tools/byo-mcp)
 - [MCP authorization spec](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)

@@ -7,7 +7,7 @@
 > rewrite) · [`STATUS-2026-07-16-full.md`](history/STATUS-2026-07-16-full.md) (D1–D48 in full, including superseded ones).
 > Section numbers are stable, because code comments and docs cite them.
 
-_Last updated: 2026-11-05 · Phase: **live in production, nothing in flight.**_
+_Last updated: 2026-11-06 · Phase: **live in production. The MCP server is on `staging`, waiting on go-live.**_
 
 ---
 
@@ -57,7 +57,7 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Nobody has signed in with Google or used a phone on this release, and the staging deployment was not clicked through. Prod's latest recorded Google sign-in is 2026-08-25, so this upgrade has not yet seen one.
 2. **Owner: run `/mcp` to re-authenticate Linear**, then create issues for the untracked work.
 3. Work through the rest of "What's open". Nothing there blocks anything.
-4. **MCP server for organisers:** planned, not started. Resume from [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md), at its step 1 (toy server). The owner is learning MCP as it is built, so go one step at a time.
+4. **MCP server for organisers:** built and on `staging`, off by default, not on production. Real sign-in and real writes are untested until go-live. Resume from the runbook in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §5.
 
 ### What's open
 
