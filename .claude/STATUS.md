@@ -23,7 +23,7 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 | Item         | State                                                                                                 |
 | ------------ | ----------------------------------------------------------------------------------------------------- |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `0febd7c`, serving Next 16.4.5  |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `e7222c4`, serving Next 16.4.5  |
 | Staging      | `cetele-git-staging-university-services.vercel.app`. Ahead of `main` by docs commits only             |
 | Migrations   | **39 in the repo, the same 39 on prod** (compared against the Supabase migration list). No drift      |
 | Git          | Clean. No feature branches, worktrees or stashes                                                      |
@@ -57,7 +57,7 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Nobody has signed in with Google or used a phone on this release, and the staging deployment was not clicked through. Prod's latest recorded Google sign-in is 2026-08-25, so this upgrade has not yet seen one.
 2. **Owner: run `/mcp` to re-authenticate Linear**, then create issues for the untracked work.
 3. Work through the rest of "What's open". Nothing there blocks anything.
-4. **MCP server for organisers:** live on production with writes on, and a test draft has been built from normal Claude. Remaining checks are in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §4 and §5.
+4. **MCP server for organisers:** live on production with writes on. Tested by the owner from normal Claude, including the drafts-only refusal. Next is an operator trial. Remaining checks are in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §4. The seven-day expiry first applies on 2026-11-12.
 
 ### What's open
 

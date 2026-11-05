@@ -1,6 +1,6 @@
 # Cetele MCP server — plan and go-live runbook
 
-**Status (2026-11-06): live on production with writes on. An organiser connected from normal Claude and built a test draft, and the audit log shows the changes under their account. A follow-up on `staging` fixes two bugs and adds the setup page at `/programme/connect`.**
+**Status (2026-11-06): live on production at `e7222c4` with writes on. An organiser connected from normal Claude, built a test draft, read the published programme, and was refused when editing it. Next: an operator trial, then ChatGPT if wanted.**
 
 Goal: an organiser asks Claude to build a roadmap, and Claude creates a **draft** programme in Cetele with its items and
 descriptions. A person reviews and publishes it in the app.
@@ -119,12 +119,11 @@ All server-only environment variables. Each fails closed, and a change needs a r
 
 **Writes on production (2026-11-06):** Claude created a draft, two items and a reward, and `audit_log` recorded all seven changes under the organiser.
 
-**Bugs that test found, fixed on `staging`:**
+**Drafts-only guard on production (2026-11-06):** asked to rename an item in the published programme, the tool returned "This programme is published, so it can only be changed in the Cetele app." The database confirmed no change.
 
-- Zod's `uuid()` refused the seeded programme's id, which Postgres accepts. So that programme could not be read, and the "edit a published programme" test was refused by validation, never reaching the drafts-only guard. **Re-run that test.**
-- `get_programme` counted every circle, not those following, which hid the "no circles" note.
+**Bugs found by testing, fixed and confirmed on production:** Zod's `uuid()` refused the seeded programme's id, and `get_programme` counted every circle instead of those following.
 
-**Not tested yet:** the drafts-only guard on production, Cancel, a valid token from a non-organiser or an app session being refused at the route, the seven-day expiry on a real session, and ChatGPT.
+**Not tested yet:** the setup page's copy buttons, Cancel, a valid token from a non-organiser or an app session being refused at the route, the seven-day expiry on a real session (first due 2026-11-12), an operator other than the owner, Cowork, and ChatGPT.
 
 ---
 
