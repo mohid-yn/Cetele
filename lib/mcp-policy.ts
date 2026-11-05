@@ -5,6 +5,13 @@
  * an unset flag, an empty allowlist or a missing claim all mean no.
  */
 
+/**
+ * The client registered for Claude in Supabase, shown on the setup page. Public by
+ * design: Claude sends it openly, and it has no secret. Registering it is not enough
+ * to connect, as `MCP_ALLOWED_CLIENT_IDS` must also list it.
+ */
+export const CLAUDE_CLIENT_ID = "aa300035-9e96-4d37-ad60-fd3a761a738a";
+
 export type McpConfig = {
   enabled: boolean;
   writesEnabled: boolean;

@@ -8,6 +8,8 @@ const DRAFT = "00000000-0000-4000-8000-000000000001";
 const LIVE = "00000000-0000-4000-8000-000000000002";
 const ITEM = "00000000-0000-4000-8000-000000000003";
 const NEW_ITEM = "00000000-0000-4000-8000-000000000004";
+// Valid in Postgres, but without RFC version bits, like the seeded programme.
+const SEEDED = "00000000-0000-0000-0000-0000000000f1";
 
 type Row = Record<string, unknown>;
 type Call = { fn: string; args: Row };
@@ -35,7 +37,10 @@ function fakeSupabase(tables: Record<string, Row[]>, failing: string[] = []) {
     if (failing.includes(fn)) {
       return { data: null, error: { message: `${fn} failed` } };
     }
-    return { data: fn === "roadmap_circles" ? [] : NEW_ITEM, error: null };
+    return {
+      data: fn === "roadmap_circles" ? (tables.circles ?? []) : NEW_ITEM,
+      error: null,
+    };
   };
   return { calls, client: { from, rpc } };
 }
@@ -44,6 +49,7 @@ const tables = (): Record<string, Row[]> => ({
   roadmaps: [
     { id: DRAFT, name: "Draft", ends_on: "2099-01-01", published: false },
     { id: LIVE, name: "Live", ends_on: "2099-01-01", published: true },
+    { id: SEEDED, name: "Seeded", ends_on: "2099-01-01", published: true },
   ],
   roadmap_items: [
     {
@@ -140,6 +146,15 @@ describe("the drafts-only guard", () => {
       assert.equal(writes(), 0);
     });
   }
+
+  it("reaches the guard for an id without RFC version bits", async () => {
+    const fake = fakeSupabase(tables());
+    const { call } = await connect(fake);
+    const result = await call("save_item", { programmeId: SEEDED, ...item });
+    assert.equal(result.isError, true);
+    assert.match(result.text, /published/);
+    assert.deepEqual(fake.calls, []);
+  });
 
   it("refuses a published item reached by naming a draft", async () => {
     const fake = fakeSupabase(tables());
@@ -278,6 +293,44 @@ describe("save_item", () => {
 });
 
 describe("get_programme", () => {
+  it("reads a programme whose id has no RFC version bits", async () => {
+    const { call } = await connect(fakeSupabase(tables()));
+    const result = await call("get_programme", { programmeId: SEEDED });
+    assert.equal(result.isError, false);
+    assert.equal(JSON.parse(result.text).name, "Seeded");
+  });
+
+  it("counts only the circles on this programme, and hides their names", async () => {
+    const data = tables();
+    data.circles = [
+      {
+        group_id: "g1",
+        name: "Secret circle",
+        member_count: 3,
+        following: false,
+      },
+    ];
+    const notFollowed = await connect(fakeSupabase(data));
+    const first = await notFollowed.call("get_programme", {
+      programmeId: DRAFT,
+    });
+    assert.ok(
+      JSON.parse(first.text).readiness.notes.some(
+        (note: { id: string }) => note.id === "no-circles",
+      ),
+    );
+    assert.doesNotMatch(first.text, /Secret circle/);
+
+    data.circles[0].following = true;
+    const followed = await connect(fakeSupabase(data));
+    const second = await followed.call("get_programme", { programmeId: DRAFT });
+    assert.ok(
+      !JSON.parse(second.text).readiness.notes.some(
+        (note: { id: string }) => note.id === "no-circles",
+      ),
+    );
+  });
+
   it("reports publishing blockers and leaves out circle names", async () => {
     const { call } = await connect(fakeSupabase(tables()));
     const result = await call("get_programme", { programmeId: DRAFT });

@@ -1,6 +1,6 @@
 # Cetele MCP server — plan and go-live runbook
 
-**Status (2026-11-06): live on production with read tools only. The owner signed in as an organiser from normal Claude and listed the real programmes. Runbook steps 0 to 5 are done, and writes are still off. Resume at step 6.** No write through the tools has been tested yet.
+**Status (2026-11-06): live on production with writes on. An organiser connected from normal Claude and built a test draft, and the audit log shows the changes under their account. A follow-up on `staging` fixes two bugs and adds the setup page at `/programme/connect`.**
 
 Goal: an organiser asks Claude to build a roadmap, and Claude creates a **draft** programme in Cetele with its items and
 descriptions. A person reviews and publishes it in the app.
@@ -47,6 +47,7 @@ accepts, because every rule depends on the Supabase identity (`auth.uid()`). Mov
 | `lib/mcp-auth.ts`                               | Token and organiser check on every request          |
 | `app/api/mcp/route.ts`                          | The MCP endpoint                                    |
 | `app/api/mcp/oauth-protected-resource/route.ts` | Tells Claude which login system to use              |
+| `app/(app)/programme/connect/`                  | Setup steps for organisers                          |
 | `app/oauth/consent/`                            | The approval page                                   |
 
 **Never use the service-role key here.** It would bypass the organiser check and lose the real actor in the audit log.
@@ -116,7 +117,14 @@ All server-only environment variables. Each fails closed, and a change needs a r
 
 **Confirmed on production by the owner:** a non-organiser reaches "Only organisers can connect" with no Allow button, Use a different account leads on to approval, and an organiser lists real programmes in normal Claude.
 
-**Not tested yet:** any write through the tools, Cancel, a valid token from a non-organiser or an app session being refused at the route, the seven-day expiry on a real session, and ChatGPT.
+**Writes on production (2026-11-06):** Claude created a draft, two items and a reward, and `audit_log` recorded all seven changes under the organiser.
+
+**Bugs that test found, fixed on `staging`:**
+
+- Zod's `uuid()` refused the seeded programme's id, which Postgres accepts. So that programme could not be read, and the "edit a published programme" test was refused by validation, never reaching the drafts-only guard. **Re-run that test.**
+- `get_programme` counted every circle, not those following, which hid the "no circles" note.
+
+**Not tested yet:** the drafts-only guard on production, Cancel, a valid token from a non-organiser or an app session being refused at the route, the seven-day expiry on a real session, and ChatGPT.
 
 ---
 

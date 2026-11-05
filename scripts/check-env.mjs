@@ -19,6 +19,14 @@ import { readFileSync } from "node:fs";
 /** Each key with the reason it is load-bearing, printed on failure. */
 const REQUIRED = [
   [
+    "MCP_ENABLED",
+    "the MCP route and setup page return 404 or a notice without it, which mcp-connect.spec tests",
+  ],
+  [
+    "MCP_ALLOWED_CLIENT_IDS",
+    "the setup page only shows when this lists CLAUDE_CLIENT_ID (lib/mcp-policy.ts)",
+  ],
+  [
     "NEXT_PUBLIC_SUPABASE_URL",
     "the browser client and e2e's own admin client both read it",
   ],

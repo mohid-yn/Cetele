@@ -5,8 +5,14 @@ import { q } from "@/lib/db-log";
 import { Badge, Card, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
-import { ChevronRightIcon, FlagIcon, UsersIcon } from "@/components/app/icons";
+import {
+  ChevronRightIcon,
+  FlagIcon,
+  LinkIcon,
+  UsersIcon,
+} from "@/components/app/icons";
 import { localDateISO } from "@/lib/local-date";
+import { readMcpConfig } from "@/lib/mcp-policy";
 import { levelsOf, programmeWindow } from "@/lib/roadmap";
 import { NewProgrammeButton } from "./new-programme";
 
@@ -231,6 +237,27 @@ export default async function ProgrammeHubPage() {
             </ul>
           </section>
         ))
+      )}
+
+      {isSuperAdmin && readMcpConfig(process.env).enabled && (
+        <Card className="overflow-hidden">
+          <Link
+            href="/programme/connect"
+            className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-hover active:bg-surface-active"
+          >
+            <LinkIcon
+              aria-hidden
+              className="size-5 shrink-0 text-muted-foreground"
+            />
+            <span className="min-w-0 flex-1 font-semibold text-foreground">
+              Build with Claude
+            </span>
+            <ChevronRightIcon
+              aria-hidden
+              className="size-5 shrink-0 text-muted-foreground"
+            />
+          </Link>
+        </Card>
       )}
     </Screen>
   );

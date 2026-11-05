@@ -35,7 +35,10 @@ const CATEGORY_VALUES = [
   "listening",
 ] as const satisfies readonly RoadmapCategory[];
 
-const id = z.string().uuid();
+// `guid`, not `uuid`: Zod's uuid also requires the RFC version bits and Postgres does
+// not. The seeded programme's id (00000000-...-f1) is valid in the database, and
+// `uuid` refused it.
+const id = z.guid();
 const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the format YYYY-MM-DD");
@@ -160,8 +163,10 @@ export function createMcpServer({
         rewards: rewardRows,
         endsOn: programme.data.ends_on,
         todayISO: new Date().toISOString().slice(0, 10),
-        // Only the count is used. Circle names never reach the AI.
-        circles: (circles.data ?? []).length,
+        // `roadmap_circles` lists every circle, with a flag for those on this
+        // programme. Only the count is used, so circle names never reach the AI.
+        circles: (circles.data ?? []).filter((circle) => circle.following)
+          .length,
       });
 
       return json({

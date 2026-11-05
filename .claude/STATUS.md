@@ -7,7 +7,7 @@
 > rewrite) · [`STATUS-2026-07-16-full.md`](history/STATUS-2026-07-16-full.md) (D1–D48 in full, including superseded ones).
 > Section numbers are stable, because code comments and docs cite them.
 
-_Last updated: 2026-11-06 · Phase: **live in production. The MCP server is live with read tools only.**_
+_Last updated: 2026-11-06 · Phase: **live in production. The MCP server is live for organisers.**_
 
 ---
 
@@ -28,7 +28,7 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 | Migrations   | **39 in the repo, the same 39 on prod** (compared against the Supabase migration list). No drift      |
 | Git          | Clean. No feature branches, worktrees or stashes                                                      |
 | CI           | Green on both `main` and `staging`                                                                    |
-| Tests        | Unit 146 · pgTAP 814 across 23 suites · e2e 82 across 20 specs                                        |
+| Tests        | Unit 150 · pgTAP 814 across 23 suites · e2e 84 across 21 specs                                        |
 | Local stack  | Docker is not available in this WSL distro now. `supabase start` needs it, and downloads about 3.5 GB |
 | Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue        |
 | Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                 |
@@ -57,7 +57,7 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Nobody has signed in with Google or used a phone on this release, and the staging deployment was not clicked through. Prod's latest recorded Google sign-in is 2026-08-25, so this upgrade has not yet seen one.
 2. **Owner: run `/mcp` to re-authenticate Linear**, then create issues for the untracked work.
 3. Work through the rest of "What's open". Nothing there blocks anything.
-4. **MCP server for organisers:** live on production with read tools only, and an organiser has connected from normal Claude. Writes are off and untested. Resume at step 6 of the runbook in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §5.
+4. **MCP server for organisers:** live on production with writes on, and a test draft has been built from normal Claude. Remaining checks are in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §4 and §5.
 
 ### What's open
 
@@ -199,7 +199,7 @@ components/{ui,app,motion,theme}           primitives · shared app components �
 lib/                                       supabase/ · push/ · use-*.ts · groups-store · viewer-store · brand.ts
                                            goals.ts · shares.ts · task-links.ts · quick-count.ts · roadmap.ts
                                            programme-readiness.ts · sound.ts · haptics.ts · db-log.ts
-supabase/migrations/ (39) · supabase/tests/ (23 pgTAP) · e2e/ (20 specs + helpers.ts)
+supabase/migrations/ (39) · supabase/tests/ (23 pgTAP) · e2e/ (21 specs + helpers.ts)
 public/splash/ (gen-splash.mjs) · public/icons/ (gen-icons.mjs)
 scripts/                                   build_prd_docx.py · check-env.mjs · ci-build.sh · dev-fixture.sql
 research/                                  landscape · motivation and reward · feature recommendations
