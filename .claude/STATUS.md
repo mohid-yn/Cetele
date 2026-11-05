@@ -7,7 +7,7 @@
 > rewrite) · [`STATUS-2026-07-16-full.md`](history/STATUS-2026-07-16-full.md) (D1–D48 in full, including superseded ones).
 > Section numbers are stable, because code comments and docs cite them.
 
-_Last updated: 2026-11-06 · Phase: **live in production. The MCP server is deployed but switched off, waiting on go-live.**_
+_Last updated: 2026-11-06 · Phase: **live in production. The MCP server is live with read tools only.**_
 
 ---
 
@@ -23,7 +23,7 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 | Item         | State                                                                                                 |
 | ------------ | ----------------------------------------------------------------------------------------------------- |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `840f72e`, serving Next 16.4.5  |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `0febd7c`, serving Next 16.4.5  |
 | Staging      | `cetele-git-staging-university-services.vercel.app`. Ahead of `main` by docs commits only             |
 | Migrations   | **39 in the repo, the same 39 on prod** (compared against the Supabase migration list). No drift      |
 | Git          | Clean. No feature branches, worktrees or stashes                                                      |
@@ -57,7 +57,7 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Nobody has signed in with Google or used a phone on this release, and the staging deployment was not clicked through. Prod's latest recorded Google sign-in is 2026-08-25, so this upgrade has not yet seen one.
 2. **Owner: run `/mcp` to re-authenticate Linear**, then create issues for the untracked work.
 3. Work through the rest of "What's open". Nothing there blocks anything.
-4. **MCP server for organisers:** deployed to production and switched off (`/api/mcp` returns 404), with migration 0039 applied. Real sign-in and real writes are untested until go-live. Resume at step 2 of the runbook in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §5.
+4. **MCP server for organisers:** live on production with read tools only, and an organiser has connected from normal Claude. Writes are off and untested. Resume at step 6 of the runbook in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §5.
 
 ### What's open
 

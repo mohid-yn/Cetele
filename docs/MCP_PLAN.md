@@ -1,6 +1,6 @@
 # Cetele MCP server — plan and go-live runbook
 
-**Status (2026-11-06): deployed to production at `840f72e` and OFF: `/api/mcp` returns 404. Migration 0039 is applied, and runbook steps 0 and 1 are done. Resume at step 2.** Nothing has been tested with a real sign-in or a real database write, because neither is possible before go-live (§4). No Supabase auth setting has changed.
+**Status (2026-11-06): live on production with read tools only. The owner signed in as an organiser from normal Claude and listed the real programmes. Runbook steps 0 to 5 are done, and writes are still off. Resume at step 6.** No write through the tools has been tested yet.
 
 Goal: an organiser asks Claude to build a roadmap, and Claude creates a **draft** programme in Cetele with its items and
 descriptions. A person reviews and publishes it in the app.
@@ -114,9 +114,9 @@ All server-only environment variables. Each fails closed, and a change needs a r
 | Approval page at 390px, ask state                                                              | Checked by eye                        |
 | Normal Claude reaching a preview, using an earlier fake tool and a bypass secret               | Worked (owner)                        |
 
-**Not tested, and only testable at go-live:** a real sign-in, the approve and deny calls, any real database read or write
-through the tools, a non-organiser being refused with a real token, and a real app session being refused. Treat these as
-unproven until §5 is complete.
+**Confirmed on production by the owner:** a non-organiser reaches "Only organisers can connect" with no Allow button, Use a different account leads on to approval, and an organiser lists real programmes in normal Claude.
+
+**Not tested yet:** any write through the tools, Cancel, a valid token from a non-organiser or an app session being refused at the route, the seven-day expiry on a real session, and ChatGPT.
 
 ---
 
