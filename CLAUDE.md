@@ -16,7 +16,7 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 ## How we work
 
 - **Track in Linear** (team `CET`, https://linear.app/mohidkz/team/CET) via the Linear MCP — keep issue state in sync with the code.
-- **Confirm consequential product decisions** with the user, then log them in STATUS.md "Decisions locked".
+- **Confirm consequential product decisions** with the user, then log them in STATUS.md §6.
 - **Build in increments**, verify, then commit. End commit messages with a
   `Co-Authored-By: Claude <model> <noreply@anthropic.com>` trailer naming **whichever model
   wrote the commit** — the history carries `Opus 4.8` and `Opus 5` for exactly that reason.
@@ -27,7 +27,7 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
   - Commit increments; **push to get a Vercel preview URL**.
   - When `build` + `lint` + `tsc` + `format:check` are green, merge to **`staging`**, push, **delete the feature branch** (local + remote). This needs no approval — staging is not production.
   - **Verify on the staging URL**, then **ask the owner before promoting to `main`** — that confirm is the approval step (it replaces a PR).
-  - Promotion is `ALLOW_MAIN_PUSH=1 git push origin main`; `.husky/pre-push` refuses anything else (unsoaked commit, non-fast-forward, or a missing override). Open a real PR only ad-hoc when a written review trail is wanted (`gh` is installed). See STATUS.md **§3** + **D16**.
+  - Promotion is `ALLOW_MAIN_PUSH=1 git push origin main`; `.husky/pre-push` refuses anything else (unsoaked commit, non-fast-forward, or a missing override). Open a real PR only ad-hoc when a written review trail is wanted (`gh` is installed). See STATUS.md **§3** + **D50**.
 - The user prefers **concise, scannable** docs — tables and short bullets, not walls of text.
 - **Keep the PRD Word copy in sync:** edit `docs/PRD.md`, then regenerate the formatted `.docx` with `python3 scripts/build_prd_docx.py` (stdlib-only; the script _is_ the doc's formatting — edit its content there too).
 
@@ -86,8 +86,7 @@ the unit suite is its only check; write the test with the code.
 > **`Element type is invalid … got: undefined`** naming whatever component you added
 > most recently, because the stale chunk genuinely lacks it. If you see that, you are
 > holding old bytes — **one hard reload** (Ctrl+Shift+R) runs the teardown and it is
-> then gone for good. PWA icons: `node scripts/gen-icons.mjs`; iOS splash images:
-> `node scripts/gen-splash.mjs`. The installed PWA caches the old manifest/icons — to
+> then gone for good. The installed PWA caches the old manifest/icons — to
 > see a `start_url`/splash change, remove the home-screen icon and re-add it.
 >
 > **Regenerated `logo.svg`, an icon, a splash image or the manifest? Bump `CACHE` in

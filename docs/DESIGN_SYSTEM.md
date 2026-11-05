@@ -1,10 +1,8 @@
 # Cetele Design System — v3
 
-> **Status: APPLIED.** `app/globals.css` runs v3 and §13 items **1–8 are done**, including item 7 in
-> full: the `lib/brand.ts` platform literals, the brand mark (`public/logo.svg`, recoloured by L\*
-> match — see §14 q1), the 4 PWA icons and the 36 iOS launch images, all regenerated. Every value
-> below is generated and measured. **Still outstanding:** §13 item 9 — collapsing `card`/`muted` into
-> the five surface tiers _everywhere_ — is partially done, not finished.
+> **Status: APPLIED.** `app/globals.css` runs v3, brand mark, PWA icons and iOS launch images included. Every value
+> below is generated and measured. **Still outstanding:** collapsing `card`/`muted` into the five surface tiers
+> _everywhere_ is partially done, not finished.
 
 Palette source: the owner's five swatches — `#FAB3A9 · #C6AD94 · #7FB285 · #463239 · #ED6B86`.
 Structure: **Material Design 3** tonal palettes, colour roles and state layers, adapted to this
@@ -35,7 +33,7 @@ Each swatch becomes the hue anchor of a full tonal palette, and each keeps a rea
 
 **Green stays the brand.** Sage replaces emerald, but the locked meaning — green is calm, growth, and
 the completion signal, and is culturally expected for a dhikr audience — is preserved. **Gold is
-gone**, and that is the one meaning this palette does not carry forward; see §14.
+gone**, and that is the one meaning this palette does not carry forward.
 
 **The signature is the notched ring.** `ProgressRing` with a `mark` at the circle's share while the
 arc runs to your own goal (D51) is a form that exists nowhere else and states the product in one
@@ -856,7 +854,7 @@ moments.
 
 The last one matters most: **the token pairs are testable, and this document's numbers are the
 fixtures.** A script that parses `globals.css` and asserts §7 turns this spec into a gate rather than a
-memo. That is the point of §14's "enforce it later".
+memo.
 
 **Two rules in this document are already gates, and both are BEHAVIOURAL** — they could not be caught
 by parsing a stylesheet, because what they assert is what a thumb can reach and what a person sees:
@@ -873,37 +871,12 @@ rule is broken.** A green test you have never seen fail is a decoration.
 
 ---
 
-## 13. Migration map
-
-| #   | v1                                        | v3                                       | Touches                                       |
-| --- | ----------------------------------------- | ---------------------------------------- | --------------------------------------------- |
-| 1   | Nav/sidebar `bg-card` (white)             | `--surface-high`                         | `bottom-nav.tsx`, `sidebar.tsx`               |
-| 2   | Resting card `bg-muted/40`                | `--surface-low` + dashed `--outline`     | `today-client.tsx`                            |
-| 3   | Toggle thumb `bg-card` on `bg-muted`      | Thumb one tier above track               | `theme-toggle.tsx`, `segmented.tsx`           |
-| 4   | `--color-neutral-*` (slate)               | neutral + neutral-variant tonal palettes | `globals.css`, `button.tsx`                   |
-| 5   | `--border`/`--input` on interactive parts | `--outline` (≥3:1)                       | `button.tsx`, `input.tsx`                     |
-| 6   | `disabled:opacity-50`                     | Disabled token pair                      | `button.tsx`                                  |
-| 7   | Emerald + gold                            | Sage + rose tonal palettes               | `globals.css`, `brand.ts`, **icons + splash** |
-| 8   | Slate shadows                             | Warm ink shadows                         | `globals.css`                                 |
-| 9   | `card` / `muted`                          | Five surface tiers                       | everywhere                                    |
-
-**The brand-asset cost of #7, stated plainly:** `--primary` moves from `#047857` to `#346d3f` and the
-page from `#faf6ec` to `#fff8ee`. Those three values are platform literals in `lib/brand.ts`, wired to
-the PWA manifest, `<meta name="theme-color">` and **36 generated iOS launch images**. Changing them
-requires `node scripts/gen-icons.mjs` **and** `node scripts/gen-splash.mjs`, and installed PWAs cache
-the old manifest — existing users must remove and re-add the home-screen icon to see it.
-
----
-
 ## 14. Open questions
 
-| #   | Question                                                                                                                                                                                                                                                                                                                   | Why it's yours                                                                                                                                                         |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Gold is gone — ANSWERED 2026-08-01: recolour everything, mark included.** D20/D25 justified gold partly on Islamic resonance; rose carries warmth and celebration but not that. The owner was offered a middle option (sage mark, gold arrow kept, so gold survived in the brand asset only) and chose full sage + rose. | The one meaning this palette doesn't carry forward. Reopening it means a sixth hue for celebration only — not a return of gold to the accent role, which is rose's now |
-| 2   | **Rose is the accent, and accent sits where danger lives** (§3.1).                                                                                                                                                                                                                                                         | Mitigated by depth + the mandatory glyph, but it is a real constraint of the palette you chose                                                                         |
-| 3   | **Sage is lighter than emerald.** Primary tone 40 `#346d3f` is a softer, greyer green — calmer, less assertive.                                                                                                                                                                                                            | It changes how "brand" feels, not just how it looks                                                                                                                    |
-| 4   | **Display face: ANSWERED 2026-11-04.** Quicksand replaced by **Figtree** on the owner's go-ahead, chosen by comparing candidates live on Today and the counter. Its digits hold one width.                                                                                                                                 | Done                                                                                                                                                                   |
-| 5   | **Apply order.** §13 items 1–3 are what you reported; 4–9 are systemic. Item 7 is the one with asset cost.                                                                                                                                                                                                                 | Worth doing 1–6 first and 7 as its own change                                                                                                                          |
+| #   | Question                                                                                                        | Why it's yours                                                                                 |
+| --- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 2   | **Rose is the accent, and accent sits where danger lives** (§3.1).                                              | Mitigated by depth + the mandatory glyph, but it is a real constraint of the palette you chose |
+| 3   | **Sage is lighter than emerald.** Primary tone 40 `#346d3f` is a softer, greyer green — calmer, less assertive. | It changes how "brand" feels, not just how it looks                                            |
 
 ---
 

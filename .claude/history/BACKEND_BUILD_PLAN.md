@@ -1,5 +1,7 @@
 # Backend build plan — sequenced execution (CET-2 → v1 backend)
 
+> **ARCHIVED 2026-11-05.** Fully executed: M0–M9 shipped and the mock is deleted. Kept for the reasoning only; the live schema is `supabase/migrations/`.
+
 > **What this is:** the ordered "what to build next, in what order, done when" plan
 > for taking Cetele from _foundation-only backend + disconnected mock_ to a
 > working v1 backend. Grounded in the 2026-07-03 backend/frontend review.
@@ -7,8 +9,8 @@
 > **How it relates to the other docs:**
 >
 > - [`MIGRATION_MOCK_TO_SUPABASE.md`](./MIGRATION_MOCK_TO_SUPABASE.md) = the **how** (schema §3, RLS §4, selector→query §5, action→Server-Action §6, auth §7, realtime §8). This plan references it; it does not repeat it.
-> - [`PRD.md`](./PRD.md) §6 = the **data model** (the 12-table yardstick).
-> - [`.claude/STATUS.md`](../.claude/STATUS.md) = **live status** (which milestone we're on). This doc is the map; STATUS is the "you are here".
+> - [`PRD.md`](../../docs/PRD.md) §6 = the **data model** (the 12-table yardstick).
+> - [`.claude/STATUS.md`](../STATUS.md) = **live status** (which milestone we're on). This doc is the map; STATUS is the "you are here".
 
 ---
 

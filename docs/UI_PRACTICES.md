@@ -13,24 +13,9 @@ back_. Researched 2026-06-24. Apply together with the brand decisions
 > and motion rules below reflect that: warm/celebratory moments are a _feature_
 > here, spent deliberately, not suppressed.
 
-**How to use this doc:** each section ends in **"Rules to hold"** — the
-enforceable bar for any UI work, checked at review time. Open shortcomings are
-tracked in the implementation tracker so the work is referenceable without this
-doc open.
+**How to use this doc:** each section ends in **"Rules to hold"**, the bar for any UI work at review time.
 
-## Implementation tracker (research → work)
-
-| §   | Finding / shortcoming                                                                                                                                                                                                                       | Action                                                                                                                                | Priority |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| §1  | Green is underused. For a _dhikr_ audience it carries cultural+psychological weight (growth, calm, spirituality). Promote to a semantic.                                                                                                    | Elevate `--success`/new `--growth` to completion/streak role; decision needed (touches D13).                                          | High     |
-| §2  | ~~App follows OS theme only — **no manual light/dark toggle.**~~ Dhikr peaks at night (82.7% enable dark after 10pm); dhikr ≈ Isha/Tahajjud/pre-Fajr.                                                                                       | **Done (D19):** persisted Light/Dark toggle via a `.dark` class set before paint (System option dropped 2026-06-29 — default light).  | —        |
-| §2  | ~~Dark accent + status hues need calming; surfaces need a real elevation ladder (shadows barely register on dark); garden sky glares at night.~~                                                                                            | **Done:** dark block tuned — surface ladder (lighter = raised) + visible border; gold/status softened; garden re-tinted deep-emerald. | —        |
-| §3  | **Not responsive** — hard-capped at `max-w-[28rem]` with a phone bottom-nav. Unusable as a real layout on laptop/desktop.                                                                                                                   | Responsive shell: bottom-nav (mobile) → sidebar + wider/multi-col (≥`lg`).                                                            | High     |
-| §4  | Motion budget + earned-celebration model **validated** — keep within 150–300ms / spring only on celebration.                                                                                                                                | — (review-time bar)                                                                                                                   | —        |
-| §5  | Status today leans on colour; some states (rings, leaderboard) need a second channel for colour-blind safety.                                                                                                                               | Glyph/label beside every status colour; never colour-alone.                                                                           | Medium   |
-| §1  | ~~Navy+orange validated — no re-theme needed.~~ **Reversed (D20):** product owner found navy/orange ugly + too corporate for a calm dhikr app. Re-themed to **emerald + gold on white** — green becomes the brand _and_ the completion hue. | Done — see §1 synthesis (updated).                                                                                                    | —        |
-
----
+> **Research, not the palette.** Colours named here (navy, orange, emerald, gold) predate v3. For any value, [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) wins.
 
 ## 1. Colour psychology — engineered for return, not decoration
 

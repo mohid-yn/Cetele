@@ -1,5 +1,7 @@
 # Migration plan — mock store → Supabase (and client-heavy → server-first)
 
+> **ARCHIVED 2026-11-05.** Fully executed: M0–M9 shipped and the mock is deleted. Kept for the reasoning only; the live schema is `supabase/migrations/`.
+
 > **Status:** the detailed "how" for the backend build, now **in execution**
 > (requirements locked D32; sequence + live progress in
 > [`BACKEND_BUILD_PLAN.md`](./BACKEND_BUILD_PLAN.md) / `.claude/STATUS.md`).
