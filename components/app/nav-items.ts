@@ -156,9 +156,15 @@ export const NO_GROUP_NAV_ITEMS: readonly FlatItem[] = [
  */
 export function noGroupNavItems(
   isOrganiser: boolean,
+  hasRoadmap = false,
 ): readonly (ScopedItem | FlatItem)[] {
-  if (!isOrganiser) return NO_GROUP_NAV_ITEMS;
-  return [NO_GROUP_NAV_ITEMS[0], ADMIN_NAV_ITEM, NO_GROUP_NAV_ITEMS.at(-1)!];
+  // The roadmap is the member's own, so it needs no circle (D75, D76).
+  return [
+    NO_GROUP_NAV_ITEMS[0],
+    ...(isOrganiser ? [ADMIN_NAV_ITEM] : []),
+    ...(hasRoadmap ? [ROADMAP_NAV_ITEM] : []),
+    NO_GROUP_NAV_ITEMS.at(-1)!,
+  ];
 }
 
 /**

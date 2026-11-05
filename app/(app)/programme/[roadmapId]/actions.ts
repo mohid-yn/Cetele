@@ -45,3 +45,28 @@ export async function setRoadmapItemContent(
   revalidatePath("/roadmap");
   return { error: null };
 }
+
+/**
+ * Take part in a roadmap as yourself, with no circle, or stop (D76, 0040). A thin
+ * relay: `take_part_in_roadmap` refuses anyone who is not an organiser and only
+ * ever writes the caller's own row.
+ */
+export async function setTakingPart(
+  roadmapId: string,
+  takePart: boolean,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await q(
+    "rpc.take_part_in_roadmap",
+    supabase.rpc("take_part_in_roadmap", {
+      p_roadmap: roadmapId,
+      p_take_part: takePart,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+
+  revalidatePath("/programme", "layout");
+  revalidatePath("/roadmap");
+  return { error: null };
+}

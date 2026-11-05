@@ -50,7 +50,7 @@ export function BottomNav({
   const items =
     hasGroups && !isGroupPicker(pathname)
       ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
-      : noGroupNavItems(isOrganiser);
+      : noGroupNavItems(isOrganiser, hasRoadmap);
 
   return (
     <nav

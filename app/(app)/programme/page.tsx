@@ -13,7 +13,8 @@ import {
   UsersIcon,
 } from "@/components/app/icons";
 import { localDateISO } from "@/lib/local-date";
-import { followsRoadmap } from "@/lib/my-roadmaps";
+import { followsRoadmap, takePartOffer } from "@/lib/my-roadmaps";
+import { TakePart } from "./[roadmapId]/take-part";
 import { readMcpConfig } from "@/lib/mcp-policy";
 import { levelsOf, programmeWindow } from "@/lib/roadmap";
 import { NewProgrammeButton } from "./new-programme";
@@ -53,42 +54,53 @@ export default async function ProgrammeHubPage() {
   const me = claims?.claims.sub as string | undefined;
   if (!me) redirect("/");
 
-  const [{ data: roadmaps }, { data: viewer }, { data: myCircles }] =
-    await Promise.all([
-      q(
-        "programmeHub.roadmaps",
-        supabase
-          .from("roadmaps")
-          // `level` alone — this screen counts the shape of a programme, it never
-          // renders an item. Pulling titles and cover art here would be a page of
-          // data for a line of text.
-          .select(
-            "id, name, starts_on, ends_on, published, roadmap_items(level), group_roadmaps(group_id)",
-          )
-          .order("starts_on", { ascending: false }),
-      ),
-      // WHICH READER this is, for the empty state and the footer — never as a
-      // filter. Read off `profiles` because the private schema is not exposed to
-      // PostgREST (0002), exactly as the report and the catalogue do it.
-      q(
-        "programmeHub.viewer (is_super_admin — copy only)",
-        supabase
-          .from("profiles")
-          .select("is_super_admin, timezone")
-          .eq("id", me)
-          .maybeSingle(),
-      ),
-      // The viewer's own circles, for the way to their own record on each row. The
-      // Roadmap tab depends on which circle is active, so this screen cannot
-      // assume it is there.
-      q(
-        "programmeHub.my circles (log my progress)",
-        supabase
-          .from("memberships")
-          .select("groups(group_roadmaps(roadmap_id))")
-          .eq("user_id", me),
-      ),
-    ]);
+  const [
+    { data: roadmaps },
+    { data: viewer },
+    { data: myCircles },
+    { data: taking },
+  ] = await Promise.all([
+    q(
+      "programmeHub.roadmaps",
+      supabase
+        .from("roadmaps")
+        // `level` alone — this screen counts the shape of a programme, it never
+        // renders an item. Pulling titles and cover art here would be a page of
+        // data for a line of text.
+        .select(
+          "id, name, starts_on, ends_on, published, roadmap_items(level), group_roadmaps(group_id)",
+        )
+        .order("starts_on", { ascending: false }),
+    ),
+    // WHICH READER this is, for the empty state and the footer — never as a
+    // filter. Read off `profiles` because the private schema is not exposed to
+    // PostgREST (0002), exactly as the report and the catalogue do it.
+    q(
+      "programmeHub.viewer (is_super_admin — copy only)",
+      supabase
+        .from("profiles")
+        .select("is_super_admin, timezone")
+        .eq("id", me)
+        .maybeSingle(),
+    ),
+    // The viewer's own circles, for the way to their own record on each row. The
+    // Roadmap tab depends on which circle is active, so this screen cannot
+    // assume it is there.
+    q(
+      "programmeHub.my circles (log my progress)",
+      supabase
+        .from("memberships")
+        .select("groups(group_roadmaps(roadmap_id))")
+        .eq("user_id", me),
+    ),
+    q(
+      "programmeHub.taking part (0040)",
+      supabase
+        .from("roadmap_participants")
+        .select("roadmap_id")
+        .eq("user_id", me),
+    ),
+  ]);
 
   const isSuperAdmin = viewer?.is_super_admin ?? false;
   const todayISO = localDateISO(viewer?.timezone ?? "UTC");
@@ -161,7 +173,20 @@ export default async function ProgrammeHubPage() {
     .filter((g) => g.rows.length > 0);
 
   const myProgressLink = (p: (typeof programmes)[number]) => {
-    if (!p.published || !followsRoadmap(myCircles ?? [], p.id)) return null;
+    const inFollowingCircle = followsRoadmap(myCircles ?? [], p.id);
+    const takingPart = (taking ?? []).some((t) => t.roadmap_id === p.id);
+    if (
+      takePartOffer({
+        isOrganiser: isSuperAdmin,
+        published: p.published,
+        closed: phaseOf(p) === "closed",
+        inFollowingCircle,
+        takingPart,
+      }) === "join"
+    ) {
+      return <TakePart roadmapId={p.id} name={p.name} asRow />;
+    }
+    if (!p.published || !(inFollowingCircle || takingPart)) return null;
     return (
       <Link
         href={`/roadmap?r=${p.id}`}

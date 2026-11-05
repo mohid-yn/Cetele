@@ -37,21 +37,31 @@ export default async function RoadmapPage({
 
   // The window is counted on the MEMBER's calendar (D34), so the zone is read
   // before any date is derived — never the server's.
-  const [{ data: memberships }, { data: profile }] = await Promise.all([
-    q(
-      "roadmap.followed programmes (all my circles)",
-      supabase
-        .from("memberships")
-        .select(
-          "groups(group_roadmaps(roadmaps(id, name, starts_on, published)))",
-        )
-        .eq("user_id", me),
-    ),
-    q(
-      "roadmap.profile (timezone)",
-      supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
-    ),
-  ]);
+  const [{ data: memberships }, { data: taking }, { data: profile }] =
+    await Promise.all([
+      q(
+        "roadmap.followed programmes (all my circles)",
+        supabase
+          .from("memberships")
+          .select(
+            "groups(group_roadmaps(roadmaps(id, name, starts_on, published)))",
+          )
+          .eq("user_id", me),
+      ),
+      // An organiser taking part with no circle (0040, D76). RLS returns nothing
+      // to anyone else, and nothing once the role is gone.
+      q(
+        "roadmap.taking part",
+        supabase
+          .from("roadmap_participants")
+          .select("roadmaps(id, name, starts_on, published)")
+          .eq("user_id", me),
+      ),
+      q(
+        "roadmap.profile (timezone)",
+        supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
+      ),
+    ]);
 
   const todayISO = localDateISO(profile?.timezone ?? "UTC");
 
@@ -65,6 +75,9 @@ export default async function RoadmapPage({
     for (const row of m.groups?.group_roadmaps ?? []) {
       if (row.roadmaps?.published) byId.set(row.roadmaps.id, row.roadmaps);
     }
+  }
+  for (const row of taking ?? []) {
+    if (row.roadmaps?.published) byId.set(row.roadmaps.id, row.roadmaps);
   }
   const followed = [...byId.values()].sort((a, b) =>
     b.starts_on.localeCompare(a.starts_on),

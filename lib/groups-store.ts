@@ -29,7 +29,12 @@ export type GroupRow = {
   followsRoadmap: boolean;
 };
 
-type State = { groups: GroupRow[]; loaded: boolean };
+type State = {
+  groups: GroupRow[];
+  /** Taking part in a published roadmap with no circle (organisers, D76). */
+  takesPart: boolean;
+  loaded: boolean;
+};
 
 const ROLE_RANK: Record<GroupRow["role"], number> = {
   owner: 0,
@@ -37,7 +42,7 @@ const ROLE_RANK: Record<GroupRow["role"], number> = {
   member: 2,
 };
 
-let state: State = { groups: [], loaded: false };
+let state: State = { groups: [], takesPart: false, loaded: false };
 const listeners = new Set<() => void>();
 let inFlight = false;
 let queued = false;
@@ -48,7 +53,18 @@ async function fetchOnce(): Promise<void> {
   const { data: claims } = await supabase.auth.getClaims();
   const me = claims?.claims.sub;
   let groups: GroupRow[] = [];
+  let takesPart = false;
   if (me) {
+    // RLS returns rows only to an organiser, so for everyone else this is an
+    // empty answer from one indexed read.
+    const { data: taking } = await q(
+      "groups-store.roadmap participants",
+      supabase
+        .from("roadmap_participants")
+        .select("roadmaps(published)")
+        .eq("user_id", me),
+    );
+    takesPart = (taking ?? []).some((t) => t.roadmaps?.published);
     const { data } = await q(
       "groups-store.memberships",
       supabase
@@ -72,10 +88,11 @@ async function fetchOnce(): Promise<void> {
           ROLE_RANK[a.role] - ROLE_RANK[b.role] || a.name.localeCompare(b.name),
       );
   }
-  document.cookie = groups.some((g) => g.followsRoadmap)
-    ? `${ROADMAP_HINT_COOKIE}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
-    : `${ROADMAP_HINT_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
-  const next: State = { groups, loaded: true };
+  document.cookie =
+    takesPart || groups.some((g) => g.followsRoadmap)
+      ? `${ROADMAP_HINT_COOKIE}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
+      : `${ROADMAP_HINT_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+  const next: State = { groups, takesPart, loaded: true };
   // Only swap the snapshot when something actually changed —
   // useSyncExternalStore consumers re-render on identity.
   if (JSON.stringify(next) !== JSON.stringify(state)) {
@@ -120,7 +137,7 @@ const subscribe = (cb: () => void) => {
   };
 };
 
-const SERVER_STATE: State = { groups: [], loaded: false };
+const SERVER_STATE: State = { groups: [], takesPart: false, loaded: false };
 
 export function useGroupsSnapshot(): State {
   return React.useSyncExternalStore(
@@ -140,6 +157,6 @@ export function useGroupsSnapshot(): State {
  * only: `useHasGroups` and the switcher already refresh on navigation.
  */
 export function useHasRoadmap(initial: boolean): boolean {
-  const { groups, loaded } = useGroupsSnapshot();
-  return loaded ? groups.some((g) => g.followsRoadmap) : initial;
+  const { groups, takesPart, loaded } = useGroupsSnapshot();
+  return loaded ? takesPart || groups.some((g) => g.followsRoadmap) : initial;
 }

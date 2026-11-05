@@ -51,7 +51,7 @@ export function Sidebar({
     ? [...ADMIN_ZONE_ITEMS, ADMIN_ZONE_EXIT]
     : hasGroups && !isGroupPicker(pathname)
       ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
-      : noGroupNavItems(isOrganiser);
+      : noGroupNavItems(isOrganiser, hasRoadmap);
 
   return (
     // `bg-chrome` — same reason as the bottom nav: the sidebar is the frame.

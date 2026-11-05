@@ -958,15 +958,45 @@ test("the Roadmap tab follows the member, not the selected circle", async ({
   await page.goto(`/g/${otherId}/roadmap`);
   await expect(page.getByText("isn’t on a roadmap")).toBeVisible();
 
-  // An organiser in no following circle is offered nothing that cannot work.
-  await page.goto("/groups");
-  const elsewhere = `e2e-roadmap-org-solo-${STAMP}@example.com`;
-  await signIn(page, elsewhere);
-  await makeSuperAdmin(elsewhere);
+  // AN ORGANISER IN NO CIRCLE TAKES PART DIRECTLY (D76). Nothing to log against
+  // yet, so the hub and the editor offer to join rather than a link that fails.
+  const solo = `e2e-roadmap-org-solo-${STAMP}@example.com`;
+  await signIn(page, solo);
+  await makeSuperAdmin(solo);
   await page.goto(`/programme/${IDP}`);
+  await expect(page.getByRole("link", { name: "Log my progress" })).toHaveCount(
+    0,
+  );
+  await page.getByRole("button", { name: "Take part" }).click();
+  await page.waitForURL(`**/roadmap?r=${IDP}`);
+
+  // The Roadmap tab has arrived, with no circle behind it, and logging is real.
   await expect(
-    page.getByRole("heading", { name: "Islamic Development Program" }),
+    page.getByRole("link", { name: "Roadmap", exact: true }).first(),
   ).toBeVisible();
+  await page.getByRole("button", { name: /^Book/ }).click();
+  const soloBook = page
+    .locator("ul > li")
+    .filter({ hasText: "Calling to Good" })
+    .first();
+  const soloSaved = page.waitForResponse(
+    (r) => r.request().method() === "POST" && r.ok(),
+  );
+  await soloBook.getByRole("button", { name: "Mark done" }).click();
+  await soloSaved;
+  await page.reload();
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(soloBook.getByRole("button", { name: "Undo" })).toBeVisible();
+
+  // And they can stop, through the confirm step, keeping the way back.
+  await page.goto(`/programme/${IDP}`);
+  await page.getByRole("button", { name: "Stop taking part" }).click();
+  await page
+    .getByRole("alertdialog")
+    .or(page.getByRole("dialog"))
+    .getByRole("button", { name: "Stop taking part" })
+    .click();
+  await expect(page.getByRole("button", { name: "Take part" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Log my progress" })).toHaveCount(
     0,
   );

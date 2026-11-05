@@ -10,12 +10,13 @@ import {
   FlagIcon,
   UsersIcon,
 } from "@/components/app/icons";
-import { followsRoadmap } from "@/lib/my-roadmaps";
+import { followsRoadmap, takePartOffer } from "@/lib/my-roadmaps";
 import { CatalogueView } from "./catalogue-view";
 import { BUILDER_TABS, type BuilderTab } from "./builder-tabs";
 import { ProgrammeBuilder } from "./programme-builder";
 import {
   levelsOf,
+  programmeWindow,
   type LevelRequirement,
   type RoadmapCategory,
   type RoadmapItem,
@@ -185,15 +186,27 @@ export default async function ProgrammeCataloguePage({
   );
 
   // THE WAY TO THE VIEWER'S OWN RECORD. This screen never records progress.
-  const { data: myCircles } = await q(
-    "catalogue.my circles (log my progress)",
-    supabase
-      .from("memberships")
-      .select("groups(group_roadmaps(roadmap_id))")
-      .eq("user_id", me),
-  );
+  const [{ data: myCircles }, { data: taking }] = await Promise.all([
+    q(
+      "catalogue.my circles (log my progress)",
+      supabase
+        .from("memberships")
+        .select("groups(group_roadmaps(roadmap_id))")
+        .eq("user_id", me),
+    ),
+    q(
+      "catalogue.taking part (0040)",
+      supabase
+        .from("roadmap_participants")
+        .select("roadmap_id")
+        .eq("user_id", me)
+        .eq("roadmap_id", roadmapId),
+    ),
+  ]);
+  const inFollowingCircle = followsRoadmap(myCircles ?? [], roadmapId);
+  const takingPart = (taking ?? []).length > 0;
   const myProgressHref =
-    roadmap.published && followsRoadmap(myCircles ?? [], roadmapId)
+    roadmap.published && (inFollowingCircle || takingPart)
       ? `/roadmap?r=${roadmapId}`
       : null;
 
@@ -243,6 +256,18 @@ export default async function ProgrammeCataloguePage({
         sortOrders={[...sortOrderOf]}
         canReadCohort={Boolean(canReadCohort)}
         myProgressHref={myProgressHref}
+        takePart={takePartOffer({
+          isOrganiser: canEdit,
+          published: roadmap.published,
+          closed:
+            programmeWindow(
+              roadmap.starts_on,
+              roadmap.ends_on,
+              localDateISO(profile?.timezone ?? "UTC"),
+            ).state === "closed",
+          inFollowingCircle,
+          takingPart,
+        })}
         todayISO={localDateISO(profile?.timezone ?? "UTC")}
         initialTab={
           BUILDER_TABS.includes(tab as BuilderTab)

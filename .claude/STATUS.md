@@ -115,7 +115,6 @@ Also open: should later levels genuinely lock (D57)? Does neglecting a newly joi
 
 **Known gaps in the product**
 
-- An organiser in no circle following a roadmap cannot log against it. They would have to join or create one. A direct "Take part" is an open idea and needs a migration.
 - Taps batch for 300ms on Today and 600ms on the count screen, so force-closing the app inside that window can lose the last tap.
 - A tap in the first moments of an account's very first visit belongs to the UTC day until the timezone sync finishes.
 - "Turn on" for reminders looks disabled in `pnpm dev` because no worker exists there. If a worker ever failed to register in production, it would stay disabled with no explanation.
@@ -301,6 +300,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D73** Organisers build programmes through an MCP server: real tools behind flags (off by default), Supabase OAuth with one pre-registered Claude client, organisers only, drafts only, no publish tool. A connection lasts seven days (0039). No database-level limit on what a token can do, for now. [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md).
 - **D74** Administration is its own workspace, not a section of `/groups`. Inside `/admin/*`, and `/programme/*` for an organiser, a deep sage bar replaces the member's tabs: Roadmaps, Organisers, Circles (the way out). The way in is an Admin tab, which gives way to a circle's Roadmap tab, plus a Profile row that is always there.
 - **D75** The roadmap screen is the member's own, at `/roadmap`, and lists what any of their circles follows. The tab shows whichever circle is selected, and opening it leaves that selection alone. `/g/[id]/roadmap` only forwards or explains. For an organiser this tab takes the fifth slot from Admin.
+- **D76** An organiser can take part in a published roadmap with no circle (`roadmap_participants`, `take_part_in_roadmap`, 0040). It counts in the cohort report, only organisers see that row, and it lasts only while they hold the role. Recorded progress stays. Offered only when they have no other way to log.
 - **D65** Planned: compute moves to Cloudflare (`@opennextjs/cloudflare`). Supabase and auth stay. Only `lib/push/send.ts` and `api/push/dispatch` are not portable. Not started.
 
 ---

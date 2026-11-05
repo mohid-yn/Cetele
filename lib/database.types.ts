@@ -847,6 +847,39 @@ export type Database = {
           },
         ];
       };
+      roadmap_participants: {
+        Row: {
+          created_at: string;
+          roadmap_id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          roadmap_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          roadmap_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_participants_roadmap_id_fkey";
+            columns: ["roadmap_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmaps";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "roadmap_participants_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       roadmap_progress: {
         Row: {
           done: number;
@@ -1277,6 +1310,10 @@ export type Database = {
           roadmap_id: string;
           user_id: string;
         }[];
+      };
+      take_part_in_roadmap: {
+        Args: { p_roadmap: string; p_take_part: boolean };
+        Returns: undefined;
       };
       save_push_subscription: {
         Args: {

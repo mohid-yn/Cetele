@@ -20,6 +20,7 @@ import {
 import type { BuilderTab } from "./builder-tabs";
 import { CirclesPanel, type RoadmapCircle } from "./circles-panel";
 import { ItemsPanel } from "./items-panel";
+import { StopTakingPart, TakePart } from "./take-part";
 import { ReachCard } from "./reach-card";
 import { RewardsEditor, type EditableReward } from "./rewards-editor";
 import { SettingsPanel } from "./settings-panel";
@@ -55,6 +56,7 @@ export function ProgrammeBuilder({
   sortOrders,
   canReadCohort,
   myProgressHref,
+  takePart,
   todayISO,
   initialTab,
 }: {
@@ -76,6 +78,8 @@ export function ProgrammeBuilder({
   canReadCohort: boolean;
   /** Their own roadmap screen, when a circle of theirs follows this one. */
   myProgressHref: string | null;
+  /** Whether to offer joining or leaving as themselves (D76). */
+  takePart: "join" | "leave" | null;
   todayISO: string;
   initialTab: BuilderTab;
 }) {
@@ -124,6 +128,7 @@ export function ProgrammeBuilder({
           {fmtDate(roadmap.startsOn)} to {fmtDate(roadmap.endsOn)}
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
+          {takePart === "join" && <TakePart roadmapId={roadmap.id} />}
           {myProgressHref && (
             <Link
               href={myProgressHref}
@@ -149,6 +154,9 @@ export function ProgrammeBuilder({
             <EyeIcon aria-hidden />
             Preview
           </Link>
+          {takePart === "leave" && (
+            <StopTakingPart roadmapId={roadmap.id} name={roadmap.name} />
+          )}
         </div>
       </div>
 
