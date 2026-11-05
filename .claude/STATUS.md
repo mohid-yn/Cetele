@@ -23,12 +23,12 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 | Item         | State                                                                                                 |
 | ------------ | ----------------------------------------------------------------------------------------------------- |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `e7222c4`, serving Next 16.4.5  |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `eaa5167`, serving Next 16.4.5  |
 | Staging      | `cetele-git-staging-university-services.vercel.app`. Ahead of `main` by docs commits only             |
 | Migrations   | **39 in the repo, the same 39 on prod** (compared against the Supabase migration list). No drift      |
 | Git          | Clean. No feature branches, worktrees or stashes                                                      |
 | CI           | Green on both `main` and `staging`                                                                    |
-| Tests        | Unit 150 · pgTAP 814 across 23 suites · e2e 84 across 21 specs                                        |
+| Tests        | Unit 155 · pgTAP 814 across 23 suites · e2e 84 across 21 specs                                        |
 | Local stack  | Docker is not available in this WSL distro now. `supabase start` needs it, and downloads about 3.5 GB |
 | Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue        |
 | Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                 |
@@ -36,6 +36,10 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 Everything through D72 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
 
 ### Last release (2026-11-06)
+
+The administration workspace (D74), no migration. Promoted at the owner's request without a staging soak. CI passed (84 e2e) on a rerun. **Nobody has opened it signed in as a real organiser yet**, on production or anywhere else outside CI.
+
+### Previous release (2026-11-06)
 
 The organiser MCP server (D73). Organisers connect Claude and build draft programmes; a person reviews and publishes in the app. Migration 0039 ends a connection after seven days. Runbook, blocks and remaining risks: [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md).
 
@@ -65,6 +69,7 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 
 ### Next steps, in order
 
+0. **Owner: open the administration workspace (D74) on the phone as the organiser account.** Admin tab, Organisers, Circles, and a full reload of `/programme`.
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Google sign-in on a desktop browser is confirmed on this release (2026-11-06). Nobody has used a phone on it, and staging was not clicked through.
 2. **Owner: run `/mcp` to re-authenticate Linear**, then create issues for the untracked work.
 3. Work through the rest of "What's open". Nothing there blocks anything.
@@ -115,6 +120,7 @@ Also open: should later levels genuinely lock (D57)? Does neglecting a newly joi
 
 **Tests and performance**
 
+- `roadmap` e2e, line 191: taps +1 three times and reloads at once, so the reload can abort a save in flight. It failed both attempts in one CI run (2 of 15, then 0 of 15) and passed on rerun. Saw it in the trace (`status -1`). Fix the test by waiting for the writes. The same race could lose a member's last tap if they reload that fast, which is untested.
 - `task-links` link pane: after Link, the heading can keep the old count though the row is saved. Timing, not fixed: the dialog relies on `router.refresh()`.
 - A loading skeleton held for 30s once in `task-config-history`. Not reproduced in 12 repeats. Unexplained.
 - `roadmap` e2e picks the first "Roadmap Circle", so it fails on an unreset database.
