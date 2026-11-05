@@ -26,7 +26,7 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 | Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `67a853a`, serving Next 16.4.5  |
 | Staging      | `cetele-git-staging-university-services.vercel.app`. Ahead of `main` by docs commits only             |
 | Migrations   | **38 in the repo, the same 38 on prod** (compared against the Supabase migration list). No drift      |
-| Git          | Clean. No feature branches or worktrees. Three old stashes (see Owner decisions)                      |
+| Git          | Clean. No feature branches, worktrees or stashes                                                      |
 | CI           | Green on both `main` and `staging`                                                                    |
 | Tests        | Unit 111 · pgTAP 795 across 22 suites · e2e 82 across 20 specs                                        |
 | Local stack  | Docker is not available in this WSL distro now. `supabase start` needs it, and downloads about 3.5 GB |
@@ -70,7 +70,6 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 | Custom domain (~$10–15/yr) | Unlocks Resend email (invites, magic links), the Google consent-screen logo and a custom auth domain                                                                      |
 | Members who lost reminders | Migration 0033 removed 15 reminders from five members, as designed. **They were never told.** The backups in `~/cetele-backups/` are not on this machine now              |
 | Celebration quotes         | Two remaining religious quotes need checking by someone qualified                                                                                                         |
-| Stashes                    | `stash@{0}` is an older version of what shipped as D71. `{1}` (2026-08-07) mostly shipped and conflicts. `{2}` is a June lint-staged backup. All look droppable           |
 
 **Roadmap questions (D55).** None block anything, and the code assumes no answer.
 

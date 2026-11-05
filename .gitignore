@@ -71,6 +71,3 @@ supabase/snippets/
 # playwright artifacts
 test-results/
 playwright-report/
-
-# local working briefs — implementation specs handed to the agent, not project docs
-docs/INSTRUCTIONS_NEXT_STEPS.md
