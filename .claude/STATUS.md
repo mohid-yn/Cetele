@@ -212,8 +212,8 @@ Each is a production bug already paid for. The full story behind each is in the 
 ## 5. Where things live
 
 ```
-app/(app)/g/[groupId]/{today,group,progress,roadmap,count/[taskId],group/manage}   group-scoped routes
-app/(app)/{groups,profile}                 circle picker · personal settings and reminders
+app/(app)/g/[groupId]/{today,group,progress,count/[taskId],group/manage}   group-scoped routes
+app/(app)/{groups,profile,roadmap}                 circle picker · personal settings and reminders
 app/(app)/admin/organisers                 who holds the organiser role (D74)
 app/(app)/programme/                       roadmap hub, builder and cohort report (organisers, circle leads)
 app/join/[code] · app/(legal) · app/designsystem
@@ -298,6 +298,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D50** `main` is production, `staging` is the soak.
 - **D73** Organisers build programmes through an MCP server: real tools behind flags (off by default), Supabase OAuth with one pre-registered Claude client, organisers only, drafts only, no publish tool. A connection lasts seven days (0039). No database-level limit on what a token can do, for now. [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md).
 - **D74** Administration is its own workspace, not a section of `/groups`. Inside `/admin/*`, and `/programme/*` for an organiser, a deep sage bar replaces the member's tabs: Roadmaps, Organisers, Circles (the way out). The way in is an Admin tab, which gives way to a circle's Roadmap tab, plus a Profile row that is always there.
+- **D75** The roadmap screen is the member's own, at `/roadmap`, and lists what any of their circles follows. The tab shows whichever circle is selected, and opening it leaves that selection alone. `/g/[id]/roadmap` only forwards or explains. For an organiser this tab takes the fifth slot from Admin.
 - **D65** Planned: compute moves to Cloudflare (`@opennextjs/cloudflare`). Supabase and auth stay. Only `lib/push/send.ts` and `api/push/dispatch` are not portable. Not started.
 
 ---

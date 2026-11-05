@@ -109,10 +109,9 @@ test("a circle follows a programme, and its members can record against it", asyn
   await expect(page.getByText("Nothing recorded yet")).toHaveCount(0);
   await expect(page.getByText("0 of 3 levels")).toBeVisible();
 
-  // THE WAY IN IS THE NAV TAB. It appears only for a circle that follows a
-  // programme, and the flag reaches the nav without the app shell doing any DB
-  // work: the group layout reads it and publishes to a store the nav
-  // subscribes to (`lib/use-group-roadmap.ts`).
+  // THE WAY IN IS THE NAV TAB. It appears when any of the member's circles
+  // follows a programme, and reaches the nav without the app shell doing any DB
+  // work: the groups store fetches it on the client (D75).
   await page.goto(manageUrl);
   const tab = page.getByRole("link", { name: "Roadmap", exact: true }).first();
   await expect(tab).toBeVisible();
@@ -384,7 +383,7 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   await expect(page.getByText(/You are an organiser/)).toBeVisible();
 
   // THE PROGRAMME ITSELF, which an organiser could not reach at all: the
-  // member's roadmap is at /g/[groupId]/roadmap and is membership-gated, and an
+  // member's roadmap is at /roadmap and is membership-gated, and an
   // organiser is deliberately in no circle. They could read that Zayd had
   // finished level 2 and not what level 2 asks for.
   //
@@ -871,18 +870,17 @@ test("an organiser sees who a roadmap reaches, and puts a circle on it", async (
   await page.waitForURL("**/programme");
 });
 
-test("an organiser in a following circle can get from the hub to logging", async ({
+test("the Roadmap tab follows the member, not the selected circle", async ({
   page,
 }) => {
-  // The tab depends on the ACTIVE circle, so an organiser standing in a circle
-  // that follows nothing reaches the editor and a read-only preview. Those
-  // screens have to lead to the member's screen, which is the only place
-  // progress is recorded.
+  // D75. Progress belongs to the member, so the tab must not vanish when the
+  // selected circle follows nothing. An organiser is the sharpest case, since
+  // the slot would otherwise lead to an editor.
   const organiser = `e2e-roadmap-org-member-${STAMP}@example.com`;
   await signIn(page, organiser);
   await makeSuperAdmin(organiser);
 
-  const following = await newCircle(page, `Following ${STAMP}`);
+  await newCircle(page, `Following ${STAMP}`);
   const optIn = page.getByRole("checkbox", {
     name: "Islamic Development Program",
   });
@@ -892,21 +890,18 @@ test("an organiser in a following circle can get from the hub to logging", async
   );
   await optIn.check();
   await written;
-  const followingId = following.match(/\/g\/([^/]+)\//)![1];
 
-  // A second circle, following nothing, is now the active one.
-  await newCircle(page, `Not following ${STAMP}`);
+  // A second circle, following nothing, is now the selected one.
+  const other = await newCircle(page, `Not following ${STAMP}`);
+  const otherId = other.match(/\/g\/([^/]+)\//)![1];
+  await page.goto(`/g/${otherId}/today`);
 
-  await page.goto("/programme");
-  await expect(
-    page.getByRole("link", { name: "Log my progress on Islamic Development" }),
-  ).toHaveAttribute("href", `/g/${followingId}/roadmap?r=${IDP}`);
+  const tab = page.getByRole("link", { name: "Roadmap", exact: true }).first();
+  await expect(tab).toBeVisible();
+  await tab.click();
+  await page.waitForURL("**/roadmap");
 
-  await page.goto(`/programme/${IDP}`);
-  await page.getByRole("link", { name: "Log my progress" }).click();
-  await page.waitForURL(`**/g/${followingId}/roadmap?r=${IDP}`);
-
-  // And it is the real thing: the write lands, and survives a reload.
+  // The write lands from here, and survives a reload.
   await page.getByRole("button", { name: /^Book/ }).click();
   const book = page
     .locator("ul > li")
@@ -921,11 +916,28 @@ test("an organiser in a following circle can get from the hub to logging", async
   await page.getByRole("button", { name: /^Book/ }).click();
   await expect(book.getByRole("button", { name: "Undo" })).toBeVisible();
 
-  // The preview leads to the same place.
+  // Opening it did not change the selected circle.
+  await expect(
+    page.getByRole("link", { name: "Today", exact: true }).first(),
+  ).toHaveAttribute("href", `/g/${otherId}/today`);
+
+  // The admin screens lead to the same place.
+  await page.goto("/programme");
+  await expect(
+    page.getByRole("link", { name: "Log my progress on Islamic Development" }),
+  ).toHaveAttribute("href", `/roadmap?r=${IDP}`);
+  await page.goto(`/programme/${IDP}`);
+  await expect(
+    page.getByRole("link", { name: "Log my progress" }),
+  ).toHaveAttribute("href", `/roadmap?r=${IDP}`);
   await page.goto(`/programme/${IDP}?view=member`);
   await expect(
     page.getByRole("link", { name: "Log my progress" }),
-  ).toHaveAttribute("href", `/g/${followingId}/roadmap?r=${IDP}`);
+  ).toHaveAttribute("href", `/roadmap?r=${IDP}`);
+
+  // A kept link to a circle's roadmap still works.
+  await page.goto(`/g/${otherId}/roadmap`);
+  await expect(page.getByText("isn’t on a roadmap")).toBeVisible();
 
   // An organiser in no following circle is offered nothing that cannot work.
   await page.goto("/groups");

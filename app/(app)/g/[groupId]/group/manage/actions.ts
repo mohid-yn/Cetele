@@ -98,8 +98,8 @@ export async function setGroupRoadmap(
   if (error) return fail(error.message);
 
   revalidateManage(groupId);
-  // "layout" so the group-scoped layout re-runs — it carries the nav-tab flag.
   revalidatePath(`/g/${groupId}`, "layout");
+  revalidatePath("/roadmap");
   return ok;
 }
 

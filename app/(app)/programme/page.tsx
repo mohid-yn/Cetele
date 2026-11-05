@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
@@ -13,9 +12,8 @@ import {
   LinkIcon,
   UsersIcon,
 } from "@/components/app/icons";
-import { ACTIVE_GROUP_COOKIE, groupHref } from "@/lib/group-href";
 import { localDateISO } from "@/lib/local-date";
-import { myProgressCircle } from "@/lib/my-progress-circle";
+import { followsRoadmap } from "@/lib/my-roadmaps";
 import { readMcpConfig } from "@/lib/mcp-policy";
 import { levelsOf, programmeWindow } from "@/lib/roadmap";
 import { NewProgrammeButton } from "./new-programme";
@@ -87,12 +85,10 @@ export default async function ProgrammeHubPage() {
         "programmeHub.my circles (log my progress)",
         supabase
           .from("memberships")
-          .select("group_id, groups(name, group_roadmaps(roadmap_id))")
+          .select("groups(group_roadmaps(roadmap_id))")
           .eq("user_id", me),
       ),
     ]);
-  const activeGroupId =
-    (await cookies()).get(ACTIVE_GROUP_COOKIE)?.value ?? null;
 
   const isSuperAdmin = viewer?.is_super_admin ?? false;
   const todayISO = localDateISO(viewer?.timezone ?? "UTC");
@@ -165,21 +161,15 @@ export default async function ProgrammeHubPage() {
     .filter((g) => g.rows.length > 0);
 
   const myProgressLink = (p: (typeof programmes)[number]) => {
-    const circle = p.published
-      ? myProgressCircle(myCircles ?? [], p.id, activeGroupId)
-      : null;
-    if (!circle) return null;
+    if (!p.published || !followsRoadmap(myCircles ?? [], p.id)) return null;
     return (
       <Link
-        href={`${groupHref(circle.groupId, "/roadmap")}?r=${p.id}`}
+        href={`/roadmap?r=${p.id}`}
         aria-label={`Log my progress on ${p.name}`}
         className="flex min-h-11 items-center gap-2 px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover active:bg-surface-active"
       >
         <CheckIcon aria-hidden className="size-4 shrink-0" />
         <span className="flex-1">Log my progress</span>
-        <span className="max-w-[40%] truncate text-xs font-normal text-muted-foreground">
-          {circle.name}
-        </span>
         <ChevronRightIcon
           aria-hidden
           className="size-5 shrink-0 text-muted-foreground"

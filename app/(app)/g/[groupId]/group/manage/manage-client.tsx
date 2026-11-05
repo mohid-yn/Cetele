@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { refreshGroups } from "@/lib/groups-store";
 import Link from "next/link";
 import {
   Avatar,
@@ -781,7 +782,9 @@ export function ManageClient({
                           );
                           void roadmapAct.run(
                             () => act.setGroupRoadmap(group.id, r.id, !on),
-                            undefined,
+                            // The nav's Roadmap tab reads the groups store, and
+                            // this write does not navigate.
+                            () => void refreshGroups(),
                             () => setFollowed(previous),
                           );
                         }}

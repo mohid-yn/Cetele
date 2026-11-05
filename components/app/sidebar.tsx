@@ -20,7 +20,7 @@ import { ThemeToggleButton } from "@/components/theme/theme-toggle";
 import { WebAppLogo } from "@/components/ui/logo";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
-import { useGroupHasRoadmap } from "@/lib/use-group-roadmap";
+import { useHasRoadmap } from "@/lib/groups-store";
 import { useIsSuperAdmin } from "@/lib/viewer-store";
 import { groupHref } from "@/lib/group-href";
 import { isAdminZone } from "@/lib/admin-zone";
@@ -30,18 +30,19 @@ export function Sidebar({
   initialHasGroups,
   initialGroupId,
   initialIsOrganiser,
+  initialHasRoadmap,
 }: {
   initialHasGroups: boolean;
   initialGroupId: string | null;
   initialIsOrganiser: boolean;
+  initialHasRoadmap: boolean;
 }) {
   const pathname = usePathname();
   const groupId = useActiveGroupId(initialGroupId);
   const hasGroups = useHasGroups(initialHasGroups);
-  // The desktop nav is a vertical list, so the fifth item costs nothing here —
-  // but it must agree with the bottom bar, or the same circle has two different
-  // navigations depending on viewport width.
-  const hasRoadmap = useGroupHasRoadmap(groupId);
+  // Must agree with the bottom bar, or one member has two navigations depending
+  // on viewport width.
+  const hasRoadmap = useHasRoadmap(initialHasRoadmap);
   // The flag is fetched client-side because the shell does no server work (§4).
   const isOrganiser = useIsSuperAdmin(initialIsOrganiser);
   // …and the same collapse on the picker itself, where no circle is selected.

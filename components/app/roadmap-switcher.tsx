@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Eyebrow } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { groupHref } from "@/lib/group-href";
 
 /**
  * Which programme this screen is showing, when the circle follows more than one
@@ -27,11 +26,9 @@ import { groupHref } from "@/lib/group-href";
  * line tall however many there are.
  */
 export function RoadmapSwitcher({
-  groupId,
   programmes,
   currentId,
 }: {
-  groupId: string;
   programmes: { id: string; name: string }[];
   currentId: string;
 }) {
@@ -48,7 +45,7 @@ export function RoadmapSwitcher({
           return (
             <Link
               key={p.id}
-              href={`${groupHref(groupId, "/roadmap")}?r=${p.id}`}
+              href={`/roadmap?r=${p.id}`}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",

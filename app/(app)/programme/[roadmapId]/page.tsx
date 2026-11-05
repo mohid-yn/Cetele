@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
@@ -11,8 +10,7 @@ import {
   FlagIcon,
   UsersIcon,
 } from "@/components/app/icons";
-import { ACTIVE_GROUP_COOKIE, groupHref } from "@/lib/group-href";
-import { myProgressCircle } from "@/lib/my-progress-circle";
+import { followsRoadmap } from "@/lib/my-roadmaps";
 import { CatalogueView } from "./catalogue-view";
 import { BUILDER_TABS, type BuilderTab } from "./builder-tabs";
 import { ProgrammeBuilder } from "./programme-builder";
@@ -28,7 +26,7 @@ import {
  *
  * WHY IT EXISTS. The report next door answers "how far has everyone got", and
  * that was the only programme screen an organiser could reach: the member's
- * roadmap lives at `/g/[groupId]/roadmap` and is membership-gated, so a super
+ * roadmap lives at `/roadmap` and is membership-gated, so a super
  * admin — who is deliberately in NO circle (D27) — could see the administration's
  * own programme measured but never read it. They could tell you Zayd had
  * finished level 2 and not what level 2 asks for.
@@ -186,26 +184,18 @@ export default async function ProgrammeCataloguePage({
     supabase.rpc("can_read_roadmap_cohort", { p_roadmap: roadmapId }),
   );
 
-  // THE WAY TO THE VIEWER'S OWN RECORD. This screen never records progress, and
-  // the Roadmap tab depends on which circle is active, so without this someone
-  // in a following circle has no route from here to logging.
+  // THE WAY TO THE VIEWER'S OWN RECORD. This screen never records progress.
   const { data: myCircles } = await q(
     "catalogue.my circles (log my progress)",
     supabase
       .from("memberships")
-      .select("group_id, groups(name, group_roadmaps(roadmap_id))")
+      .select("groups(group_roadmaps(roadmap_id))")
       .eq("user_id", me),
   );
-  const myCircle = roadmap.published
-    ? myProgressCircle(
-        myCircles ?? [],
-        roadmapId,
-        (await cookies()).get(ACTIVE_GROUP_COOKIE)?.value ?? null,
-      )
-    : null;
-  const myProgressHref = myCircle
-    ? `${groupHref(myCircle.groupId, "/roadmap")}?r=${roadmapId}`
-    : null;
+  const myProgressHref =
+    roadmap.published && followsRoadmap(myCircles ?? [], roadmapId)
+      ? `/roadmap?r=${roadmapId}`
+      : null;
 
   // Who may edit. Only decides which screen renders: every RPC behind the builder
   // refuses a non-organiser on its own.

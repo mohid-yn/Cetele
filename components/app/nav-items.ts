@@ -47,14 +47,13 @@ export const NAV_ITEMS: readonly (ScopedItem | FlatItem)[] = [
 ] as const;
 
 /**
- * The Roadmap tab, inserted before Profile for a circle that FOLLOWS a
- * programme (D55, Q7 resolved). Kept out of `NAV_ITEMS` because it is the only
- * conditional destination in the app: most circles follow no programme, and a
- * permanent tab leading to "this circle isn't following a programme" is clutter
- * rather than navigation. `useGroupHasRoadmap` decides; the navs splice.
+ * The Roadmap tab, inserted before Profile when ANY of the member's circles
+ * follows a programme, whichever is selected (D75). Flat, because the screen is
+ * the member's own: opening it leaves the selected circle alone. Kept out of
+ * `NAV_ITEMS` because it is conditional, as most members follow no programme.
  */
-export const ROADMAP_NAV_ITEM: ScopedItem = {
-  sub: "/roadmap",
+export const ROADMAP_NAV_ITEM: FlatItem = {
+  href: "/roadmap",
   label: "Roadmap",
   shortLabel: "Roadmap",
   Icon: FlagIcon,

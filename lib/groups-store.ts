@@ -3,6 +3,7 @@
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { q } from "@/lib/db-log";
+import { ROADMAP_HINT_COOKIE } from "@/lib/group-href";
 
 /**
  * The signed-in user's circles — ONE source of truth for every shell surface:
@@ -24,6 +25,8 @@ export type GroupRow = {
   id: string;
   name: string;
   role: "owner" | "admin" | "member";
+  /** Follows at least one published roadmap, which is what the nav tab asks. */
+  followsRoadmap: boolean;
 };
 
 type State = { groups: GroupRow[]; loaded: boolean };
@@ -50,7 +53,7 @@ async function fetchOnce(): Promise<void> {
       "groups-store.memberships",
       supabase
         .from("memberships")
-        .select("role, groups(id, name)")
+        .select("role, groups(id, name, group_roadmaps(roadmaps(published)))")
         .eq("user_id", me),
     );
     groups = (data ?? [])
@@ -59,12 +62,19 @@ async function fetchOnce(): Promise<void> {
         id: r.groups!.id,
         name: r.groups!.name,
         role: r.role as GroupRow["role"],
+        // Published is checked here because an organiser's RLS returns drafts.
+        followsRoadmap: r.groups!.group_roadmaps.some(
+          (g) => g.roadmaps?.published,
+        ),
       }))
       .sort(
         (a, b) =>
           ROLE_RANK[a.role] - ROLE_RANK[b.role] || a.name.localeCompare(b.name),
       );
   }
+  document.cookie = groups.some((g) => g.followsRoadmap)
+    ? `${ROADMAP_HINT_COOKIE}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
+    : `${ROADMAP_HINT_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
   const next: State = { groups, loaded: true };
   // Only swap the snapshot when something actually changed —
   // useSyncExternalStore consumers re-render on identity.
@@ -121,4 +131,15 @@ export function useGroupsSnapshot(): State {
     // saw "loaded", rendered Today's switcher, and React threw the tree away.
     () => SERVER_STATE,
   );
+}
+
+/**
+ * Does any of the member's circles follow a roadmap? Whichever is selected,
+ * because the roadmap screen is theirs and not a circle's (D75). `initial` is the
+ * server's reading of the hint cookie, used until the first fetch lands. Reads
+ * only: `useHasGroups` and the switcher already refresh on navigation.
+ */
+export function useHasRoadmap(initial: boolean): boolean {
+  const { groups, loaded } = useGroupsSnapshot();
+  return loaded ? groups.some((g) => g.followsRoadmap) : initial;
 }

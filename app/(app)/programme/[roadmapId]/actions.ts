@@ -42,5 +42,6 @@ export async function setRoadmapItemContent(
   // the organiser is standing on, and every member's own roadmap.
   revalidatePath("/programme", "layout");
   revalidatePath("/g", "layout");
+  revalidatePath("/roadmap");
   return { error: null };
 }

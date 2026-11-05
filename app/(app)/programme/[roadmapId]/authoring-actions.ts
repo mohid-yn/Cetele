@@ -18,7 +18,7 @@ import { signOutIfStaleSession } from "@/lib/stale-session";
  *
  * WHAT EACH ONE REVALIDATES matters more than it looks. A programme's content
  * is read on three different routes — the hub, the catalogue, and every
- * member's own `/g/[groupId]/roadmap` — so an edit that revalidates only the
+ * member's own `/roadmap` — so an edit that revalidates only the
  * screen the organiser is standing on leaves members holding the old copy until
  * something else happens to refresh them.
  */
@@ -28,6 +28,7 @@ type Result = { error: string | null };
 function revalidateProgramme(): void {
   revalidatePath("/programme", "layout");
   revalidatePath("/g", "layout");
+  revalidatePath("/roadmap");
 }
 
 export async function updateRoadmap(

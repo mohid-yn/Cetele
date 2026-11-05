@@ -60,18 +60,16 @@ const fmtDate = (iso: string, todayISO: string) =>
 export function RoadmapClient({
   roadmap,
   todayISO,
-  groupId,
   programmes,
   canAdminister,
 }: {
   roadmap: Roadmap;
   /** The member's own today (D34) — the window is counted on their calendar. */
   todayISO: string;
-  groupId: string;
-  /** Everything this circle follows (0028). One is the ordinary case. */
+  /** Everything their circles follow (0028). One is the ordinary case. */
   programmes: { id: string; name: string }[];
   /**
-   * Owner or co-admin of THIS circle — they get the strip below (D59). Not a
+   * May read this roadmap's cohort (0035) — they get the strip below (D59). Not a
    * permission: the report is scoped by RLS and the item editor
    * refuses a non-organiser regardless. Hiding the links from a plain member is
    * so the screen says what it is for, not so it is safe.
@@ -211,13 +209,9 @@ export function RoadmapClient({
         }
       />
 
-      <RoadmapSwitcher
-        groupId={groupId}
-        programmes={programmes}
-        currentId={roadmap.id}
-      />
+      <RoadmapSwitcher programmes={programmes} currentId={roadmap.id} />
 
-      {/* THE ADMIN STRIP (D59) — for whoever leads this circle, and nobody
+      {/* THE ADMIN STRIP (D59) — for whoever leads a following circle, and nobody
           else. Two jobs live off this screen and both used to be a scavenger
           hunt: "how is everyone getting on" was a link at the foot of Manage,
           and the programme's own content — the item editor with it — was behind

@@ -13,6 +13,13 @@
  */
 export const ACTIVE_GROUP_COOKIE = "cetele-active-group";
 
+/**
+ * A first-paint hint: a circle of this member's follows a roadmap. The shell does
+ * no DB work, so without it the Roadmap tab would arrive after the page does. It
+ * only chooses a tab, and the groups store rewrites it on every fetch.
+ */
+export const ROADMAP_HINT_COOKIE = "cetele-roadmap-hint";
+
 /** The group-scoped screens, as URL sub-paths under `/g/[groupId]`. */
 export type GroupSubPath =
   | "/today"

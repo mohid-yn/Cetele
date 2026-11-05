@@ -17,7 +17,7 @@ import { AdminTabBar } from "./admin-tab-bar";
 import { isAdminZone } from "@/lib/admin-zone";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
-import { useGroupHasRoadmap } from "@/lib/use-group-roadmap";
+import { useHasRoadmap } from "@/lib/groups-store";
 import { useIsSuperAdmin } from "@/lib/viewer-store";
 
 /** Mobile tab bar pinned to the bottom of the app column (hidden on desktop). */
@@ -25,20 +25,19 @@ export function BottomNav({
   initialHasGroups,
   initialGroupId,
   initialIsOrganiser,
+  initialHasRoadmap,
 }: {
   initialHasGroups: boolean;
   initialGroupId: string | null;
   initialIsOrganiser: boolean;
+  initialHasRoadmap: boolean;
 }) {
   const pathname = usePathname();
   const groupId = useActiveGroupId(initialGroupId);
   const hasGroups = useHasGroups(initialHasGroups);
   // No circle yet → collapse to the front door + you (the group tabs would be
   // dead links to /groups).
-  // Only for the circle in hand: mid-navigation between two circles the store
-  // still holds the old one, and inheriting its answer is how a Roadmap tab
-  // appears on a circle that has no programme.
-  const hasRoadmap = useGroupHasRoadmap(groupId);
+  const hasRoadmap = useHasRoadmap(initialHasRoadmap);
   // An organiser is in no circle by role (D27), so their Admin tab is the one
   // thing in this bar that no group page can publish — it comes from the
   // client-side viewer store instead.
