@@ -1,6 +1,6 @@
 # Cetele MCP server — plan and go-live runbook
 
-**Status (2026-11-06): the server is on `staging`, OFF by default, and not on production. The seven-day connection limit is on branch `mohidkhanzada/mcp-session-expiry`, waiting for approval to run its migration.** Nothing has been tested with a real sign-in or a real database write, because neither is possible before go-live (§4). No Supabase setting has changed.
+**Status (2026-11-06): deployed to production at `840f72e` and OFF: `/api/mcp` returns 404. Migration 0039 is applied, and runbook steps 0 and 1 are done. Resume at step 2.** Nothing has been tested with a real sign-in or a real database write, because neither is possible before go-live (§4). No Supabase auth setting has changed.
 
 Goal: an organiser asks Claude to build a roadmap, and Claude creates a **draft** programme in Cetele with its items and
 descriptions. A person reviews and publishes it in the app.
