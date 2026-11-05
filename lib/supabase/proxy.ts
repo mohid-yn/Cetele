@@ -12,6 +12,9 @@ const PUBLIC_PATHS = [
   // authenticates with a Bearer secret instead (see the route). Without this
   // the gate 307s it to the login page and no reminder is ever sent.
   "/api/push",
+  // An MCP client has no cookie session. A redirect to the login page would hide
+  // the 401 that starts its sign-in, so the route answers for itself.
+  "/api/mcp",
 ];
 
 function isPublic(pathname: string) {
