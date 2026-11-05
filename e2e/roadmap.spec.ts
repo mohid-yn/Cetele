@@ -29,6 +29,13 @@ const ORGANISER = `e2e-roadmap-org-${STAMP}@example.com`;
  */
 const SECOND_PROGRAMME = `Second Programme ${STAMP}`;
 /**
+ * Stamped, and every lookup uses the stamp. An organiser sees EVERY circle, and a
+ * serial retry re-runs this file under a new STAMP against the same database, so
+ * the first try's circle is still there. Matching on /Roadmap Circle/ ticked that
+ * stale one, and the new owner then correctly saw their own circle unticked.
+ */
+const CIRCLE = `Roadmap Circle ${STAMP}`;
+/**
  * The booklet's own programme, from the seed. Named because the report is now
  * PER PROGRAMME (D59) — every route to it carries an id, so the specs need the
  * one the seed guarantees rather than whichever happens to come back first.
@@ -54,7 +61,7 @@ test("a circle follows a programme, and its members can record against it", asyn
   page,
 }) => {
   await signIn(page, OWNER);
-  const manageUrl = await newCircle(page, `Roadmap Circle ${STAMP}`);
+  const manageUrl = await newCircle(page, CIRCLE);
 
   // Before opting in there is NO Roadmap tab. The tab is the only way in now
   // (Q7 resolved) and it is conditional — most circles follow no programme, so
@@ -241,10 +248,7 @@ test("the roadmap never touches the daily engine", async ({ page }) => {
   // items above changed nothing on Progress: no streak, no consistency, no
   // completed day — the roadmap can only ever ADD.
   await page.goto("/groups");
-  await page
-    .getByRole("link", { name: /Roadmap Circle/ })
-    .first()
-    .click();
+  await page.getByRole("link", { name: CIRCLE }).first().click();
   // Wait for each landing before acting on it: clicking a nav tab on a
   // half-mounted screen is the false negative this suite keeps re-learning.
   await page.waitForURL("**/today");
@@ -535,10 +539,7 @@ test("the timeline, its pictures, and an organiser editing an item", async ({
   // following the programme without a deploy.
   await signIn(page, OWNER);
   await page.goto("/groups");
-  await page
-    .getByRole("link", { name: /Roadmap Circle/ })
-    .first()
-    .click();
+  await page.getByRole("link", { name: CIRCLE }).first().click();
   await page.waitForURL("**/today");
   await page
     .getByRole("link", { name: "Roadmap", exact: true })
@@ -557,7 +558,7 @@ test("a member walks the timeline: stations, then categories, then items", async
 
   // OWNER's circle followed the programme in the first spec in this file.
   await page.goto("/groups");
-  const circle = page.getByRole("link", { name: /Roadmap Circle/ }).first();
+  const circle = page.getByRole("link", { name: CIRCLE }).first();
   await expect(circle).toBeVisible();
   await circle.click();
   await page.waitForURL("**/today");
@@ -667,10 +668,7 @@ test("a circle follows TWO programmes, and the roadmap switches between them", a
   // so a circle wanting both had to choose or be split in two.
   await signIn(page, OWNER);
   await page.goto("/groups");
-  await page
-    .getByRole("link", { name: /Roadmap Circle/ })
-    .first()
-    .click();
+  await page.getByRole("link", { name: CIRCLE }).first().click();
   await page.waitForURL("**/today");
   const groupId = page.url().match(/\/g\/([^/]+)\//)![1];
 
@@ -809,23 +807,20 @@ test("an organiser sees who a roadmap reaches, and puts a circle on it", async (
 
   await page.getByRole("button", { name: "Add circles" }).click();
   await expect(page).toHaveURL(/tab=circles/);
-  const circle = page.getByRole("checkbox", { name: /Roadmap Circle/ }).first();
+  const circle = page.getByRole("checkbox", { name: CIRCLE }).first();
   await circle.check();
   await expect(
     page.getByText(/^Live for \d+ members? in 1 circle\.$/),
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole("checkbox", { name: /Roadmap Circle/ }).first(),
+    page.getByRole("checkbox", { name: CIRCLE }).first(),
   ).toBeChecked();
 
   // The circle's admin sees it ticked, with the control they have always had.
   await signIn(page, OWNER);
   await page.goto("/groups");
-  await page
-    .getByRole("link", { name: /Roadmap Circle/ })
-    .first()
-    .click();
+  await page.getByRole("link", { name: CIRCLE }).first().click();
   await page.waitForURL("**/today");
   const groupId = page.url().match(/\/g\/([^/]+)\//)![1];
   await page.goto(`/g/${groupId}/group/manage`);

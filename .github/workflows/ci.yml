@@ -38,6 +38,10 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Pure logic, and the only check on a rule that exists solely on the client.
+      - name: Unit tests
+        run: pnpm test:unit
+
       - name: Build
         run: pnpm build
         env:
@@ -138,3 +142,13 @@ jobs:
 
       - name: E2E (Playwright)
         run: pnpm test:e2e
+
+      # A red e2e run is only diagnosable with the page snapshots and traces, and
+      # they die with the runner unless they are kept here.
+      - name: Keep e2e evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: test-results/
+          retention-days: 7
