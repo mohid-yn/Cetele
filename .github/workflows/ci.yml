@@ -43,7 +43,7 @@ jobs:
         run: pnpm test:unit
 
       - name: Build
-        run: pnpm build
+        run: scripts/ci-build.sh
         env:
           # Public, build-inlined Supabase vars — NOT secrets (they ship to the
           # browser; RLS protects the data, same values stack-tests hardcodes).
@@ -140,22 +140,8 @@ jobs:
       - name: Check the e2e environment is complete
         run: pnpm check:env
 
-      # Seen twice on 2026-11-05: Turbopack stops on `next/font/google queries have
-      # exactly one entry` before any test has run, and a rerun of the same commit
-      # builds. Retry only that error, so a real build failure still fails first time.
       - name: Build
-        run: |
-          for attempt in 1 2 3; do
-            if pnpm build 2>&1 | tee build.log; test "${PIPESTATUS[0]}" -eq 0; then
-              exit 0
-            fi
-            if ! grep -q "next/font/google" build.log; then
-              exit 1
-            fi
-            echo "::warning::font resolution failed the build on attempt $attempt, retrying"
-            sleep 10
-          done
-          exit 1
+        run: scripts/ci-build.sh
 
       - name: E2E (Playwright)
         run: pnpm test:e2e
