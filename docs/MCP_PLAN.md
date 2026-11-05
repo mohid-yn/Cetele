@@ -1,8 +1,8 @@
 # Cetele MCP server — plan
 
-**Status (2026-11-06): step 2 in progress on branch `mohidkhanzada/mcp-server`.** A fake-data route exists at `/api/mcp` and
-passes locally. It has not been reached from normal Claude, because Vercel's login blocks previews (see §6). No Supabase
-setting has changed. **Do not merge it, or add real data to it, until sign-in is in place.**
+**Status (2026-11-06): step 2 done, step 3 not started, on branch `mohidkhanzada/mcp-server`.** The owner reached the
+fake-data route at `/api/mcp` from normal Claude, and it answered correctly. No Supabase setting has changed. **Do not add
+real data to the route until sign-in is in place, and ask the owner before turning on OAuth.**
 
 Goal: an organiser asks Claude to build a roadmap, and Claude creates a **draft** programme in Cetele with its items and
 descriptions. A person reviews and publishes it in the app.
@@ -105,13 +105,13 @@ re-authenticate through `/mcp` first. Pure logic gets `test:unit` tests.
 
 **Check during the build**
 
-| Question                                           | Why it matters                                                                                                                                                                                       |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| How powerful is the issued token?                  | It probably carries the operator's full permissions, so leaving out a tool is not a hard limit. `client_id` checks in the database may narrow it                                                     |
-| How does Supabase's setup fit the MCP token rules? | The spec requires tokens issued for this server and forbids passing them on. Supabase's MCP page does not address audience                                                                           |
-| Does Supabase's OAuth server still count as beta?  | Its docs described it that way when checked, so behaviour may change                                                                                                                                 |
-| Where can the real sign-in be tested?              | Claude cannot reach previews or staging without a bypass secret, and the approval page is built from the Site URL plus a path, so sign-in probably lands on production. Step 3 needs a plan for this |
-| Which client method does Claude use with Supabase? | Claude offers its published identity, automatic registration, or our own client. Prefer the narrowest that works                                                                                     |
+| Question                                           | Why it matters                                                                                                                                                                                                                                                                                                                            |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| How powerful is the issued token?                  | It probably carries the operator's full permissions, so leaving out a tool is not a hard limit. `client_id` checks in the database may narrow it                                                                                                                                                                                          |
+| How does Supabase's setup fit the MCP token rules? | The spec requires tokens issued for this server and forbids passing them on. Supabase's MCP page does not address audience                                                                                                                                                                                                                |
+| Does Supabase's OAuth server still count as beta?  | Its docs described it that way when checked, so behaviour may change                                                                                                                                                                                                                                                                      |
+| Where can the real sign-in be tested?              | Claude cannot reach previews or staging without a bypass secret, and the approval page is built from the Site URL plus a path, so sign-in probably lands on production. Proposed: ship the page and a login-required route (still fake data) through staging to production, then turn on OAuth and test there. Needs the owner's approval |
+| Which client method does Claude use with Supabase? | Claude offers its published identity, automatic registration, or our own client. Prefer the narrowest that works                                                                                                                                                                                                                          |
 
 **Known risks**
 
@@ -146,6 +146,7 @@ limited beta, so this may only work in Claude Code. It is not the final setup fo
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Project token signing      | ES256 on the public JWKS, which the OAuth server needs                                                                                                                                                                                                                                                                       |
 | Vercel preview access      | Previews are behind Vercel Authentication: a POST to `/api/mcp` on the branch URL returns 401, and staging also refuses (302). Claude connects from the cloud, so it is blocked too. Do not turn protection off, as staging reads the production database. Testing needs a bypass secret, using `x-vercel-protection-bypass` |
+| Normal Claude to preview   | Works with the secret in the connector URL as a query parameter. Tested 2026-11-06 by the owner, with a dedicated secret meant to be deleted afterwards                                                                                                                                                                      |
 | OAuth server on production | Not on: `/.well-known/oauth-authorization-server/auth/v1` returns 404                                                                                                                                                                                                                                                        |
 | Authoring RPCs             | Organiser-only and audited, granted to `authenticated` (migration 0030)                                                                                                                                                                                                                                                      |
 | Drafts                     | `create_roadmap` always inserts `published = false`                                                                                                                                                                                                                                                                          |
