@@ -2,9 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   bearerToken,
-  CLAUDE_REDIRECT_URI,
   consentRefusal,
-  isClaudeCallback,
+  isHttpsUrl,
   readMcpConfig,
   tokenRefusal,
   type McpConfig,
@@ -116,26 +115,26 @@ describe("tokenRefusal", () => {
   });
 });
 
-describe("isClaudeCallback", () => {
-  it("accepts Claude's callback, with or without a query", () => {
-    assert.equal(isClaudeCallback(CLAUDE_REDIRECT_URI), true);
-    assert.equal(
-      isClaudeCallback(`${CLAUDE_REDIRECT_URI}?code=x&state=y`),
-      true,
-    );
+describe("isHttpsUrl", () => {
+  it("accepts the callbacks of hosted AI apps", () => {
+    for (const url of [
+      "https://claude.ai/api/mcp/auth_callback",
+      "https://chatgpt.com/connector/oauth/abc123",
+      "https://claude.ai/api/mcp/auth_callback?code=x&state=y",
+    ]) {
+      assert.equal(isHttpsUrl(url), true, url);
+    }
   });
 
-  it("refuses lookalikes", () => {
+  it("refuses anything else", () => {
     for (const url of [
-      "https://claude.ai.evil.com/api/mcp/auth_callback",
-      "https://evil.com/?u=https://claude.ai/api/mcp/auth_callback",
       "http://claude.ai/api/mcp/auth_callback",
-      "https://claude.ai/api/mcp/auth_callback/extra",
-      "https://claude.ai@evil.com/api/mcp/auth_callback",
       "http://localhost:3118/callback",
+      "javascript:alert(1)",
       "not a url",
+      "",
     ]) {
-      assert.equal(isClaudeCallback(url), false, url);
+      assert.equal(isHttpsUrl(url), false, url);
     }
   });
 });
@@ -145,11 +144,23 @@ describe("consentRefusal", () => {
     config: on,
     isOrganiser: true,
     clientId: "claude",
-    redirectUri: CLAUDE_REDIRECT_URI,
+    redirectUri: "https://claude.ai/api/mcp/auth_callback",
   };
 
   it("allows an organiser connecting Claude", () => {
     assert.equal(consentRefusal(request), null);
+  });
+
+  it("allows another allowlisted app, with no code change", () => {
+    assert.equal(
+      consentRefusal({
+        ...request,
+        config: { ...on, allowedClients: ["claude", "chatgpt"] },
+        clientId: "chatgpt",
+        redirectUri: "https://chatgpt.com/connector/oauth/abc123",
+      }),
+      null,
+    );
   });
 
   it("refuses when the server is off", () => {
@@ -173,9 +184,12 @@ describe("consentRefusal", () => {
     );
   });
 
-  it("refuses any other destination, even for an organiser", () => {
+  it("refuses a destination that is not HTTPS, even for an organiser", () => {
     assert.equal(
-      consentRefusal({ ...request, redirectUri: "https://evil.com/callback" }),
+      consentRefusal({
+        ...request,
+        redirectUri: "http://localhost:3118/callback",
+      }),
       "wrong-destination",
     );
   });

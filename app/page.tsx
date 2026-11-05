@@ -105,7 +105,14 @@ export default function LoginPage() {
     stashNextPath();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${location.origin}/auth/callback`,
+        // Someone connecting an AI app may need a different account from their usual
+        // one, and Google would otherwise reuse the last one without asking.
+        ...(readNextPath()?.startsWith("/oauth/consent")
+          ? { queryParams: { prompt: "select_account" } }
+          : {}),
+      },
     });
     if (error) setError(error.message);
   }

@@ -13,13 +13,13 @@ The owner is new to MCP and asked to learn as it is built, so **explain each pie
 
 | Decision               | Choice                                                              | State                |
 | ---------------------- | ------------------------------------------------------------------- | -------------------- |
-| Where operators use it | Normal Claude and Cowork, no terminal                               | Owner's requirement  |
+| Where operators use it | Claude (normal and Cowork), and possibly ChatGPT. No terminal       | Owner's requirement  |
 | Hosting                | A route in the existing Next app (`/api/mcp`)                       | Follows from above   |
 | Login                  | Browser sign-in and approval                                        | Owner's idea         |
 | Auth system            | Supabase OAuth 2.1 server, with existing Google sign-in behind it   | Owner agreed         |
 | Rollout                | Real tools, shipped behind flags and tested on production           | Owner's decision     |
 | What the AI can change | Drafts only, with no publish tool. It can remove items from a draft | Built, not confirmed |
-| Client registration    | One pre-registered client, with open registration off               | Built, not confirmed |
+| Client registration    | One pre-registered client per AI app, with open registration off    | Owner agreed         |
 
 **Why a remote server:** Claude connects to connectors from Anthropic's cloud, including in Desktop and Cowork.
 
@@ -77,18 +77,18 @@ All server-only environment variables. Each fails closed, and a change needs a r
 | `MCP_WRITES_ENABLED`     | Must be exactly `true` as well, or write tools are not offered           |
 | `MCP_ALLOWED_CLIENT_IDS` | Comma list of Supabase OAuth client ids. Empty refuses everyone          |
 
-| Block                                                                | Stops                                                 | Enforced in                 |
-| -------------------------------------------------------------------- | ----------------------------------------------------- | --------------------------- |
-| Signature and expiry check on every request                          | Forged or expired tokens                              | `lib/mcp-auth.ts`           |
-| `client_id` must be on the allowlist                                 | App session tokens and other OAuth clients            | `lib/mcp-policy.ts`         |
-| Organiser check on every request                                     | Members, and organisers who have since lost the role  | `lib/mcp-auth.ts`           |
-| Approval only for organisers                                         | Members being issued a token through the page         | `app/oauth/consent`         |
-| Approval only for the allowlisted client and Claude's exact callback | Lookalike apps and redirects                          | `lib/mcp-policy.ts`         |
-| Writes refuse a published programme, and an item from one            | AI changes reaching members                           | `lib/mcp-tools.ts`          |
-| No publish tool                                                      | Claude publishing                                     | `lib/mcp-tools.ts`          |
-| Connections end after 7 days (migration 0039)                        | A stolen or forgotten connection lasting forever      | `lib/mcp-auth.ts`, database |
-| Input limits, and http(s) links only                                 | Malformed or oversized input                          | `lib/mcp-tools.ts`          |
-| Existing RPC rules                                                   | Non-organisers, frozen fields, deleting recorded work | Database                    |
+| Block                                                                                                         | Stops                                                 | Enforced in                   |
+| ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------- |
+| Signature and expiry check on every request                                                                   | Forged or expired tokens                              | `lib/mcp-auth.ts`             |
+| `client_id` must be on the allowlist                                                                          | App session tokens and other OAuth clients            | `lib/mcp-policy.ts`           |
+| Organiser check on every request                                                                              | Members, and organisers who have since lost the role  | `lib/mcp-auth.ts`             |
+| Approval only for organisers                                                                                  | Members being issued a token through the page         | `app/oauth/consent`           |
+| Approval only for allowlisted clients and HTTPS destinations. Supabase matches each client's callback exactly | Unknown apps and local callbacks                      | `lib/mcp-policy.ts`, Supabase |
+| Writes refuse a published programme, and an item from one                                                     | AI changes reaching members                           | `lib/mcp-tools.ts`            |
+| No publish tool                                                                                               | Claude publishing                                     | `lib/mcp-tools.ts`            |
+| Connections end after 7 days (migration 0039)                                                                 | A stolen or forgotten connection lasting forever      | `lib/mcp-auth.ts`, database   |
+| Input limits, and http(s) links only                                                                          | Malformed or oversized input                          | `lib/mcp-tools.ts`            |
+| Existing RPC rules                                                                                            | Non-organisers, frozen fields, deleting recorded work | Database                      |
 
 ### Remaining risks
 
@@ -154,6 +154,19 @@ staging without a bypass secret, which is why the real test happens on productio
 | Team, Enterprise | Yes                       | Yes (Enterprise: owner enables) | An org owner, then each operator connects |
 
 **Not set up yet:** Claude Code as a client. Its callback is a local address on a varying port, which the approval page refuses.
+
+### Adding another AI app
+
+No code change. Register a client in Supabase (Authentication > OAuth Apps) with the app's exact callback, then add its id to `MCP_ALLOWED_CLIENT_IDS` (comma separated) and redeploy.
+
+| App                                   | Callback                                                                                               | Status                          |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| Claude (web, Desktop, mobile, Cowork) | `https://claude.ai/api/mcp/auth_callback`                                                              | Registered, sign-in in progress |
+| ChatGPT                               | Shown on the server's management page, in the form `https://chatgpt.com/connector/oauth/{callback_id}` | Untested                        |
+
+**ChatGPT unknowns.** Its stable callback needs `authorization_response_iss_parameter_supported`, which Supabase does not advertise, so it will use a `callback_id` address. Its docs do not say whether that id is per server or per connection. If it is per connection, each operator's address must be added to the client. Its docs also do not say how a predefined client is entered, or which plans can add a custom server. Test with one account first. If this proves unworkable, the alternative is open registration, a separate decision.
+
+**Connecting with two accounts.** Claude's "Account mismatch" compares the Claude account in the browser with the one in Desktop, and has nothing to do with the Cetele email. Any Cetele organiser account works with any Claude account.
 
 ---
 

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import {
   consentRefusal,
-  isClaudeCallback,
+  isHttpsUrl,
   readMcpConfig,
   type ConsentRefusal,
 } from "@/lib/mcp-policy";
@@ -10,7 +10,7 @@ export type ConsentRequest =
   | { kind: "signed-out" }
   | { kind: "invalid" }
   | { kind: "already-approved"; redirectUrl: string }
-  | { kind: "refused"; reason: ConsentRefusal }
+  | { kind: "refused"; reason: ConsentRefusal; email: string }
   | { kind: "ask"; clientName: string; destination: string; email: string };
 
 /**
@@ -24,6 +24,7 @@ export async function loadConsentRequest(
   const { data: auth } = await supabase.auth.getClaims();
   const userId = auth?.claims?.sub;
   if (!userId) return { kind: "signed-out" };
+  const email = auth?.claims?.email ?? "";
 
   const { data: details, error } =
     await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
@@ -41,11 +42,12 @@ export async function loadConsentRequest(
   // client to check. The other rules still apply, or an organiser who has lost the
   // role, or a server that has been switched off, would pass here.
   if (!("authorization_id" in details)) {
-    if (!config.enabled) return { kind: "refused", reason: "disabled" };
-    if (!isOrganiser) return { kind: "refused", reason: "not-organiser" };
-    return isClaudeCallback(details.redirect_url)
+    if (!config.enabled) return { kind: "refused", reason: "disabled", email };
+    if (!isOrganiser)
+      return { kind: "refused", reason: "not-organiser", email };
+    return isHttpsUrl(details.redirect_url)
       ? { kind: "already-approved", redirectUrl: details.redirect_url }
-      : { kind: "refused", reason: "wrong-destination" };
+      : { kind: "refused", reason: "wrong-destination", email };
   }
 
   const reason = consentRefusal({
@@ -54,12 +56,12 @@ export async function loadConsentRequest(
     clientId: details.client.id,
     redirectUri: details.redirect_uri,
   });
-  if (reason) return { kind: "refused", reason };
+  if (reason) return { kind: "refused", reason, email };
 
   return {
     kind: "ask",
     clientName: details.client.name,
     destination: new URL(details.redirect_uri).hostname,
-    email: details.user.email,
+    email,
   };
 }

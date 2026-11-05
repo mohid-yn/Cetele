@@ -37,3 +37,17 @@ export async function denyConsent(formData: FormData): Promise<void> {
   if (error || !data) return redirect("/");
   redirect(data.redirect_url);
 }
+
+/**
+ * Sign out of Cetele here only, then come back to this request through login. If
+ * Supabase has tied the request to the first account, the page reports it as
+ * unavailable and asks the person to connect again from the app.
+ */
+export async function switchConsentAccount(formData: FormData): Promise<void> {
+  const authorizationId = String(formData.get("authorization_id") ?? "");
+  const supabase = await createClient();
+  await supabase.auth.signOut({ scope: "local" });
+  redirect(
+    `/?next=${encodeURIComponent(`/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`)}`,
+  );
+}

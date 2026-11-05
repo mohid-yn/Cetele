@@ -5,9 +5,6 @@
  * an unset flag, an empty allowlist or a missing claim all mean no.
  */
 
-/** Where Claude's hosted apps (web, Desktop, mobile, Cowork) receive sign-in. */
-export const CLAUDE_REDIRECT_URI = "https://claude.ai/api/mcp/auth_callback";
-
 export type McpConfig = {
   enabled: boolean;
   writesEnabled: boolean;
@@ -58,11 +55,15 @@ export function tokenRefusal(
     : "client-not-allowed";
 }
 
-/** Exact origin and path. The query carries the one-time code and state. */
-export function isClaudeCallback(url: string): boolean {
+/**
+ * Only HTTPS destinations. Which app may use which address is not decided here:
+ * Supabase matches a registered client's callback exactly, and the allowlist says
+ * which clients count. Adding an AI app therefore needs no code change. This also
+ * means a local callback, like Claude Code's, stays refused.
+ */
+export function isHttpsUrl(url: string): boolean {
   try {
-    const { origin, pathname } = new URL(url);
-    return `${origin}${pathname}` === CLAUDE_REDIRECT_URI;
+    return new URL(url).protocol === "https:";
   } catch {
     return false;
   }
@@ -85,6 +86,6 @@ export function consentRefusal(input: {
   if (!input.config.allowedClients.includes(input.clientId)) {
     return "client-not-allowed";
   }
-  if (!isClaudeCallback(input.redirectUri)) return "wrong-destination";
+  if (!isHttpsUrl(input.redirectUri)) return "wrong-destination";
   return input.isOrganiser ? null : "not-organiser";
 }

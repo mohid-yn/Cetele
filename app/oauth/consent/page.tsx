@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { readMcpConfig } from "@/lib/mcp-policy";
-import { approveConsent, denyConsent } from "./actions";
+import { approveConsent, denyConsent, switchConsentAccount } from "./actions";
 import { ConsentCard, type ConsentView } from "./consent-card";
 import { loadConsentRequest } from "./load";
 
@@ -37,7 +37,7 @@ export default async function ConsentPage({
   let view: ConsentView;
   if (request.kind === "ask") view = request;
   else if (request.kind === "refused" && request.reason === "not-organiser") {
-    view = { kind: "not-organiser" };
+    view = { kind: "not-organiser", email: request.email };
   } else view = { kind: "unavailable" };
 
   return (
@@ -47,6 +47,7 @@ export default async function ConsentPage({
       writesEnabled={readMcpConfig(process.env).writesEnabled}
       approve={approveConsent}
       deny={denyConsent}
+      switchAccount={switchConsentAccount}
     />
   );
 }
