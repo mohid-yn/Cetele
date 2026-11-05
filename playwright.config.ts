@@ -59,7 +59,9 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: "http://localhost:3000",
-    trace: "on-first-retry",
+    // CI keeps every failure's trace, including first tries: the stalls this
+    // suite hits are intermittent, so a retry that passes shows nothing.
+    trace: process.env.CI ? "retain-on-failure" : "on-first-retry",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
@@ -67,5 +69,8 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
+    // The server's side of a stalled request is otherwise lost with the runner.
+    stdout: process.env.CI ? "pipe" : "ignore",
+    stderr: "pipe",
   },
 });
