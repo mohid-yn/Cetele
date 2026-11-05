@@ -1247,6 +1247,7 @@ export type Database = {
       };
       revoke_super_admin: { Args: { p_user: string }; Returns: undefined };
       roadmap_reach: { Args: { p_roadmap: string }; Returns: number };
+      mcp_session_active: { Args: never; Returns: boolean };
       roadmap_circles: {
         Args: { p_roadmap: string };
         Returns: {

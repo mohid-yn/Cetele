@@ -56,6 +56,18 @@ export async function authenticateMcpRequest(
     return forbidden("This token cannot be used with the Cetele connector.");
   }
 
+  // Seven-day limit (migration 0039). A 401 makes Claude try to renew, and once
+  // that fails too, the person is asked to connect again.
+  const { data: active, error: activeError } =
+    await supabase.rpc("mcp_session_active");
+  if (activeError) {
+    return Response.json(
+      { error: "Could not check this connection." },
+      { status: 503 },
+    );
+  }
+  if (active !== true) return unauthorized(request);
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("is_super_admin")

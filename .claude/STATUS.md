@@ -57,7 +57,7 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Nobody has signed in with Google or used a phone on this release, and the staging deployment was not clicked through. Prod's latest recorded Google sign-in is 2026-08-25, so this upgrade has not yet seen one.
 2. **Owner: run `/mcp` to re-authenticate Linear**, then create issues for the untracked work.
 3. Work through the rest of "What's open". Nothing there blocks anything.
-4. **MCP server for organisers:** built and on `staging`, off by default, not on production. Real sign-in and real writes are untested until go-live. Resume from the runbook in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §5.
+4. **MCP server for organisers:** on `staging`, off by default, not on production. Migration 0039 (seven-day connection limit) is on branch `mohidkhanzada/mcp-session-expiry` and needs `supabase db push` approval. Real sign-in and real writes are untested until go-live. Resume from the runbook in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §5.
 
 ### What's open
 
@@ -273,6 +273,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D42** Push: the schedule is in Postgres (`pg_cron` → `pg_net` → `/api/push/dispatch`), the sender is on Vercel. The claim is atomic and dead devices are pruned.
 - **D46** Motion is a token-aligned layer mirroring the CSS motion tokens, with `reducedMotion="user"` globally. No stagger-on-load.
 - **D50** `main` is production, `staging` is the soak.
+- **D73** Organisers build programmes through an MCP server: real tools behind flags (off by default), Supabase OAuth with one pre-registered Claude client, organisers only, drafts only, no publish tool. A connection lasts seven days (0039). No database-level limit on what a token can do, for now. [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md).
 - **D65** Planned: compute moves to Cloudflare (`@opennextjs/cloudflare`). Supabase and auth stay. Only `lib/push/send.ts` and `api/push/dispatch` are not portable. Not started.
 
 ---

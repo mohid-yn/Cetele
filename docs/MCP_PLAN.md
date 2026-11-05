@@ -1,7 +1,6 @@
 # Cetele MCP server — plan and go-live runbook
 
-**Status (2026-11-06): built and on `staging`, OFF by default. Not on production.** Nothing has been tested with a real
-sign-in or a real database write, because neither is possible before go-live (§4). No Supabase setting has changed.
+**Status (2026-11-06): the server is on `staging`, OFF by default, and not on production. The seven-day connection limit is on branch `mohidkhanzada/mcp-session-expiry`, waiting for approval to run its migration.** Nothing has been tested with a real sign-in or a real database write, because neither is possible before go-live (§4). No Supabase setting has changed.
 
 Goal: an organiser asks Claude to build a roadmap, and Claude creates a **draft** programme in Cetele with its items and
 descriptions. A person reviews and publishes it in the app.
@@ -78,17 +77,18 @@ All server-only environment variables. Each fails closed, and a change needs a r
 | `MCP_WRITES_ENABLED`     | Must be exactly `true` as well, or write tools are not offered           |
 | `MCP_ALLOWED_CLIENT_IDS` | Comma list of Supabase OAuth client ids. Empty refuses everyone          |
 
-| Block                                                                | Stops                                                 | Enforced in         |
-| -------------------------------------------------------------------- | ----------------------------------------------------- | ------------------- |
-| Signature and expiry check on every request                          | Forged or expired tokens                              | `lib/mcp-auth.ts`   |
-| `client_id` must be on the allowlist                                 | App session tokens and other OAuth clients            | `lib/mcp-policy.ts` |
-| Organiser check on every request                                     | Members, and organisers who have since lost the role  | `lib/mcp-auth.ts`   |
-| Approval only for organisers                                         | Members being issued a token through the page         | `app/oauth/consent` |
-| Approval only for the allowlisted client and Claude's exact callback | Lookalike apps and redirects                          | `lib/mcp-policy.ts` |
-| Writes refuse a published programme, and an item from one            | AI changes reaching members                           | `lib/mcp-tools.ts`  |
-| No publish tool                                                      | Claude publishing                                     | `lib/mcp-tools.ts`  |
-| Input limits, and http(s) links only                                 | Malformed or oversized input                          | `lib/mcp-tools.ts`  |
-| Existing RPC rules                                                   | Non-organisers, frozen fields, deleting recorded work | Database            |
+| Block                                                                | Stops                                                 | Enforced in                 |
+| -------------------------------------------------------------------- | ----------------------------------------------------- | --------------------------- |
+| Signature and expiry check on every request                          | Forged or expired tokens                              | `lib/mcp-auth.ts`           |
+| `client_id` must be on the allowlist                                 | App session tokens and other OAuth clients            | `lib/mcp-policy.ts`         |
+| Organiser check on every request                                     | Members, and organisers who have since lost the role  | `lib/mcp-auth.ts`           |
+| Approval only for organisers                                         | Members being issued a token through the page         | `app/oauth/consent`         |
+| Approval only for the allowlisted client and Claude's exact callback | Lookalike apps and redirects                          | `lib/mcp-policy.ts`         |
+| Writes refuse a published programme, and an item from one            | AI changes reaching members                           | `lib/mcp-tools.ts`          |
+| No publish tool                                                      | Claude publishing                                     | `lib/mcp-tools.ts`          |
+| Connections end after 7 days (migration 0039)                        | A stolen or forgotten connection lasting forever      | `lib/mcp-auth.ts`, database |
+| Input limits, and http(s) links only                                 | Malformed or oversized input                          | `lib/mcp-tools.ts`          |
+| Existing RPC rules                                                   | Non-organisers, frozen fields, deleting recorded work | Database                    |
 
 ### Remaining risks
 
@@ -125,17 +125,20 @@ unproven until §5 is complete.
 Each step needs the owner. Stop and turn `MCP_ENABLED` off if anything looks wrong. Claude cannot reach previews or
 staging without a bypass secret, which is why the real test happens on production.
 
-| #   | Step                                                                                                                                                                                   | Check                                              |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| 1   | **Promote to `main`.** Flags are unset, so the feature stays off                                                                                                                       | `/api/mcp` returns 404 on production               |
-| 2   | **Supabase:** Authentication > OAuth Server. Enable it, set the path to `/oauth/consent`, and leave dynamic registration **off**. Confirm the Site URL is the production URL           | Normal Google sign-in still works                  |
-| 3   | **Supabase:** Authentication > OAuth Apps > Add. Name `Claude`, type **Public**, redirect URI `https://claude.ai/api/mcp/auth_callback`. Copy the client id                            | Discovery URL stops returning 404                  |
-| 4   | **Vercel production env:** `MCP_ALLOWED_CLIENT_IDS=<client id>` and `MCP_ENABLED=true`. Redeploy. Leave writes off                                                                     | `/api/mcp` POST with no token returns 401          |
-| 5   | **Claude:** add a custom connector with `https://cetele-sable.vercel.app/api/mcp`, choose **Use your own OAuth client**, and enter the client id. Connect as an organiser, and approve | Claude lists the real programmes                   |
-| 6   | **Refusal tests:** connect with a non-organiser account                                                                                                                                | Refused at the page, with no way to approve        |
-| 7   | **Vercel:** `MCP_WRITES_ENABLED=true`. Redeploy                                                                                                                                        | Write tools appear after reconnecting              |
-| 8   | **Ask Claude to build a test draft.** Check it in `/programme`, try to get Claude to edit a published programme, then delete the draft in the app                                      | Draft is unpublished and refused edits are refused |
-| 9   | **Operator trial** in Cowork or normal Claude                                                                                                                                          | Draft reviewed and published in the app            |
+| #   | Step                                                                                                                                                                                   | Check                                                                |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 0   | **Run migration 0039** with `supabase db push`, a separate approval from promoting. Then merge the branch to `staging`                                                                 | The `expire-mcp-sessions` job exists, and normal sign-in still works |
+| 1   | **Promote to `main`.** Flags are unset, so the feature stays off                                                                                                                       | `/api/mcp` returns 404 on production                                 |
+| 2   | **Supabase:** Authentication > OAuth Server. Enable it, set the path to `/oauth/consent`, and leave dynamic registration **off**. Confirm the Site URL is the production URL           | Normal Google sign-in still works                                    |
+| 3   | **Supabase:** Authentication > OAuth Apps > Add. Name `Claude`, type **Public**, redirect URI `https://claude.ai/api/mcp/auth_callback`. Copy the client id                            | Discovery URL stops returning 404                                    |
+| 4   | **Vercel production env:** `MCP_ALLOWED_CLIENT_IDS=<client id>` and `MCP_ENABLED=true`. Redeploy. Leave writes off                                                                     | `/api/mcp` POST with no token returns 401                            |
+| 5   | **Claude:** add a custom connector with `https://cetele-sable.vercel.app/api/mcp`, choose **Use your own OAuth client**, and enter the client id. Connect as an organiser, and approve | Claude lists the real programmes                                     |
+| 6   | **Refusal tests:** connect with a non-organiser account                                                                                                                                | Refused at the page, with no way to approve                          |
+| 7   | **Vercel:** `MCP_WRITES_ENABLED=true`. Redeploy                                                                                                                                        | Write tools appear after reconnecting                                |
+| 8   | **Ask Claude to build a test draft.** Check it in `/programme`, try to get Claude to edit a published programme, then delete the draft in the app                                      | Draft is unpublished and refused edits are refused                   |
+| 9   | **Operator trial** in Cowork or normal Claude                                                                                                                                          | Draft reviewed and published in the app                              |
+
+**After go-live, confirm the seven-day limit:** Supabase may skip the Allow screen for a client already approved, so reconnecting may only need a click while signed in to Cetele. A stolen token cannot do that, as it needs the browser session. Confirm how Claude prompts for this when it first happens.
 
 **To turn it off:** set `MCP_ENABLED` to anything else and redeploy. Supabase's OAuth server can also be disabled.
 

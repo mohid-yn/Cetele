@@ -29,22 +29,28 @@ export async function loadConsentRequest(
     await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
   if (error || !details) return { kind: "invalid" };
 
-  // Already approved earlier, so Supabase hands back the way out directly.
-  if (!("authorization_id" in details)) {
-    return isClaudeCallback(details.redirect_url)
-      ? { kind: "already-approved", redirectUrl: details.redirect_url }
-      : { kind: "refused", reason: "wrong-destination" };
-  }
-
   const { data: profile } = await supabase
     .from("profiles")
     .select("is_super_admin")
     .eq("id", userId)
     .maybeSingle();
+  const isOrganiser = profile?.is_super_admin === true;
+  const config = readMcpConfig(process.env);
+
+  // Approved earlier, so Supabase hands back the way out directly and there is no
+  // client to check. The other rules still apply, or an organiser who has lost the
+  // role, or a server that has been switched off, would pass here.
+  if (!("authorization_id" in details)) {
+    if (!config.enabled) return { kind: "refused", reason: "disabled" };
+    if (!isOrganiser) return { kind: "refused", reason: "not-organiser" };
+    return isClaudeCallback(details.redirect_url)
+      ? { kind: "already-approved", redirectUrl: details.redirect_url }
+      : { kind: "refused", reason: "wrong-destination" };
+  }
 
   const reason = consentRefusal({
-    config: readMcpConfig(process.env),
-    isOrganiser: profile?.is_super_admin === true,
+    config,
+    isOrganiser,
     clientId: details.client.id,
     redirectUri: details.redirect_uri,
   });
