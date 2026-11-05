@@ -189,6 +189,7 @@ for t in [
     ("Rewards are informational and out-of-app", "(D31's shape): a threshold and a wording an organiser can correct on a live programme (D60). The app never handles fulfilment."),
     ("The organiser role authors it in-app", "create a programme, add and edit items, publish, appoint another organiser. The FIRST organiser is still set by hand in Supabase; there is deliberately no in-app bootstrap."),
     ("An organiser sees who a roadmap reaches", "which circles are on it and how many members that is. Publishing is checked first, and refused for an empty roadmap, a total the items cannot reach, or a reward nobody can earn (D72)"),
+    ("An organiser can build a draft with AI", "they connect Claude from Roadmaps > Build with Claude, and it creates programmes, items and rewards as unpublished drafts. A person reviews and publishes in the app. It cannot publish, change a live programme, or see members, circles or progress. A connection lasts seven days (D73)"),
     ("An organiser reads the cohort, not just their own circle", "a progress report per programme, across every circle following it."),
 ]:
     A(bullet([B(t[0] + " — "), N(t[1])]))

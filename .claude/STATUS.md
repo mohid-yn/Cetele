@@ -35,7 +35,18 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 Everything through D72 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
 
-### Last release (2026-11-05)
+### Last release (2026-11-06)
+
+The organiser MCP server (D73). Organisers connect Claude and build draft programmes; a person reviews and publishes in the app. Migration 0039 ends a connection after seven days. Runbook, blocks and remaining risks: [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md).
+
+| Production setting       | Value                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------- |
+| Vercel (Production only) | `MCP_ENABLED`, `MCP_WRITES_ENABLED`, `MCP_ALLOWED_CLIENT_IDS`                           |
+| Supabase                 | OAuth server on, path `/oauth/consent`, dynamic registration off, one client (`Claude`) |
+
+To turn it off, set `MCP_ENABLED` to anything else and redeploy.
+
+### Previous release (2026-11-05)
 
 Next and eslint-config-next 16.2.9 → 16.4.5, plus CI repairs (runner `ubuntu-26.04`, Supabase CLI 3.0.0, `scripts/ci-build.sh`
 retries only the `next/font/google` build error). No migrations.
@@ -54,10 +65,12 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 
 ### Next steps, in order
 
-1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Nobody has signed in with Google or used a phone on this release, and the staging deployment was not clicked through. Prod's latest recorded Google sign-in is 2026-08-25, so this upgrade has not yet seen one.
+1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Google sign-in on a desktop browser is confirmed on this release (2026-11-06). Nobody has used a phone on it, and staging was not clicked through.
 2. **Owner: run `/mcp` to re-authenticate Linear**, then create issues for the untracked work.
 3. Work through the rest of "What's open". Nothing there blocks anything.
-4. **MCP server for organisers:** live on production with writes on. Tested by the owner from normal Claude, including the drafts-only refusal. Next is an operator trial. Remaining checks are in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §4. The seven-day expiry first applies on 2026-11-12.
+4. **MCP server: operator trial.** Live and tested by the owner from normal Claude, including the drafts-only refusal. Send an organiser **Roadmaps > Build with Claude** and have them build something real. Remaining checks are in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §4. On 2026-11-12, confirm Claude asks to reconnect when the first session expires.
+5. **Owner: delete the `MCP test` draft** in `/programme`, and check "Angels in Your Presence 1" against "Angels In Their Presence 2" in the booklet, as one may be a typo.
+6. **Owner: decide whether to try ChatGPT.** Its unknowns are in the plan. Linear also has no issue for this work (step 2).
 
 ### What's open
 
@@ -114,6 +127,7 @@ Also open: should later levels genuinely lock (D57)? Does neglecting a newly joi
 - `--gradient-hero*` tokens now only appear on `/designsystem`.
 - `components/app/roadmap-entry-card.tsx` has no importers and its comment cites an answered question (Q7).
 - `lib/database.types.ts` was hand-edited for three RPCs. Regenerate it when the stack is next up.
+- `cetele-toy`, the MCP learning server, is still in the owner's local Claude Code config and points at a temp folder. Remove it with `claude mcp remove cetele-toy`.
 - `addTask` `sort_order` race: won't fix, harmless at this scale.
 
 ---
@@ -205,15 +219,16 @@ scripts/                                   build_prd_docx.py · check-env.mjs ·
 research/                                  landscape · motivation and reward · feature recommendations
 ```
 
-| Doc                                                                         | What it is for                                         |
-| --------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `CLAUDE.md`                                                                 | How we work, UI rules, commands, stack                 |
-| [`docs/PRD.md`](../docs/PRD.md)                                             | Product spec (`.docx` is generated from it)            |
-| [`docs/DESIGN_SYSTEM.md`](../docs/DESIGN_SYSTEM.md)                         | Visual system; `/designsystem` is its living reference |
-| [`docs/UI_PRACTICES.md`](../docs/UI_PRACTICES.md)                           | Research behind colour, theming, responsive, motion    |
-| [`docs/HOSTING_MIGRATION.md`](../docs/HOSTING_MIGRATION.md)                 | Vercel → Cloudflare plan, not started (D65)            |
-| [`docs/ACCOUNT_MIGRATION_RUNBOOK.md`](../docs/ACCOUNT_MIGRATION_RUNBOOK.md) | Move to the owner's new Gmail, not started             |
-| [`history/`](history/)                                                      | Old STATUS copies, plus the finished backend plans     |
+| Doc                                                                         | What it is for                                                |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `CLAUDE.md`                                                                 | How we work, UI rules, commands, stack                        |
+| [`docs/PRD.md`](../docs/PRD.md)                                             | Product spec (`.docx` is generated from it)                   |
+| [`docs/DESIGN_SYSTEM.md`](../docs/DESIGN_SYSTEM.md)                         | Visual system; `/designsystem` is its living reference        |
+| [`docs/UI_PRACTICES.md`](../docs/UI_PRACTICES.md)                           | Research behind colour, theming, responsive, motion           |
+| [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md)                                   | Organiser MCP server: design, blocks, runbook, untested items |
+| [`docs/HOSTING_MIGRATION.md`](../docs/HOSTING_MIGRATION.md)                 | Vercel → Cloudflare plan, not started (D65)                   |
+| [`docs/ACCOUNT_MIGRATION_RUNBOOK.md`](../docs/ACCOUNT_MIGRATION_RUNBOOK.md) | Move to the owner's new Gmail, not started                    |
+| [`history/`](history/)                                                      | Old STATUS copies, plus the finished backend plans            |
 
 **If reminders go quiet, check `VAPID_SUBJECT` first:** `web-push` refuses to sign without it, so every send fails silently.
 

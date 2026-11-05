@@ -123,7 +123,9 @@ All server-only environment variables. Each fails closed, and a change needs a r
 
 **Bugs found by testing, fixed and confirmed on production:** Zod's `uuid()` refused the seeded programme's id, and `get_programme` counted every circle instead of those following.
 
-**Not tested yet:** the setup page's copy buttons, Cancel, a valid token from a non-organiser or an app session being refused at the route, the seven-day expiry on a real session (first due 2026-11-12), an operator other than the owner, Cowork, and ChatGPT.
+**Setup page:** the owner confirmed the copy buttons work on production.
+
+**Not tested yet:** Cancel, a valid token from a non-organiser or an app session being refused at the route, the seven-day expiry on a real session (first due 2026-11-12), an operator other than the owner, Cowork, and ChatGPT.
 
 ---
 

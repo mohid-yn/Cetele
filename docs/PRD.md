@@ -107,6 +107,7 @@ off, it is not counted, so nothing here reaches `logs`, streaks, rings or the co
 - **The organiser role authors it in-app** — create a programme, add and edit items, publish, appoint another
   organiser. The **first** organiser is still set by hand in Supabase; there is deliberately no in-app bootstrap
 - **An organiser sees who a roadmap reaches**: which circles are on it and how many members that is. Publishing is checked first, and refused for an empty roadmap, a total the items cannot reach, or a reward nobody can earn (D72)
+- **An organiser can build a draft with AI** (D73): they connect Claude from Roadmaps > Build with Claude, and it creates programmes, items and rewards as unpublished drafts. A person reviews and publishes in the app. It cannot publish, change a live programme, or see members, circles or progress. A connection lasts seven days
 - **An organiser reads the cohort, not just their own circle**: a progress report per programme, across every
   circle following it
 
