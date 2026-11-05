@@ -19,7 +19,7 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 ## 2. Where it's at
 
-### Current state (checked 2026-11-05)
+### Current state (checked 2026-11-06)
 
 | Item         | State                                                                                                 |
 | ------------ | ----------------------------------------------------------------------------------------------------- |
@@ -33,19 +33,19 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 | Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue        |
 | Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                 |
 
-Everything through D72 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
+Everything through D76 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
 
 ### Last release (2026-11-06)
 
-Roadmap saves survive a reload (kept on the device until the server answers), and organisers can take part in a roadmap with no circle (D76, migration 0040). Promoted at the owner's request without a staging soak, CI green. **Not yet opened signed in on production.** To check: tap a roadmap item and reload at once. For Take part, it needs an organiser in no circle following that roadmap, and the owner's organiser account already follows the only live one.
+Three releases that night, all at the owner's request without a staging soak, each with CI green first. The owner checked the first two on production. The third has not been opened signed in.
 
-### Earlier the same day (personal roadmap)
+| Release   | What changed                                                                                    | Migration | Checked by owner |
+| --------- | ----------------------------------------------------------------------------------------------- | --------- | ---------------- |
+| `eaa5167` | Administration workspace (D74): sage bar, `/admin/organisers`, off the Groups tab               | None      | Yes              |
+| `fa24989` | Personal roadmap (D75): `/roadmap`, tab shows whichever circle is selected                      | None      | Yes              |
+| `2224fd2` | Saves survive a reload (`lib/roadmap-outbox.ts`). Organisers can Take part with no circle (D76) | 0040      | **No**           |
 
-The personal roadmap screen (D75), no migration, at `fa24989`. Promoted at the owner's request without a staging soak, CI green (85 e2e). The owner checked it on production and approved it (2026-11-06). Organisers whose circles follow a roadmap now reach Admin from Profile or the picker.
-
-### Earlier the same day
-
-The administration workspace (D74), no migration. Promoted at the owner's request without a staging soak. CI passed (84 e2e) on a rerun. The owner checked it on production.
+For an organiser whose circle follows a roadmap, Admin is off the usual tab bar. It is at Profile > Administration and on the Groups screen. The owner was told, and may want this revisited.
 
 ### Previous release (2026-11-06)
 
@@ -77,8 +77,9 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 
 ### Next steps, in order
 
+0. **Owner: check `2224fd2` on the phone.** Open Roadmap, tap +1 on an item a few times, reload at once. The count should hold. **Take part will not appear on the owner's organiser account**: it follows the only published roadmap through **meeting** and **Keysy Dersh**. Seeing it takes another organiser outside those circles, or a second published roadmap. CI covers the full flow.
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Google sign-in on a desktop browser is confirmed on this release (2026-11-06). Nobody has used a phone on it, and staging was not clicked through.
-2. **Owner: run `/mcp` to re-authenticate Linear**, then create issues for the untracked work.
+2. **Owner: run `/mcp` to re-authenticate Linear**, then create issues for the untracked work, including D74, D75 and D76.
 3. Work through the rest of "What's open". Nothing there blocks anything.
 4. **MCP server: operator trial.** Live and tested by the owner from normal Claude, including the drafts-only refusal. Send an organiser **Roadmaps > Build with Claude** and have them build something real. Remaining checks are in [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md) §4. On 2026-11-12, confirm Claude asks to reconnect when the first session expires.
 5. **Owner: delete the `MCP test` draft** in `/programme`, and check "Angels in Your Presence 1" against "Angels In Their Presence 2" in the booklet, as one may be a typo.
@@ -119,7 +120,8 @@ Also open: should later levels genuinely lock (D57)? Does neglecting a newly joi
 
 **Known gaps in the product**
 
-- Taps batch for 300ms on Today and 600ms on the count screen, so force-closing the app inside that window can lose the last tap.
+- A full reload on the first load on a device can still flash the member's tabs before the sage bar, until the organiser hint cookie is set.
+- Taps batch for 300ms on Today and 600ms on the count screen, so force-closing the app inside that window can lose the last tap. The roadmap fix does not cover this: dhikr taps are increments, so `lib/roadmap-outbox.ts`, which resends absolute counts, cannot be reused as it is.
 - A tap in the first moments of an account's very first visit belongs to the UTC day until the timezone sync finishes.
 - "Turn on" for reminders looks disabled in `pnpm dev` because no worker exists there. If a worker ever failed to register in production, it would stay disabled with no explanation.
 - Deleting a roadmap item orphans its uploaded cover (D60).
