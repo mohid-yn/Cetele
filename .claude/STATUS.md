@@ -37,11 +37,11 @@ Everything through D72 is on production. The 2026-08-15 relative-redirect change
 
 ### Last release (2026-11-06)
 
-The personal roadmap screen (D75), no migration, at `fa24989`. Promoted at the owner's request without a staging soak, CI green (85 e2e). Nobody has opened it signed in on production yet. Organisers whose circles follow a roadmap now reach Admin from Profile or the picker.
+The personal roadmap screen (D75), no migration, at `fa24989`. Promoted at the owner's request without a staging soak, CI green (85 e2e). The owner checked it on production and approved it (2026-11-06). Organisers whose circles follow a roadmap now reach Admin from Profile or the picker.
 
 ### Earlier the same day
 
-The administration workspace (D74), no migration. Promoted at the owner's request without a staging soak. CI passed (84 e2e) on a rerun. **Nobody has opened it signed in as a real organiser yet**, on production or anywhere else outside CI.
+The administration workspace (D74), no migration. Promoted at the owner's request without a staging soak. CI passed (84 e2e) on a rerun. The owner checked it on production.
 
 ### Previous release (2026-11-06)
 
@@ -73,7 +73,6 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 
 ### Next steps, in order
 
-0. **Owner: on the phone as the organiser account, check D74 and D75.** Select a circle that follows nothing, open Roadmap, log something, reload. Then Profile > Administration, Organisers, Circles, and a full reload of `/programme`.
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Google sign-in on a desktop browser is confirmed on this release (2026-11-06). Nobody has used a phone on it, and staging was not clicked through.
 2. **Owner: run `/mcp` to re-authenticate Linear**, then create issues for the untracked work.
 3. Work through the rest of "What's open". Nothing there blocks anything.
