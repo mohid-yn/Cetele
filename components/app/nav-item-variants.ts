@@ -31,7 +31,7 @@ export const navItemVariants = cva(
   "relative isolate flex items-center rounded-lg font-medium " +
     "transition-[background-color,color] duration-[var(--duration-fast)] " +
     "ease-[var(--ease-brand)] " +
-    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+    "focus-visible:outline-2 focus-visible:outline-offset-2",
   {
     variants: {
       layout: {
@@ -40,19 +40,48 @@ export const navItemVariants = cva(
         /** Sidebar: icon beside label, full width. */
         row: "gap-3 px-3 py-2.5 text-sm",
       },
-      active: {
-        // Text only. The active FILL is a separate `motion.span` both navs
-        // render with a shared `layoutId`, so the pill glides between tabs
-        // instead of snapping — put the fill here too and the static
-        // background would land instantly, hiding the very thing that moves.
-        true: "text-on-primary-container",
-        // `active:` (pressed) is the point: the rest state is quiet, but the
-        // control answers the moment it is touched.
-        false:
+      // Colour is left to the compound variants below: each tone is a pairing
+      // of a surface with its own state layers and focus ring.
+      active: { true: "", false: "" },
+      tone: {
+        chrome: "focus-visible:outline-ring",
+        // The sage ring vanishes on the sage bar, so this tone rings in its
+        // own foreground.
+        admin: "focus-visible:outline-admin-chrome-foreground",
+      },
+    },
+    compoundVariants: [
+      // Text only. The active FILL is a separate `motion.span` both navs
+      // render with a shared `layoutId`, so the pill glides between tabs
+      // instead of snapping — put the fill here too and the static
+      // background would land instantly, hiding the very thing that moves.
+      {
+        tone: "chrome",
+        active: true,
+        className: "text-on-primary-container",
+      },
+      // `active:` (pressed) is the point: the rest state is quiet, but the
+      // control answers the moment it is touched.
+      {
+        tone: "chrome",
+        active: false,
+        className:
           "text-muted-foreground hover:bg-chrome-hover hover:text-foreground " +
           "active:bg-chrome-active",
       },
-    },
-    defaultVariants: { layout: "row", active: false },
+      {
+        tone: "admin",
+        active: true,
+        className: "text-on-admin-chrome-pill",
+      },
+      {
+        tone: "admin",
+        active: false,
+        className:
+          "text-admin-chrome-muted hover:bg-admin-chrome-hover " +
+          "hover:text-admin-chrome-foreground active:bg-admin-chrome-active",
+      },
+    ],
+    defaultVariants: { layout: "row", active: false, tone: "chrome" },
   },
 );

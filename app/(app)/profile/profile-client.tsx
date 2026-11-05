@@ -13,7 +13,12 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { FlameIcon, ChevronRightIcon, GridIcon } from "@/components/app/icons";
+import {
+  ChevronRightIcon,
+  FlameIcon,
+  GridIcon,
+  ShieldIcon,
+} from "@/components/app/icons";
 import {
   IosInstallGuide,
   UnsupportedBrowserNote,
@@ -55,6 +60,7 @@ function to12h(time: string): string {
 }
 
 export function ProfileClient({
+  isOrganiser,
   name: serverName,
   role,
   groupName,
@@ -65,6 +71,7 @@ export function ProfileClient({
 }: {
   name: string;
   role: string | null;
+  isOrganiser: boolean;
   groupName: string | null;
   streak: number;
   reminders: Reminder[];
@@ -206,6 +213,16 @@ export function ProfileClient({
               : "Join or create a circle"
           }
         />
+        {/* The one door that is always there. When an organiser's circle follows
+            a roadmap, its Roadmap tab takes the bar's fifth slot from Admin. */}
+        {isOrganiser && (
+          <ProfileRow
+            href="/programme"
+            Icon={ShieldIcon}
+            title="Administration"
+            detail="Roadmaps and organisers"
+          />
+        )}
       </div>
 
       {/* Reminders (D30) + push delivery (D10) */}

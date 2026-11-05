@@ -1,4 +1,12 @@
-import { HomeIcon, GridIcon, UsersIcon, UserIcon, FlagIcon } from "./icons";
+import {
+  ArrowLeftIcon,
+  FlagIcon,
+  GridIcon,
+  HomeIcon,
+  ShieldIcon,
+  UserIcon,
+  UsersIcon,
+} from "./icons";
 import { groupHref, groupSubPath, type GroupSubPath } from "@/lib/group-href";
 
 /**
@@ -53,43 +61,64 @@ export const ROADMAP_NAV_ITEM: ScopedItem = {
 };
 
 /**
- * The SAME tab for an organiser, pointing at the programme hub instead of a
- * circle's copy of it (D59).
+ * The organiser's door into the administration workspace.
  *
- * An organiser is deliberately in no circle (D27), so every group-scoped route
- * is closed to them and the tab above can never appear — which left the one
- * screen they are the audience for reachable from a card on /groups and
- * nowhere else. It is a FlatItem for the same reason the report is not
- * group-scoped: a programme is one thing however many circles follow it (D55).
+ * An organiser is deliberately in no circle (D27), so no group page can offer
+ * this. It lands on the roadmap hub rather than a landing page of its own: that
+ * is what an organiser comes for, and the workspace has its own tabs from there.
  */
-export const PROGRAMME_NAV_ITEM: FlatItem = {
+export const ADMIN_NAV_ITEM: FlatItem = {
   href: "/programme",
-  label: "Roadmap",
-  shortLabel: "Roadmap",
-  Icon: FlagIcon,
+  label: "Admin",
+  shortLabel: "Admin",
+  Icon: ShieldIcon,
+};
+
+/** The workspace's own tabs, which replace the member's nav inside it (D74). */
+export const ADMIN_ZONE_ITEMS: readonly FlatItem[] = [
+  {
+    href: "/programme",
+    label: "Roadmaps",
+    shortLabel: "Roadmaps",
+    Icon: FlagIcon,
+  },
+  {
+    href: "/admin/organisers",
+    label: "Organisers",
+    shortLabel: "Organisers",
+    Icon: UsersIcon,
+  },
+];
+
+/**
+ * The way out, named for where it goes. The picker rather than the last circle,
+ * because an organiser may be in none and the picker is right for both.
+ */
+export const ADMIN_ZONE_EXIT: FlatItem = {
+  href: "/groups",
+  label: "Circles",
+  shortLabel: "Circles",
+  Icon: ArrowLeftIcon,
 };
 
 /**
- * NAV_ITEMS with Roadmap spliced in before Profile.
+ * NAV_ITEMS with the conditional fifth tab spliced in before Profile.
  *
- * NEVER TWICE, and that is the whole subtlety: an organiser who also owns a
- * circle that follows a programme (the ordinary case for the person who set
- * both up) would otherwise get two tabs called Roadmap and a six-tab bottom
- * bar. The circle's own copy wins when there is one — it is where their
- * progress is recorded — and the hub is one tap away from it, on the button
- * that screen now carries for anyone who administers the programme.
+ * NEVER BOTH, or an organiser who owns a circle following a programme gets a
+ * six-tab bar. The circle's Roadmap wins, because it is where their own progress
+ * is recorded. Admin stays reachable from Profile and from the circle picker.
  */
 export function navItemsWithRoadmap(
   hasRoadmap: boolean,
   isOrganiser = false,
 ): readonly (ScopedItem | FlatItem)[] {
-  const roadmap = hasRoadmap
+  const extra = hasRoadmap
     ? ROADMAP_NAV_ITEM
     : isOrganiser
-      ? PROGRAMME_NAV_ITEM
+      ? ADMIN_NAV_ITEM
       : null;
-  if (!roadmap) return NAV_ITEMS;
-  return [...NAV_ITEMS.slice(0, -1), roadmap, NAV_ITEMS.at(-1)!];
+  if (!extra) return NAV_ITEMS;
+  return [...NAV_ITEMS.slice(0, -1), extra, NAV_ITEMS.at(-1)!];
 }
 
 /**
@@ -130,11 +159,7 @@ export function noGroupNavItems(
   isOrganiser: boolean,
 ): readonly (ScopedItem | FlatItem)[] {
   if (!isOrganiser) return NO_GROUP_NAV_ITEMS;
-  return [
-    NO_GROUP_NAV_ITEMS[0],
-    PROGRAMME_NAV_ITEM,
-    NO_GROUP_NAV_ITEMS.at(-1)!,
-  ];
+  return [NO_GROUP_NAV_ITEMS[0], ADMIN_NAV_ITEM, NO_GROUP_NAV_ITEMS.at(-1)!];
 }
 
 /**

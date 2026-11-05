@@ -155,6 +155,7 @@ export default async function ProgrammeHubPage() {
   return (
     <Screen>
       <PageHeader
+        eyebrow={isSuperAdmin ? "Administration" : undefined}
         title="Roadmaps"
         action={isSuperAdmin ? <NewProgrammeButton /> : undefined}
       />

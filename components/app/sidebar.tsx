@@ -9,6 +9,8 @@ import { springGlide } from "@/lib/motion";
 import {
   isGroupPicker,
   navItemsWithRoadmap,
+  ADMIN_ZONE_EXIT,
+  ADMIN_ZONE_ITEMS,
   noGroupNavItems,
   resolveNavItem,
 } from "./nav-items";
@@ -21,6 +23,7 @@ import { useHasGroups } from "@/lib/use-has-groups";
 import { useGroupHasRoadmap } from "@/lib/use-group-roadmap";
 import { useIsSuperAdmin } from "@/lib/viewer-store";
 import { groupHref } from "@/lib/group-href";
+import { isAdminZone } from "@/lib/admin-zone";
 
 /** Persistent left nav for desktop (≥lg). Mirrors the mobile bottom bar. */
 export function Sidebar({
@@ -37,12 +40,13 @@ export function Sidebar({
   // but it must agree with the bottom bar, or the same circle has two different
   // navigations depending on viewport width.
   const hasRoadmap = useGroupHasRoadmap(groupId);
-  // An organiser keeps a Roadmap tab wherever they are, circle or none (D59) —
-  // the flag is fetched client-side because the shell does no server work (§4).
+  // The flag is fetched client-side because the shell does no server work (§4).
   const isOrganiser = useIsSuperAdmin();
   // …and the same collapse on the picker itself, where no circle is selected.
-  const items =
-    hasGroups && !isGroupPicker(pathname)
+  const inAdmin = isAdminZone(pathname, isOrganiser);
+  const items = inAdmin
+    ? [...ADMIN_ZONE_ITEMS, ADMIN_ZONE_EXIT]
+    : hasGroups && !isGroupPicker(pathname)
       ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
       : noGroupNavItems(isOrganiser);
 
@@ -60,15 +64,24 @@ export function Sidebar({
 
       {/* Active group (switcher when the user belongs to more than one). Hidden
           with no circle — there's nothing to switch between. */}
-      {hasGroups && (
-        <GroupSwitcher
-          initialGroupId={initialGroupId}
-          className="mb-2 w-full justify-between px-2 py-1.5 text-sm font-semibold"
-        />
+      {inAdmin ? (
+        <p className="mb-2 px-2 py-1.5 text-sm font-semibold text-foreground">
+          Administration
+        </p>
+      ) : (
+        hasGroups && (
+          <GroupSwitcher
+            initialGroupId={initialGroupId}
+            className="mb-2 w-full justify-between px-2 py-1.5 text-sm font-semibold"
+          />
+        )
       )}
 
       {/* Nav */}
-      <nav aria-label="Primary" className="flex flex-col gap-1">
+      <nav
+        aria-label={inAdmin ? "Administration" : "Primary"}
+        className="flex flex-col gap-1"
+      >
         {items.map((item) => {
           const { href, active } = resolveNavItem(item, pathname, groupId);
           const { label, Icon } = item;

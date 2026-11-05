@@ -26,7 +26,11 @@ export default async function ProfilePage() {
   const [{ data: profile }, { data: memberships }, { data: streak }] = await q(
     "profile.reads (profile+memberships+streak)",
     Promise.all([
-      supabase.from("profiles").select("name").eq("id", me).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("name, is_super_admin")
+        .eq("id", me)
+        .maybeSingle(),
       supabase
         .from("memberships")
         .select("group_id, role, groups(name)")
@@ -83,6 +87,7 @@ export default async function ProfilePage() {
   return (
     <ProfileClient
       name={profile?.name ?? "You"}
+      isOrganiser={profile?.is_super_admin ?? false}
       role={primary?.role ?? null}
       groupName={primary ? (primary.groups?.name ?? null) : null}
       streak={streak?.current ?? 0}

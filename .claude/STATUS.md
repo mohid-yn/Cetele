@@ -207,6 +207,7 @@ Each is a production bug already paid for. The full story behind each is in the 
 ```
 app/(app)/g/[groupId]/{today,group,progress,roadmap,count/[taskId],group/manage}   group-scoped routes
 app/(app)/{groups,profile}                 circle picker · personal settings and reminders
+app/(app)/admin/organisers                 who holds the organiser role (D74)
 app/(app)/programme/                       roadmap hub, builder and cohort report (organisers, circle leads)
 app/join/[code] · app/(legal) · app/designsystem
 components/{ui,app,motion,theme}           primitives · shared app components · motion · theme
@@ -273,7 +274,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D56** An organiser can appoint another, by exact email. The first is made in the dashboard. The last cannot be stood down. No self-escalation; all audited.
 - **D57 · D60** Organisers author programmes in the app. Fields that decide completion freeze field by field once anyone records work (`done > 0`). Delete refuses once recorded; withdraw instead. Adding work is checked per level. Unsafe URLs are refused. Covers go to a public `roadmap` bucket gated by storage RLS. A circle owner cannot author.
 - **D58** A circle may follow several programmes (`group_roadmaps`).
-- **D59** Organisers get a permanent Roadmap tab; circle admins don't, and never two tabs. `/programme` is a hub, and each cohort's report is at `/programme/[roadmapId]/progress`.
+- **D59** (tab amended by D74) Organisers get a nav tab; circle admins don't, and never two tabs. `/programme` is a hub, and each cohort's report is at `/programme/[roadmapId]/progress`.
 - **D69** The cohort report is for whoever leads a circle (`can_read_roadmap_cohort`). A member is refused it and still reads their own progress.
 
 **Architecture and ops**
@@ -289,6 +290,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D46** Motion is a token-aligned layer mirroring the CSS motion tokens, with `reducedMotion="user"` globally. No stagger-on-load.
 - **D50** `main` is production, `staging` is the soak.
 - **D73** Organisers build programmes through an MCP server: real tools behind flags (off by default), Supabase OAuth with one pre-registered Claude client, organisers only, drafts only, no publish tool. A connection lasts seven days (0039). No database-level limit on what a token can do, for now. [`docs/MCP_PLAN.md`](../docs/MCP_PLAN.md).
+- **D74** Administration is its own workspace, not a section of `/groups`. Inside `/admin/*`, and `/programme/*` for an organiser, a deep sage bar replaces the member's tabs: Roadmaps, Organisers, Circles (the way out). The way in is an Admin tab, which gives way to a circle's Roadmap tab, plus a Profile row that is always there.
 - **D65** Planned: compute moves to Cloudflare (`@opennextjs/cloudflare`). Supabase and auth stay. Only `lib/push/send.ts` and `api/push/dispatch` are not portable. Not started.
 
 ---

@@ -583,6 +583,20 @@ under the label, and the item therefore carries **`isolate`** — without its ow
 negative z-index escapes and the pill paints _behind_ the nav's own `bg-chrome`, rendering as nothing
 at all.
 
+**The administration workspace has its own bar** (`components/app/admin-tab-bar.tsx`, D74). It replaces
+the member's tabs on `/admin/*`, and on `/programme/*` for an organiser, so the frame itself says you
+have left the member's app. Tabs: Roadmaps, Organisers, then Circles behind a rule as the way out. On
+desktop the sidebar swaps its items and keeps `--chrome`.
+
+| Part          | Token                                                  |
+| ------------- | ------------------------------------------------------ |
+| Surface       | `--admin-chrome`                                       |
+| Active item   | `--admin-chrome-pill` + `--on-admin-chrome-pill` icon  |
+| Active label  | `--admin-chrome-foreground`                            |
+| Inactive item | `--admin-chrome-muted`                                 |
+| Hover/pressed | `--admin-chrome-hover` / `--admin-chrome-active`       |
+| Focus ring    | `--admin-chrome-foreground`. `--ring` vanishes on sage |
+
 Active state is **never colour alone** — the pill and the heavier icon stroke carry it too.
 `aria-current="page"` on the active link.
 

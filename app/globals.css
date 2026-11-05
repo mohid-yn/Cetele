@@ -254,6 +254,13 @@
   --color-surface-active: var(--surface-active);
   --color-chrome-hover: var(--chrome-hover);
   --color-chrome-active: var(--chrome-active);
+  --color-admin-chrome: var(--admin-chrome);
+  --color-admin-chrome-foreground: var(--admin-chrome-foreground);
+  --color-admin-chrome-muted: var(--admin-chrome-muted);
+  --color-admin-chrome-hover: var(--admin-chrome-hover);
+  --color-admin-chrome-active: var(--admin-chrome-active);
+  --color-admin-chrome-pill: var(--admin-chrome-pill);
+  --color-on-admin-chrome-pill: var(--on-admin-chrome-pill);
 
   /* Disabled is a token PAIR, never opacity: v1's `disabled:opacity-50` on a
      coloured fill produced a white label at 2.16:1 — illegible on every
@@ -362,6 +369,17 @@
      but taken over --chrome with --chrome-foreground as the on-colour. */
   --chrome-hover: #e2d6ca;
   --chrome-active: #dacec2;
+  /* The administration workspace's tab bar. A deep sage frame, so the bar itself
+     says you have left the member's app. Measured on --admin-chrome: foreground
+     8.91:1, muted 7.15:1 (5.14:1 when pressed). Label on pill 13.34:1. Hover and
+     pressed are the same 8%/12% recipe as --chrome-*. */
+  --admin-chrome: #23522c;
+  --admin-chrome-foreground: #f7fff8;
+  --admin-chrome-muted: #d4ead6;
+  --admin-chrome-hover: #34603c;
+  --admin-chrome-active: #3c6744;
+  --admin-chrome-pill: #d4ead6;
+  --on-admin-chrome-pill: #112013;
   --disabled-fill: #f7ebe0;
   --disabled-foreground: #867077; /* 3.2:1 — readable, though 1.4.3 exempts it */
 
@@ -526,6 +544,15 @@
      exactly. Computed over --chrome with --chrome-foreground at 8%/12%. */
   --chrome-hover: #231f1b;
   --chrome-active: #2c2723;
+  /* Measured on --admin-chrome: foreground 9.97:1, muted 8.71:1 (6.36:1 when
+     pressed). Label on pill 10.28:1. */
+  --admin-chrome: #1f3723;
+  --admin-chrome-foreground: #eee0d3;
+  --admin-chrome-muted: #c4dac6;
+  --admin-chrome-hover: #304531;
+  --admin-chrome-active: #384b38;
+  --admin-chrome-pill: #a3d6a9;
+  --on-admin-chrome-pill: #112013;
   --disabled-fill: #241e19;
   --disabled-foreground: #a08a91;
 

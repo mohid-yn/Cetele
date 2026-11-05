@@ -1,3 +1,4 @@
+import { AdminTabBar } from "@/components/app/admin-tab-bar";
 import type { Metadata } from "next";
 import {
   Avatar,
@@ -782,6 +783,14 @@ export default function DesignSystemPage() {
         </Section>
 
         {/* STATS */}
+        <Section
+          id="admin-bar"
+          title="Administration tab bar"
+          description="Replaces the member's tabs inside the organiser's workspace. Deep sage, so it reads as a different place."
+        >
+          <AdminTabBar pathname="/programme" />
+        </Section>
+
         <Section
           id="stats"
           title="Stats"

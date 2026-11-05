@@ -13,6 +13,8 @@ import {
   resolveNavItem,
 } from "./nav-items";
 import { navItemVariants } from "./nav-item-variants";
+import { AdminTabBar } from "./admin-tab-bar";
+import { isAdminZone } from "@/lib/admin-zone";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
 import { useGroupHasRoadmap } from "@/lib/use-group-roadmap";
@@ -35,11 +37,15 @@ export function BottomNav({
   // still holds the old one, and inheriting its answer is how a Roadmap tab
   // appears on a circle that has no programme.
   const hasRoadmap = useGroupHasRoadmap(groupId);
-  // An organiser is in no circle by role (D27), so their Roadmap tab is the one
-  // permanent thing in this bar that no group page can publish — it comes from
-  // the client-side viewer store instead (D59).
+  // An organiser is in no circle by role (D27), so their Admin tab is the one
+  // thing in this bar that no group page can publish — it comes from the
+  // client-side viewer store instead.
   const isOrganiser = useIsSuperAdmin();
   // …and the same collapse on the picker itself, where no circle is selected.
+  if (isAdminZone(pathname, isOrganiser)) {
+    return <AdminTabBar pathname={pathname} />;
+  }
+
   const items =
     hasGroups && !isGroupPicker(pathname)
       ? navItemsWithRoadmap(hasRoadmap, isOrganiser)

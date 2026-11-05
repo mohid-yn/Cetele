@@ -47,46 +47,43 @@ export function Organisers({
   const last = organisers.length === 1;
 
   return (
-    <Card className="flex flex-col gap-4 p-4">
-      <div>
-        <h3 className="text-sm font-semibold text-foreground">Organisers</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Organisers see how far everyone has got on a roadmap. They see nothing
-          else. No circle&rsquo;s dhikr, no streaks, no daily figures.
-        </p>
-      </div>
-
-      <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
-        {organisers.map((o) => (
-          <li key={o.userId} className="flex items-center gap-2 p-3">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">
-                {o.name ?? "Unnamed"}
-                {o.userId === me && (
-                  <span className="text-muted-foreground"> (you)</span>
-                )}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {o.email}
-              </p>
-            </div>
-            {/* The last organiser has no Remove button at all, rather than one
+    <>
+      <Card className="overflow-hidden">
+        <ul className="flex flex-col divide-y divide-border">
+          {organisers.map((o) => (
+            <li
+              key={o.userId}
+              className="flex min-h-14 items-center gap-2 px-4 py-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {o.name ?? "Unnamed"}
+                  {o.userId === me && (
+                    <span className="text-muted-foreground"> (you)</span>
+                  )}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {o.email}
+                </p>
+              </div>
+              {/* The last organiser has no Remove button at all, rather than one
                 that fails when pressed. The database refuses it either way
                 (that is where the rule has to live — it needs a lock), but a
                 control that cannot succeed should not be offered. */}
-            {!last && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={revoke.pending}
-                onClick={() => setPendingRemoval(o)}
-              >
-                Remove
-              </Button>
-            )}
-          </li>
-        ))}
-      </ul>
+              {!last && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={revoke.pending}
+                  onClick={() => setPendingRemoval(o)}
+                >
+                  Remove
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       {last && (
         <p className="text-xs text-muted-foreground">
@@ -95,49 +92,47 @@ export function Organisers({
         </p>
       )}
 
-      <form
-        className="flex flex-col gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void grant.run(
-            () => grantSuperAdmin(email),
-            () => setEmail(""),
-          );
-        }}
-      >
-        <Field
-          label="Appoint an organiser"
-          htmlFor="organiser-email"
-          hint="Their exact email address. There is no directory to search."
-        >
-          <Input
-            id="organiser-email"
-            type="email"
-            autoComplete="off"
-            placeholder="name@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </Field>
-        <Button
-          type="submit"
-          variant="outline"
-          disabled={!email.trim() || grant.pending}
-        >
-          {grant.pending ? "Appointing…" : "Appoint"}
-        </Button>
-        {grant.error && (
-          <p role="alert" className="text-xs text-danger">
-            {grant.error}
-          </p>
-        )}
-      </form>
-
       {revoke.error && (
         <p role="alert" className="text-xs text-danger">
           {revoke.error}
         </p>
       )}
+
+      <Card className="p-4">
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void grant.run(
+              () => grantSuperAdmin(email),
+              () => setEmail(""),
+            );
+          }}
+        >
+          <Field
+            label="Appoint an organiser"
+            htmlFor="organiser-email"
+            hint="Their exact email address. There is no directory to search."
+          >
+            <Input
+              id="organiser-email"
+              type="email"
+              autoComplete="off"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </Field>
+          <Button type="submit" disabled={!email.trim() || grant.pending}>
+            {grant.pending ? "Appointing…" : "Appoint"}
+          </Button>
+          {grant.error && (
+            <p role="alert" className="text-xs text-danger">
+              {grant.error}
+            </p>
+          )}
+        </form>
+      </Card>
 
       <ConfirmDialog
         open={pendingRemoval !== null}
@@ -159,9 +154,19 @@ export function Organisers({
         onConfirm={() => {
           const target = pendingRemoval;
           setPendingRemoval(null);
-          if (target) void revoke.run(() => revokeSuperAdmin(target.userId));
+          if (!target) return;
+          void revoke.run(
+            () => revokeSuperAdmin(target.userId),
+            () => {
+              // Standing yourself down ends your access to this screen. A full
+              // load also resets the viewer store, which only ever holds what
+              // it read when the document loaded, so the Admin tab goes too.
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the full load is the point
+              if (target.userId === me) window.location.assign("/groups");
+            },
+          );
         }}
       />
-    </Card>
+    </>
   );
 }

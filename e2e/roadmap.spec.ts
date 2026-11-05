@@ -318,25 +318,34 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   await makeSuperAdmin(ORGANISER);
 
   await page.goto("/groups");
-  await expect(page.getByText("Administration")).toBeVisible();
+  // Administration is its own workspace now (D74), not a section of this screen.
+  await expect(page.getByText("Administration")).toHaveCount(0);
   // "Start your first circle" is the app mistaking an administrator for a new
   // member — being in none is the role, not a step they have skipped.
   await expect(page.getByText("Start your first circle")).toHaveCount(0);
 
-  // THE NAV TAB (D59). The card below is still a way in, but an organiser is in
-  // no circle by role, so every group-scoped tab is closed to them and the app
-  // had nothing permanent to offer: the programme was reachable from one card
-  // on one screen. Now the Roadmap tab is in the bar wherever they are, and it
-  // lands on the hub rather than on a list of people.
-  const orgTab = page
-    .getByRole("link", { name: "Roadmap", exact: true })
+  // THE DOOR, and what is behind it: the member's tabs give way to the
+  // workspace's own, including the way back out.
+  const adminTab = page
+    .getByRole("link", { name: "Admin", exact: true })
     .first();
-  await expect(orgTab).toBeVisible();
-  await orgTab.click();
+  await expect(adminTab).toBeVisible();
+  await adminTab.click();
   await page.waitForURL("**/programme");
   await expect(
     page.getByRole("heading", { level: 1, name: "Roadmap" }),
   ).toBeVisible();
+  const adminNav = page.getByRole("navigation", { name: "Administration" });
+  await expect(
+    adminNav.getByRole("link", { name: "Roadmaps" }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    adminNav.getByRole("link", { name: "Organisers" }),
+  ).toBeVisible();
+  await expect(adminNav.getByRole("link", { name: "Circles" })).toHaveAttribute(
+    "href",
+    "/groups",
+  );
 
   // The hub lists the programmes, and the cohort hangs off the ONE you pick
   // (D59) — there is no screen-level report any more, because levels, rewards
@@ -400,9 +409,13 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
   // member's own roadmap is the one place a `done` is read or written.
   await expect(page.getByRole("button", { name: "Mark done" })).toHaveCount(0);
 
-  // And there is a way back out — to the hub the Roadmap tab lands on, which
-  // is where the card that opened this screen lives.
-  await page.getByRole("link", { name: "Roadmaps", exact: true }).click();
+  // And there is a way back out — to the hub the Admin tab lands on, which is
+  // where the card that opened this screen lives. Scoped to the screen, because
+  // the workspace's tab bar has a link of the same name.
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "Roadmaps", exact: true })
+    .click();
   await page.waitForURL("**/programme");
 });
 
@@ -414,7 +427,7 @@ test("an organiser appoints another, and can stand them down", async ({
   // dashboard does. Everything after this point goes through the UI.
   await signIn(page, ORGANISER);
   await makeSuperAdmin(ORGANISER);
-  await page.goto("/groups");
+  await page.goto("/admin/organisers");
   await expect(page.getByRole("heading", { name: "Organisers" })).toBeVisible();
 
   // NOTHING HERE ASSERTS A GLOBAL COUNT, and that is deliberate rather than
@@ -453,7 +466,7 @@ test("an organiser appoints another, and can stand them down", async ({
 
   // Standing down, through the confirm step, and the row goes.
   await signIn(page, ORGANISER);
-  await page.goto("/groups");
+  await page.goto("/admin/organisers");
   const row = page.locator("li", { hasText: OUTSIDER });
   await row.getByRole("button", { name: "Remove" }).click();
   await page
@@ -466,6 +479,10 @@ test("an organiser appoints another, and can stand them down", async ({
   await signIn(page, OUTSIDER);
   await page.goto(`/programme/${IDP}/progress`);
   await expect(page.getByText(/You are an organiser/)).toHaveCount(0);
+
+  // And the screen itself turns them away, rather than rendering an empty list.
+  await page.goto("/admin/organisers");
+  await page.waitForURL("**/groups");
 });
 
 test("the timeline, its pictures, and an organiser editing an item", async ({

@@ -1,17 +1,24 @@
-"use client";
-
-import * as React from "react";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { q } from "@/lib/db-log";
 
 /**
- * The app-level admin console was retired with the move to Drive-style group
- * ownership (D26) — there is no global "see everything" surface any more.
- * `/admin` now just forwards to the Groups home (My groups / Shared with me).
+ * `/admin` has no screen of its own. The workspace opens on the roadmap hub, and
+ * anyone who is not an organiser goes to the circle picker.
  */
-export default function AdminRedirect() {
-  const router = useRouter();
-  React.useEffect(() => {
-    router.replace("/groups");
-  }, [router]);
-  return null;
+export default async function AdminPage() {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const me = claims?.claims.sub;
+
+  const { data: viewer } = await q(
+    "admin.viewer (is_super_admin)",
+    supabase
+      .from("profiles")
+      .select("is_super_admin")
+      .eq("id", me ?? "")
+      .maybeSingle(),
+  );
+
+  redirect(viewer?.is_super_admin ? "/programme" : "/groups");
 }

@@ -9,11 +9,14 @@ import { cn } from "@/lib/utils";
  * (e.g. the group switcher or a greeting block) instead of a plain string.
  */
 export function PageHeader({
+  eyebrow,
   title,
   subtitle,
   action,
   className,
 }: {
+  /** A short label above the title, naming the section the screen belongs to. */
+  eyebrow?: string;
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
@@ -22,6 +25,9 @@ export function PageHeader({
   return (
     <header className={cn("flex items-start justify-between gap-3", className)}>
       <div className="min-w-0 flex-1">
+        {eyebrow != null && (
+          <p className="mb-0.5 text-xs font-semibold text-primary">{eyebrow}</p>
+        )}
         {typeof title === "string" ? (
           <h1 className="font-display text-2xl font-bold text-foreground">
             {title}
