@@ -108,3 +108,15 @@ export async function makeSuperAdmin(email: string) {
     .eq("id", user.id);
   if (error) throw error;
 }
+
+/**
+ * Manage is split into Members · Tasks · Settings tabs. A circle with no tasks
+ * opens on Tasks, any other on Members, unless `?tab=` says otherwise. The tab
+ * labels carry a count ("Members · 2"), hence the prefix match.
+ */
+export async function openManageTab(
+  page: Page,
+  tab: "Members" | "Tasks" | "Settings",
+) {
+  await page.getByRole("tab", { name: new RegExp(`^${tab}`) }).click();
+}

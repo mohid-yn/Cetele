@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { makeSuperAdmin, signIn } from "./helpers";
+import { makeSuperAdmin, signIn, openManageTab } from "./helpers";
 
 /**
  * The roadmap loop (D55, migration 0025): a circle follows a published
@@ -74,7 +74,7 @@ test("a circle follows a programme, and its members can record against it", asyn
   // Back to Manage by URL, not history: Manage STREAMS, so for a beat the only
   // thing on the page is the circle name, and an immediate selectOption on a
   // half-rendered screen is a false negative (a trap this suite has hit before).
-  await page.goto(manageUrl);
+  await page.goto(`${manageUrl}?tab=settings`);
   // A CHECKBOX now, not a <select> (0028): a circle may follow several, and a
   // single-value control cannot express that.
   const optIn = page.getByRole("checkbox", {
@@ -695,7 +695,7 @@ test("a circle follows TWO programmes, and the roadmap switches between them", a
   await page.waitForURL("**/today");
   const groupId = page.url().match(/\/g\/([^/]+)\//)![1];
 
-  await page.goto(`/g/${groupId}/group/manage`);
+  await page.goto(`/g/${groupId}/group/manage?tab=settings`);
   const second = page.getByRole("checkbox", { name: SECOND_PROGRAMME });
   await expect(second).toBeVisible();
   await second.check();
@@ -746,7 +746,7 @@ test("a circle follows TWO programmes, and the roadmap switches between them", a
   // AND UN-FOLLOWING KEEPS THE RECORD. This circle's owner marked items done in
   // the first spec; dropping the programme and picking it up again must find
   // them exactly where they were (D55 — progress belongs to the member).
-  await page.goto(`/g/${groupId}/group/manage`);
+  await page.goto(`/g/${groupId}/group/manage?tab=settings`);
   const first = page.getByRole("checkbox", {
     name: "Islamic Development Program",
   });
@@ -846,7 +846,7 @@ test("an organiser sees who a roadmap reaches, and puts a circle on it", async (
   await page.getByRole("link", { name: CIRCLE }).first().click();
   await page.waitForURL("**/today");
   const groupId = page.url().match(/\/g\/([^/]+)\//)![1];
-  await page.goto(`/g/${groupId}/group/manage`);
+  await page.goto(`/g/${groupId}/group/manage?tab=settings`);
   await expect(page.getByRole("checkbox", { name })).toBeChecked();
 
   // Withdrawing a live roadmap asks first, because it takes it away from people.
@@ -881,6 +881,7 @@ test("the Roadmap tab follows the member, not the selected circle", async ({
   await makeSuperAdmin(organiser);
 
   await newCircle(page, `Following ${STAMP}`);
+  await openManageTab(page, "Settings");
   const optIn = page.getByRole("checkbox", {
     name: "Islamic Development Program",
   });

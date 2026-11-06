@@ -77,8 +77,7 @@ test("a circle, a task at 3, and yesterday closed at 3", async ({ page }) => {
 
 test("the admin raises the bar from 3 to 30", async ({ page }) => {
   await signIn(page, USER);
-  await page.goto(manageUrl);
-  await expect(page.getByText("Add people")).toBeVisible();
+  await page.goto(`${manageUrl}?tab=tasks`);
 
   await page.getByRole("button", { name: "Edit" }).first().click();
   await page.getByLabel("Target each time").fill("30");

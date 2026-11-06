@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { signIn } from "./helpers";
+import { signIn, openManageTab } from "./helpers";
 
 /**
  * A task the member adds for THEMSELVES (0036, D70).
@@ -73,13 +73,12 @@ test("a circle of two, on the circle's own task", async ({ page }) => {
   await page.click('button:has-text("Create group")');
   await page.waitForURL("**/group/manage");
   manageUrl = page.url();
-  await expect(page.getByText("Add people")).toBeVisible();
-
   await page.fill('input[aria-label="New task label"]', "Salawat");
   await page.fill('input[aria-label="New task daily target"]', "10");
   await page.click('button:has-text("Add task")');
   await expect(page.getByText("Salawat")).toBeVisible();
 
+  await openManageTab(page, "Members");
   inviteLink = await page
     .locator("code", { hasText: "/join/" })
     .first()
@@ -186,7 +185,7 @@ test("an admin may not reassign it — the row states its carrier", async ({
   page,
 }) => {
   await signIn(page, OWNER);
-  await page.goto(manageUrl);
+  await page.goto(`${manageUrl}?tab=tasks`);
 
   const row = page.getByRole("listitem").filter({ hasText: "Wird" });
   await expect(

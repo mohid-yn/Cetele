@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { signIn } from "./helpers";
+import { signIn, openManageTab } from "./helpers";
 
 /**
  * Leaving a circle (CET-27 follow-up — /privacy has always promised it).
@@ -33,6 +33,7 @@ test("owner creates a circle and an open invite", async ({ page }) => {
   await page.waitForURL("**/group/manage");
 
   // 0022: the circle's open link comes WITH the circle — nothing to click.
+  await openManageTab(page, "Members");
   await expect(page.getByText("Add people")).toBeVisible();
   const joinLink = await page
     .locator("code", { hasText: "/join/" })

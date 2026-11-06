@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { signIn } from "./helpers";
+import { signIn, openManageTab } from "./helpers";
 
 /**
  * The M2 loop, end-to-end against the real local stack:
@@ -51,6 +51,7 @@ test("owner: create group → manage → tasks → open invite", async ({ page }
   await expect(page.getByText("target 33 · daily")).toBeVisible();
 
   // rename the group (the header echoes the new name after revalidation)
+  await openManageTab(page, "Settings");
   await page.fill("#group-name", "M2 Circle Renamed");
   await page
     .locator("section", { hasText: "Group name" })
@@ -62,6 +63,7 @@ test("owner: create group → manage → tasks → open invite", async ({ page }
 
   // 0022: the circle's open link is NOT created here — it exists from the
   // moment create_group ran. Nothing is clicked; it is simply on the page.
+  await openManageTab(page, "Members");
   const joinLink = await page
     .locator("code", { hasText: "/join/" })
     .first()

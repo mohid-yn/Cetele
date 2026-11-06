@@ -26,7 +26,9 @@ import {
   currentAssignees,
   type Assignment,
 } from "@/lib/assignments";
+import { Segmented } from "@/components/app/segmented";
 import { AssigneesDialog } from "./assignees-dialog";
+import type { ManageTab } from "./manage-tabs";
 import * as act from "./actions";
 
 /**
@@ -285,6 +287,7 @@ export function ManageClient({
   invites: propInvites,
   defaultCode: propDefaultCode,
   canClaim,
+  initialTab,
   roadmaps,
   followedRoadmapIds,
 }: {
@@ -297,6 +300,8 @@ export function ManageClient({
   invites: ManageInvite[];
   defaultCode: string | null;
   canClaim: boolean;
+  /** From `?tab=`, so a reload or a shared link lands on the same tab. */
+  initialTab: ManageTab;
   /** Published programmes this circle could follow (D55). Often empty. */
   roadmaps: { id: string; name: string }[];
   /** Which of them this circle follows (0028) — several is ordinary now. */
@@ -325,6 +330,18 @@ export function ManageClient({
     ),
   );
 
+  // Members, Tasks and Settings used to share one long scroll (owner, 2026-11-06:
+  // "a lot of scroll, kind of tedious"). Same pattern as the programme builder:
+  // instant switch, tab kept in the URL with a NULL history state (see STATUS §7
+  // on replaceState). Every form's state lives up here, so switching tabs never
+  // loses a half-typed task.
+  const [tab, setTab] = React.useState<ManageTab>(initialTab);
+  const chooseTab = (next: ManageTab) => {
+    setTab(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", next);
+    window.history.replaceState(null, "", url);
+  };
   const isOwner = myRole === "owner";
   const owner = members.find((m) => m.role === "owner");
 
@@ -438,499 +455,534 @@ export function ManageClient({
         </Card>
       )}
 
-      {/* Members --------------------------------------------------------- */}
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-foreground">
-          Members ({members.length})
-        </h2>
-        <ul className="flex flex-col gap-2">
-          {members.map((m) => {
-            const isSelf = m.userId === me;
-            const isOwnerRow = m.role === "owner";
-            return (
-              <li
-                key={m.userId}
-                className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-card px-3 py-2.5"
-              >
-                <Avatar name={m.name} size="sm" />
-                {/* `min-w-0 flex-1` alone let the name shrink to ~31px so the
+      <Segmented<ManageTab>
+        value={tab}
+        onChange={chooseTab}
+        options={[
+          { value: "members", label: `Members · ${members.length}` },
+          { value: "tasks", label: `Tasks · ${tasks.length}` },
+          { value: "settings", label: "Settings" },
+        ]}
+      />
+
+      {tab === "members" && (
+        <>
+          {/* Members --------------------------------------------------------- */}
+          <section>
+            <h2 className="mb-2 text-sm font-semibold text-foreground">
+              Members ({members.length})
+            </h2>
+            <ul className="flex flex-col gap-2">
+              {members.map((m) => {
+                const isSelf = m.userId === me;
+                const isOwnerRow = m.role === "owner";
+                return (
+                  <li
+                    key={m.userId}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-card px-3 py-2.5"
+                  >
+                    <Avatar name={m.name} size="sm" />
+                    {/* `min-w-0 flex-1` alone let the name shrink to ~31px so the
                     role toggle and Remove could stay on one line — "Dev
                     Reviewer (you)" rendered as "Dev |" and "Yusuf" as "Yusu".
                     A destructive action next to an unreadable name is the
                     actual bug. A real basis makes the CONTROLS wrap to their
                     own line instead, which is what `flex-wrap` was for. */}
-                <div className="min-w-0 flex-1 basis-40">
-                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
-                    {m.name}
-                    {isSelf && (
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        (you)
-                      </span>
+                    <div className="min-w-0 flex-1 basis-40">
+                      <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
+                        {m.name}
+                        {isSelf && (
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            (you)
+                          </span>
+                        )}
+                      </p>
+                      {isOwnerRow && (
+                        <p className="text-xs text-muted-foreground">
+                          Owner. Change via Transfer ownership below
+                        </p>
+                      )}
+                    </div>
+                    {isOwnerRow ? null : (
+                      // One wrapping unit: the toggle and Remove travel together to
+                      // a second line rather than splitting across the row.
+                      <div className="ml-auto flex items-center gap-2">
+                        <RoleToggle
+                          value={m.role}
+                          disabled={isSelf || membersAct.pending}
+                          onChange={(r) => {
+                            if (r === "admin" || r === "member")
+                              membersAct.run(
+                                () => act.setMemberRole(group.id, m.userId, r),
+                                () =>
+                                  setMembers((ms) =>
+                                    ms.map((x) =>
+                                      x.userId === m.userId
+                                        ? { ...x, role: r }
+                                        : x,
+                                    ),
+                                  ),
+                              );
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          // No `disabled:opacity-40`: the primitive's base already
+                          // sets `disabled:text-disabled-foreground`, and fading
+                          // danger text by 40% was putting a destructive label
+                          // below the readable floor.
+                          className="text-danger hover:bg-danger-500/10"
+                          disabled={isSelf}
+                          onClick={() =>
+                            setRemovingMember({
+                              userId: m.userId,
+                              name: m.name,
+                            })
+                          }
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     )}
-                  </p>
-                  {isOwnerRow && (
-                    <p className="text-xs text-muted-foreground">
-                      Owner. Change via Transfer ownership below
-                    </p>
-                  )}
-                </div>
-                {isOwnerRow ? null : (
-                  // One wrapping unit: the toggle and Remove travel together to
-                  // a second line rather than splitting across the row.
-                  <div className="ml-auto flex items-center gap-2">
-                    <RoleToggle
-                      value={m.role}
-                      disabled={isSelf || membersAct.pending}
-                      onChange={(r) => {
-                        if (r === "admin" || r === "member")
-                          membersAct.run(
-                            () => act.setMemberRole(group.id, m.userId, r),
-                            () =>
-                              setMembers((ms) =>
-                                ms.map((x) =>
-                                  x.userId === m.userId ? { ...x, role: r } : x,
-                                ),
-                              ),
-                          );
-                      }}
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      // No `disabled:opacity-40`: the primitive's base already
-                      // sets `disabled:text-disabled-foreground`, and fading
-                      // danger text by 40% was putting a destructive label
-                      // below the readable floor.
-                      className="text-danger hover:bg-danger-500/10"
-                      disabled={isSelf}
-                      onClick={() =>
-                        setRemovingMember({ userId: m.userId, name: m.name })
-                      }
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        <ErrorNote error={membersAct.error} />
+                  </li>
+                );
+              })}
+            </ul>
+            <ErrorNote error={membersAct.error} />
 
-        {/* Share / invites (D34: links are shared by you — nothing is emailed)
+            {/* Share / invites (D34: links are shared by you — nothing is emailed)
             0022: the circle's link is a PROPERTY of the circle, not a thing you
             manage a list of. It always exists and it is regenerated, never
             revoked-and-recreated — so the common case ("let me send someone the
             link") is a copy button and nothing else. */}
-        <Card className="mt-3 flex flex-col gap-4 p-4">
-          <div>
-            <p className="text-sm font-semibold text-foreground">Add people</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Share this link yourself (WhatsApp, in person). Nothing is
-              emailed. Anyone who opens it joins as a member; co-admins are made
-              in the members list above, never by a link.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <CopyField
-              label="Invite link"
-              value={defaultCode ? joinUrl(defaultCode) : "—"}
-            />
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">
-                Regenerating makes a new link and stops the old one working.
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={regenAct.pending}
-                onClick={() => setRegenOpen(true)}
-              >
-                {regenAct.pending ? "Regenerating…" : "Regenerate"}
-              </Button>
-            </div>
-            <ErrorNote error={regenAct.error} />
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-border pt-3">
-            <div>
-              <Eyebrow>Invite one person</Eyebrow>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                A single-use link locked to one email. It stops working the
-                moment they join.
-              </p>
-            </div>
-            <Field
-              label="Lock to an email"
-              htmlFor="invite-email"
-              hint="They must sign in with this email to join."
-            >
-              <div className="flex flex-wrap gap-2">
-                <Input
-                  id="invite-email"
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="min-w-[12rem] flex-1"
-                />
-                <Button
-                  variant="primary"
-                  disabled={inviteAct.pending}
-                  onClick={() =>
-                    inviteAct.run(
-                      () => act.createInvite(group.id, inviteEmail),
-                      (res) => {
-                        if (res.invite)
-                          setInvites((iv) => [...iv, res.invite!]);
-                        setInviteEmail("");
-                      },
-                    )
-                  }
-                >
-                  {inviteAct.pending ? "Creating…" : "Create invite"}
-                </Button>
+            <Card className="mt-3 flex flex-col gap-4 p-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Add people
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Share this link yourself (WhatsApp, in person). Nothing is
+                  emailed. Anyone who opens it joins as a member; co-admins are
+                  made in the members list above, never by a link.
+                </p>
               </div>
-            </Field>
-            <ErrorNote error={inviteAct.error} />
-          </div>
 
-          {invites.length > 0 && (
-            <div className="flex flex-col gap-3 border-t border-border pt-3">
-              <Eyebrow>Waiting to be used ({invites.length})</Eyebrow>
-              {invites.map((i) => (
-                <div key={i.id} className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="min-w-0 flex-1 truncate text-foreground">
-                      {i.email}
-                    </span>
+              <div className="flex flex-col gap-2">
+                <CopyField
+                  label="Invite link"
+                  value={defaultCode ? joinUrl(defaultCode) : "—"}
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Regenerating makes a new link and stops the old one working.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={regenAct.pending}
+                    onClick={() => setRegenOpen(true)}
+                  >
+                    {regenAct.pending ? "Regenerating…" : "Regenerate"}
+                  </Button>
+                </div>
+                <ErrorNote error={regenAct.error} />
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-border pt-3">
+                <div>
+                  <Eyebrow>Invite one person</Eyebrow>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    A single-use link locked to one email. It stops working the
+                    moment they join.
+                  </p>
+                </div>
+                <Field
+                  label="Lock to an email"
+                  htmlFor="invite-email"
+                  hint="They must sign in with this email to join."
+                >
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      id="invite-email"
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="min-w-[12rem] flex-1"
+                    />
                     <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-danger hover:bg-danger-500/10"
+                      variant="primary"
+                      disabled={inviteAct.pending}
                       onClick={() =>
                         inviteAct.run(
-                          () => act.revokeInvite(group.id, i.id),
-                          () =>
-                            setInvites((iv) => iv.filter((x) => x.id !== i.id)),
+                          () => act.createInvite(group.id, inviteEmail),
+                          (res) => {
+                            if (res.invite)
+                              setInvites((iv) => [...iv, res.invite!]);
+                            setInviteEmail("");
+                          },
                         )
                       }
                     >
-                      Revoke
+                      {inviteAct.pending ? "Creating…" : "Create invite"}
                     </Button>
                   </div>
-                  <CopyField label="Invite link" value={joinUrl(i.code)} />
+                </Field>
+                <ErrorNote error={inviteAct.error} />
+              </div>
+
+              {invites.length > 0 && (
+                <div className="flex flex-col gap-3 border-t border-border pt-3">
+                  <Eyebrow>Waiting to be used ({invites.length})</Eyebrow>
+                  {invites.map((i) => (
+                    <div key={i.id} className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="min-w-0 flex-1 truncate text-foreground">
+                          {i.email}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger hover:bg-danger-500/10"
+                          onClick={() =>
+                            inviteAct.run(
+                              () => act.revokeInvite(group.id, i.id),
+                              () =>
+                                setInvites((iv) =>
+                                  iv.filter((x) => x.id !== i.id),
+                                ),
+                            )
+                          }
+                        >
+                          Revoke
+                        </Button>
+                      </div>
+                      <CopyField label="Invite link" value={joinUrl(i.code)} />
+                    </div>
+                  ))}
                 </div>
+              )}
+            </Card>
+          </section>
+        </>
+      )}
+
+      {tab === "tasks" && (
+        <>
+          {/* Tasks ----------------------------------------------------------- */}
+          <section>
+            <h2 className="mb-1 text-sm font-semibold text-foreground">
+              Tasks in {group.name}
+            </h2>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Targets are per person. A task goes to everyone unless you pick
+              who it&rsquo;s for.
+            </p>
+            <ul className="flex flex-col gap-2">
+              {tasks.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  groupId={group.id}
+                  task={t}
+                  members={members}
+                  assignees={assignees[t.id] ?? null}
+                  onRemove={setRemovingTask}
+                  onSaved={(u) =>
+                    setTasks((ts) => ts.map((x) => (x.id === u.id ? u : x)))
+                  }
+                  onAssigneesSaved={(taskId, next) =>
+                    setAssignees((a) => ({ ...a, [taskId]: next }))
+                  }
+                />
               ))}
-            </div>
-          )}
-        </Card>
-      </section>
+              {tasks.length === 0 && (
+                <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+                  No tasks yet. Add the group&rsquo;s first one below.
+                </li>
+              )}
+            </ul>
 
-      {/* Tasks ----------------------------------------------------------- */}
-      <section>
-        <h2 className="mb-1 text-sm font-semibold text-foreground">
-          Tasks in {group.name}
-        </h2>
-        <p className="mb-2 text-xs text-muted-foreground">
-          Targets are per person. A task goes to everyone unless you pick who
-          it&rsquo;s for.
-        </p>
-        <ul className="flex flex-col gap-2">
-          {tasks.map((t) => (
-            <TaskRow
-              key={t.id}
-              groupId={group.id}
-              task={t}
-              members={members}
-              assignees={assignees[t.id] ?? null}
-              onRemove={setRemovingTask}
-              onSaved={(u) =>
-                setTasks((ts) => ts.map((x) => (x.id === u.id ? u : x)))
-              }
-              onAssigneesSaved={(taskId, next) =>
-                setAssignees((a) => ({ ...a, [taskId]: next }))
-              }
-            />
-          ))}
-          {tasks.length === 0 && (
-            <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-              No tasks yet. Add the group&rsquo;s first one below.
-            </li>
-          )}
-        </ul>
+            <Card className="mt-3 p-4">
+              <p className="mb-2 text-sm font-semibold text-foreground">
+                Add a task
+              </p>
+              <div className="flex flex-col gap-2">
+                <Input
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  placeholder="Label (e.g. La ilaha illallah)"
+                  aria-label="New task label"
+                />
+                <Input
+                  value={newSubtitle}
+                  onChange={(e) => setNewSubtitle(e.target.value)}
+                  placeholder="Subtitle (optional)"
+                  aria-label="New task subtitle"
+                  dir="auto"
+                />
+                <Input
+                  value={newTarget}
+                  inputMode="numeric"
+                  onChange={(e) =>
+                    setNewTarget(e.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="Daily target"
+                  aria-label="New task daily target"
+                />
+                <FrequencyPicker
+                  id="new-task-frequency"
+                  label="How often"
+                  value={parseInt(newFrequency, 10)}
+                  onChange={(d) => setNewFrequency(String(d))}
+                />
+                <Button
+                  variant="accent"
+                  leadingIcon={<PlusIcon />}
+                  disabled={!newLabel.trim() || taskAct.pending}
+                  onClick={addTask}
+                >
+                  {taskAct.pending ? "Adding…" : "Add task"}
+                </Button>
+                <ErrorNote error={taskAct.error} />
+              </div>
+            </Card>
+          </section>
+        </>
+      )}
 
-        <Card className="mt-3 p-4">
-          <p className="mb-2 text-sm font-semibold text-foreground">
-            Add a task
-          </p>
-          <div className="flex flex-col gap-2">
-            <Input
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="Label (e.g. La ilaha illallah)"
-              aria-label="New task label"
-            />
-            <Input
-              value={newSubtitle}
-              onChange={(e) => setNewSubtitle(e.target.value)}
-              placeholder="Subtitle (optional)"
-              aria-label="New task subtitle"
-              dir="auto"
-            />
-            <Input
-              value={newTarget}
-              inputMode="numeric"
-              onChange={(e) => setNewTarget(e.target.value.replace(/\D/g, ""))}
-              placeholder="Daily target"
-              aria-label="New task daily target"
-            />
-            <FrequencyPicker
-              id="new-task-frequency"
-              label="How often"
-              value={parseInt(newFrequency, 10)}
-              onChange={(d) => setNewFrequency(String(d))}
-            />
-            <Button
-              variant="accent"
-              leadingIcon={<PlusIcon />}
-              disabled={!newLabel.trim() || taskAct.pending}
-              onClick={addTask}
-            >
-              {taskAct.pending ? "Adding…" : "Add task"}
-            </Button>
-            <ErrorNote error={taskAct.error} />
-          </div>
-        </Card>
-      </section>
+      {tab === "settings" && (
+        <>
+          {/* Settings -------------------------------------------------------- */}
+          <section>
+            <h2 className="mb-2 text-sm font-semibold text-foreground">
+              Settings
+            </h2>
+            <Card className="p-4">
+              <Field label="Group name" htmlFor="group-name">
+                <div className="flex gap-2">
+                  <Input
+                    id="group-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <Button
+                    variant="tonal"
+                    disabled={
+                      !name.trim() ||
+                      name.trim() === group.name ||
+                      settingsAct.pending
+                    }
+                    onClick={() =>
+                      settingsAct.run(() => act.renameGroup(group.id, name))
+                    }
+                  >
+                    Save
+                  </Button>
+                </div>
+              </Field>
+              <ErrorNote error={settingsAct.error} />
+            </Card>
+          </section>
 
-      {/* Settings -------------------------------------------------------- */}
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-foreground">Settings</h2>
-        <Card className="p-4">
-          <Field label="Group name" htmlFor="group-name">
-            <div className="flex gap-2">
-              <Input
-                id="group-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <Button
-                variant="tonal"
-                disabled={
-                  !name.trim() ||
-                  name.trim() === group.name ||
-                  settingsAct.pending
-                }
-                onClick={() =>
-                  settingsAct.run(() => act.renameGroup(group.id, name))
-                }
-              >
-                Save
-              </Button>
-            </div>
-          </Field>
-          <ErrorNote error={settingsAct.error} />
-        </Card>
-      </section>
-
-      {/* Programme ------------------------------------------------------- */}
-      {/* Shown whenever there is anything to show OR anything already followed.
+          {/* Programme ------------------------------------------------------- */}
+          {/* Shown whenever there is anything to show OR anything already followed.
           `roadmaps` is what RLS lets this admin read — PUBLISHED ones only —
           and nothing un-follows a circle when a programme is unpublished. Gated
           on the list alone, unpublishing made this whole section disappear
           while members still saw the programme, with no control anywhere to
           drop it. */}
-      {(roadmaps.length > 0 || followed.length > 0) && (
-        <section>
-          <h2 className="mb-2 text-sm font-semibold text-foreground">
-            Roadmaps
-          </h2>
-          <Card className="p-4">
-            <p className="mb-3 text-sm text-muted-foreground">
-              Everyone in this circle sees the roadmaps ticked here. An
-              organiser can also add or remove them.
-            </p>
+          {(roadmaps.length > 0 || followed.length > 0) && (
+            <section>
+              <h2 className="mb-2 text-sm font-semibold text-foreground">
+                Roadmaps
+              </h2>
+              <Card className="p-4">
+                <p className="mb-3 text-sm text-muted-foreground">
+                  Everyone in this circle sees the roadmaps ticked here. An
+                  organiser can also add or remove them.
+                </p>
 
-            {/* CHECKBOXES, not a <select> (0028). A circle may follow several,
+                {/* CHECKBOXES, not a <select> (0028). A circle may follow several,
                 and a single-value control cannot express that — it also had a
                 trap worth remembering: a <select> whose value matches no option
                 silently shows the FIRST one, so an unpublished programme read
                 as "No programme" for a circle that was on it. A list of
                 independent toggles has no such failure mode; each row states
                 its own state. */}
-            <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
-              {roadmaps.map((r) => {
-                const on = followed.includes(r.id);
-                return (
-                  <li key={r.id}>
-                    <label className="flex min-h-11 cursor-pointer items-center gap-3 p-3">
-                      <input
-                        type="checkbox"
-                        className="size-4 shrink-0 accent-primary"
-                        checked={on}
-                        disabled={roadmapAct.pending}
-                        onChange={() => {
-                          const previous = followed;
-                          // Optimistic, undone on refusal — without the undo a
-                          // write RLS filtered away still looks applied.
-                          setFollowed(
-                            on
-                              ? followed.filter((x) => x !== r.id)
-                              : [...followed, r.id],
-                          );
-                          void roadmapAct.run(
-                            () => act.setGroupRoadmap(group.id, r.id, !on),
-                            // The nav's Roadmap tab reads the groups store, and
-                            // this write does not navigate.
-                            () => void refreshGroups(),
-                            () => setFollowed(previous),
-                          );
-                        }}
-                      />
-                      <span className="min-w-0 flex-1 text-sm text-foreground">
-                        {r.name}
-                      </span>
-                    </label>
-                  </li>
-                );
-              })}
+                <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
+                  {roadmaps.map((r) => {
+                    const on = followed.includes(r.id);
+                    return (
+                      <li key={r.id}>
+                        <label className="flex min-h-11 cursor-pointer items-center gap-3 p-3">
+                          <input
+                            type="checkbox"
+                            className="size-4 shrink-0 accent-primary"
+                            checked={on}
+                            disabled={roadmapAct.pending}
+                            onChange={() => {
+                              const previous = followed;
+                              // Optimistic, undone on refusal — without the undo a
+                              // write RLS filtered away still looks applied.
+                              setFollowed(
+                                on
+                                  ? followed.filter((x) => x !== r.id)
+                                  : [...followed, r.id],
+                              );
+                              void roadmapAct.run(
+                                () => act.setGroupRoadmap(group.id, r.id, !on),
+                                // The nav's Roadmap tab reads the groups store, and
+                                // this write does not navigate.
+                                () => void refreshGroups(),
+                                () => setFollowed(previous),
+                              );
+                            }}
+                          />
+                          <span className="min-w-0 flex-1 text-sm text-foreground">
+                            {r.name}
+                          </span>
+                        </label>
+                      </li>
+                    );
+                  })}
 
-              {/* A roadmap this circle follows that has been withdrawn, or is
+                  {/* A roadmap this circle follows that has been withdrawn, or is
                   a draft an organiser lined up. RLS hides it from members and
                   admins alike, so all that can be said is that it exists. */}
-              {followed
-                .filter((id) => !roadmaps.some((r) => r.id === id))
-                .map((id) => (
-                  <li key={id}>
-                    <label className="flex min-h-11 cursor-pointer items-center gap-3 p-3">
-                      <input
-                        type="checkbox"
-                        className="size-4 shrink-0 accent-primary"
-                        checked
-                        disabled={roadmapAct.pending}
-                        onChange={() => {
-                          const previous = followed;
-                          setFollowed(followed.filter((x) => x !== id));
-                          void roadmapAct.run(
-                            () => act.setGroupRoadmap(group.id, id, false),
-                            undefined,
-                            () => setFollowed(previous),
-                          );
-                        }}
-                      />
-                      <span className="min-w-0 flex-1 text-sm text-muted-foreground">
-                        A roadmap that isn&rsquo;t published right now. Members
-                        can&rsquo;t see it until it is.
-                      </span>
-                    </label>
-                  </li>
-                ))}
-            </ul>
+                  {followed
+                    .filter((id) => !roadmaps.some((r) => r.id === id))
+                    .map((id) => (
+                      <li key={id}>
+                        <label className="flex min-h-11 cursor-pointer items-center gap-3 p-3">
+                          <input
+                            type="checkbox"
+                            className="size-4 shrink-0 accent-primary"
+                            checked
+                            disabled={roadmapAct.pending}
+                            onChange={() => {
+                              const previous = followed;
+                              setFollowed(followed.filter((x) => x !== id));
+                              void roadmapAct.run(
+                                () => act.setGroupRoadmap(group.id, id, false),
+                                undefined,
+                                () => setFollowed(previous),
+                              );
+                            }}
+                          />
+                          <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+                            A roadmap that isn&rsquo;t published right now.
+                            Members can&rsquo;t see it until it is.
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                </ul>
 
-            <p className="mt-3 text-xs text-muted-foreground">
-              Roadmaps don&rsquo;t affect streaks or the circle&rsquo;s figures.
-              Unticking one keeps everything already recorded.
-            </p>
-            {followed.length > 0 && (
-              // A cohort belongs to ONE programme now (D59). Following a single
-              // one goes straight to its report; following several goes to the
-              // list, because this button cannot pick for them — and a report
-              // stacking both is the screen the owner asked us to take apart.
-              <Link
-                href={
-                  followed.length === 1
-                    ? `/programme/${followed[0]}/progress`
-                    : "/programme"
-                }
-                className={buttonVariants({
-                  variant: "tonal",
-                  className: "mt-3 w-full",
-                })}
-              >
-                See how members are getting on
-              </Link>
-            )}
-            <ErrorNote error={roadmapAct.error} />
-          </Card>
-        </section>
-      )}
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Roadmaps don&rsquo;t affect streaks or the circle&rsquo;s
+                  figures. Unticking one keeps everything already recorded.
+                </p>
+                {followed.length > 0 && (
+                  // A cohort belongs to ONE programme now (D59). Following a single
+                  // one goes straight to its report; following several goes to the
+                  // list, because this button cannot pick for them — and a report
+                  // stacking both is the screen the owner asked us to take apart.
+                  <Link
+                    href={
+                      followed.length === 1
+                        ? `/programme/${followed[0]}/progress`
+                        : "/programme"
+                    }
+                    className={buttonVariants({
+                      variant: "tonal",
+                      className: "mt-3 w-full",
+                    })}
+                  >
+                    See how members are getting on
+                  </Link>
+                )}
+                <ErrorNote error={roadmapAct.error} />
+              </Card>
+            </section>
+          )}
 
-      {/* Ownership ------------------------------------------------------- */}
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-foreground">
-          Ownership
-        </h2>
-        {isOwner ? (
-          <Card className="flex flex-col gap-4 p-4">
-            <Field
-              label="Transfer ownership"
-              htmlFor="transfer-owner"
-              hint="The new owner gains full control; you become a co-admin."
-            >
-              <div className="flex flex-wrap gap-2">
-                <select
-                  id="transfer-owner"
-                  className={selectCls + " min-w-[10rem] flex-1"}
-                  value={transferId}
-                  onChange={(e) => setTransferId(e.target.value)}
-                  disabled={transferCandidates.length === 0}
+          {/* Ownership ------------------------------------------------------- */}
+          <section>
+            <h2 className="mb-2 text-sm font-semibold text-foreground">
+              Ownership
+            </h2>
+            {isOwner ? (
+              <Card className="flex flex-col gap-4 p-4">
+                <Field
+                  label="Transfer ownership"
+                  htmlFor="transfer-owner"
+                  hint="The new owner gains full control; you become a co-admin."
                 >
-                  <option value="">
-                    {transferCandidates.length
-                      ? "Choose a member…"
-                      : "No one to transfer to yet"}
-                  </option>
-                  {transferCandidates.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  variant="outline"
-                  disabled={!transferId}
-                  onClick={() => setTransferOpen(true)}
-                >
-                  Transfer
-                </Button>
-              </div>
-            </Field>
-            <ErrorNote error={ownershipAct.error} />
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      id="transfer-owner"
+                      className={selectCls + " min-w-[10rem] flex-1"}
+                      value={transferId}
+                      onChange={(e) => setTransferId(e.target.value)}
+                      disabled={transferCandidates.length === 0}
+                    >
+                      <option value="">
+                        {transferCandidates.length
+                          ? "Choose a member…"
+                          : "No one to transfer to yet"}
+                      </option>
+                      {transferCandidates.map((m) => (
+                        <option key={m.userId} value={m.userId}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="outline"
+                      disabled={!transferId}
+                      onClick={() => setTransferOpen(true)}
+                    >
+                      Transfer
+                    </Button>
+                  </div>
+                </Field>
+                <ErrorNote error={ownershipAct.error} />
 
-            <div className="border-t border-border pt-3">
-              {/* Danger zone: the heading stays neutral — ONE red element, the
+                <div className="border-t border-border pt-3">
+                  {/* Danger zone: the heading stays neutral — ONE red element, the
                   action itself (a real outlined button, escalating to the solid
                   destructive confirm in the dialog). A red heading + red button
                   was double-shouting, and the ghost button read as plain text. */}
-              <p className="mb-1 text-sm font-medium text-foreground">
-                Delete this group
-              </p>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Removes the group, its tasks, and all member records. This
-                can&rsquo;t be undone.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-danger-500/40 text-danger hover:border-danger-500/60 hover:bg-danger-500/10"
-                onClick={() => setDeleteOpen(true)}
-              >
-                Delete group
-              </Button>
-            </div>
-          </Card>
-        ) : (
-          <Card className="p-4 text-sm text-muted-foreground">
-            Owned by{" "}
-            <span className="font-medium text-foreground">
-              {owner?.name ?? "—"}
-            </span>
-            . Only the owner can transfer or delete this group.
-          </Card>
-        )}
-      </section>
+                  <p className="mb-1 text-sm font-medium text-foreground">
+                    Delete this group
+                  </p>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    Removes the group, its tasks, and all member records. This
+                    can&rsquo;t be undone.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-danger-500/40 text-danger hover:border-danger-500/60 hover:bg-danger-500/10"
+                    onClick={() => setDeleteOpen(true)}
+                  >
+                    Delete group
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <Card className="p-4 text-sm text-muted-foreground">
+                Owned by{" "}
+                <span className="font-medium text-foreground">
+                  {owner?.name ?? "—"}
+                </span>
+                . Only the owner can transfer or delete this group.
+              </Card>
+            )}
+          </section>
+        </>
+      )}
 
       {/* Confirms -------------------------------------------------------- */}
       {/* Regenerate is confirmed because it is irreversible and its blast

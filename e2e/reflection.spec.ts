@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { closesDay, signIn } from "./helpers";
+import { closesDay, signIn, openManageTab } from "./helpers";
 
 /**
  * M5 (CET-9/CET-16) — the reflection surfaces, end-to-end against the real
@@ -56,6 +56,7 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
   await pageA.click('button:has-text("Add task")');
   await expect(pageA.getByText("target 10 · daily")).toBeVisible();
   // 0022: the circle's open link comes with the circle — nothing to click.
+  await openManageTab(pageA, "Members");
   const joinLink = await pageA
     .locator("code", { hasText: "/join/" })
     .first()

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveGroup } from "@/lib/active-group";
 import { toAssignments } from "@/lib/assignments";
 import { ManageClient } from "./manage-client";
+import { MANAGE_TABS, type ManageTab } from "./manage-tabs";
 
 /**
  * Manage screen, server-first (M2 — the second real screen after /groups).
@@ -14,10 +15,13 @@ import { ManageClient } from "./manage-client";
  */
 export default async function ManageGroupPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ groupId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { groupId } = await params;
+  const { tab } = await searchParams;
   const active = await resolveGroup(groupId);
   if (!active) redirect("/groups");
 
@@ -143,6 +147,15 @@ export default async function ManageGroupPage({
       defaultCode={defaultCode}
       invites={lockedInvites}
       canClaim={canClaim ?? false}
+      initialTab={
+        MANAGE_TABS.includes(tab as ManageTab)
+          ? (tab as ManageTab)
+          : // A circle with no tasks has nothing to do yet: creating one lands
+            // here, and adding the first task is the next step.
+            (tasks ?? []).length === 0
+            ? "tasks"
+            : "members"
+      }
       roadmaps={(roadmaps ?? []).map((r) => ({ id: r.id, name: r.name }))}
       followedRoadmapIds={(group.group_roadmaps ?? []).map((g) => g.roadmap_id)}
     />

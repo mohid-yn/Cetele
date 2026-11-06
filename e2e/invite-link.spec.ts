@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { signIn } from "./helpers";
+import { signIn, openManageTab } from "./helpers";
 
 async function signOut(page: Page) {
   await page.goto("/profile");
@@ -39,7 +39,7 @@ test.describe.configure({ mode: "serial" });
  */
 async function openManage(page: Page) {
   await signIn(page, OWNER);
-  await page.goto(manageUrl);
+  await page.goto(`${manageUrl}?tab=members`);
   await expect(page.getByText("Add people")).toBeVisible();
 }
 
@@ -66,6 +66,7 @@ test("a new circle already owns exactly one open link", async ({ page }) => {
   await page.click('button:has-text("Create group")');
   await page.waitForURL("**/group/manage");
   manageUrl = page.url();
+  await openManageTab(page, "Members");
   await expect(page.getByText("Add people")).toBeVisible();
 
   // Nothing was clicked to make it: it came with the circle.

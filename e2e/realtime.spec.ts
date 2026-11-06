@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { closesDay, signIn } from "./helpers";
+import { closesDay, signIn, openManageTab } from "./helpers";
 
 /**
  * M4 (CET-7) — the live collective counter, end-to-end against the real local
@@ -31,6 +31,7 @@ test("collective counter climbs live when a peer taps", async ({ browser }) => {
   await pageA.click('button:has-text("Add task")');
   await expect(pageA.getByText("target 10 · daily")).toBeVisible();
   // 0022: the circle's open link comes with the circle — nothing to click.
+  await openManageTab(pageA, "Members");
   const joinLink = await pageA
     .locator("code", { hasText: "/join/" })
     .first()

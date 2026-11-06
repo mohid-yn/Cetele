@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { closesDay, signIn } from "./helpers";
+import { closesDay, signIn, openManageTab } from "./helpers";
 
 /**
  * The v2 retention layer, end-to-end against the real local stack (CET-17…22).
@@ -40,6 +40,7 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   // "Create invite" with an empty email now RAISES, and this spec used to do
   // exactly that and pass anyway by reading the default link out of the error
   // state.)
+  await openManageTab(pageA, "Members");
   const joinLink = await pageA
     .locator("code", { hasText: "/join/" })
     .first()

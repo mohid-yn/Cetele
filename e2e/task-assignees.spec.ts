@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { signIn } from "./helpers";
+import { signIn, openManageTab } from "./helpers";
 
 /**
  * Member-specific tasks (0023, D54).
@@ -43,8 +43,8 @@ async function signOut(page: Page) {
  */
 async function openManage(page: Page) {
   await signIn(page, OWNER);
-  await page.goto(manageUrl);
-  await expect(page.getByText("Add people")).toBeVisible();
+  await page.goto(`${manageUrl}?tab=tasks`);
+  await expect(page.getByRole("button", { name: "Add task" })).toBeVisible();
 }
 
 /**
@@ -73,7 +73,6 @@ test("a circle, two members, and a task that starts out everyone's", async ({
   await page.click('button:has-text("Create group")');
   await page.waitForURL("**/group/manage");
   manageUrl = page.url();
-  await expect(page.getByText("Add people")).toBeVisible();
 
   // Two tasks: one stays the circle's, one gets scoped later. Both are created
   // through the real form, so the DEFAULT is what the trigger produced.
@@ -93,6 +92,7 @@ test("a circle, two members, and a task that starts out everyone's", async ({
     page.getByRole("button", { name: /Who is Shared Dhikr for/ }),
   ).toHaveText("Everyone");
 
+  await openManageTab(page, "Members");
   inviteLink = await page
     .locator("code", { hasText: "/join/" })
     .first()

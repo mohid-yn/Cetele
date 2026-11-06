@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { closesDay, signIn } from "./helpers";
+import { closesDay, signIn, openManageTab } from "./helpers";
 
 /**
  * Personal stretch goals (D51), end-to-end against the real local stack.
@@ -228,6 +228,7 @@ test("on a phone, a circle with many tasks can still reach Save", async ({
   await page.goto("/groups");
   await page.click('a:has-text("Manage")');
   await page.waitForURL("**/group/manage");
+  await openManageTab(page, "Tasks");
   for (const label of ["Tahlil", "Tasbih", "Tahmid", "Takbir", "Hawqala"]) {
     await page.getByPlaceholder("Label (e.g. La ilaha illallah)").fill(label);
     await page.getByPlaceholder("Daily target").last().fill("33");
