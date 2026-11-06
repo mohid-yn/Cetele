@@ -613,12 +613,8 @@
    dark sky that still reads as a lit garden. Plants carry their own per-theme
    --garden-* tokens (below), because one set could not pass on both.
    Specificity (:root.dark .x) beats the single utility class. */
-:root.dark .garden-ground {
-  fill: var(--color-primary-900);
-}
-:root.dark .garden-soil {
-  fill: var(--color-primary-800);
-}
+/* (v2) Ground and soil are now --garden-grass* / --garden-soil tokens, set
+   below — a green bed under a blue sky, rather than the brand blue for both. */
 
 /* Garden colour tokens.
    These are TOKENS, not class rules, and the SVG references them inline. That is
@@ -704,6 +700,92 @@
 }
 :root.dark .garden-stars {
   display: block;
+}
+
+/* Garden v2 — the reward layer (lib/garden.ts). Same hardening rule as above:
+   the SVG reads every one of these inline with a var(x, var(y)) fallback.
+
+   GRASS / SOIL: the bed is green under a blue sky. v4 re-hued the brand to
+   blue and the old ground (primary-200/300) went with it, leaving plants
+   growing out of blue earth. Plants stay >=3:1 on both bands (measured, worst case on
+   --garden-grass-deep: stem 4.58, leaf 3.60, resting leaf 3.33 light; every
+   pair is above 5.8 dark).
+
+   PETALS: four tones, one per member (lib/garden petalTone), so a plant is
+   recognisable as someone's. Tone 1 is the exact YN orange; tone 2 the YN coral
+   (#f0632e). Every petal carries a darker centre, which is what holds it >=3:1
+   on a pale sky.
+
+   GOLD: the rare bloom and the golden butterfly. Reserved — it means "rare". */
+:root {
+  --garden-grass: #cfe8c3;
+  --garden-grass-deep: #b4d9a6;
+  --garden-soil: #a98b6a;
+  --garden-tuft: #7fb36f;
+  --garden-petal-1: var(--color-accent-300, #f08e03);
+  --garden-petal-2: #f0632e;
+  --garden-petal-3: #e5779a;
+  --garden-petal-4: #8f7be0;
+  --garden-centre: #7a3d00;
+  --garden-gold: #f2c230;
+  --garden-gold-deep: #a87a00;
+  --garden-sun: #ffd36b;
+  --garden-sun-glow: #ffe9ad;
+  --garden-halo: var(--color-primary-400, #3698f1);
+  --garden-wing: #f09a3e;
+  --garden-wing-deep: #8a5001;
+  --garden-bee: #f2c230;
+  --garden-ink: #20262f;
+  --garden-bird: #1172c1;
+}
+:root.dark {
+  --garden-grass: #1e3a28;
+  --garden-grass-deep: #183022;
+  --garden-soil: #3a2c20;
+  --garden-tuft: #3f6b4a;
+  --garden-petal-1: #f5a54f;
+  --garden-petal-2: #f57a4b;
+  --garden-petal-3: #ee93b1;
+  --garden-petal-4: #a796ef;
+  --garden-centre: #ffd9a8;
+  --garden-gold: #f7d258;
+  --garden-gold-deep: #fff0b8;
+  /* By night the sun is a moon: same arc, same meaning, softer light. */
+  --garden-sun: #f3edd2;
+  --garden-sun-glow: #6d7aa8;
+  --garden-halo: var(--color-primary-300, #6bb4fe);
+  --garden-wing: #f5a54f;
+  --garden-wing-deep: #ffd9a8;
+  --garden-bee: #f7d258;
+  --garden-ink: #e8edf5;
+  --garden-bird: #8cc4ff;
+}
+
+/* The petal tones as classes, so a <g> can set its plant's colour once. */
+.garden-tone-1 {
+  --petal: var(--garden-petal-1, #f08e03);
+}
+.garden-tone-2 {
+  --petal: var(--garden-petal-2, #f0632e);
+}
+.garden-tone-3 {
+  --petal: var(--garden-petal-3, #e5779a);
+}
+.garden-tone-4 {
+  --petal: var(--garden-petal-4, #8f7be0);
+}
+.garden-tone-gold {
+  --petal: var(--garden-gold, #f2c230);
+}
+
+/* A plant is a button (tap to see whose it is). Keyboard focus draws a ring on
+   the plot; a mouse press does not. */
+.garden-plot {
+  cursor: pointer;
+  outline: none;
+}
+.garden-plot:focus-visible .garden-plot-focus {
+  opacity: 1;
 }
 
 /* The default border colour, so a bare `border` utility draws the decorative
@@ -866,6 +948,159 @@ body {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+/* Garden v2: a FRESH bloom (opened since you last looked, or live) overshoots
+   and settles — the one place the garden is allowed a spring, because it is the
+   reward itself. Everything ambient stays on the plain ease-outs. */
+@keyframes bloom-burst {
+  0% {
+    transform: scale(0) rotate(-40deg);
+  }
+  60% {
+    transform: scale(1.35) rotate(6deg);
+  }
+  80% {
+    transform: scale(0.92) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+/* The bud a fresh bloom replaces: it swells, then gives way. */
+@keyframes bud-give-way {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+/* Petal/sparkle particles thrown out from a bloom. Each sets --dx/--dy. */
+@keyframes garden-burst {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0.3)
+      rotate(var(--rot, 120deg));
+    opacity: 0;
+  }
+}
+
+/* A rising ring of light behind a fresh bloom. */
+@keyframes garden-ripple {
+  0% {
+    transform: scale(0.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* The waiting bud (your plant, not yet tended today): breathes, as a cue. */
+@keyframes bud-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+@keyframes halo-breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Gold shimmer on a rare bloom. */
+@keyframes garden-shimmer {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+/* The sun's rays turn slowly once the day is closed. */
+@keyframes garden-rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Petals falling across the scene when the circle closes the day. */
+@keyframes garden-petal-fall {
+  0% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), 150px) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+/* Visitors: wings flap; the body wanders a loop over the bed. */
+@keyframes garden-flap {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.25);
+  }
+}
+@keyframes garden-wander {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(46px, -14px);
+  }
+  50% {
+    transform: translate(84px, 4px);
+  }
+  75% {
+    transform: translate(38px, 12px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+/* A visitor's entrance: flies in from off-scene the first time it's seen. */
+@keyframes garden-arrive {
+  0% {
+    transform: translate(-140px, -60px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
   }
 }
 

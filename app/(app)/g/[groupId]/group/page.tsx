@@ -668,6 +668,8 @@ export default async function GroupPage({
         names={names}
         viewerId={me}
         garden={garden}
+        gardenDay={todayISO}
+        gardenLeft={Math.max(0, todayGoal - todayTotal)}
         pair={pair}
         pairless={pairless}
       />

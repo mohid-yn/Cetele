@@ -131,6 +131,8 @@ export function GroupClient({
   names,
   viewerId,
   garden,
+  gardenDay,
+  gardenLeft,
   pair,
   pairless,
 }: {
@@ -156,6 +158,10 @@ export function GroupClient({
   viewerId: string;
   /** The collective living artefact (CET-17) — derived, stores nothing. */
   garden: Garden;
+  /** The circle's local date — seeds the garden's rare blooms and visitor. */
+  gardenDay: string;
+  /** Counts still to go on today's collective goal (the garden's sun). */
+  gardenLeft: number;
   /** This week's winnable duo goal (CET-22). Null when there is no partner:
    *  either a circle of one, or the member sitting out an odd-sized circle. */
   pair: Pair | null;
@@ -291,7 +297,19 @@ export function GroupClient({
                   read as a mistake. The garden absorbs the difference as sky
                   (see group-garden.tsx); the breakdown's list keeps its top. */}
               <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-                <GroupGarden garden={garden} />
+                <GroupGarden
+                  garden={garden}
+                  members={contributions.map((c) => ({
+                    userId: c.userId,
+                    name: c.name,
+                    isMe: c.isMe,
+                    tended: c.today > 0,
+                  }))}
+                  groupId={groupId}
+                  day={gardenDay}
+                  viewerId={viewerId}
+                  todayLeft={gardenLeft}
+                />
 
                 <section
                   className={cn(
