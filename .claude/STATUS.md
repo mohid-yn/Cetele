@@ -307,6 +307,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D74** Administration is its own workspace, not a section of `/groups`. Inside `/admin/*`, and `/programme/*` for an organiser, a deep sage bar replaces the member's tabs: Roadmaps, Organisers, Circles (the way out). The way in is an Admin tab, which gives way to a circle's Roadmap tab, plus a Profile row that is always there.
 - **D75** The roadmap screen is the member's own, at `/roadmap`, and lists what any of their circles follows. The tab shows whichever circle is selected, and opening it leaves that selection alone. `/g/[id]/roadmap` only forwards or explains. For an organiser this tab takes the fifth slot from Admin.
 - **D76** An organiser can take part in a published roadmap with no circle (`roadmap_participants`, `take_part_in_roadmap`, 0040). It counts in the cohort report, only organisers see that row, and it lasts only while they hold the role. Recorded progress stays. Offered only when they have no other way to log.
+- **D77** A circle can only follow a PUBLISHED roadmap (0041). Both writers refuse a draft: the `group_roadmaps` insert policy (circle admins) and `set_circle_on_roadmap` (organisers). Existing rows and unpublishing are untouched.
 - **D65** Planned: compute moves to Cloudflare (`@opennextjs/cloudflare`). Supabase and auth stay. Only `lib/push/send.ts` and `api/push/dispatch` are not portable. Not started.
 
 ---
