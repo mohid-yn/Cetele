@@ -243,7 +243,8 @@ export function EventDetailClient({
         />
       )}
 
-      {event.status !== "draft" && (
+      {/* Questions are for a session someone leads, not a camp. */}
+      {event.status !== "draft" && event.kind === "halaqah" && (
         <Questions
           eventId={event.id}
           initial={initialQuestions}

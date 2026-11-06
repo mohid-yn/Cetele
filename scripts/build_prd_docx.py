@@ -193,6 +193,21 @@ for t in [
     ("An organiser reads the cohort, not just their own circle", "a progress report per programme, across every circle following it."),
 ]:
     A(bullet([B(t[0] + " — "), N(t[1])]))
+A(heading("Branches and events — camps and weekly halaqahs (D79–D80, not live)", 2))
+A(normal("Camps and halaqahs belong to a place, not to one circle and not to the whole administration. Nothing here touches logging: no event is read by the count screen, rings, streaks or the collective goal."))
+for t in [
+    ("Branch", "a place, nested to any depth (Youth Nexus > Victoria > Melbourne > South East). A circle sits in at most one."),
+    ("Joining", "a circle's admin asks from Manage > Settings; a steward of that branch approves. Being in a branch is what reveals venues."),
+    ("Reach", "a member sees events in their circles' branches and every branch above them. A Melbourne camp reaches South East and North, never Queensland. No circle, or no branch: no events."),
+    ("Steward", "runs a branch and everything inside it: posts events, approves circles, appoints stewards. Sees circle names and sizes, never anyone's dhikr. Organisers are stewards of every branch."),
+    ("Camp", "one-off, posted by a steward. Optional capacity and reply deadline. One-tap Going / Maybe / Can't, plus a note (dietary needs)."),
+    ("Weekly halaqah", "a series laid out six weeks ahead, topped up daily. Each week is its own session with its own polls and questions. A host runs polls and reads questions."),
+    ("Polls", "topic, food, activity. One vote each, changeable until the session starts. Results show after you vote. Nobody can see who voted for what."),
+    ("Questions", "anonymous to everyone, the host included. Upvoted ones rise. Hosts mark answered or hide. Five each per session."),
+    ("Who sees names", "RSVP counts: everyone in reach. RSVP names and notes: the branch's stewards only."),
+    ("Today", "one 'Up next' line below the rings, only when there is a vote or an answer to give, or you are going within two days. Fetched after the screen paints."),
+]:
+    A(bullet([B(t[0] + " — "), N(t[1])]))
 A(heading("v1.1 — fast-follow", 2))
 A(bullet([B("Push notifications — "), N("daily nudges via Web Push + service worker (VAPID keys), sent from a Vercel cron / Supabase Edge Function. Works on Android & desktop; iOS only on 16.4+ as an installed PWA")]))
 A(bullet([B("Email reminders — "), N("reliable fallback (Supabase/Resend) for users who don't install or are on older iOS")]))

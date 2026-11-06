@@ -7,7 +7,7 @@
 > rewrite) · [`STATUS-2026-07-16-full.md`](history/STATUS-2026-07-16-full.md) (D1–D48 in full, including superseded ones).
 > Section numbers are stable, because code comments and docs cite them.
 
-_Last updated: 2026-11-06 · Phase: **live in production. The MCP server is live for organisers.**_
+_Last updated: 2026-11-07 · Phase: **live in production. The MCP server is live for organisers.**_
 
 ---
 
@@ -21,17 +21,17 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 ### Current state (checked 2026-11-06)
 
-| Item         | State                                                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `62078f7` (Manage tabs promoted 2026-11-06)         |
-| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main` apart from this docs commit                        |
-| Migrations   | **40 in the repo, the same 40 on prod** (compared against the Supabase migration list). No drift                          |
-| Git          | D77 (`fix/drafts-cannot-be-followed-v2`) **approved**, blocked on `supabase login`. Rebrand on `feat/youth-nexus-rebrand` |
-| CI           | Green on both `main` and `staging`                                                                                        |
-| Tests        | Unit 169 · pgTAP 834 across 24 suites · e2e 85 across 21 specs                                                            |
-| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                       |
-| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                            |
-| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                                     |
+| Item         | State                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `62078f7` (Manage tabs promoted 2026-11-06)   |
+| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main` apart from this docs commit                  |
+| Migrations   | **40 on prod.** `feat/branches-events` adds 0042 + 0043 (local only, never pushed). D77's 0041 is on its own branch |
+| Git          | D77 approved, blocked on `supabase login`. `feat/branches-events` sits on rebrand + garden (`feat/garden-dopamine`) |
+| CI           | Green on both `main` and `staging`                                                                                  |
+| Tests        | On `feat/branches-events`: unit 217 · pgTAP 973 across 26 suites · e2e 90 across 22 specs, all green locally        |
+| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                 |
+| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                      |
+| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                               |
 
 Everything through D76 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
 
@@ -74,6 +74,19 @@ sent the whole page and the browser rendered nothing.
 | `prefetch={false}` on ring links, no upgrade                      | 7 of 480      |
 
 Which upstream change fixed it was not traced. The bug predates D71/D72 (August's `0532e25` blanks 1 of 240).
+
+### Branches and events (built 2026-11-07, on `feat/branches-events`, not merged)
+
+Camps and weekly halaqahs, scoped by place (D79, D80). Owner gave the agent full ownership of the branch; nothing is on staging or prod.
+
+| Layer        | What exists                                                                                                      |
+| ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| DB           | 0042 branches, stewards, join requests · 0043 events, series, RSVPs, polls, anonymous questions. pgTAP 025 + 026 |
+| Member       | `/events`, `/events/[id]` (RSVP, polls, questions), Today "Up next" line, Group "coming up" link, Profile row    |
+| Steward      | Admin › Events (camps, weekly halaqahs, hosts) and Admin › Branches (tree, approvals, stewards)                  |
+| Circle admin | Manage › Settings › Branch: ask to join, withdraw, leave. Switcher shows the branch                              |
+
+To ship: owner review on a preview, then `supabase db push` (0042, 0043) **before** merging, because staging reads prod's DB. 0041 (D77) must go first or with it. Not done: push notifications for events, Linear issues.
 
 ### Next steps, in order
 
@@ -310,6 +323,8 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D74** Administration is its own workspace, not a section of `/groups`. Inside `/admin/*`, and `/programme/*` for an organiser, a deep sage bar replaces the member's tabs: Roadmaps, Organisers, Circles (the way out). The way in is an Admin tab, which gives way to a circle's Roadmap tab, plus a Profile row that is always there.
 - **D75** The roadmap screen is the member's own, at `/roadmap`, and lists what any of their circles follows. The tab shows whichever circle is selected, and opening it leaves that selection alone. `/g/[id]/roadmap` only forwards or explains. For an organiser this tab takes the fifth slot from Admin.
 - **D76** An organiser can take part in a published roadmap with no circle (`roadmap_participants`, `take_part_in_roadmap`, 0040). It counts in the cohort report, only organisers see that row, and it lasts only while they hold the role. Recorded progress stays. Offered only when they have no other way to log.
+- **D79 (built, awaiting owner)** A circle sits in at most one **branch** (a nested place). Its reach is that branch and every ancestor. Joining is a request a steward approves. **Stewards** run a branch and its subtree; organisers run all. Stewards see circle names and sizes only (D27 holds).
+- **D80 (built, awaiting owner)** Events belong to a branch and reach every circle under it, with no circle opt-in (an invitation, not an obligation, unlike roadmaps). No circle or no branch: no events. RSVP counts to everyone in reach, names to stewards only (owner, 2026-11-07). Questions are anonymous to every reader, the asker stored only for limits and self-delete. Today gets one actionable line below the rings, fetched after paint: logging speed comes first (owner, 2026-11-07).
 - **D78 (proposed, awaiting owner)** Rebrand to the Youth Nexus palette: blue + navy + orange on white, design tokens v4, Chivo display face. Every v3 value is re-hued at its exact L\*, so contrast holds. The product name stays Cetele until the owner says otherwise. See `docs/DESIGN_SYSTEM.md` on the branch.
 - **D65** Planned: compute moves to Cloudflare (`@opennextjs/cloudflare`). Supabase and auth stay. Only `lib/push/send.ts` and `api/push/dispatch` are not portable. Not started.
 
