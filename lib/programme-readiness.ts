@@ -84,7 +84,10 @@ export function programmeReadiness({
   if (circles === 0) {
     notes.push({
       id: "no-circles",
-      message: "No circles are on it yet, so nobody will see it until one is.",
+      // A draft cannot take circles (0041, D77), so this is what happens NEXT,
+      // not something to fix before publishing.
+      message:
+        "No circles yet. Add them on the Circles tab once it is published.",
     });
   }
 
@@ -117,7 +120,9 @@ export function reachSentence(reach: Reach): string {
     case "draft":
       return reach.circles === 0
         ? "Only organisers can see this."
-        : `Only organisers can see this. ${plural(reach.circles, "circle")} will get it when you publish.`;
+        : // Only a circle put on before 0041 (D77), or a roadmap unpublished
+          // since, can be here: a draft takes no new circles.
+          `Only organisers can see this. ${plural(reach.circles, "circle")} will get it when you publish.`;
     case "unassigned":
       return "Published, but no circle is on it yet, so no member can see it.";
     case "live":

@@ -1,0 +1,58 @@
+$ next build
+▲ Next.js 16.4.5 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 22ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1507ms
+  Running TypeScript ...
+  Finished TypeScript in 2.9s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/22) ...
+  Generating static pages using 11 workers (5/22) 
+  Generating static pages using 11 workers (10/22) 
+  Generating static pages using 11 workers (16/22) 
+✓ Generating static pages using 11 workers (22/22) in 363ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /admin
+├ ƒ /admin/organisers
+├ ƒ /api/mcp
+├ ƒ /api/mcp/oauth-protected-resource
+├ ƒ /api/push/dispatch
+├ ƒ /auth/callback
+├ ƒ /auth/confirm
+├ ƒ /auth/signout
+├ ○ /designsystem
+├ ƒ /g/[groupId]/count/[taskId]
+├ ƒ /g/[groupId]/group
+├ ƒ /g/[groupId]/group/manage
+├ ƒ /g/[groupId]/progress
+├ ƒ /g/[groupId]/roadmap
+├ ƒ /g/[groupId]/today
+├ ƒ /group
+├ ƒ /groups
+├ ƒ /join/[code]
+├ ƒ /leaderboard
+├ ○ /manifest.webmanifest
+├ ƒ /oauth/consent
+├ ○ /privacy
+├ ƒ /profile
+├ ƒ /programme
+├ ƒ /programme/[roadmapId]
+├ ƒ /programme/[roadmapId]/progress
+├ ƒ /programme/connect
+├ ƒ /progress
+├ ƒ /roadmap
+├ ○ /terms
+└ ƒ /today
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Input } from "@/components/ui";
 import { usePropState } from "@/lib/use-prop-state";
+import { cn } from "@/lib/utils";
 import { setCircleOnRoadmap } from "./authoring-actions";
 
 export type RoadmapCircle = {
@@ -16,6 +17,10 @@ export type RoadmapCircle = {
  * Which circles are on this roadmap (D72). Rows stay in alphabetical order when
  * toggled, so the row under a thumb never moves. A search box appears only once
  * the list is too long to scan.
+ *
+ * A DRAFT takes no new circles (0041, D77): its unticked rows are disabled. A
+ * ticked row can still be unticked, because a circle put on before 0041, or on
+ * a roadmap unpublished since, must always be removable.
  */
 export function CirclesPanel({
   roadmapId,
@@ -67,10 +72,18 @@ export function CirclesPanel({
           {circles.length === 1 ? "circle" : "circles"} on this roadmap
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          {published
-            ? "Taking a circle off hides the roadmap from it and keeps everything its members recorded."
-            : "Members won't see anything until you publish."}{" "}
-          A circle&rsquo;s admins can also change this from Manage.
+          {published ? (
+            <>
+              Taking a circle off hides the roadmap from it and keeps everything
+              its members recorded. A circle&rsquo;s admins can also change this
+              from Manage.
+            </>
+          ) : (
+            <>
+              Publish this roadmap to add circles. A draft is still being
+              written, so nobody can join it yet.
+            </>
+          )}
         </p>
       </div>
 
@@ -92,11 +105,19 @@ export function CirclesPanel({
         <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
           {shown.map((c) => (
             <li key={c.id}>
-              <label className="flex min-h-14 cursor-pointer items-center gap-3 px-4 py-2 transition-colors duration-[var(--duration-fast)] first:rounded-t-2xl last:rounded-b-2xl hover:bg-surface-hover">
+              <label
+                className={cn(
+                  "flex min-h-14 items-center gap-3 px-4 py-2 transition-colors duration-[var(--duration-fast)] first:rounded-t-2xl last:rounded-b-2xl",
+                  !published && !c.following
+                    ? "cursor-not-allowed opacity-60"
+                    : "cursor-pointer hover:bg-surface-hover",
+                )}
+              >
                 <input
                   type="checkbox"
                   className="size-5 shrink-0 accent-primary"
                   checked={c.following}
+                  disabled={!published && !c.following}
                   onChange={() => void toggle(c)}
                 />
                 <span className="min-w-0 flex-1 text-sm font-medium wrap-anywhere text-foreground">
