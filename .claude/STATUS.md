@@ -23,10 +23,10 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 | Item         | State                                                                                                                     |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `2224fd2`, serving Next 16.4.5                      |
-| Staging      | `cetele-git-staging-university-services.vercel.app`. Ahead of `main` by Manage tabs (`ee03650`), awaiting soak + approval |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `62078f7` (Manage tabs promoted 2026-11-06)         |
+| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main` apart from this docs commit                        |
 | Migrations   | **40 in the repo, the same 40 on prod** (compared against the Supabase migration list). No drift                          |
-| Git          | `fix/drafts-cannot-be-followed-v2` (D77, migration 0041) pushed, not merged: needs `db push` approval                     |
+| Git          | D77 (`fix/drafts-cannot-be-followed-v2`) **approved**, blocked on `supabase login`. Rebrand on `feat/youth-nexus-rebrand` |
 | CI           | Green on both `main` and `staging`                                                                                        |
 | Tests        | Unit 169 · pgTAP 834 across 24 suites · e2e 85 across 21 specs                                                            |
 | Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                       |
@@ -77,8 +77,8 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 
 ### Next steps, in order
 
-- **Owner: approve D77** (migration 0041, drafts cannot be followed). Gates, pgTAP 842 and the roadmap/manage e2e are green locally. Merging it to `staging` means `supabase db push` to prod.
-- **Owner: check Manage tabs on staging**, then approve promoting to `main`.
+- **D77 is approved; ship it once the CLI is logged in.** omenserver's Supabase CLI was never linked. The owner runs `! supabase login`, then: `supabase link --project-ref <prod ref>`, `supabase db push` (0041), merge `fix/drafts-cannot-be-followed-v2` to `staging`, soak, promote. The merge onto current staging is clean and every gate passed on it (2026-11-06). Do not merge the code before the push: staging reads prod's database.
+- **Owner: review the Youth Nexus rebrand** on the `feat/youth-nexus-rebrand` Vercel preview (D78, proposed). Confirm the name stays **Cetele**, and send the official YN logo if the app should carry it. Then merge to `staging`.
 
 0. **Owner: check `2224fd2` on the phone.** Open Roadmap, tap +1 on an item a few times, reload at once. The count should hold. **Take part will not appear on the owner's organiser account**: it follows the only published roadmap through **meeting** and **Keysy Dersh**. Seeing it takes another organiser outside those circles, or a second published roadmap. CI covers the full flow.
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Google sign-in on a desktop browser is confirmed on this release (2026-11-06). Nobody has used a phone on it, and staging was not clicked through.
@@ -310,6 +310,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D74** Administration is its own workspace, not a section of `/groups`. Inside `/admin/*`, and `/programme/*` for an organiser, a deep sage bar replaces the member's tabs: Roadmaps, Organisers, Circles (the way out). The way in is an Admin tab, which gives way to a circle's Roadmap tab, plus a Profile row that is always there.
 - **D75** The roadmap screen is the member's own, at `/roadmap`, and lists what any of their circles follows. The tab shows whichever circle is selected, and opening it leaves that selection alone. `/g/[id]/roadmap` only forwards or explains. For an organiser this tab takes the fifth slot from Admin.
 - **D76** An organiser can take part in a published roadmap with no circle (`roadmap_participants`, `take_part_in_roadmap`, 0040). It counts in the cohort report, only organisers see that row, and it lasts only while they hold the role. Recorded progress stays. Offered only when they have no other way to log.
+- **D78 (proposed, awaiting owner)** Rebrand to the Youth Nexus palette: blue + navy + orange on white, design tokens v4, Chivo display face. Every v3 value is re-hued at its exact L\*, so contrast holds. The product name stays Cetele until the owner says otherwise. See `docs/DESIGN_SYSTEM.md` on the branch.
 - **D65** Planned: compute moves to Cloudflare (`@opennextjs/cloudflare`). Supabase and auth stay. Only `lib/push/send.ts` and `api/push/dispatch` are not portable. Not started.
 
 ---
