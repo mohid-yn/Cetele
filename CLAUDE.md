@@ -67,8 +67,8 @@ colors/spacing or fork primitives.
 ## Commands
 
 `pnpm dev` (dev server) · `pnpm build` · `pnpm start` (serve prod build) ·
-`pnpm lint` · `pnpm exec tsc --noEmit` (typecheck). Run them directly — you're
-inside WSL. Verify build + lint + tsc are green before committing.
+`pnpm lint` · `pnpm exec tsc --noEmit` (typecheck). Run them directly — you're on
+omenserver (see STATUS.md §7). Verify build + lint + tsc are green before committing.
 
 Tests: `pnpm test:unit` (pure logic, Node's own runner — no dependency, no DB,
 sub-second) · `pnpm test:rls` (pgTAP) · `pnpm test:e2e` (Playwright).
@@ -98,7 +98,7 @@ the unit suite is its only check; write the test with the code.
 
 Next.js (App Router) + React + TypeScript + Tailwind + shadcn/ui · **Supabase**
 (Postgres, Auth, Realtime) · hosted on **Vercel** · shipped as an **installable
-PWA** (no app store). Develop inside WSL Ubuntu — run `pnpm` directly.
+PWA** (no app store). Develop on omenserver (Ubuntu home server) — run `pnpm` directly.
 
 ## Retention thesis
 

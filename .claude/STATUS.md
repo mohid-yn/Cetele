@@ -21,17 +21,17 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 ### Current state (checked 2026-11-06)
 
-| Item         | State                                                                                                 |
-| ------------ | ----------------------------------------------------------------------------------------------------- |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `2224fd2`, serving Next 16.4.5  |
-| Staging      | `cetele-git-staging-university-services.vercel.app`. Ahead of `main` by docs commits only             |
-| Migrations   | **40 in the repo, the same 40 on prod** (compared against the Supabase migration list). No drift      |
-| Git          | Clean. No feature branches, worktrees or stashes                                                      |
-| CI           | Green on both `main` and `staging`                                                                    |
-| Tests        | Unit 169 · pgTAP 834 across 24 suites · e2e 85 across 21 specs                                        |
-| Local stack  | Docker is not available in this WSL distro now. `supabase start` needs it, and downloads about 3.5 GB |
-| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue        |
-| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                 |
+| Item         | State                                                                                                |
+| ------------ | ---------------------------------------------------------------------------------------------------- |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `2224fd2`, serving Next 16.4.5 |
+| Staging      | `cetele-git-staging-university-services.vercel.app`. Ahead of `main` by docs commits only            |
+| Migrations   | **40 in the repo, the same 40 on prod** (compared against the Supabase migration list). No drift     |
+| Git          | Clean. No feature branches, worktrees or stashes                                                     |
+| CI           | Green on both `main` and `staging`                                                                   |
+| Tests        | Unit 169 · pgTAP 834 across 24 suites · e2e 85 across 21 specs                                       |
+| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06  |
+| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue       |
+| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                |
 
 Everything through D76 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
 
@@ -116,7 +116,7 @@ Also open: should later levels genuinely lock (D57)? Does neglecting a newly joi
 - **Real custom environment for staging** on Vercel, bound to the `staging` branch. It currently builds as an ordinary preview. Decide its database first.
 - **Real-device pass:** iPhone Safari vs the installed PWA on `/profile` (install steps, then the reminder switch). Android for haptics. Ring and grid contrast on a real screen. CWV numbers are lab-only.
 - **Supabase automated backups:** set and verify.
-- **`.wslconfig`** (see §7) and optionally making `mohid-yn/Cetele` private (no secrets in history).
+- Optionally make `mohid-yn/Cetele` private (no secrets in history).
 
 **Known gaps in the product**
 
@@ -315,8 +315,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 
 **Before believing a red e2e**
 
-- **Re-run the spec alone first.** A different spec failing each run and passing alone is machine pressure, proven on unmodified code. The VM has 6.7 GB and no `.wslconfig`. Do not raise the Playwright timeout; that hides it.
-- **Fix the machine:** create `C:\Users\<you>\.wslconfig` with `[wsl2]`, `memory=10GB`, `processors=8`, `swap=4GB`, then run `wsl --shutdown`. Without it, a heavy run can lock up the host and kill Docker (`Input/output error`, `AuthRetryableFetchError: fetch failed`).
+- **Re-run the spec alone first.** A different spec failing each run and passing alone is machine pressure, proven on unmodified code on the old 6.7 GB WSL VM. omenserver (16 GB) has not shown it yet. Do not raise the Playwright timeout; that hides it.
 - **Stop `pnpm dev` first** and check `ss -ltnp | grep :3000`. `reuseExistingServer` silently tests whatever is there, and a stale `next start` gives "This page couldn't load". `pkill -f "next dev"` also kills your own shell.
 - **Reset before EACH suite:** `supabase db reset && pnpm test:rls`, then `supabase db reset && pnpm test:e2e`. Neither suite rolls back, and past about 150 leftover circles, list and search screens fail at random.
 - **Write fixture-scoped pgTAP assertions,** never global counts. A local-only pgTAP failure usually means a polluted DB.
@@ -336,11 +335,19 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **`replaceState(window.history.state, ...)` is treated by Next as internal,** so the next Server Action reverts the URL. Use `replaceState(null, "", url)`.
 - **A constant exported from a client component cannot be read by a server page.** Put it in a plain module.
 
+**The dev machine: omenserver**
+
+- **An always-on home server,** reached by `ssh omen`. Repo at `~/projects/Cetele`. Node 26 locally; CI uses 22.
+- **Docker data lives on the HDD** (`/mnt/data/docker`, containerd snapshotter off), because the SSD is worn. Don't move it back.
+- **pnpm** is a global npm install under nvm; **Supabase CLI 3.0.0** and **gh** are binaries in `~/.local/bin`.
+- **Headless Chromium needed nine apt libraries** (`libatk1.0-0t64`, `libgbm1`, `libasound2t64` and others), not `playwright install-deps`, which adds Xvfb. A launch failing with `error while loading shared libraries` means one is missing: `ldd` the binary.
+- **sudo can't prompt through Claude Code's `!`.** Run root steps from a separate SSH session.
+
 **Supabase and CI**
 
 - **Full local env:** `cp .env.ci .env.local`, plus the service-role key from `supabase status -o env`. `pnpm test:e2e` runs `check:env` first and fails by name if something is missing.
 - **GoTrue errors:** read `docker logs supabase_auth_Cetele`. The JS client only reports `AuthRetryableFetchError {}`.
 - **`supabase db push` certificate error after "Finished":** the CLI's catalog-cache step, not a migration failure.
-- **`supabase db push` DNS error (`no such host`):** fixed with `generateResolvConf = false` in `/etc/wsl.conf` and real nameservers in `/etc/resolv.conf`.
+- **`supabase db push` DNS error (`no such host`):** seen on the old WSL box, fixed there with `generateResolvConf = false` in `/etc/wsl.conf` and real nameservers in `/etc/resolv.conf`.
 - **A Supabase CLI step is red but its report says `Result: PASS`:** read the last lines before the exit code. PostHog telemetry caused it once; `DO_NOT_TRACK: "1"` is set on `stack-tests`.
 - **CI jobs:** `verify` (lint, tsc, build, format) and `stack-tests` (migration replay, pgTAP, `check:env`, build, e2e) on every push. Husky pre-commit is the local gate.
