@@ -35,6 +35,33 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
 );
 Input.displayName = "Input";
 
+/**
+ * Multi-line text, the same field as `Input` with the height freed. Same 16px
+ * phone type size (iOS zoom) and the same token-pair disabled state.
+ */
+const Textarea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.ComponentProps<"textarea">
+>(({ className, rows = 3, ...props }, ref) => (
+  <textarea
+    ref={ref}
+    rows={rows}
+    className={cn(
+      "flex w-full rounded-lg border border-input bg-background px-3.5 py-2.5",
+      "text-base md:text-sm",
+      "text-foreground placeholder:text-muted-foreground",
+      "transition-[border-color,box-shadow] duration-[var(--duration-fast)]",
+      "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
+      "disabled:cursor-not-allowed disabled:border-border",
+      "disabled:bg-disabled-fill disabled:text-disabled-foreground",
+      "disabled:placeholder:text-disabled-foreground",
+      className,
+    )}
+    {...props}
+  />
+));
+Textarea.displayName = "Textarea";
+
 const Label = React.forwardRef<HTMLLabelElement, React.ComponentProps<"label">>(
   ({ className, ...props }, ref) => (
     <label
@@ -89,4 +116,4 @@ function Field({
   );
 }
 
-export { Input, Label, Field };
+export { Input, Textarea, Label, Field };

@@ -18,6 +18,7 @@ import {
   FlameIcon,
   GridIcon,
   ShieldIcon,
+  CalendarIcon,
 } from "@/components/app/icons";
 import {
   IosInstallGuide,
@@ -61,6 +62,8 @@ function to12h(time: string): string {
 
 export function ProfileClient({
   isOrganiser,
+  isSteward,
+  inAnyCircle,
   name: serverName,
   role,
   groupName,
@@ -72,6 +75,10 @@ export function ProfileClient({
   name: string;
   role: string | null;
   isOrganiser: boolean;
+  /** Runs a branch without the organiser role (D79). */
+  isSteward: boolean;
+  /** Events reach members through their circles' branches (D80). */
+  inAnyCircle: boolean;
   groupName: string | null;
   streak: number;
   reminders: Reminder[];
@@ -215,13 +222,31 @@ export function ProfileClient({
         />
         {/* The one door that is always there. When an organiser's circle follows
             a roadmap, its Roadmap tab takes the bar's fifth slot from Admin. */}
-        {isOrganiser && (
+        {/* Camps and halaqahs from the branches your circles are in (D80). */}
+        {inAnyCircle && (
+          <ProfileRow
+            href="/events"
+            Icon={CalendarIcon}
+            title="Events"
+            detail="Camps and halaqahs near you"
+          />
+        )}
+        {isOrganiser ? (
           <ProfileRow
             href="/programme"
             Icon={ShieldIcon}
             title="Administration"
-            detail="Roadmaps and organisers"
+            detail="Roadmaps, events, branches and organisers"
           />
+        ) : (
+          isSteward && (
+            <ProfileRow
+              href="/admin/events"
+              Icon={ShieldIcon}
+              title="Administration"
+              detail="Events and branches you run"
+            />
+          )
         )}
       </div>
 

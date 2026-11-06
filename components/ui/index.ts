@@ -10,7 +10,7 @@ export {
   CardFooter,
 } from "./card";
 export { Badge, badgeVariants, type BadgeProps } from "./badge";
-export { Input, Label, Field, type FieldProps } from "./input";
+export { Input, Textarea, Label, Field, type FieldProps } from "./input";
 export { Avatar, avatarVariants, type AvatarProps } from "./avatar";
 export { ProgressRing, type ProgressRingProps } from "./progress-ring";
 export { ProgressBar, type ProgressBarProps } from "./progress-bar";

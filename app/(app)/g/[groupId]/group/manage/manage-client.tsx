@@ -290,6 +290,7 @@ export function ManageClient({
   initialTab,
   roadmaps,
   followedRoadmapIds,
+  branchSlot,
 }: {
   group: ManageGroup;
   me: string;
@@ -306,6 +307,8 @@ export function ManageClient({
   roadmaps: { id: string; name: string }[];
   /** Which of them this circle follows (0028) — several is ordinary now. */
   followedRoadmapIds: string[];
+  /** The circle's branch (D79), rendered on the server and placed in Settings. */
+  branchSlot?: React.ReactNode;
 }) {
   // The three lists render from local state (CET-30): a mutation shows the
   // moment its action succeeds, without waiting on a refetch that can be dropped.
@@ -784,6 +787,9 @@ export function ManageClient({
               <ErrorNote error={settingsAct.error} />
             </Card>
           </section>
+
+          {/* Branch (D79) --------------------------------------------------- */}
+          {branchSlot}
 
           {/* Programme ------------------------------------------------------- */}
           {/* Shown whenever there is anything to show OR anything already followed.

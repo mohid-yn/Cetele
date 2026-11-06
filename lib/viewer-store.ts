@@ -34,9 +34,9 @@ import { ORGANISER_HINT_COOKIE } from "@/lib/admin-zone";
  * new appointee's tab still arrives with the answer, and someone stood down
  * elsewhere sees the old tabs for one read at most, then never again.
  */
-type State = { isSuperAdmin: boolean; loaded: boolean };
+type State = { isSuperAdmin: boolean; isSteward: boolean; loaded: boolean };
 
-let state: State = { isSuperAdmin: false, loaded: false };
+let state: State = { isSuperAdmin: false, isSteward: false, loaded: false };
 const listeners = new Set<() => void>();
 let inFlight = false;
 
@@ -46,10 +46,14 @@ function writeHint(isSuperAdmin: boolean): void {
     : `${ORGANISER_HINT_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
 }
 
-function publish(isSuperAdmin: boolean): void {
+function publish(isSuperAdmin: boolean, isSteward = false): void {
   writeHint(isSuperAdmin);
-  const next: State = { isSuperAdmin, loaded: true };
-  if (next.isSuperAdmin !== state.isSuperAdmin || !state.loaded) {
+  const next: State = { isSuperAdmin, isSteward, loaded: true };
+  if (
+    next.isSuperAdmin !== state.isSuperAdmin ||
+    next.isSteward !== state.isSteward ||
+    !state.loaded
+  ) {
     state = next;
     listeners.forEach((l) => l());
   }
@@ -68,15 +72,28 @@ async function fetchOnce(): Promise<void> {
   // schema is not exposed to PostgREST (0002), and the self arm of
   // `profiles_select_self_or_shared` covers your own row. Exactly how the
   // report and the catalogue read it server-side.
-  const { data } = await q(
-    "viewer-store.is_super_admin",
-    supabase
-      .from("profiles")
-      .select("is_super_admin")
-      .eq("id", me)
-      .maybeSingle(),
-  );
-  publish(data?.is_super_admin ?? false);
+  //
+  // A steward (D79) runs a branch without the organiser role. The self arm of
+  // `branch_stewards_select` returns their own rows; one is enough.
+  const [{ data }, { data: stewardRows }] = await Promise.all([
+    q(
+      "viewer-store.is_super_admin",
+      supabase
+        .from("profiles")
+        .select("is_super_admin")
+        .eq("id", me)
+        .maybeSingle(),
+    ),
+    q(
+      "viewer-store.is_steward",
+      supabase
+        .from("branch_stewards")
+        .select("branch_id")
+        .eq("user_id", me)
+        .limit(1),
+    ),
+  ]);
+  publish(data?.is_super_admin ?? false, (stewardRows ?? []).length > 0);
 }
 
 const subscribe = (cb: () => void) => {
@@ -109,4 +126,26 @@ export function useIsSuperAdmin(initial = false): boolean {
   }, []);
 
   return snapshot.loaded ? snapshot.isSuperAdmin : initial;
+}
+
+/**
+ * Does the viewer run a branch (D79)? Organisers run every branch, so this is
+ * true for them too. Shares the one fetch with `useIsSuperAdmin`.
+ */
+export function useIsSteward(initial = false): boolean {
+  const snapshot = React.useSyncExternalStore(
+    subscribe,
+    () => state,
+    () => state,
+  );
+  React.useEffect(() => {
+    if (state.loaded || inFlight) return;
+    inFlight = true;
+    void fetchOnce().finally(() => {
+      inFlight = false;
+    });
+  }, []);
+  return snapshot.loaded
+    ? snapshot.isSteward || snapshot.isSuperAdmin
+    : initial;
 }

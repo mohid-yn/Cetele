@@ -44,7 +44,7 @@ export function BottomNav({
   const isOrganiser = useIsSuperAdmin(initialIsOrganiser);
   // …and the same collapse on the picker itself, where no circle is selected.
   if (isAdminZone(pathname, isOrganiser)) {
-    return <AdminTabBar pathname={pathname} />;
+    return <AdminTabBar pathname={pathname} isOrganiser={isOrganiser} />;
   }
 
   const items =

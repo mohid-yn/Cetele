@@ -54,6 +54,7 @@ import {
   type ReactionTally,
 } from "@/components/app/peer-reactions";
 import { FreshStartBanner } from "@/components/app/fresh-start";
+import { UpNextCard } from "@/components/app/up-next-card";
 import { WelcomeCard } from "@/components/app/welcome-card";
 
 /**
@@ -854,6 +855,11 @@ export function TodayClient({
           </p>
         )}
       </section>
+
+      {/* Camps and halaqahs (D80): one actionable line, below the rings so it
+          never moves what the thumb is about to tap, and only on today. It
+          fetches after paint and renders nothing on most days. */}
+      {isToday && <UpNextCard />}
 
       {/* Your circle today — the accountability glance, now with the one-tap
           encouragement (CET-18) under anyone who has closed every ring. */}

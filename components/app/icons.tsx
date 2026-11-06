@@ -388,3 +388,51 @@ export const MonitorIcon = (p: IconProps) => (
     <path d="M8 20h8M12 16.5V20" />
   </svg>
 );
+
+/** Events (D80): a date on the calendar. */
+export const CalendarIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+    <path d="M3.5 10h17M8 3v4M16 3v4" />
+  </svg>
+);
+
+/** Where an event is. */
+export const PinIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" />
+    <circle cx="12" cy="10" r="2.3" />
+  </svg>
+);
+
+/** A question for the halaqah, asked anonymously. */
+export const QuestionIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v9a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 15.5Z" />
+    <path d="M10 8.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.5M12 13.8v.1" />
+  </svg>
+);
+
+/** Raise a question up the list. */
+export const ArrowUpIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </svg>
+);
+
+/** Branches: places nested inside places. */
+export const BranchesIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="9" y="3" width="6" height="5" rx="1.2" />
+    <rect x="3" y="16" width="6" height="5" rx="1.2" />
+    <rect x="15" y="16" width="6" height="5" rx="1.2" />
+    <path d="M12 8v4M6 16v-2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+
+/** A poll: options with their share. */
+export const PollIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 6h10M4 12h16M4 18h7" />
+  </svg>
+);

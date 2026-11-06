@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { springGlide } from "@/lib/motion";
-import { ADMIN_ZONE_EXIT, ADMIN_ZONE_ITEMS, resolveNavItem } from "./nav-items";
+import { ADMIN_ZONE_EXIT, adminZoneItems, resolveNavItem } from "./nav-items";
 import { navItemVariants } from "./nav-item-variants";
 
 /**
@@ -18,15 +18,35 @@ import { navItemVariants } from "./nav-item-variants";
  *
  * `pathname` is a prop so the design system page can render it standing still.
  */
-export function AdminTabBar({ pathname }: { pathname: string }) {
+// Literal class names, so Tailwind sees them: one column per tab plus the exit.
+const COLS: Record<number, string> = {
+  3: "grid-cols-3",
+  4: "grid-cols-4",
+  5: "grid-cols-5",
+};
+
+export function AdminTabBar({
+  pathname,
+  isOrganiser = true,
+}: {
+  pathname: string;
+  /** A steward who is not an organiser gets Events and Branches only (D79). */
+  isOrganiser?: boolean;
+}) {
+  const items = adminZoneItems(isOrganiser);
   return (
     <nav
       aria-label="Administration"
       className="shrink-0 border-t border-admin-chrome bg-admin-chrome lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="mx-auto grid max-w-[28rem] grid-cols-3 gap-1 p-1.5">
-        {ADMIN_ZONE_ITEMS.map((item) => {
+      <ul
+        className={cn(
+          "mx-auto grid max-w-[28rem] gap-1 p-1.5",
+          COLS[items.length + 1],
+        )}
+      >
+        {items.map((item) => {
           const { href, active } = resolveNavItem(item, pathname, null);
           const { shortLabel, Icon } = item;
           return (

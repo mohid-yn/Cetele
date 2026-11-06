@@ -10,7 +10,7 @@ import {
   isGroupPicker,
   navItemsWithRoadmap,
   ADMIN_ZONE_EXIT,
-  ADMIN_ZONE_ITEMS,
+  adminZoneItems,
   noGroupNavItems,
   resolveNavItem,
 } from "./nav-items";
@@ -48,7 +48,7 @@ export function Sidebar({
   // …and the same collapse on the picker itself, where no circle is selected.
   const inAdmin = isAdminZone(pathname, isOrganiser);
   const items = inAdmin
-    ? [...ADMIN_ZONE_ITEMS, ADMIN_ZONE_EXIT]
+    ? [...adminZoneItems(isOrganiser), ADMIN_ZONE_EXIT]
     : hasGroups && !isGroupPicker(pathname)
       ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
       : noGroupNavItems(isOrganiser, hasRoadmap);

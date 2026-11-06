@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { EventsLink } from "@/components/app/up-next-card";
 import { motion, AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
 import { DURATION, EASE_BRAND } from "@/lib/motion";
@@ -802,6 +803,10 @@ export function GroupClient({
           <InlineAlert className="mt-2">{logError}</InlineAlert>
         </Dialog>
       )}
+
+      {/* Camps and halaqahs for this circle's branch and above (D80). Last on
+          the screen, so arriving after the fetch moves nothing above it. */}
+      <EventsLink />
     </Screen>
   );
 }

@@ -27,6 +27,8 @@ export type GroupRow = {
   role: "owner" | "admin" | "member";
   /** Follows at least one published roadmap, which is what the nav tab asks. */
   followsRoadmap: boolean;
+  /** The branch the circle sits in (D79), shown under its name. */
+  branchName: string | null;
 };
 
 type State = {
@@ -69,7 +71,9 @@ async function fetchOnce(): Promise<void> {
       "groups-store.memberships",
       supabase
         .from("memberships")
-        .select("role, groups(id, name, group_roadmaps(roadmaps(published)))")
+        .select(
+          "role, groups(id, name, branches(name), group_roadmaps(roadmaps(published)))",
+        )
         .eq("user_id", me),
     );
     groups = (data ?? [])
@@ -82,6 +86,7 @@ async function fetchOnce(): Promise<void> {
         followsRoadmap: r.groups!.group_roadmaps.some(
           (g) => g.roadmaps?.published,
         ),
+        branchName: r.groups!.branches?.name ?? null,
       }))
       .sort(
         (a, b) =>

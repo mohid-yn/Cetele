@@ -23,8 +23,13 @@ export default async function ProfilePage() {
   const me = claims?.claims?.sub as string | undefined;
   if (!me) redirect("/");
 
-  const [{ data: profile }, { data: memberships }, { data: streak }] = await q(
-    "profile.reads (profile+memberships+streak)",
+  const [
+    { data: profile },
+    { data: memberships },
+    { data: streak },
+    { data: stewardRows },
+  ] = await q(
+    "profile.reads (profile+memberships+streak+steward)",
     Promise.all([
       supabase
         .from("profiles")
@@ -40,6 +45,12 @@ export default async function ProfilePage() {
         .select("current")
         .eq("user_id", me)
         .maybeSingle(),
+      // A steward (D79) runs a branch without being an organiser.
+      supabase
+        .from("branch_stewards")
+        .select("branch_id")
+        .eq("user_id", me)
+        .limit(1),
     ]),
   );
 
@@ -88,6 +99,8 @@ export default async function ProfilePage() {
     <ProfileClient
       name={profile?.name ?? "You"}
       isOrganiser={profile?.is_super_admin ?? false}
+      isSteward={(stewardRows ?? []).length > 0}
+      inAnyCircle={(memberships ?? []).length > 0}
       role={primary?.role ?? null}
       groupName={primary ? (primary.groups?.name ?? null) : null}
       streak={streak?.current ?? 0}

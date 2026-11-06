@@ -180,6 +180,9 @@ export function GroupSwitcher({
                 )}
               >
                 {roleLabel(g.role)}
+                {/* Where the circle is (D79), so two circles with one name in
+                    different places can be told apart. */}
+                {g.branchName && ` · ${g.branchName}`}
               </span>
             </span>
             {activeOne && <CheckIcon aria-hidden className="size-5 shrink-0" />}

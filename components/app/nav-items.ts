@@ -1,5 +1,7 @@
 import {
   ArrowLeftIcon,
+  BranchesIcon,
+  CalendarIcon,
   FlagIcon,
   GridIcon,
   HomeIcon,
@@ -82,12 +84,37 @@ export const ADMIN_ZONE_ITEMS: readonly FlatItem[] = [
     Icon: FlagIcon,
   },
   {
+    href: "/admin/events",
+    label: "Events",
+    shortLabel: "Events",
+    Icon: CalendarIcon,
+  },
+  {
+    href: "/admin/branches",
+    label: "Branches",
+    shortLabel: "Branches",
+    Icon: BranchesIcon,
+  },
+  {
     href: "/admin/organisers",
     label: "Organisers",
     shortLabel: "Organisers",
     Icon: UsersIcon,
   },
 ];
+
+/**
+ * The workspace's tabs for THIS viewer. A steward who is not an organiser
+ * (D79) runs events and branches and nothing else, so Roadmaps and Organisers
+ * are not offered to them: their pages would only send them away.
+ */
+export function adminZoneItems(isOrganiser: boolean): readonly FlatItem[] {
+  return isOrganiser
+    ? ADMIN_ZONE_ITEMS
+    : ADMIN_ZONE_ITEMS.filter(
+        (i) => i.href === "/admin/events" || i.href === "/admin/branches",
+      );
+}
 
 /**
  * The way out, named for where it goes. The picker rather than the last circle,

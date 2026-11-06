@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveGroup } from "@/lib/active-group";
 import { toAssignments } from "@/lib/assignments";
 import { ManageClient } from "./manage-client";
+import { BranchSection } from "./branch-section";
 import { MANAGE_TABS, type ManageTab } from "./manage-tabs";
 
 /**
@@ -59,10 +60,12 @@ export default async function ManageGroupPage({
     { data: assignmentRows },
     { data: canClaim },
     { data: roadmaps },
+    { data: directoryRows },
+    { data: branchRequest },
   ] = await Promise.all([
     supabase
       .from("groups")
-      .select("id, name, created_by, group_roadmaps(roadmap_id)")
+      .select("id, name, created_by, branch_id, group_roadmaps(roadmap_id)")
       .eq("id", active.groupId)
       .maybeSingle(),
     supabase
@@ -107,6 +110,13 @@ export default async function ManageGroupPage({
     supabase.from("roadmaps").select("id, name").order("starts_on", {
       ascending: false,
     }),
+    // Branches (D79): every place, labelled with its path, for the picker.
+    supabase.rpc("branch_directory"),
+    supabase
+      .from("branch_requests")
+      .select("branch_id")
+      .eq("group_id", active.groupId)
+      .maybeSingle(),
   ]);
 
   if (!group) redirect("/groups");
@@ -136,8 +146,23 @@ export default async function ManageGroupPage({
         a.name.localeCompare(b.name),
     );
 
+  const directory = (directoryRows ?? []).map((d) => ({
+    id: d.id,
+    label: d.label,
+  }));
+  const labelOf = (id: string | null | undefined) =>
+    id ? (directory.find((d) => d.id === id) ?? null) : null;
+
   return (
     <ManageClient
+      branchSlot={
+        <BranchSection
+          groupId={group.id}
+          current={labelOf(group.branch_id)}
+          pending={labelOf(branchRequest?.branch_id)}
+          directory={directory}
+        />
+      }
       group={group}
       me={me}
       myRole={active.role}
