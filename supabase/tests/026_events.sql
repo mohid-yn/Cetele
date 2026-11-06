@@ -276,6 +276,8 @@ select pg_temp.reset_role();
 select pg_temp.impersonate('cd000000-0000-0000-0000-000000000006');
 select is((select count(*) from public.event_detail((select v from ids where k = 'week1'))), 1::bigint,
   'the host sees their halaqah though they are in no circle');
+select ok((select count(*) from public.my_upcoming_events()) >= 5,
+  'and finds its sessions in their events list');
 select throws_ok(
   $$ select public.create_poll((select v from ids where k = 'week1'), 'food', 'Dinner?', array['Pizza', ' ']) $$,
   'a poll has 2 to 8 options',

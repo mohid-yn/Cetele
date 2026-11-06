@@ -28,7 +28,7 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 | Migrations   | **40 on prod.** `feat/branches-events` adds 0042 + 0043 (local only, never pushed). D77's 0041 is on its own branch |
 | Git          | D77 approved, blocked on `supabase login`. `feat/branches-events` sits on rebrand + garden (`feat/garden-dopamine`) |
 | CI           | Green on both `main` and `staging`                                                                                  |
-| Tests        | On `feat/branches-events`: unit 217 · pgTAP 973 across 26 suites · e2e 90 across 22 specs, all green locally        |
+| Tests        | On `feat/branches-events`: unit 216 · pgTAP 973 across 26 suites · e2e 90 across 22 specs, all green locally        |
 | Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                 |
 | Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                      |
 | Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                               |

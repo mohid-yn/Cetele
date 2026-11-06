@@ -625,7 +625,10 @@ create or replace function public.my_upcoming_events(p_limit integer default 30)
     join public.branches b on b.id = e.branch_id
    where e.status <> 'draft'
      and e.ends_at > now()
-     and e.branch_id in (select private.my_reach())
+     -- A host leads a halaqah whether or not their own circle is in its
+     -- branch, and has to be able to find it.
+     and (e.branch_id in (select private.my_reach())
+          or (e.series_id is not null and private.hosts_series(e.series_id)))
    order by e.starts_at
    limit least(greatest(coalesce(p_limit, 30), 1), 100);
 $$;
