@@ -1,8 +1,31 @@
-# Cetele Design System — v3
+# Cetele Design System — v4 (Youth Nexus)
 
-> **Status: APPLIED.** `app/globals.css` runs v3, brand mark, PWA icons and iOS launch images included. Every value
-> below is generated and measured. **Still outstanding:** collapsing `card`/`muted` into the five surface tiers
-> _everywhere_ is partially done, not finished.
+> **Status: ON A BRANCH, awaiting owner review** (`feat/youth-nexus-rebrand`). v4 re-hues every v3 value onto the
+> Youth Nexus palette. **The method is what makes it safe:** each colour keeps its exact CIE L*, and relative
+> luminance depends on L* alone, so **every contrast ratio below still holds**. Only the named overrides moved.
+> Read "sage / rose / tan / plum" in the v3 sections as **primary / accent / neutral / outline**.
+
+## v4 at a glance
+
+| Role                    | v3                  | v4                                                                | Anchor                                                 |
+| ----------------------- | ------------------- | ----------------------------------------------------------------- | ------------------------------------------------------ |
+| Primary                 | sage                | Youth Nexus blue, ramp deepens to YN navy                         | `--primary` `#0163ad` light · `#a0cefe` dark           |
+| Accent                  | rose                | Youth Nexus orange, **exact** in both themes                      | `--accent` `#f09a3e`, navy label 7.61:1 (6.10 pressed) |
+| Success                 | sage-deeper         | green, **unchanged**: "done" is no longer the brand hue           | `--success` `#21703e`                                  |
+| Neutral                 | tan paper           | cool slate; **cards are pure white**                              | page `#f6f9fe` · card `#ffffff`                        |
+| Outline                 | plum                | navy-grey                                                         | `--outline` `#6f7782` (4.53:1 on card)                 |
+| Danger · warning · info | rust · ochre · blue | red · gold · teal (moved off the new brand hues)                  |                                                        |
+| Dark                    | warm brown          | deep YN navy                                                      | page `#0d141c` · card `#151c25`                        |
+| Display                 | Figtree             | **Chivo** (the Youth Nexus site's heading face); body stays Geist |                                                        |
+
+Source: the Youth Nexus site (youthnexus.org.au), whose CSS uses orange `#f09a3e`/`#f0632e`, navy `#333c4e`/`#072c5e`
+and blue `#1172c1` on white. Motion is unchanged: it already followed the strong ease-out curve,
+sub-300ms timings and `scale(0.97)` press feedback that the reference motion guidance asks for. The brand mark
+keeps its shape and takes blue to navy plus the two YN oranges. The group garden stays green (leaves are green).
+
+---
+
+# v3 derivation (the values v4 was re-hued from)
 
 Palette source: the owner's five swatches — `#FAB3A9 · #C6AD94 · #7FB285 · #463239 · #ED6B86`.
 Structure: **Material Design 3** tonal palettes, colour roles and state layers, adapted to this

@@ -31,7 +31,7 @@ import { CheckIcon, FlameIcon, SettingsIcon } from "@/components/app/icons";
 export const metadata: Metadata = {
   title: "Design System · Cetele",
   description:
-    "Living style guide — tokens and components, themed sage + rose on warm paper.",
+    "Living style guide — tokens and components, themed in Youth Nexus blue + orange on white.",
 };
 
 /* ---------- small presentational helpers (page-local) ---------- */
@@ -195,8 +195,8 @@ export default function DesignSystemPage() {
           Design System
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Tokens and reusable components for Cetele, themed sage + rose on warm
-          paper. Everything below is driven by the design tokens in{" "}
+          Tokens and reusable components for Cetele, themed in Youth Nexus blue
+          + orange on white. Everything below is driven by the design tokens in{" "}
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
             app/globals.css
           </code>
@@ -224,7 +224,7 @@ export default function DesignSystemPage() {
         <Section
           id="brand"
           title="Brand marks"
-          description="The Cetele logo — a sage mark with a rose arrow, from public/logo.svg (a fixed-colour brand asset, not theme-token-driven: it does not flip with the theme). Recoloured for v3 by matching each gradient stop's L* to the nearest tone of the new palettes, so the mark's internal lightness structure is unchanged. AppIconLogo is the square hero mark on a light tile (login, splash); WebAppLogo is the horizontal icon + wordmark for headers and the app sidebar. Import from @/components/ui/logo."
+          description="The Cetele logo — a Youth Nexus blue-to-navy mark with an orange arrow, from public/logo.svg (a fixed-colour brand asset, not theme-token-driven: it does not flip with the theme). Recoloured for v4 onto the blue and navy token ramp plus the two Youth Nexus oranges. AppIconLogo is the square hero mark on a light tile (login, splash); WebAppLogo is the horizontal icon + wordmark for headers and the app sidebar. Import from @/components/ui/logo."
         >
           <Card>
             <CardContent className="flex flex-wrap items-center gap-8 pt-6">
@@ -248,39 +248,39 @@ export default function DesignSystemPage() {
         <Section
           id="colors"
           title="Colors"
-          description="Sage (primary) is calm and the colour of completion/growth — it owns the surface, chrome, and 'done' states. Rose (accent) arouses — reserved for the single most important action and live progress, so its energy is earned, not background noise. Rust (danger) is errors only, never urgency/FOMO; it sits only 31° from the accent, so the glyph beside it is load-bearing."
+          description="Youth Nexus blue (primary) owns the brand, chrome and structure, deepening to YN navy. Youth Nexus orange (accent) arouses — reserved for the single most important action and live progress, so its energy is earned, not background noise. Green (success) is completion. Red (danger) is errors only, never urgency/FOMO, and always carries a glyph."
         >
           <Card>
             <CardContent className="grid gap-3 pt-6 text-sm sm:grid-cols-2">
               {[
                 [
-                  "Sage — primary",
-                  "Brand, calm, completion & growth. Buttons, chrome, headings, closed rings.",
+                  "Youth Nexus blue — primary",
+                  "Brand and structure. Buttons, chrome, headings, live rings. Deepens to YN navy.",
                   "bg-primary",
                 ],
                 [
-                  "Rose — accent",
-                  "The one earned action per view + celebration. (Dark label: white-on-rose is 2.98:1 and fails.)",
+                  "Youth Nexus orange — accent",
+                  "The one earned action per view + celebration. Always a navy label (7.6:1); white on orange fails.",
                   "bg-accent",
                 ],
                 [
-                  "Sage, deeper — success",
-                  "Complete / on track. Same family as the brand, by design. Always paired with a CheckIcon.",
+                  "Green — success",
+                  "Complete / on track. Distinct from the blue brand, so done reads as done. Always paired with a CheckIcon.",
                   "bg-success",
                 ],
                 [
-                  "Ochre — warning",
+                  "Gold — warning",
                   "At risk / attention. Paired with text.",
                   "bg-warning",
                 ],
                 [
-                  "Rust — danger",
-                  "Errors & destructive actions ONLY. 31° from the accent, so the glyph is load-bearing.",
+                  "Red — danger",
+                  "Errors & destructive actions ONLY. Always paired with a word or glyph.",
                   "bg-danger",
                 ],
                 [
-                  "Tan — neutral",
-                  "Paper: text, borders, muted surfaces. One warm family, no cool grey.",
+                  "Slate — neutral",
+                  "Text, borders, muted surfaces. Cool slate with a navy tint; cards are white.",
                   "bg-neutral-400",
                 ],
               ].map(([name, role, dot]) => (
@@ -311,9 +311,9 @@ export default function DesignSystemPage() {
             <Swatch name="Card" varName="--card" />
           </div>
           <div className="space-y-5">
-            <Scale label="Primary · sage" prefix="primary" />
-            <Scale label="Accent · rose" prefix="accent" />
-            <Scale label="Neutral · tan" prefix="neutral" />
+            <Scale label="Primary · YN blue" prefix="primary" />
+            <Scale label="Accent · YN orange" prefix="accent" />
+            <Scale label="Neutral · slate" prefix="neutral" />
           </div>
         </Section>
 
@@ -321,7 +321,7 @@ export default function DesignSystemPage() {
         <Section
           id="typography"
           title="Typography"
-          description="Figtree (warm, open) for display & headings. Geist Sans for body and UI."
+          description="Chivo (the Youth Nexus heading face) for display & headings. Geist Sans for body and UI."
         >
           <Card>
             <CardContent className="divide-y divide-border pt-6">
@@ -385,7 +385,7 @@ export default function DesignSystemPage() {
         <Section
           id="elevation"
           title="Elevation"
-          description="Soft, warm-tinted shadows for a clean lift off the paper page — a neutral-grey shadow over a warm surface reads as dirt, so these carry the neutral ramp's own hue. Cards use sm; popovers/menus use md–lg; modals use xl."
+          description="Soft, navy-tinted shadows for a clean lift off the page — they carry the brand navy rather than a flat grey, so depth stays in the palette. Cards use sm; popovers/menus use md–lg; modals use xl."
         >
           <div className="flex flex-wrap gap-6">
             {SHADOWS.map((s) => (
@@ -786,7 +786,7 @@ export default function DesignSystemPage() {
         <Section
           id="admin-bar"
           title="Administration tab bar"
-          description="Replaces the member's tabs inside the organiser's workspace. Deep sage, so it reads as a different place."
+          description="Replaces the member's tabs inside the organiser's workspace. Deep YN navy, so it reads as a different place."
         >
           <AdminTabBar pathname="/programme" />
         </Section>
@@ -822,7 +822,7 @@ export default function DesignSystemPage() {
       </div>
 
       <footer className="mt-20 border-t border-border pt-6 text-xs text-muted-foreground">
-        Cetele design system · sage + rose on warm paper · tokens in{" "}
+        Cetele design system · Youth Nexus blue + orange · tokens in{" "}
         <code className="font-mono">app/globals.css</code>, components in{" "}
         <code className="font-mono">components/ui/</code>.
       </footer>

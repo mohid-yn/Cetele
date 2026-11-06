@@ -8,7 +8,7 @@
 // tokens (utilities or var(--token)) — never a raw color. See docs/DESIGN_SYSTEM.md.
 //
 // eslint-disable-next-line no-restricted-syntax -- platform APIs need a literal; see note above
-export const BRAND_THEME_COLOR = "#346d3f";
+export const BRAND_THEME_COLOR = "#0163ad"; // Youth Nexus blue
 
 // The page surface, light + dark — the SAME platform-boundary exception. These
 // paint the PWA splash canvas (manifest `background_color`) and the generated
@@ -16,6 +16,6 @@ export const BRAND_THEME_COLOR = "#346d3f";
 // jumps colour. Keep in sync with `--background` (light) and `:root.dark
 // --background` in app/globals.css.
 // eslint-disable-next-line no-restricted-syntax -- platform APIs need a literal; see note above
-export const BRAND_SURFACE_COLOR = "#fff8ee"; // warm paper
+export const BRAND_SURFACE_COLOR = "#f6f9fe"; // cool white
 // eslint-disable-next-line no-restricted-syntax -- platform APIs need a literal; see note above
-export const BRAND_SURFACE_COLOR_DARK = "#16130f"; // deep warm brown
+export const BRAND_SURFACE_COLOR_DARK = "#0d141c"; // deep navy

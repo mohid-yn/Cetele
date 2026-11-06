@@ -1,34 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <!--
-    The Cetele mark, on the v3 palette (sage + rose).
+    The Cetele mark, on the v4 Youth Nexus palette (blue + orange).
 
-    Recoloured from v1's emerald + gold by matching each stop's CIE L* to the
-    nearest tone of the corresponding v3 tonal palette — the tone number IS L*,
-    so the mark's INTERNAL lightness structure is carried over unchanged (the
-    facet still sits just above the arrow it creases, the deep stop is still the
-    deep stop). That matters more than matching hue: the drop shadow and the
-    0.85/0.6 opacity layers were all judged against those relationships.
-
-    Fixed-colour by design — this is the brand asset, not a themed surface, so
-    it does NOT read design tokens and does not flip with the theme. It renders
-    on a white tile in the PWA icons and on warm paper in the splash screens.
+    v4: the arcs run Youth Nexus blue to YN navy (the token ramp's primary,
+    800 and 900 tones); the lighter arc is primary-500 to 400. The accent runs
+    the two YN oranges (#f0632e to #f09a3e) out to accent-200. The v3 note
+    still applies: this is the fixed-colour brand asset, it does NOT read design
+    tokens and does not flip with the theme.
     Re-run `node scripts/gen-icons.mjs` AND `node scripts/gen-splash.mjs` after
-    touching this file.
+    touching this file, and bump CACHE in public/sw.js.
   -->
   <defs>
     <linearGradient id="ceteleGreen" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#346d3f" />
-      <stop offset="50%" stop-color="#23522c" />
-      <stop offset="100%" stop-color="#1f3723" />
+      <stop offset="0%" stop-color="#0163ad" />
+      <stop offset="50%" stop-color="#014a83" />
+      <stop offset="100%" stop-color="#00335d" />
     </linearGradient>
     <linearGradient id="ceteleLightGreen" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#488753" />
-      <stop offset="100%" stop-color="#62a26c" />
+      <stop offset="0%" stop-color="#0d7cd4" />
+      <stop offset="100%" stop-color="#3698f1" />
     </linearGradient>
     <linearGradient id="ceteleRose" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#e98a9b" />
-      <stop offset="50%" stop-color="#f1b0ba" />
-      <stop offset="100%" stop-color="#f7d7dc" />
+      <stop offset="0%" stop-color="#f0632e" />
+      <stop offset="50%" stop-color="#f09a3e" />
+      <stop offset="100%" stop-color="#fbb26a" />
     </linearGradient>
     <filter id="ceteleShadow" x="-10%" y="-10%" width="130%" height="130%">
       <feDropShadow dx="2" dy="4" stdDeviation="5" flood-opacity="0.3" />
@@ -68,5 +63,5 @@
            filter="url(#ceteleShadow)" />
 
   <polygon points="260,255 380,45 325,120"
-           fill="#f1b0ba" opacity="0.6" />
+           fill="#f09a3e" opacity="0.6" />
 </svg>

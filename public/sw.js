@@ -48,7 +48,7 @@
 //
 // **Bump this on any change to a cached asset, not only on a change to this
 // file.** Logo, PWA icons, splash images, manifest: if you regenerate one, bump.
-const CACHE = "cetele-static-v6";
+const CACHE = "cetele-static-v7";
 
 /** Immutable build output + static files. Everything else is app data. */
 function isStaticAsset(url) {

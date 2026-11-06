@@ -1,27 +1,39 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   CETELE DESIGN TOKENS v3  —  sage + rose on warm paper (light-first)
+   CETELE DESIGN TOKENS v4  —  Youth Nexus: blue + orange on white (light-first)
    See docs/DESIGN_SYSTEM.md. Structure is Material 3: every key colour is a
    TONAL PALETTE (the step number tracks CIE L*), roles come in fill/`on-` PAIRS,
    and interaction states are M3 state layers (hover 8%, focus/pressed 12%)
    PRECOMPUTED to solid hex — this codebase has been bitten repeatedly by alpha
    over an unknown surface, so no state is a runtime composite.
 
-   Primary = sage  (#346d3f light / #a3d6a9 dark): brand, calm, growth, AND the
-   completion signal — green stays the culturally-expected hue for a dhikr
-   audience and the retention-correct "done" colour at once.
-   Accent  = rose  (#d9798a): the ONE earned action + celebration per view.
-   Neutral = tan, Outline = plum: one warm family, no cool grey anywhere.
+   Primary = Youth Nexus blue (#0163ad light / #a0cefe dark), deepening to the
+             YN navy at the dark end of the ramp (admin chrome, hero, labels).
+   Accent  = Youth Nexus orange, EXACTLY #f09a3e in both themes, always with a
+             deep-navy label (7.61:1, 6.10:1 pressed) — the ONE earned action +
+             celebration per view.
+   Success = green, unchanged: "done" stays the culturally-expected dhikr hue,
+             now distinct from the brand rather than shared with it.
+   Neutral = cool slate with white cards; Outline = navy-grey.
+   Danger / warning / info moved to red / gold / teal so none sits on a brand hue.
 
-   Every value below was generated and measured, not picked by eye.
+   HOW v4 WAS MADE (scratch tool, not committed): every v3 value was re-hued at
+   its exact CIE L*. Relative luminance is a function of L* alone, so EVERY
+   contrast ratio quoted in the comments below still holds, except where a v4
+   override is named (accent fill + label, white cards). Older comments still
+   say "sage", "rose", "tan" and "plum": read those as the ROLE (primary, accent,
+   neutral, outline). The rationale they record is unchanged.
    ============================================================================ */
 
-@theme {
+/* `static`: emit EVERY token, used or not. Tailwind v4 otherwise tree-shakes
+   unused theme vars, which blanked the unused ramp steps in the /designsystem
+   gallery (it reads var(--color-*) directly). */
+@theme static {
   /* ---- Type families ---- */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-display:
-    var(--font-figtree), var(--font-geist-sans), ui-sans-serif, sans-serif;
+    var(--font-chivo), var(--font-geist-sans), ui-sans-serif, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   /* ---- Type scale (size + paired line-height) → text-xs … text-5xl ---- */
@@ -50,22 +62,22 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* ---- Primary · sage, hue 148° (brand + completion/growth) ----
+  /* ---- Primary · Youth Nexus blue, OKLCH hue 251° (brand) ----
      Step numbers are kept from v1 so ~600 existing call sites keep working;
      each now resolves to a tone of the sage palette (50→t98 … 950→t10). */
-  --color-primary-50: #effff0;
-  --color-primary-100: #d4ead6;
-  --color-primary-200: #a3d6a9;
-  --color-primary-300: #82bd8a; /* ← the owner's sage swatch #7fb285 */
-  --color-primary-400: #62a26c;
-  --color-primary-500: #488753;
-  --color-primary-600: #387343;
-  --color-primary-700: #2d6237;
-  --color-primary-800: #23522c;
-  --color-primary-900: #1f3723;
-  --color-primary-950: #112013;
+  --color-primary-50: #f8fbff;
+  --color-primary-100: #d1e7fe;
+  --color-primary-200: #a0cefe;
+  --color-primary-300: #6bb4fe;
+  --color-primary-400: #3698f1;
+  --color-primary-500: #0d7cd4;
+  --color-primary-600: #0469b5;
+  --color-primary-700: #00599c;
+  --color-primary-800: #014a83;
+  --color-primary-900: #00335d;
+  --color-primary-950: #001d39;
 
-  /* ---- Accent · rose, hue 11° (earned action + celebration only) ----
+  /* ---- Accent · Youth Nexus orange, OKLCH hue 65° (earned action + celebration only) ----
      SOFTENED 2026-08-02: every tone keeps its L* and hue and had its CHROMA
      scaled x0.75. Measured, the old rose was the loudest colour in a palette
      whose stated direction is "muted botanical warmth" — C* 53.6 against the
@@ -78,46 +90,46 @@
      The owner's original swatch was #ED6B86; this reverses that part of v3
      deliberately, on their call. `public/logo.svg` was scaled by the same
      factor so the mark does not out-saturate the UI it sits in. */
-  --color-accent-50: #fdf7f7;
-  --color-accent-100: #f7d7dc;
-  --color-accent-200: #f1b0ba; /* ← the owner's salmon swatch #fab3a9 */
-  --color-accent-300: #e98a9b;
-  --color-accent-400: #ce6c7f;
-  --color-accent-500: #b25266;
-  --color-accent-600: #984154;
-  --color-accent-700: #843546;
-  --color-accent-800: #702b3a;
-  --color-accent-900: #482329;
-  --color-accent-950: #2a1318;
+  --color-accent-50: #fef7f2; /* the fill itself is YN #f09a3e, set on --accent */
+  --color-accent-100: #fcd8b9;
+  --color-accent-200: #fbb26a;
+  --color-accent-300: #f08e03;
+  --color-accent-400: #c87607;
+  --color-accent-500: #a56000;
+  --color-accent-600: #8a5001;
+  --color-accent-700: #764301;
+  --color-accent-800: #643800;
+  --color-accent-900: #472601;
+  --color-accent-950: #2a1500;
 
-  /* ---- Neutral · tan, hue 67° (paper). Replaces the v1 SLATE ramp entirely:
+  /* ---- Neutral · cool slate, OKLCH hue 255° (v3: tan paper). Replaces the v1 SLATE ramp entirely:
      warm surfaces meeting a cool grey scale was a 170° hue jump, which is what
      made `subtle`'s hover shift colour and greyed the whole light theme. ---- */
   --color-neutral-0: #ffffff;
-  --color-neutral-50: #fff8ee;
-  --color-neutral-100: #eee0d3;
-  --color-neutral-200: #d5c3b2;
-  --color-neutral-300: #bca894; /* ← the owner's tan swatch #c6ad94 */
-  --color-neutral-400: #a28c77;
-  --color-neutral-500: #87735e;
-  --color-neutral-600: #72604d;
-  --color-neutral-700: #625140;
-  --color-neutral-800: #524435;
-  --color-neutral-900: #372f27;
-  --color-neutral-950: #1f1b16;
+  --color-neutral-50: #f6f9fe;
+  --color-neutral-100: #dee3e9;
+  --color-neutral-200: #c1c7ce;
+  --color-neutral-300: #a5acb5;
+  --color-neutral-400: #89919a;
+  --color-neutral-500: #6f7782;
+  --color-neutral-600: #5c646f;
+  --color-neutral-700: #4d555f;
+  --color-neutral-800: #3f4751;
+  --color-neutral-900: #2a313b;
+  --color-neutral-950: #151c25;
 
-  /* ---- Outline · plum, hue 356° — boundaries + secondary text.
+  /* ---- Outline · navy-grey, OKLCH hue 262° (v3: plum) — boundaries + secondary text.
      From the owner's #463239. Separate from the neutral ramp so a boundary can
      be tuned to the 3:1 non-text floor without moving every surface. ---- */
-  --color-outline-100: #e9e0e3;
-  --color-outline-200: #d4c1c7;
-  --color-outline-300: #bba5ac;
-  --color-outline-400: #a08a91;
-  --color-outline-500: #867077;
-  --color-outline-600: #6c595f;
-  --color-outline-700: #514247;
-  --color-outline-800: #372e31; /* ← the owner's plum swatch #463239 */
-  --color-outline-900: #1f1a1c;
+  --color-outline-100: #dde3ec;
+  --color-outline-200: #c0c6d2;
+  --color-outline-300: #a3abb9;
+  --color-outline-400: #8790a0;
+  --color-outline-500: #6c7687;
+  --color-outline-600: #555e6f;
+  --color-outline-700: #3d4657;
+  --color-outline-800: #283140; /* ≈ the YN slate-navy #333c4e */
+  --color-outline-900: #141b2a;
 
   /* ---- Status hues ---- Sited to maximise the MINIMUM hue gap between
      neighbours, which this palette makes hard: the accent (rose, 9°) sits where
@@ -132,16 +144,16 @@
   --color-success-500: #358a53;
   --color-success-600: #257543;
   --color-success-800: #12542c;
-  --color-warning-100: #f4e0c1;
-  --color-warning-500: #9e6c00;
-  --color-warning-600: #855a00;
-  --color-warning-800: #603f00;
-  --color-danger-100: #fed9cd;
-  --color-danger-500: #b65734;
-  --color-danger-600: #9d4626;
-  --color-danger-800: #742e14;
-  --color-info-500: #577a9e;
-  --color-info-600: #476788;
+  --color-warning-100: #efe2c0;
+  --color-warning-500: #927102;
+  --color-warning-600: #7b5f02;
+  --color-warning-800: #584302;
+  --color-danger-100: #fed8d4;
+  --color-danger-500: #c24c48;
+  --color-danger-600: #a73b39;
+  --color-danger-800: #7c2524;
+  --color-info-500: #40808f;
+  --color-info-600: #316c7a;
 
   /* ---- Radii (friendly, youthful) ---- */
   --radius-sm: 0.375rem;
@@ -156,17 +168,17 @@
      shadow on warm paper reads as grey film, and it is a large part of why the
      light theme looked dull. On DARK, shadows are not the elevation signal at
      all — a raised surface is a lighter one (see the surface ladder below). ---- */
-  --shadow-xs: 0 1px 2px 0 rgb(31 27 22 / 0.06);
+  --shadow-xs: 0 1px 2px 0 rgb(0 29 57 / 0.06);
   --shadow-sm:
-    0 1px 2px 0 rgb(31 27 22 / 0.06), 0 4px 10px -2px rgb(31 27 22 / 0.08);
+    0 1px 2px 0 rgb(0 29 57 / 0.06), 0 4px 10px -2px rgb(0 29 57 / 0.08);
   --shadow-md:
-    0 2px 4px -1px rgb(31 27 22 / 0.07), 0 8px 20px -4px rgb(31 27 22 / 0.1);
+    0 2px 4px -1px rgb(0 29 57 / 0.07), 0 8px 20px -4px rgb(0 29 57 / 0.1);
   --shadow-lg:
-    0 4px 8px -2px rgb(31 27 22 / 0.08), 0 16px 32px -8px rgb(31 27 22 / 0.14);
+    0 4px 8px -2px rgb(0 29 57 / 0.08), 0 16px 32px -8px rgb(0 29 57 / 0.14);
   --shadow-xl:
-    0 8px 16px -4px rgb(31 27 22 / 0.1), 0 28px 56px -12px rgb(31 27 22 / 0.2);
+    0 8px 16px -4px rgb(0 29 57 / 0.1), 0 28px 56px -12px rgb(0 29 57 / 0.2);
   /* Upward lift for the sticky bottom nav (separates it from scrolling content). */
-  --shadow-up: 0 -2px 12px -4px rgb(31 27 22 / 0.1);
+  --shadow-up: 0 -2px 12px -4px rgb(0 29 57 / 0.1);
 
   /* ---- Motion ---- (150–300ms micro-interactions, ≤500ms transitions).
      Two ease-outs, both smooth — real objects decelerate, they don't bounce.
@@ -281,21 +293,21 @@
   /* ---- Surfaces. Warm paper throughout, one hue family (tan, 67°).
      CHROME recedes below the page, CARD lifts above it — the frame sits behind
      the content, in both themes. */
-  --chrome: #f3e6da; /* nav, sidebar, sticky headers — the frame */
-  --chrome-foreground: #1f1b16; /* 15.0:1 */
-  --background: #fff8ee; /* the page */
-  --muted: #f7ebe0; /* inset wells, chips, hover fills */
-  --card: #fffdf4; /* content cards lift off the page */
-  --elevated: #fffdf4; /* menus/dialogs — in LIGHT the lift is the shadow */
-  --foreground: #1f1b16; /* ink — 16.4:1 on the page */
-  --card-foreground: #1f1b16;
-  --muted-foreground: #514247; /* plum — 8.1:1 on card, 4.5+ everywhere */
+  --chrome: #e4e9ee; /* nav, sidebar, sticky headers — the frame */
+  --chrome-foreground: #151c25; /* 15.0:1 */
+  --background: #f6f9fe; /* the page */
+  --muted: #e9edf3; /* inset wells, chips, hover fills */
+  --card: #ffffff; /* content cards lift off the page */
+  --elevated: #ffffff; /* menus/dialogs — in LIGHT the lift is the shadow */
+  --foreground: #151c25; /* ink — 16.4:1 on the page */
+  --card-foreground: #151c25;
+  --muted-foreground: #3d4657; /* plum — 8.1:1 on card, 4.5+ everywhere */
 
   /* Decorative hairline (cards, dividers) vs the >=3:1 INTERACTIVE boundary. */
-  --border: #e4d7c6; /* tan, from the paper's own family */
-  --outline: #87735e; /* tan — 4.3:1 page · 4.4:1 card · 3.7:1 chrome */
-  --input: #87735e; /* inputs take the interactive boundary, not the hairline */
-  --ring: #346d3f; /* sage focus ring — 5.9:1 on the page */
+  --border: #d4d9e0; /* tan, from the paper's own family */
+  --outline: #6f7782; /* tan — 4.3:1 page · 4.4:1 card · 3.7:1 chrome */
+  --input: #6f7782; /* inputs take the interactive boundary, not the hairline */
+  --ring: #0163ad; /* sage focus ring — 5.9:1 on the page */
 
   /* The unfilled arc of a progress ring / bar. NOT --muted: that is a large-AREA
      fill token, and a fill that reads fine behind a chip disappears as an 8–18px
@@ -316,50 +328,50 @@
      Moved to a grey SAGE, 2026-11-04, at the same measurements: card 3.16:1, page
      3.05:1, fill-vs-track 1.92:1. Brown beside the sage arc looked muddy, and the
      thin track under a thick arc now separates them by shape as well. */
-  --progress-track: #7f9582;
+  --progress-track: #7e92a7;
   /* The notch a ring draws at a threshold inside its own arc — the circle's
      share, when a member is aiming past it (D51). Judged against what it is
      actually DRAWN ON, which is never the page: the sage fill, the success green
      once the ring closes, and the track. Light can use the ink; dark CANNOT, and
      that is the whole reason this is a token — see the dark block. */
-  --progress-mark: #1f1b16;
+  --progress-mark: #151c25;
 
   /* ---- Role pairs ---- */
-  --primary: #346d3f; /* sage: brand, calm, completion/growth */
-  --primary-foreground: #f7fff8; /* 6.05:1 */
-  --primary-container: #d4ead6;
-  --on-primary-container: #112013; /* 13.3:1 */
+  --primary: #0163ad; /* sage: brand, calm, completion/growth */
+  --primary-foreground: #fbfdff; /* 6.05:1 */
+  --primary-container: #d1e7fe;
+  --on-primary-container: #001d39; /* 13.3:1 */
   /* The `tonal` button and the circle switcher. 8%/12% of the on-colour. */
-  --primary-container-hover: #c4dac6; /* 11.5:1 */
-  --primary-container-active: #bdd2bf; /* 10.6:1 */
+  --primary-container-hover: #b4d8fe; /* 11.5:1 */
+  --primary-container-active: #abd0f8; /* 10.6:1 */
   /* The owner's rose, EXACTLY. It carries a dark label rather than white:
      white-on-rose is 2.98:1 (fails), the tone-10 label is 5.84:1 and still
      clears 4.5 at pressed (4.81) — which is the tightest margin in the system,
      so the accent fill cannot be made any lighter without a darker label. */
-  --accent: #d9798a;
-  --accent-foreground: #2a1318;
-  --accent-container: #f7d7dc;
-  --on-accent-container: #2a1318;
-  --accent-ink: #a2475a; /* rose as TEXT/thin stroke on light — 5.75:1 */
+  --accent: #f09a3e;
+  --accent-foreground: #001d39;
+  --accent-container: #fcd8b9;
+  --on-accent-container: #001d39;
+  --accent-ink: #945601; /* rose as TEXT/thin stroke on light — 5.75:1 */
 
   --success: #21703e; /* deeper sage — same family as the brand, by design */
   --success-foreground: #f6fff9;
-  --warning: #7f5500;
-  --warning-foreground: #fffde8;
-  --danger: #964222; /* grave rust-red, never an alarm red (D8) */
-  --danger-foreground: #fffdfa;
-  --info: #426181; /* the one cool hue in the system */
-  --info-foreground: #f8ffff;
+  --warning: #755a02;
+  --warning-foreground: #fffcf5;
+  --danger: #a03735; /* grave rust-red, never an alarm red (D8) */
+  --danger-foreground: #fefdfd;
+  --info: #2c6673; /* the one cool hue in the system */
+  --info-foreground: #fbfeff;
 
   /* ---- M3 state layers, precomputed to solid hex ---- */
-  --primary-hover: #44794e;
-  --primary-active: #4b7f55;
-  --accent-hover: #cb7181;
-  --accent-active: #c46d7c;
-  --danger-hover: #9e5133;
-  --danger-active: #a3583c;
-  --surface-hover: #f7ebe0;
-  --surface-active: #f3e6da;
+  --primary-hover: #0170c1;
+  --primary-active: #0176cc;
+  --accent-hover: #dd903e;
+  --accent-active: #d38b3d;
+  --danger-hover: #a84844;
+  --danger-active: #ad504b;
+  --surface-hover: #e9edf3;
+  --surface-active: #e4e9ee;
   /* State layers for the CHROME tier (nav, sidebar, sticky headers).
      --surface-* is computed from --card and cannot serve here: --surface-active
      is #f3e6da, which is --chrome EXACTLY, so a pressed nav item rendered as
@@ -367,21 +379,21 @@
      was pressable — the standard layer was a no-op on the one surface the nav
      uses. Same 8%/12% M3 recipe as every other pair, precomputed to solid hex,
      but taken over --chrome with --chrome-foreground as the on-colour. */
-  --chrome-hover: #e2d6ca;
-  --chrome-active: #dacec2;
+  --chrome-hover: #d3d8df;
+  --chrome-active: #cbd0d7;
   /* The administration workspace's tab bar. A deep sage frame, so the bar itself
      says you have left the member's app. Measured on --admin-chrome: foreground
      8.91:1, muted 7.15:1 (5.14:1 when pressed). Label on pill 13.34:1. Hover and
      pressed are the same 8%/12% recipe as --chrome-*. */
-  --admin-chrome: #23522c;
-  --admin-chrome-foreground: #f7fff8;
-  --admin-chrome-muted: #d4ead6;
-  --admin-chrome-hover: #34603c;
-  --admin-chrome-active: #3c6744;
-  --admin-chrome-pill: #d4ead6;
-  --on-admin-chrome-pill: #112013;
-  --disabled-fill: #f7ebe0;
-  --disabled-foreground: #867077; /* 3.2:1 — readable, though 1.4.3 exempts it */
+  --admin-chrome: #014a83;
+  --admin-chrome-foreground: #fbfdff;
+  --admin-chrome-muted: #d1e7fe;
+  --admin-chrome-hover: #01589b;
+  --admin-chrome-active: #0160a7;
+  --admin-chrome-pill: #d1e7fe;
+  --on-admin-chrome-pill: #001d39;
+  --disabled-fill: #e9edf3;
+  --disabled-foreground: #6c7687; /* 3.2:1 — readable, though 1.4.3 exempts it */
 
   /* ---- Depth (hero surfaces, glows, raised fills) ----
      One emphasis surface per screen sits on --gradient-hero; the sheen is a
@@ -403,7 +415,7 @@
     rgb(255 255 255 / 0.12),
     transparent 60%
   );
-  --gradient-hero-foreground: #f7fff8; /* 7.07:1 on the lightest stop bare,
+  --gradient-hero-foreground: #fbfdff; /* 7.07:1 on the lightest stop bare,
      5.26:1 where the 12% sheen lightens it — the real worst case. */
   /* An ACCENT glyph on the hero (the streak flame) cannot be plain --accent.
      The medallion tile is --gradient-hero-foreground at 12%, i.e. a LIGHTENED
@@ -479,20 +491,20 @@
      on a --muted track, which is lighter-on-darker in light and DARKER-on-lighter
      in dark, so at night the selected option read as pressed into the control. */
   color-scheme: dark;
-  --chrome: #110e0b; /* the frame — deepest, still not pure black */
-  --chrome-foreground: #eee0d3; /* 15.7:1 */
-  --background: #16130f; /* the page */
-  --card: #1f1b16; /* content cards lift off the page */
-  --muted: #241e19; /* fills INSIDE a card go lighter on dark */
-  --elevated: #2f2821; /* menus, dialogs, segmented thumbs */
-  --foreground: #eee0d3; /* warm off-white, not pure #fff */
-  --card-foreground: #eee0d3;
-  --muted-foreground: #d4c1c7; /* 9.6:1 on card */
+  --chrome: #090f17; /* the frame — deepest, still not pure black */
+  --chrome-foreground: #dee3e9; /* 15.7:1 */
+  --background: #0d141c; /* the page */
+  --card: #151c25; /* content cards lift off the page */
+  --muted: #192029; /* fills INSIDE a card go lighter on dark */
+  --elevated: #232a33; /* menus, dialogs, segmented thumbs */
+  --foreground: #dee3e9; /* warm off-white, not pure #fff */
+  --card-foreground: #dee3e9;
+  --muted-foreground: #c0c6d2; /* 9.6:1 on card */
 
-  --border: #40362c; /* warm separator (shadows are weak on dark) */
-  --outline: #a28c77; /* tan — 5.8:1 page · 5.3:1 card */
-  --input: #a28c77;
-  --ring: #a3d6a9; /* light sage focus — 11.2:1 on the page */
+  --border: #313842; /* warm separator (shadows are weak on dark) */
+  --outline: #89919a; /* tan — 5.8:1 page · 5.3:1 card */
+  --input: #89919a;
+  --ring: #a0cefe; /* light sage focus — 11.2:1 on the page */
 
   /* Same story on dark, same measurement: --muted as a stroke was 1.10:1 on the
      card in v1. Lifted past --border, which only separates two surfaces — but
@@ -501,60 +513,60 @@
      "empty bar looks full" failure and dropped fill-vs-track to 1.95:1. Taken
      to the deep end of the permitted band instead: card 3.06:1, page 3.31:1,
      fill-vs-track 3.40:1 — the best of the three versions on every axis. */
-  --progress-track: #5a7060; /* grey sage, matching light */
+  --progress-track: #576d84; /* grey sage, matching light */
   /* INVERTED from light, and measured rather than assumed. Reusing the light
      recipe (the ink) here gives a cream notch on a LIGHT sage fill — in v1 that
      measured 2.10:1 on --primary and 1.59:1 on --success, so the mark all but
      vanished at exactly the moment the ring was doing well. Dark therefore goes
      DARKER than everything it sits on. The binding surface is the track. */
-  --progress-mark: #110e0b;
+  --progress-mark: #090f17;
 
   /* ---- Role pairs ---- */
-  --primary: #a3d6a9; /* light sage so fills + rings read on dark */
-  --primary-foreground: #1f3723; /* 7.8:1 */
-  --primary-container: #23522c;
-  --on-primary-container: #d4ead6; /* 7.2:1 */
-  --primary-container-hover: #315e3a; /* 5.9:1 */
-  --primary-container-active: #386440; /* 5.4:1 */
-  --accent: #e98a9b; /* lightened rose so it won't vibrate on dark */
-  --accent-foreground: #482329; /* 5.5:1, holds 4.6 at pressed */
-  --accent-container: #702b3a;
-  --on-accent-container: #f7d7dc;
-  --accent-ink: #e98a9b; /* on dark the accent IS legible as a mark — 6.99:1 */
+  --primary: #a0cefe; /* light sage so fills + rings read on dark */
+  --primary-foreground: #00335d; /* 7.8:1 */
+  --primary-container: #014a83;
+  --on-primary-container: #d1e7fe; /* 7.2:1 */
+  --primary-container-hover: #015697; /* 5.9:1 */
+  --primary-container-active: #025ca1; /* 5.4:1 */
+  --accent: #f09a3e; /* lightened rose so it won't vibrate on dark */
+  --accent-foreground: #001d39; /* 5.5:1, holds 4.6 at pressed */
+  --accent-container: #643800;
+  --on-accent-container: #fcd8b9;
+  --accent-ink: #f09a3e; /* on dark the accent IS legible as a mark — 6.99:1 */
 
   --success: #99d9a9;
   --success-foreground: #193823;
-  --warning: #eebe72;
-  --warning-foreground: #422c01;
-  --danger: #ffaf93; /* softened so errors don't alarm-vibrate */
-  --danger-foreground: #4a2517;
-  --info: #adcae9;
-  --info-foreground: #243240;
+  --warning: #e4c26f;
+  --warning-foreground: #3d2e02;
+  --danger: #feaea7; /* softened so errors don't alarm-vibrate */
+  --danger-foreground: #4f211e;
+  --info: #9ecfdb;
+  --info-foreground: #1c343a;
 
   /* ---- M3 state layers, precomputed to solid hex ---- */
-  --primary-hover: #98c99e;
-  --primary-active: #93c399;
-  --accent-hover: #dc8292;
-  --accent-active: #d67e8d;
-  --danger-hover: #f1a489;
-  --danger-active: #e99e84;
-  --surface-hover: #241e19;
-  --surface-active: #110e0b;
+  --primary-hover: #88c2fe;
+  --primary-active: #7cbcff;
+  --accent-hover: #dd903e;
+  --accent-active: #d38b3d;
+  --danger-hover: #fc9d96;
+  --danger-active: #f39790;
+  --surface-hover: #192029;
+  --surface-active: #090f17;
   /* Same trap, mirrored: --surface-active is #110e0b, which is --chrome
      exactly. Computed over --chrome with --chrome-foreground at 8%/12%. */
-  --chrome-hover: #231f1b;
-  --chrome-active: #2c2723;
+  --chrome-hover: #192029;
+  --chrome-active: #212832;
   /* Measured on --admin-chrome: foreground 9.97:1, muted 8.71:1 (6.36:1 when
      pressed). Label on pill 10.28:1. */
-  --admin-chrome: #1f3723;
-  --admin-chrome-foreground: #eee0d3;
-  --admin-chrome-muted: #c4dac6;
-  --admin-chrome-hover: #304531;
-  --admin-chrome-active: #384b38;
-  --admin-chrome-pill: #a3d6a9;
-  --on-admin-chrome-pill: #112013;
-  --disabled-fill: #241e19;
-  --disabled-foreground: #a08a91;
+  --admin-chrome: #00335d;
+  --admin-chrome-foreground: #cde5fe;
+  --admin-chrome-muted: #b4d8fe;
+  --admin-chrome-hover: #15426b;
+  --admin-chrome-active: #21486f;
+  --admin-chrome-pill: #a0cefe;
+  --on-admin-chrome-pill: #001d39;
+  --disabled-fill: #192029;
+  --disabled-foreground: #8790a0;
 
   /* ---- Depth · dark mirror ----
      The hero keeps deep sage stops (they read as a lit surface against the
@@ -576,7 +588,7 @@
     rgb(255 255 255 / 0.06),
     transparent 60%
   );
-  --gradient-hero-foreground: #eee0d3;
+  --gradient-hero-foreground: #cde5fe;
   /* One step MORE saturated than light's: the dark hero's stops are deeper, so
      accent-200 still clears the floor (3.31:1 on a fully-lit tile) and holds
      more of the rose than accent-100 would. */
