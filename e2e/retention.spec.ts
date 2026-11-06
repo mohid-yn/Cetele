@@ -116,17 +116,15 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   await pageA.goto("/group");
   await pageA.waitForURL(/\/g\/.*\/group/);
   // A brand-new circle is resting — calm, never shaming (D8).
-  await expect(pageA.getByText("Your circle's garden")).toContainText(
-    "Resting",
-  );
+  // The stage is a chip beside the heading since the garden rebuild.
+  await expect(pageA.getByText("Your circle's garden")).toBeVisible();
+  await expect(pageA.getByText("Resting", { exact: true })).toBeVisible();
 
   // The SHORT-TERM layer: B has logged today and A hasn't, so the garden must
   // say "1 of 2" — the fact a 30-day average cannot show, and the reason to
   // look again this evening. Vitality alone moved a plant ~12px for a whole
   // day's effort, which is why the day needed its own signal.
-  await expect(
-    pageA.getByText(/1 of 2 has tended the garden today/),
-  ).toBeVisible();
+  await expect(pageA.getByText(/1 of 2\s+has tended it today/)).toBeVisible();
 
   // A tends it too → the circle is fully represented, stated without naming
   // anyone (no scoreboard of absence).
@@ -145,9 +143,7 @@ test("v2: welcome → peer reaction → garden, pair goal, badges", async ({
   await counted;
   await pageA.goto("/group");
   await pageA.waitForURL(/\/g\/.*\/group/);
-  await expect(
-    pageA.getByText(/2 of 2 have tended the garden today/),
-  ).toBeVisible();
+  await expect(pageA.getByText(/2 of 2\s+have tended it today/)).toBeVisible();
 
   await pageA.click('button:has-text("Standings")');
   // The duo goal leads the ranking: B is A's only possible partner.

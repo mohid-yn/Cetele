@@ -92,7 +92,9 @@ test("reflection surfaces read real logs; admin proxy-edit persists", async ({
 
   // Overview — collective is 10 of (10 × 2 members) = 50%.
   await expect(pageA.getByText("The circle today")).toBeVisible();
-  await expect(pageA.getByText("50%")).toBeVisible();
+  // The collective ring's figure. The garden now says how far "the sun is up"
+  // in a percentage too, so the ring is named rather than matched on text.
+  await expect(pageA.getByRole("progressbar").getByText("50%")).toBeVisible();
   await expect(pageA.getByText("10 / 20")).toBeVisible();
 
   // Standings — B is active 1/7 days this week off real logs.
