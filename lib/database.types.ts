@@ -44,6 +44,7 @@ export type Database = {
           id: string;
           target_user_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           action: string;
           actor_id?: string | null;
@@ -93,6 +94,7 @@ export type Database = {
           group_id: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           badge_id: string;
           earned_on: string;
@@ -140,6 +142,7 @@ export type Database = {
           threshold: number;
           window_days: number | null;
         };
+        ComputedFields: never;
         Insert: {
           description: string;
           glyph: string;
@@ -168,6 +171,7 @@ export type Database = {
           key: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           dismissed_at?: string;
           key: string;
@@ -188,6 +192,134 @@ export type Database = {
           },
         ];
       };
+      branch_requests: {
+        Row: {
+          branch_id: string;
+          created_at: string;
+          group_id: string;
+          requested_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          branch_id: string;
+          created_at?: string;
+          group_id: string;
+          requested_by?: string | null;
+        };
+        Update: {
+          branch_id?: string;
+          created_at?: string;
+          group_id?: string;
+          requested_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "branch_requests_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branch_requests_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: true;
+            referencedRelation: "groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branch_requests_requested_by_fkey";
+            columns: ["requested_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      branch_stewards: {
+        Row: {
+          branch_id: string;
+          created_at: string;
+          created_by: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          branch_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          user_id: string;
+        };
+        Update: {
+          branch_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "branch_stewards_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branch_stewards_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branch_stewards_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      branches: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          name: string;
+          parent_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          name: string;
+          parent_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          name?: string;
+          parent_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "branches_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branches_parent_id_fkey";
+            columns: ["parent_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       daily_completion: {
         Row: {
           completion_pct: number;
@@ -195,6 +327,7 @@ export type Database = {
           group_id: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           completion_pct: number;
           date: string;
@@ -224,12 +357,240 @@ export type Database = {
           },
         ];
       };
+      event_questions: {
+        Row: {
+          answered_at: string | null;
+          asker_id: string | null;
+          body: string;
+          created_at: string;
+          event_id: string;
+          hidden_at: string | null;
+          id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          answered_at?: string | null;
+          asker_id?: string | null;
+          body: string;
+          created_at?: string;
+          event_id: string;
+          hidden_at?: string | null;
+          id?: string;
+        };
+        Update: {
+          answered_at?: string | null;
+          asker_id?: string | null;
+          body?: string;
+          created_at?: string;
+          event_id?: string;
+          hidden_at?: string | null;
+          id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "event_questions_asker_id_fkey";
+            columns: ["asker_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "event_questions_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      event_rsvps: {
+        Row: {
+          event_id: string;
+          note: string;
+          status: string;
+          updated_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          event_id: string;
+          note?: string;
+          status: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          event_id?: string;
+          note?: string;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "event_rsvps_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "event_rsvps_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      event_series: {
+        Row: {
+          active: boolean;
+          branch_id: string;
+          created_at: string;
+          created_by: string | null;
+          details: string;
+          duration_minutes: number;
+          id: string;
+          start_time: string;
+          timezone: string;
+          title: string;
+          venue: string;
+          weekday: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          branch_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          details?: string;
+          duration_minutes?: number;
+          id?: string;
+          start_time: string;
+          timezone: string;
+          title: string;
+          venue?: string;
+          weekday: number;
+        };
+        Update: {
+          active?: boolean;
+          branch_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          details?: string;
+          duration_minutes?: number;
+          id?: string;
+          start_time?: string;
+          timezone?: string;
+          title?: string;
+          venue?: string;
+          weekday?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "event_series_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "event_series_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      events: {
+        Row: {
+          branch_id: string;
+          capacity: number | null;
+          created_at: string;
+          created_by: string | null;
+          details: string;
+          ends_at: string;
+          id: string;
+          kind: string;
+          rsvp_closes_at: string | null;
+          series_id: string | null;
+          starts_at: string;
+          status: string;
+          timezone: string;
+          title: string;
+          updated_at: string;
+          venue: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          branch_id: string;
+          capacity?: number | null;
+          created_at?: string;
+          created_by?: string | null;
+          details?: string;
+          ends_at: string;
+          id?: string;
+          kind: string;
+          rsvp_closes_at?: string | null;
+          series_id?: string | null;
+          starts_at: string;
+          status?: string;
+          timezone: string;
+          title: string;
+          updated_at?: string;
+          venue?: string;
+        };
+        Update: {
+          branch_id?: string;
+          capacity?: number | null;
+          created_at?: string;
+          created_by?: string | null;
+          details?: string;
+          ends_at?: string;
+          id?: string;
+          kind?: string;
+          rsvp_closes_at?: string | null;
+          series_id?: string | null;
+          starts_at?: string;
+          status?: string;
+          timezone?: string;
+          title?: string;
+          updated_at?: string;
+          venue?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "events_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "events_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "events_series_id_fkey";
+            columns: ["series_id"];
+            isOneToOne: false;
+            referencedRelation: "event_series";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       group_roadmaps: {
         Row: {
           created_at: string;
           group_id: string;
           roadmap_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           group_id: string;
@@ -259,24 +620,35 @@ export type Database = {
       };
       groups: {
         Row: {
+          branch_id: string | null;
           created_at: string;
           created_by: string | null;
           id: string;
           name: string;
         };
+        ComputedFields: never;
         Insert: {
+          branch_id?: string | null;
           created_at?: string;
           created_by?: string | null;
           id?: string;
           name: string;
         };
         Update: {
+          branch_id?: string | null;
           created_at?: string;
           created_by?: string | null;
           id?: string;
           name?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "groups_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "groups_created_by_fkey";
             columns: ["created_by"];
@@ -295,6 +667,7 @@ export type Database = {
           id: string;
           role: string;
         };
+        ComputedFields: never;
         Insert: {
           code?: string;
           created_at?: string;
@@ -331,6 +704,7 @@ export type Database = {
           updated_at: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           count?: number;
           date: string;
@@ -381,6 +755,7 @@ export type Database = {
           updated_at: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           frequency_days?: number | null;
           target_count?: number | null;
@@ -419,6 +794,7 @@ export type Database = {
           task_id: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           cluster_id?: string;
           created_at?: string;
@@ -458,6 +834,7 @@ export type Database = {
           task_id: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           effective_from?: string;
           effective_to?: string | null;
@@ -508,6 +885,7 @@ export type Database = {
           role: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           group_id: string;
@@ -539,6 +917,126 @@ export type Database = {
           },
         ];
       };
+      poll_options: {
+        Row: {
+          id: string;
+          label: string;
+          poll_id: string;
+          sort_order: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          id?: string;
+          label: string;
+          poll_id: string;
+          sort_order?: number;
+        };
+        Update: {
+          id?: string;
+          label?: string;
+          poll_id?: string;
+          sort_order?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "poll_options_poll_id_fkey";
+            columns: ["poll_id"];
+            isOneToOne: false;
+            referencedRelation: "polls";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      poll_votes: {
+        Row: {
+          option_id: string;
+          poll_id: string;
+          user_id: string;
+          voted_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          option_id: string;
+          poll_id: string;
+          user_id: string;
+          voted_at?: string;
+        };
+        Update: {
+          option_id?: string;
+          poll_id?: string;
+          user_id?: string;
+          voted_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "poll_votes_option_id_fkey";
+            columns: ["option_id"];
+            isOneToOne: false;
+            referencedRelation: "poll_options";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "poll_votes_poll_id_fkey";
+            columns: ["poll_id"];
+            isOneToOne: false;
+            referencedRelation: "polls";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "poll_votes_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      polls: {
+        Row: {
+          closes_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          event_id: string;
+          id: string;
+          kind: string;
+          question: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          closes_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          event_id: string;
+          id?: string;
+          kind: string;
+          question: string;
+        };
+        Update: {
+          closes_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          event_id?: string;
+          id?: string;
+          kind?: string;
+          question?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "polls_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "polls_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           avatar_url: string | null;
@@ -548,6 +1046,7 @@ export type Database = {
           name: string;
           timezone: string;
         };
+        ComputedFields: never;
         Insert: {
           avatar_url?: string | null;
           created_at?: string;
@@ -576,6 +1075,7 @@ export type Database = {
           user_agent: string | null;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           auth: string;
           created_at?: string;
@@ -604,6 +1104,37 @@ export type Database = {
           },
         ];
       };
+      question_upvotes: {
+        Row: {
+          question_id: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          question_id: string;
+          user_id: string;
+        };
+        Update: {
+          question_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "question_upvotes_question_id_fkey";
+            columns: ["question_id"];
+            isOneToOne: false;
+            referencedRelation: "event_questions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "question_upvotes_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       reactions: {
         Row: {
           created_at: string;
@@ -614,6 +1145,7 @@ export type Database = {
           kind: string;
           to_user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           date: string;
@@ -666,6 +1198,7 @@ export type Database = {
           time_of_day: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           enabled?: boolean;
@@ -707,6 +1240,7 @@ export type Database = {
           resolved_by: string | null;
           status: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           group_id?: string | null;
@@ -778,6 +1312,7 @@ export type Database = {
           unit: string;
           url: string | null;
         };
+        ComputedFields: never;
         Insert: {
           category: string;
           compulsory?: boolean;
@@ -825,6 +1360,7 @@ export type Database = {
           min_total: number;
           roadmap_id: string;
         };
+        ComputedFields: never;
         Insert: {
           category: string;
           level: number;
@@ -853,6 +1389,7 @@ export type Database = {
           roadmap_id: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           roadmap_id: string;
@@ -887,6 +1424,7 @@ export type Database = {
           updated_at: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           done: number;
           item_id: string;
@@ -924,6 +1462,7 @@ export type Database = {
           roadmap_id: string;
           threshold: number;
         };
+        ComputedFields: never;
         Insert: {
           description?: string | null;
           id?: string;
@@ -957,6 +1496,7 @@ export type Database = {
           published: boolean;
           starts_on: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           ends_on: string;
@@ -975,6 +1515,40 @@ export type Database = {
         };
         Relationships: [];
       };
+      series_hosts: {
+        Row: {
+          created_at: string;
+          series_id: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          series_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          series_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "series_hosts_series_id_fkey";
+            columns: ["series_id"];
+            isOneToOne: false;
+            referencedRelation: "event_series";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "series_hosts_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       streaks: {
         Row: {
           current: number;
@@ -983,6 +1557,7 @@ export type Database = {
           longest: number;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           current?: number;
           freezes_left?: number;
@@ -1015,6 +1590,7 @@ export type Database = {
           unassigned_at: string | null;
           user_id: string | null;
         };
+        ComputedFields: never;
         Insert: {
           assigned_at?: string;
           id?: string;
@@ -1055,6 +1631,7 @@ export type Database = {
           target_count: number;
           task_id: string;
         };
+        ComputedFields: never;
         Insert: {
           effective_from?: string;
           effective_to?: string | null;
@@ -1093,6 +1670,7 @@ export type Database = {
           subtitle: string | null;
           target_count: number;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           frequency_days?: number;
@@ -1140,6 +1718,7 @@ export type Database = {
       accept_invite: {
         Args: { p_code: string };
         Returns: {
+          branch_id: string | null;
           created_at: string;
           created_by: string | null;
           id: string;
@@ -1178,13 +1757,50 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      appoint_series_host: {
+        Args: { p_email: string; p_series: string };
+        Returns: {
+          name: string;
+          user_id: string;
+        }[];
+      };
+      appoint_steward: {
+        Args: { p_branch: string; p_email: string };
+        Returns: {
+          name: string;
+          user_id: string;
+        }[];
+      };
+      ask_question: {
+        Args: { p_body: string; p_event: string };
+        Returns: string;
+      };
+      branch_circles: {
+        Args: { p_branch: string };
+        Returns: {
+          group_id: string;
+          members: number;
+          name: string;
+          pending: boolean;
+          requested_at: string;
+        }[];
+      };
+      branch_directory: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          depth: number;
+          id: string;
+          label: string;
+        }[];
+      };
       can_claim_ownership: { Args: { p_group: string }; Returns: boolean };
       can_read_roadmap_cohort: {
         Args: { p_roadmap: string };
         Returns: boolean;
       };
+      cancel_branch_request: { Args: { p_group: string }; Returns: undefined };
       claim_due_reminders: {
-        Args: never;
+        Args: Record<PropertyKey, never>;
         Returns: {
           auth: string;
           endpoint: string;
@@ -1195,9 +1811,14 @@ export type Database = {
         }[];
       };
       claim_ownership: { Args: { p_group: string }; Returns: undefined };
+      create_branch: {
+        Args: { p_name: string; p_parent: string };
+        Returns: string;
+      };
       create_group: {
         Args: { p_name: string };
         Returns: {
+          branch_id: string | null;
           created_at: string;
           created_by: string | null;
           id: string;
@@ -1209,6 +1830,16 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      create_poll: {
+        Args: {
+          p_closes_at?: string;
+          p_event: string;
+          p_kind: string;
+          p_options: string[];
+          p_question: string;
+        };
+        Returns: string;
       };
       create_roadmap: {
         Args: { p_ends_on: string; p_name: string; p_starts_on: string };
@@ -1228,9 +1859,98 @@ export type Database = {
         };
         Returns: string;
       };
+      decide_branch_request: {
+        Args: { p_approve: boolean; p_group: string };
+        Returns: undefined;
+      };
+      delete_branch: { Args: { p_branch: string }; Returns: undefined };
+      delete_event: { Args: { p_event: string }; Returns: undefined };
+      delete_my_question: { Args: { p_question: string }; Returns: undefined };
+      delete_poll: { Args: { p_poll: string }; Returns: undefined };
       delete_roadmap: { Args: { p_roadmap: string }; Returns: undefined };
       delete_roadmap_item: { Args: { p_item: string }; Returns: undefined };
       delete_roadmap_reward: { Args: { p_reward: string }; Returns: undefined };
+      event_attendees: {
+        Args: { p_event: string };
+        Returns: {
+          name: string;
+          note: string;
+          status: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+      };
+      event_detail: {
+        Args: { p_event: string };
+        Returns: {
+          branch_id: string;
+          branch_name: string;
+          can_lead: boolean;
+          can_steward: boolean;
+          capacity: number;
+          details: string;
+          ends_at: string;
+          going: number;
+          id: string;
+          kind: string;
+          maybe: number;
+          my_note: string;
+          my_status: string;
+          no: number;
+          rsvp_closes_at: string;
+          series_id: string;
+          starts_at: string;
+          status: string;
+          timezone: string;
+          title: string;
+          venue: string;
+        }[];
+      };
+      event_polls: {
+        Args: { p_event: string };
+        Returns: {
+          closes_at: string;
+          kind: string;
+          label: string;
+          mine: boolean;
+          option_id: string;
+          poll_id: string;
+          question: string;
+          sort_order: number;
+          votes: number;
+        }[];
+      };
+      event_question_list: {
+        Args: { p_event: string };
+        Returns: {
+          answered: boolean;
+          body: string;
+          created_at: string;
+          hidden: boolean;
+          i_upvoted: boolean;
+          id: string;
+          mine: boolean;
+          upvotes: number;
+        }[];
+      };
+      events_i_lead: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          branch_id: string;
+          branch_name: string;
+          can_steward: boolean;
+          ends_at: string;
+          going: number;
+          id: string;
+          kind: string;
+          questions: number;
+          series_id: string;
+          starts_at: string;
+          status: string;
+          timezone: string;
+          title: string;
+        }[];
+      };
       grant_super_admin: {
         Args: { p_email: string };
         Returns: {
@@ -1246,12 +1966,29 @@ export type Database = {
         Args: { p_date: string; p_delta: number; p_task: string };
         Returns: number;
       };
+      leave_branch: { Args: { p_group: string }; Returns: undefined };
       link_tasks: {
         Args: { p_task_a: string; p_task_b: string };
         Returns: string;
       };
+      list_branch_stewards: {
+        Args: { p_branch: string };
+        Returns: {
+          email: string;
+          name: string;
+          user_id: string;
+        }[];
+      };
+      list_series_hosts: {
+        Args: { p_series: string };
+        Returns: {
+          email: string;
+          name: string;
+          user_id: string;
+        }[];
+      };
       list_super_admins: {
-        Args: never;
+        Args: Record<PropertyKey, never>;
         Returns: {
           email: string;
           name: string;
@@ -1269,26 +2006,60 @@ export type Database = {
           invite_role: string;
         }[];
       };
+      mcp_session_active: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      my_steward_tree: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          circles: number;
+          depth: number;
+          direct: boolean;
+          id: string;
+          name: string;
+          parent_id: string;
+          pending: number;
+        }[];
+      };
+      my_upcoming_events: {
+        Args: { p_limit?: number };
+        Returns: {
+          branch_name: string;
+          capacity: number;
+          ends_at: string;
+          going: number;
+          id: string;
+          kind: string;
+          maybe: number;
+          my_open_votes: number;
+          my_status: string;
+          open_polls: number;
+          questions: number;
+          rsvp_closes_at: string;
+          starts_at: string;
+          status: string;
+          timezone: string;
+          title: string;
+          venue: string;
+        }[];
+      };
       reassign_owner: {
         Args: { p_group: string; p_new_owner: string };
         Returns: undefined;
       };
       regenerate_invite: { Args: { p_group_id: string }; Returns: string };
-      resolve_report: {
-        Args: { p_note?: string; p_report: string; p_status: string };
+      remove_series_host: {
+        Args: { p_series: string; p_user: string };
         Returns: undefined;
       };
-      revoke_super_admin: { Args: { p_user: string }; Returns: undefined };
-      roadmap_reach: { Args: { p_roadmap: string }; Returns: number };
-      mcp_session_active: { Args: never; Returns: boolean };
-      roadmap_circles: {
-        Args: { p_roadmap: string };
-        Returns: {
-          following: boolean;
-          group_id: string;
-          member_count: number;
-          name: string;
-        }[];
+      remove_steward: {
+        Args: { p_branch: string; p_user: string };
+        Returns: undefined;
+      };
+      rename_branch: {
+        Args: { p_branch: string; p_name: string };
+        Returns: undefined;
       };
       reorder_roadmap_items: {
         Args: {
@@ -1299,21 +2070,48 @@ export type Database = {
         };
         Returns: undefined;
       };
-      set_circle_on_roadmap: {
-        Args: { p_follow: boolean; p_group: string; p_roadmap: string };
+      request_branch: {
+        Args: { p_branch: string; p_group: string };
+        Returns: string;
+      };
+      resolve_report: {
+        Args: { p_note?: string; p_report: string; p_status: string };
         Returns: undefined;
       };
+      revoke_super_admin: { Args: { p_user: string }; Returns: undefined };
+      roadmap_circles: {
+        Args: { p_roadmap: string };
+        Returns: {
+          following: boolean;
+          group_id: string;
+          member_count: number;
+          name: string;
+        }[];
+      };
+      roadmap_reach: { Args: { p_roadmap: string }; Returns: number };
       roadmap_roster: {
-        Args: never;
+        Args: Record<PropertyKey, never>;
         Returns: {
           name: string;
           roadmap_id: string;
           user_id: string;
         }[];
       };
-      take_part_in_roadmap: {
-        Args: { p_roadmap: string; p_take_part: boolean };
-        Returns: undefined;
+      save_camp: {
+        Args: {
+          p_branch: string;
+          p_capacity: number;
+          p_details: string;
+          p_ends_at: string;
+          p_id: string;
+          p_rsvp_closes_at: string;
+          p_starts_at: string;
+          p_status: string;
+          p_timezone: string;
+          p_title: string;
+          p_venue: string;
+        };
+        Returns: string;
       };
       save_push_subscription: {
         Args: {
@@ -1322,6 +2120,25 @@ export type Database = {
           p_p256dh: string;
           p_user_agent: string;
         };
+        Returns: undefined;
+      };
+      save_series: {
+        Args: {
+          p_active: boolean;
+          p_branch: string;
+          p_details: string;
+          p_duration_minutes: number;
+          p_id: string;
+          p_start_time: string;
+          p_timezone: string;
+          p_title: string;
+          p_venue: string;
+          p_weekday: number;
+        };
+        Returns: string;
+      };
+      set_circle_on_roadmap: {
+        Args: { p_follow: boolean; p_group: string; p_roadmap: string };
         Returns: undefined;
       };
       set_count: {
@@ -1333,9 +2150,17 @@ export type Database = {
         };
         Returns: number;
       };
+      set_event_cancelled: {
+        Args: { p_cancelled: boolean; p_event: string };
+        Returns: undefined;
+      };
       set_member_task_share: {
         Args: { p_target: number; p_task: string; p_user: string };
         Returns: number;
+      };
+      set_question_state: {
+        Args: { p_answered: boolean; p_hidden: boolean; p_question: string };
+        Returns: undefined;
       };
       set_reminder: {
         Args: {
@@ -1386,6 +2211,10 @@ export type Database = {
         Args: { p_published: boolean; p_roadmap: string };
         Returns: undefined;
       };
+      set_rsvp: {
+        Args: { p_event: string; p_note?: string; p_status: string };
+        Returns: string;
+      };
       set_task_assignees: {
         Args: { p_task: string; p_user_ids: string[] };
         Returns: undefined;
@@ -1399,6 +2228,10 @@ export type Database = {
         Returns: number;
       };
       sync_badges: { Args: { p_group: string }; Returns: undefined };
+      take_part_in_roadmap: {
+        Args: { p_roadmap: string; p_take_part: boolean };
+        Returns: undefined;
+      };
       toggle_reaction: {
         Args: { p_group: string; p_kind: string; p_to: string };
         Returns: boolean;
@@ -1426,6 +2259,14 @@ export type Database = {
           p_threshold: number;
         };
         Returns: string;
+      };
+      upvote_question: {
+        Args: { p_on: boolean; p_question: string };
+        Returns: undefined;
+      };
+      vote_poll: {
+        Args: { p_option: string; p_poll: string };
+        Returns: undefined;
       };
     };
     Enums: {
