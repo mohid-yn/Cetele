@@ -21,17 +21,17 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 ### Current state (checked 2026-11-06)
 
-| Item         | State                                                                                                |
-| ------------ | ---------------------------------------------------------------------------------------------------- |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `2224fd2`, serving Next 16.4.5 |
-| Staging      | `cetele-git-staging-university-services.vercel.app`. Ahead of `main` by docs commits only            |
-| Migrations   | **40 in the repo, the same 40 on prod** (compared against the Supabase migration list). No drift     |
-| Git          | Clean. No feature branches, worktrees or stashes                                                     |
-| CI           | Green on both `main` and `staging`                                                                   |
-| Tests        | Unit 169 · pgTAP 834 across 24 suites · e2e 85 across 21 specs                                       |
-| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06  |
-| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue       |
-| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                |
+| Item         | State                                                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `2224fd2`, serving Next 16.4.5                      |
+| Staging      | `cetele-git-staging-university-services.vercel.app`. Ahead of `main` by Manage tabs (`ee03650`), awaiting soak + approval |
+| Migrations   | **40 in the repo, the same 40 on prod** (compared against the Supabase migration list). No drift                          |
+| Git          | `fix/drafts-cannot-be-followed-v2` (D77, migration 0041) pushed, not merged: needs `db push` approval                     |
+| CI           | Green on both `main` and `staging`                                                                                        |
+| Tests        | Unit 169 · pgTAP 834 across 24 suites · e2e 85 across 21 specs                                                            |
+| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                       |
+| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                            |
+| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                                     |
 
 Everything through D76 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
 
@@ -76,6 +76,9 @@ sent the whole page and the browser rendered nothing.
 Which upstream change fixed it was not traced. The bug predates D71/D72 (August's `0532e25` blanks 1 of 240).
 
 ### Next steps, in order
+
+- **Owner: approve D77** (migration 0041, drafts cannot be followed). Gates, pgTAP 842 and the roadmap/manage e2e are green locally. Merging it to `staging` means `supabase db push` to prod.
+- **Owner: check Manage tabs on staging**, then approve promoting to `main`.
 
 0. **Owner: check `2224fd2` on the phone.** Open Roadmap, tap +1 on an item a few times, reload at once. The count should hold. **Take part will not appear on the owner's organiser account**: it follows the only published roadmap through **meeting** and **Keysy Dersh**. Seeing it takes another organiser outside those circles, or a second published roadmap. CI covers the full flow.
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Google sign-in on a desktop browser is confirmed on this release (2026-11-06). Nobody has used a phone on it, and staging was not clicked through.
