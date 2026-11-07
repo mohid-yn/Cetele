@@ -76,7 +76,7 @@ export default async function JoinPage({
         </p>
         <p className="text-xs text-muted-foreground">
           {invite.invite_role === "admin"
-            ? "You'll join as a co-admin, helping run the group's tasks and members."
+            ? "You'll join as an admin, helping run the group's tasks and members."
             : "You'll join as a member and follow the group's shared daily tasks."}
         </p>
         <AcceptButton code={code} />

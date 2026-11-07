@@ -255,10 +255,11 @@ export function Stewards({
 
   return (
     <section>
-      <SectionHeading>Stewards</SectionHeading>
+      <SectionHeading>Admins</SectionHeading>
       <p className="mb-2 text-xs text-muted-foreground">
-        They post events here and in every branch inside, approve circles, and
-        see who is coming. They see no circle&apos;s dhikr.
+        They run this branch and every branch inside it: post camps and
+        halaqahs, approve circles, add admins. They see each circle&apos;s name
+        and size, never its members or anyone&apos;s dhikr.
       </p>
       {stewards.length > 0 && (
         <Card className="mb-3 overflow-hidden">
@@ -299,7 +300,7 @@ export function Stewards({
         }}
       >
         <Field
-          label="Appoint a steward"
+          label="Add an admin"
           htmlFor="steward-email"
           hint="Their exact email address. There is no directory to search."
           className="flex-1"
@@ -318,7 +319,7 @@ export function Stewards({
           variant="tonal"
           disabled={!email.trim() || appoint.pending}
         >
-          {appoint.pending ? "Appointing…" : "Appoint"}
+          {appoint.pending ? "Adding…" : "Add"}
         </Button>
       </form>
       {(appoint.error || remove.error) && (
@@ -329,7 +330,7 @@ export function Stewards({
       <ConfirmDialog
         open={removing !== null}
         onClose={() => setRemoving(null)}
-        title="Remove this steward?"
+        title="Remove this admin?"
         description={
           removing
             ? `${removing.name ?? removing.email} will stop running ${branch.name}.${removing.userId === me ? " This is you." : ""}`

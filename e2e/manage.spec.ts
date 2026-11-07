@@ -127,7 +127,7 @@ test("joiner: signed-out invite link → ?next= → sign in → accept → membe
   await signOut(page);
 });
 
-test("owner: promote the joiner to co-admin, then remove them", async ({
+test("owner: promote the joiner to admin, then remove them", async ({
   page,
 }) => {
   await signIn(page, OWNER);
@@ -141,11 +141,9 @@ test("owner: promote the joiner to co-admin, then remove them", async ({
   const joinerRow = page.locator("li", { hasText: `e2e-joiner-${STAMP}` });
 
   // promote → co-admin
-  await joinerRow
-    .getByRole("button", { name: "Co-admin", exact: true })
-    .click();
+  await joinerRow.getByRole("button", { name: "Admin", exact: true }).click();
   await expect(
-    joinerRow.getByRole("button", { name: "Co-admin", exact: true }),
+    joinerRow.getByRole("button", { name: "Admin", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
 
   // remove them (confirm dialog)

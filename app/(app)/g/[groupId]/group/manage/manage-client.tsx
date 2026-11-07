@@ -451,7 +451,7 @@ export function ManageClient({
           <p className="mt-1 text-xs text-muted-foreground">
             {owner?.name ?? "The owner"} hasn&rsquo;t been active in a while. As
             a co-admin you can take over ownership so the circle isn&rsquo;t
-            left without one. They stay on as a co-admin.
+            left without one. They stay on as an admin.
           </p>
           <Button
             size="sm"
@@ -945,7 +945,7 @@ export function ManageClient({
                 <Field
                   label="Transfer ownership"
                   htmlFor="transfer-owner"
-                  hint="The new owner gains full control; you become a co-admin."
+                  hint="The new owner gains full control; you stay on as an admin."
                 >
                   <div className="flex flex-wrap gap-2">
                     <select
@@ -1036,7 +1036,7 @@ export function ManageClient({
         onClose={() => setClaimOpen(false)}
         onConfirm={() => claimAct.run(() => act.claimOwnership(group.id))}
         title="Claim ownership of this circle?"
-        description="The current owner has been inactive, so you can take over to keep the circle running. They stay on as a co-admin. This is recorded in the group's history."
+        description="The current owner has been inactive, so you can take over to keep the circle running. They stay on as an admin. This is recorded in the group's history."
         confirmLabel="Claim ownership"
       />
       <ConfirmDialog
@@ -1050,7 +1050,7 @@ export function ManageClient({
             );
         }}
         title={`Make ${transferName ?? "this member"} the owner?`}
-        description="They gain full control of the group, including the ability to delete it. You'll stay on as a co-admin."
+        description="They gain full control of the group, including the ability to delete it. You'll stay on as an admin."
         confirmLabel="Transfer ownership"
       />
       <ConfirmDialog

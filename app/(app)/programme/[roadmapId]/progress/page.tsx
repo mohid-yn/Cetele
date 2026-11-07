@@ -151,7 +151,7 @@ export default async function ProgrammeReportPage({
         <BackLink roadmapId={roadmapId} />
         <EmptyCard
           title="Not your report"
-          body="Members’ progress is for a circle’s owner and co-admins. Your own is on your circle’s Roadmap."
+          body="Members’ progress is for a circle’s admins. Your own is on your circle’s Roadmap."
         />
       </Screen>
     );

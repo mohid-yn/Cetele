@@ -34,9 +34,22 @@ import { ORGANISER_HINT_COOKIE } from "@/lib/admin-zone";
  * new appointee's tab still arrives with the answer, and someone stood down
  * elsewhere sees the old tabs for one read at most, then never again.
  */
-type State = { isSuperAdmin: boolean; isSteward: boolean; loaded: boolean };
+/** A branch the viewer is an admin of (D79), for the switcher's "You run" (D86). */
+export type RunPlace = { id: string; name: string };
 
-let state: State = { isSuperAdmin: false, isSteward: false, loaded: false };
+type State = {
+  isSuperAdmin: boolean;
+  isSteward: boolean;
+  runs: RunPlace[];
+  loaded: boolean;
+};
+
+let state: State = {
+  isSuperAdmin: false,
+  isSteward: false,
+  runs: [],
+  loaded: false,
+};
 const listeners = new Set<() => void>();
 let inFlight = false;
 
@@ -46,12 +59,17 @@ function writeHint(isSuperAdmin: boolean): void {
     : `${ORGANISER_HINT_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
 }
 
-function publish(isSuperAdmin: boolean, isSteward = false): void {
+function publish(isSuperAdmin: boolean, runs: RunPlace[] = []): void {
   writeHint(isSuperAdmin);
-  const next: State = { isSuperAdmin, isSteward, loaded: true };
+  const next: State = {
+    isSuperAdmin,
+    isSteward: runs.length > 0,
+    runs,
+    loaded: true,
+  };
   if (
     next.isSuperAdmin !== state.isSuperAdmin ||
-    next.isSteward !== state.isSteward ||
+    next.runs.map((r) => r.id).join() !== state.runs.map((r) => r.id).join() ||
     !state.loaded
   ) {
     state = next;
@@ -88,12 +106,16 @@ async function fetchOnce(): Promise<void> {
       "viewer-store.is_steward",
       supabase
         .from("branch_stewards")
-        .select("branch_id")
-        .eq("user_id", me)
-        .limit(1),
+        .select("branch_id, branches(name)")
+        .eq("user_id", me),
     ),
   ]);
-  publish(data?.is_super_admin ?? false, (stewardRows ?? []).length > 0);
+  publish(
+    data?.is_super_admin ?? false,
+    (stewardRows ?? [])
+      .map((r) => ({ id: r.branch_id, name: r.branches?.name ?? "Branch" }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  );
 }
 
 const subscribe = (cb: () => void) => {
@@ -148,4 +170,26 @@ export function useIsSteward(initial = false): boolean {
   return snapshot.loaded
     ? snapshot.isSteward || snapshot.isSuperAdmin
     : initial;
+}
+
+/**
+ * The branches the viewer runs (D86), for the circle switcher's "You run"
+ * section. Empty until loaded and for anyone who runs none. An organiser runs
+ * every branch without a row, so the switcher shows them "All branches" from
+ * `useIsSuperAdmin` instead.
+ */
+export function useBranchesIRun(): RunPlace[] {
+  const snapshot = React.useSyncExternalStore(
+    subscribe,
+    () => state,
+    () => state,
+  );
+  React.useEffect(() => {
+    if (state.loaded || inFlight) return;
+    inFlight = true;
+    void fetchOnce().finally(() => {
+      inFlight = false;
+    });
+  }, []);
+  return snapshot.runs;
 }

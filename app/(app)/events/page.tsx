@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Card, Screen } from "@/components/ui";
+import { buttonVariants, Card, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { EventCard } from "@/components/app/event-card";
 import { SectionHeading } from "@/components/app/section-heading";
-import { CalendarIcon } from "@/components/app/icons";
+import { CalendarIcon, PlusIcon } from "@/components/app/icons";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
 import { toUpcoming } from "@/lib/events";
@@ -23,26 +23,44 @@ export default async function EventsPage() {
   const me = claims?.claims.sub as string | undefined;
   if (!me) redirect("/");
 
-  const [{ data: rows }, { data: profile }, { data: memberships }] =
-    await Promise.all([
-      q(
-        "events.my_upcoming_events",
-        supabase.rpc("my_upcoming_events", { p_limit: 50 }),
-      ),
-      q(
-        "events.profile (timezone)",
-        supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
-      ),
-      q(
-        "events.memberships (branch)",
-        supabase
-          .from("memberships")
-          .select("role, groups(id, name, branch_id)")
-          .eq("user_id", me),
-      ),
-    ]);
+  const [
+    { data: rows },
+    { data: profile },
+    { data: memberships },
+    { data: running },
+  ] = await Promise.all([
+    q(
+      "events.my_upcoming_events",
+      supabase.rpc("my_upcoming_events", { p_limit: 50 }),
+    ),
+    q(
+      "events.profile (timezone)",
+      supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
+    ),
+    q(
+      "events.memberships (branch)",
+      supabase
+        .from("memberships")
+        .select("role, groups(id, name, branch_id)")
+        .eq("user_id", me),
+    ),
+    // Where this person can POST (D86): the branches they run, or all of
+    // them for an organiser. Asked here because Events is where someone
+    // thinks "we should put a camp on", so that is where the door is.
+    q("events.places I run", supabase.rpc("my_steward_tree")),
+  ]);
 
   const events = (rows ?? []).map(toUpcoming);
+  const tops = (running ?? []).filter((b) => b.depth === 0);
+  const postTo =
+    tops.length === 1
+      ? {
+          href: `/admin/branches/${tops[0].id}`,
+          label: `Post to ${tops[0].name}`,
+        }
+      : tops.length > 1
+        ? { href: "/admin/branches", label: "Post an event" }
+        : null;
   const camps = events.filter((e) => e.kind === "camp");
   const halaqahs = events.filter((e) => e.kind !== "camp");
   const zone = profile?.timezone ?? "UTC";
@@ -60,6 +78,17 @@ export default async function EventsPage() {
       <PageHeader
         title="Events"
         subtitle="Camps and halaqahs for the branches your circles are in."
+        action={
+          postTo ? (
+            <Link
+              href={postTo.href}
+              className={buttonVariants({ variant: "tonal", size: "sm" })}
+            >
+              <PlusIcon aria-hidden className="size-4" />
+              {postTo.label}
+            </Link>
+          ) : undefined
+        }
       />
 
       {events.length > 0 ? (

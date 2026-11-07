@@ -49,7 +49,7 @@ export function RoleToggle({
               : "text-muted-foreground hover:text-foreground disabled:text-disabled-foreground")
           }
         >
-          {r === "member" ? "Member" : "Co-admin"}
+          {r === "member" ? "Member" : "Admin"}
         </button>
       ))}
     </div>

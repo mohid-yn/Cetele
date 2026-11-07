@@ -129,23 +129,22 @@ export const ADMIN_ZONE_EXIT: FlatItem = {
 };
 
 /**
- * NAV_ITEMS with the conditional fifth tab spliced in before Profile.
+ * NAV_ITEMS with the conditional Roadmap tab spliced in before Profile.
  *
- * NEVER BOTH, or an organiser who owns a circle following a programme gets a
- * six-tab bar. The circle's Roadmap wins, because it is where their own progress
- * is recorded. Admin stays reachable from Profile and from the circle picker.
+ * NO ADMIN TAB HERE ANY MORE (D86). It used to take this slot for an organiser
+ * and give it up whenever a circle of theirs followed a roadmap, so the way in
+ * came and went for reasons unrelated to administration, and a branch admin
+ * never had one at all. The way in is now the circle switcher's "You run"
+ * section, the same control for every place someone belongs to, plus the
+ * Profile row. `isOrganiser` is kept for callers and ignored.
  */
 export function navItemsWithRoadmap(
   hasRoadmap: boolean,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for callers, see above
   isOrganiser = false,
 ): readonly (ScopedItem | FlatItem)[] {
-  const extra = hasRoadmap
-    ? ROADMAP_NAV_ITEM
-    : isOrganiser
-      ? ADMIN_NAV_ITEM
-      : null;
-  if (!extra) return NAV_ITEMS;
-  return [...NAV_ITEMS.slice(0, -1), extra, NAV_ITEMS.at(-1)!];
+  if (!hasRoadmap) return NAV_ITEMS;
+  return [...NAV_ITEMS.slice(0, -1), ROADMAP_NAV_ITEM, NAV_ITEMS.at(-1)!];
 }
 
 /**

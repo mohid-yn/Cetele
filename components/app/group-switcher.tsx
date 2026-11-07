@@ -25,7 +25,14 @@ import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 import { Avatar } from "@/components/ui";
 import { DURATION, EASE_BRAND } from "@/lib/motion";
-import { ChevronDownIcon, CheckIcon, GridIcon } from "@/components/app/icons";
+import {
+  BranchesIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CheckIcon,
+  GridIcon,
+} from "@/components/app/icons";
+import { useBranchesIRun, useIsSuperAdmin } from "@/lib/viewer-store";
 import { groupHref, groupSubPath } from "@/lib/group-href";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { refreshGroups, useGroupsSnapshot } from "@/lib/groups-store";
@@ -116,10 +123,21 @@ export function GroupSwitcher({
     initialName ??
     "Select group";
 
-  const hidden = onlyWhenMultiple && (!loaded || groups.length <= 1);
+  // The places this person RUNS (D86): the branches they are an admin of, or
+  // every branch for an organiser. Listed under their circles, so the control
+  // that moves between circles is also the way into running a place: one
+  // switcher for every space they belong to (Discord's server list, Slack's
+  // workspace menu), not a tab that comes and goes or a row hidden in Profile.
+  const runs = useBranchesIRun();
+  const isOrganiser = useIsSuperAdmin();
+  const runsAnything = isOrganiser || runs.length > 0;
+
+  // One circle and nothing to run: nothing to switch between.
+  const hidden =
+    onlyWhenMultiple && (!loaded || (groups.length <= 1 && !runsAnything));
 
   const roleLabel = (r: Role) =>
-    r === "owner" ? "Owner" : r === "admin" ? "Co-admin" : "Member";
+    r === "owner" ? "Owner" : r === "admin" ? "Admin" : "Member";
 
   const menu = open && coords && typeof document !== "undefined" && (
     <motion.div
@@ -138,6 +156,7 @@ export function GroupSwitcher({
       }}
       className="z-[var(--z-modal)] w-72 max-w-[calc(100vw-2.5rem)] rounded-xl border border-border bg-elevated p-1.5 shadow-lg"
     >
+      {runsAnything && <MenuHeading>Your circles</MenuHeading>}
       {groups.map((g) => {
         const activeOne = g.id === activeId;
         return (
@@ -195,6 +214,28 @@ export function GroupSwitcher({
         </p>
       )}
 
+      {runsAnything && (
+        <div className="mt-1.5 border-t border-border pt-1.5">
+          <MenuHeading>You run</MenuHeading>
+          {isOrganiser ? (
+            <PlaceLink
+              href="/admin/branches"
+              name="All branches"
+              onPick={() => setOpen(false)}
+            />
+          ) : (
+            runs.map((b) => (
+              <PlaceLink
+                key={b.id}
+                href={`/admin/branches/${b.id}`}
+                name={b.name}
+                onPick={() => setOpen(false)}
+              />
+            ))
+          )}
+        </div>
+      )}
+
       {/* Drive-style "My Drive" entry — manage / create groups */}
       <div className="mt-1.5 border-t border-border pt-1.5">
         <Link
@@ -243,5 +284,43 @@ export function GroupSwitcher({
       </button>
       {menu && createPortal(menu, document.body)}
     </>
+  );
+}
+
+function MenuHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="px-2.5 pt-1 pb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      {children}
+    </p>
+  );
+}
+
+/** A place this person runs: opens it in the administration workspace. */
+function PlaceLink({
+  href,
+  name,
+  onPick,
+}: {
+  href: string;
+  name: string;
+  onPick: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onPick}
+      className="flex min-h-12 w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-foreground transition-colors hover:bg-surface-hover active:bg-surface-active"
+    >
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-100 text-primary-800">
+        <BranchesIcon aria-hidden className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+        {name}
+      </span>
+      <ChevronRightIcon
+        aria-hidden
+        className="size-4 shrink-0 text-muted-foreground"
+      />
+    </Link>
   );
 }
