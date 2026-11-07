@@ -34,7 +34,7 @@ changes, update STATUS.md **and** Linear — never track status elsewhere.
 ## UI / design system
 
 Themed in **Youth Nexus blue `#0163ad` + orange `#f09a3e` on white** (light-first; dark = deep navy).
-This is **v4** (pending owner review on `feat/youth-nexus-rebrand`): every v3 value re-hued at its exact CIE L\*,
+This is **v4** (approved by the owner 2026-11-07, D78): every v3 value re-hued at its exact CIE L\*,
 so the recorded contrast ratios still hold. Blue = brand + structure, deepening to YN navy; orange = earned
 action + celebration only, always with a navy label; green = completion (success). Build UI from the existing system — don't hard-code
 colors/spacing or fork primitives.

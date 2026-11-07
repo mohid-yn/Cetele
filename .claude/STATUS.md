@@ -7,7 +7,7 @@
 > rewrite) · [`STATUS-2026-07-16-full.md`](history/STATUS-2026-07-16-full.md) (D1–D48 in full, including superseded ones).
 > Section numbers are stable, because code comments and docs cite them.
 
-_Last updated: 2026-11-07 · Phase: **live in production. The MCP server is live for organisers.**_
+_Last updated: 2026-11-07 · Phase: **live in production. A large release (rebrand, garden, branches and events, D77–D87) is built and waiting on the production migrations.**_
 
 ---
 
@@ -21,17 +21,17 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 ### Current state (checked 2026-11-06)
 
-| Item         | State                                                                                                               |
-| ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `62078f7` (Manage tabs promoted 2026-11-06)   |
-| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main` apart from this docs commit                  |
-| Migrations   | **40 on prod.** `feat/branches-events` adds 0042 + 0043 (local only, never pushed). D77's 0041 is on its own branch |
-| Git          | D77 approved, blocked on `supabase login`. `feat/branches-events` sits on rebrand + garden (`feat/garden-dopamine`) |
-| CI           | Green on both `main` and `staging`                                                                                  |
-| Tests        | On `feat/unified-admin`: unit 228 · pgTAP 1024 across 28 suites · e2e 91 across 22 specs, all green locally         |
-| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                 |
-| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                      |
-| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                               |
+| Item         | State                                                                                                                 |
+| ------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `62078f7` (Manage tabs promoted 2026-11-06)     |
+| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main` apart from this docs commit                    |
+| Migrations   | **40 on prod.** The release line adds **0041–0047** (never pushed). They must reach prod BEFORE any merge             |
+| Git          | One release line: **`feat/unified-admin`** = rebrand + garden + D77 + branches/events (D78–D87). Blocked on CLI login |
+| CI           | Green on both `main` and `staging`                                                                                    |
+| Tests        | On `feat/unified-admin`: unit 228 · pgTAP 1034 across 29 suites · e2e 91 across 22 specs, all green locally           |
+| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                   |
+| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                        |
+| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                                 |
 
 Everything through D76 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
 
@@ -75,24 +75,25 @@ sent the whole page and the browser rendered nothing.
 
 Which upstream change fixed it was not traced. The bug predates D71/D72 (August's `0532e25` blanks 1 of 240).
 
-### Branches and events (built 2026-11-07, on `feat/branches-events`, not merged)
+### The waiting release (built 2026-11-07, `feat/unified-admin`)
 
-Camps and weekly halaqahs, scoped by place (D79, D80). After the owner's first local review ("if I'm having trouble navigating, so will others"), reach and creation were made visible (D81–D84). Owner gave the agent full ownership of the branch; nothing is on staging or prod.
+Owner asked on 2026-11-07 to ship everything to `main` and clear the redundant branches. Blocked only on the production migrations: omenserver's Supabase CLI is not logged in.
 
-| Layer        | What exists                                                                                                                                     |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| DB           | 0042 branches · 0043 events · 0044 roadmaps on a branch · 0045 camp details · 0046 `branch_reach` · 0047 move/archive (on `feat/unified-admin`) |
-| Member       | **Events tab** (camps first), `/events/[id]` with cost, what to bring, schedule, contact. Today "Up next". Progress is in Group                 |
-| Steward      | Admin lands on **Branches** as folders (D85). A branch page: create tiles, Happening here, branches inside, circles; settings behind the gear   |
-| Organiser    | Roadmaps are added from a branch's page; the editor's **Who follows** summarises branches and keeps single circles                              |
-| Circle admin | Manage › Settings: one **Branch** row (ask, withdraw, leave open from it). A branch-set roadmap shows ticked and locked                         |
+| Part                      | Decisions | What members and admins get                                                                                          |
+| ------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------- |
+| Youth Nexus rebrand       | D78       | Blue + navy + orange tokens v4, Chivo display face. Name stays Cetele (shipping it is the owner's approval)          |
+| Garden reward loop        | (garden)  | The group garden rebuilt as a reward loop (`29ac93c`)                                                                |
+| Drafts can't be followed  | D77       | 0041. Carried into 0044, which replaces its policy and function                                                      |
+| Branches, camps, halaqahs | D79–D80   | 0042, 0043. RSVPs, polls, anonymous questions, Today's "Up next"                                                     |
+| Making it findable        | D81–D84   | 0044 roadmaps on a branch, 0045 camp details, 0046 `branch_reach`. Events tab; Progress inside Group                 |
+| Folders, one Admin word   | D85–D87   | Branches as folders, no pickers; the switcher's "You run"; move/archive branches, move circles, delete events (0047) |
 
-To ship: owner review on a preview, then `supabase db push` (0042–0046) **before** merging, because staging reads prod's DB. 0041 (D77) must go first or with it. Not done: push notifications for events, Linear issues. Local review data: `review-demo.sql` was a scratch file, not committed.
+**To ship (agent, once logged in):** `supabase link` → `supabase db push` (0041–0047, owner's approval: "push everything") → merge `feat/unified-admin` into `staging` → push → CI green → `ALLOW_MAIN_PUSH=1 git push origin main` → delete the merged branches (`feat/unified-admin`, `feat/branches-events`, `feat/garden-dopamine`, `feat/youth-nexus-rebrand`, `fix/drafts-cannot-be-followed-v2`, local and remote). Not in it: push notifications for events, archiving a circle (needs the streak decision, D36/D48), Linear issues.
 
 ### Next steps, in order
 
-- **D77 is approved; ship it once the CLI is logged in.** omenserver's Supabase CLI was never linked. The owner runs `! supabase login`, then: `supabase link --project-ref <prod ref>`, `supabase db push` (0041), merge `fix/drafts-cannot-be-followed-v2` to `staging`, soak, promote. The merge onto current staging is clean and every gate passed on it (2026-11-06). Do not merge the code before the push: staging reads prod's database.
-- **Owner: review the Youth Nexus rebrand** on the `feat/youth-nexus-rebrand` Vercel preview (D78, proposed). Confirm the name stays **Cetele**, and send the official YN logo if the app should carry it. Then merge to `staging`.
+- **Owner: run `! supabase login`.** Then the agent ships the waiting release above, in that order. Do not merge any code before `supabase db push`: staging and prod read the same database.
+- **Owner: after the release, check on a phone:** Events tab, a branch page, the switcher's "You run", and that Today still opens and counts at once.
 
 0. **Owner: check `2224fd2` on the phone.** Open Roadmap, tap +1 on an item a few times, reload at once. The count should hold. **Take part will not appear on the owner's organiser account**: it follows the only published roadmap through **meeting** and **Keysy Dersh**. Seeing it takes another organiser outside those circles, or a second published roadmap. CI covers the full flow.
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Google sign-in on a desktop browser is confirmed on this release (2026-11-06). Nobody has used a phone on it, and staging was not clicked through.
@@ -325,8 +326,8 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D75** The roadmap screen is the member's own, at `/roadmap`, and lists what any of their circles follows. The tab shows whichever circle is selected, and opening it leaves that selection alone. `/g/[id]/roadmap` only forwards or explains. For an organiser this tab takes the fifth slot from Admin.
 - **D76** An organiser can take part in a published roadmap with no circle (`roadmap_participants`, `take_part_in_roadmap`, 0040). It counts in the cohort report, only organisers see that row, and it lasts only while they hold the role. Recorded progress stays. Offered only when they have no other way to log.
 - **D77** A circle can only follow a PUBLISHED roadmap (0041). Both writers refuse a draft: the `group_roadmaps` insert policy (circle admins) and `set_circle_on_roadmap` (organisers). Existing rows and unpublishing are untouched.
-- **D79 (built, awaiting owner)** A circle sits in at most one **branch** (a nested place). Its reach is that branch and every ancestor. Joining is a request a steward approves. **Stewards** run a branch and its subtree; organisers run all. Stewards see circle names and sizes only (D27 holds).
-- **D80 (built, awaiting owner)** Events belong to a branch and reach every circle under it, with no circle opt-in (an invitation, not an obligation, unlike roadmaps). No circle or no branch: no events. RSVP counts to everyone in reach, names to stewards only (owner, 2026-11-07). Questions are anonymous to every reader, the asker stored only for limits and self-delete. Today gets one actionable line below the rings, fetched after paint: logging speed comes first (owner, 2026-11-07).
+- **D79 (owner, 2026-11-07)** A circle sits in at most one **branch** (a nested place). Its reach is that branch and every ancestor. Joining is a request a steward approves. **Stewards** run a branch and its subtree; organisers run all. Stewards see circle names and sizes only (D27 holds).
+- **D80 (owner, 2026-11-07)** Events belong to a branch and reach every circle under it, with no circle opt-in (an invitation, not an obligation, unlike roadmaps). No circle or no branch: no events. RSVP counts to everyone in reach, names to stewards only (owner, 2026-11-07). Questions are anonymous to every reader, the asker stored only for limits and self-delete. Today gets one actionable line below the rings, fetched after paint: logging speed comes first (owner, 2026-11-07).
 - **D81 (owner, 2026-11-07)** A roadmap can be assigned to a **branch** as well as to single circles. Materialised into `group_roadmaps` with `via_branch`, synced by trigger when a circle's branch changes; a direct follow survives the branch's removal. A circle admin cannot drop a branch-set row. Organisers only.
 - **D82 (owner, 2026-11-07)** The branch tree is the admin hub. The workspace lands on Branches (not Roadmaps); each branch shows every roadmap, weekly halaqah and upcoming camp reaching it, marked set here or from above, with "Camp here", "Weekly halaqah here", "Assign a roadmap".
 - **D83 (owner, 2026-11-07)** Events is a tab: Today · Group · Events · Roadmap/Admin · Profile. Progress moves into Group as its fourth segment (own route kept, Group lit). `/events` leads with camps.
@@ -334,7 +335,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D85 (owner, 2026-11-07)** Branches work like folders: no breadcrumbs, no tree diagrams ("ruins the look"). Admin home lists top branches only; a branch page holds everything happening there and two create tiles ("reaches N circles"), so no form has a branch picker. Admin bar: Branches · Roadmaps · Organisers (Events tab gone); a steward of one branch lands inside it. Roadmaps are added from the branch (option A); the editor summarises. Manage shows one Branch row. Members never see the tree. Mockup: claude.ai/artifact/89HAMVVGXvgTpg5wRTp7Qx.
 - **D86 (owner, 2026-11-07, on `feat/unified-admin`)** One role word, **Admin**, for circles and branches (a circle's owner keeps "Owner"). The way into running a place is the circle switcher's "You run" section (and the same on `/groups`), not a tab: the member bar's come-and-go Admin tab is gone (an organiser in no circle keeps theirs). Events shows "Post to <branch>". Permissions unchanged: what's posted cascades down; a circle's members and dhikr stay with its own admins (D27, like Drive's My Drive vs shared drive). Built on its own branch so the owner can fall back to `feat/branches-events`.
 - **D87 (owner, 2026-11-07, on `feat/unified-admin`)** Branches behave like Drive folders: **move** a branch (needs the right to run both ends; never inside itself), branch admins **move circles** between branches they run, **archive/restore** a branch (its subtree stops reaching circles and leaves pickers; nothing deleted). Camps can be **deleted** in any state and cancelled/restored from their admin page; a weekly halaqah can be deleted whole; a single week is cancelled, not deleted. Migration 0047, pgTAP 028. Archiving a **circle** is deferred until streak rules for it are decided (D36/D48).
-- **D78 (proposed, awaiting owner)** Rebrand to the Youth Nexus palette: blue + navy + orange on white, design tokens v4, Chivo display face. Every v3 value is re-hued at its exact L\*, so contrast holds. The product name stays Cetele until the owner says otherwise. See `docs/DESIGN_SYSTEM.md` on the branch.
+- **D78 (owner, 2026-11-07: shipped with the release)** Rebrand to the Youth Nexus palette: blue + navy + orange on white, design tokens v4, Chivo display face. Every v3 value is re-hued at its exact L\*, so contrast holds. The product name stays Cetele until the owner says otherwise. See `docs/DESIGN_SYSTEM.md` on the branch.
 - **D65** Planned: compute moves to Cloudflare (`@opennextjs/cloudflare`). Supabase and auth stay. Only `lib/push/send.ts` and `api/push/dispatch` are not portable. Not started.
 
 ---
