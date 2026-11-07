@@ -355,6 +355,13 @@ export const ArrowLeftIcon = (p: IconProps) => (
   </svg>
 );
 
+/** Sign out: an open doorframe with the way out leading right. */
+export const SignOutIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+  </svg>
+);
+
 export const GoogleIcon = (p: IconProps) => (
   // Brand glyph drawn with currentColor (mono) to respect the token contract.
   <svg {...base({ strokeWidth: 1.8, ...p })}>

@@ -25,17 +25,24 @@ const OPTIONS: { value: Theme; label: string; Icon: typeof SunIcon }[] = [
  * changing name alone, never both — the same double-negative that had a screen
  * reader announcing "Sound off, not pressed" on the count screen.
  */
-export function ThemeToggleButton({ className }: { className?: string }) {
+export function ThemeToggleButton({
+  className,
+  variant = "outline",
+}: {
+  className?: string;
+  /** `ghost` when it sits in a row of sibling actions (the sidebar's account row). */
+  variant?: "outline" | "ghost";
+}) {
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
   const next = isDark ? "light" : "dark";
 
   return (
     <Button
-      // `outline`, not `ghost`: it stands alone in the sidebar foot with no
-      // neighbouring control to borrow context from, and a ghost icon with no
-      // resting edge there is exactly the "baked into the background" read.
-      variant="outline"
+      // `outline` by default: alone, a ghost icon with no resting edge reads
+      // as "baked into the background". The sidebar's account row passes
+      // `ghost`, because there it sits among sibling actions that give it context.
+      variant={variant}
       size="icon-sm"
       onClick={() => setTheme(next)}
       aria-label={`Switch to ${next} theme`}

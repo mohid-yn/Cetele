@@ -37,10 +37,14 @@ import { ORGANISER_HINT_COOKIE } from "@/lib/admin-zone";
 /** A branch the viewer is an admin of (D79), for the switcher's "You run" (D86). */
 export type RunPlace = { id: string; name: string };
 
+/** Who is signed in, for the sidebar's account row. */
+export type ViewerIdentity = { name: string; avatarUrl: string | null };
+
 type State = {
   isSuperAdmin: boolean;
   isSteward: boolean;
   runs: RunPlace[];
+  identity: ViewerIdentity | null;
   loaded: boolean;
 };
 
@@ -48,6 +52,7 @@ let state: State = {
   isSuperAdmin: false,
   isSteward: false,
   runs: [],
+  identity: null,
   loaded: false,
 };
 const listeners = new Set<() => void>();
@@ -59,17 +64,24 @@ function writeHint(isSuperAdmin: boolean): void {
     : `${ORGANISER_HINT_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
 }
 
-function publish(isSuperAdmin: boolean, runs: RunPlace[] = []): void {
+function publish(
+  isSuperAdmin: boolean,
+  runs: RunPlace[] = [],
+  identity: ViewerIdentity | null = null,
+): void {
   writeHint(isSuperAdmin);
   const next: State = {
     isSuperAdmin,
     isSteward: runs.length > 0,
     runs,
+    identity,
     loaded: true,
   };
   if (
     next.isSuperAdmin !== state.isSuperAdmin ||
     next.runs.map((r) => r.id).join() !== state.runs.map((r) => r.id).join() ||
+    next.identity?.name !== state.identity?.name ||
+    next.identity?.avatarUrl !== state.identity?.avatarUrl ||
     !state.loaded
   ) {
     state = next;
@@ -98,7 +110,7 @@ async function fetchOnce(): Promise<void> {
       "viewer-store.is_super_admin",
       supabase
         .from("profiles")
-        .select("is_super_admin")
+        .select("is_super_admin, name, avatar_url")
         .eq("id", me)
         .maybeSingle(),
     ),
@@ -117,7 +129,18 @@ async function fetchOnce(): Promise<void> {
       .filter((r) => !r.branches?.archived_at)
       .map((r) => ({ id: r.branch_id, name: r.branches?.name ?? "Branch" }))
       .sort((a, b) => a.name.localeCompare(b.name)),
+    data ? { name: data.name ?? "", avatarUrl: data.avatar_url ?? null } : null,
   );
+}
+
+/**
+ * A rename on /profile updates the sidebar at once, rather than on the next
+ * document load: the snapshot is otherwise read once per page load.
+ */
+export function setViewerName(name: string): void {
+  if (!state.identity || state.identity.name === name) return;
+  state = { ...state, identity: { ...state.identity, name } };
+  listeners.forEach((l) => l());
 }
 
 const subscribe = (cb: () => void) => {
@@ -194,4 +217,25 @@ export function useBranchesIRun(): RunPlace[] {
     });
   }, []);
   return snapshot.runs;
+}
+
+/**
+ * The signed-in person's name and avatar, for the desktop sidebar's account
+ * row. Null until the shared read returns (and when signed out). Rides the
+ * same single `profiles` read as the organiser flag, so it costs no query.
+ */
+export function useViewerIdentity(): ViewerIdentity | null {
+  const snapshot = React.useSyncExternalStore(
+    subscribe,
+    () => state,
+    () => state,
+  );
+  React.useEffect(() => {
+    if (state.loaded || inFlight) return;
+    inFlight = true;
+    void fetchOnce().finally(() => {
+      inFlight = false;
+    });
+  }, []);
+  return snapshot.identity;
 }

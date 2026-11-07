@@ -18,10 +18,16 @@ import { navItemVariants } from "./nav-item-variants";
 import { GroupSwitcher } from "@/components/app/group-switcher";
 import { ThemeToggleButton } from "@/components/theme/theme-toggle";
 import { WebAppLogo } from "@/components/ui/logo";
+import { Avatar, Button } from "@/components/ui";
+import { SignOutIcon } from "./icons";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
 import { useHasRoadmap } from "@/lib/groups-store";
-import { useIsSteward, useIsSuperAdmin } from "@/lib/viewer-store";
+import {
+  useIsSteward,
+  useIsSuperAdmin,
+  useViewerIdentity,
+} from "@/lib/viewer-store";
 import { groupHref } from "@/lib/group-href";
 import { isAdminZone } from "@/lib/admin-zone";
 
@@ -49,11 +55,18 @@ export function Sidebar({
   const runsBranch = useIsSteward();
   // …and the same collapse on the picker itself, where no circle is selected.
   const inAdmin = isAdminZone(pathname, isOrganiser);
-  const items = inAdmin
-    ? [...adminZoneItems(isOrganiser), ADMIN_ZONE_EXIT]
-    : hasGroups && !isGroupPicker(pathname)
-      ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
-      : noGroupNavItems(isOrganiser, hasRoadmap, hasGroups, runsBranch);
+  const identity = useViewerIdentity();
+  const items = (
+    inAdmin
+      ? [...adminZoneItems(isOrganiser), ADMIN_ZONE_EXIT]
+      : hasGroups && !isGroupPicker(pathname)
+        ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
+        : noGroupNavItems(isOrganiser, hasRoadmap, hasGroups, runsBranch)
+  )
+    // Profile is the account row at the foot here, not a tab: the same
+    // destination as the bottom bar's, housed where a desktop puts "you".
+    .filter((i) => !("href" in i) || i.href !== "/profile");
+  const onProfile = pathname === "/profile";
 
   return (
     // `bg-chrome` — same reason as the bottom nav: the sidebar is the frame.
@@ -116,13 +129,42 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* Theme at the foot — a single icon button, not the labelled two-option
-          pill this used to carry. Theme is a preference, and a 224px control
-          spelling out both options is more furniture than a preference earns in
-          the navigation frame. The full labelled control still lives on
-          /profile, where every other preference is. */}
-      <div className="mt-auto flex justify-start pt-4">
-        <ThemeToggleButton />
+      {/* The account row: who is signed in (it IS the Profile link), with the
+          two account-level actions beside it. The theme icon used to stand
+          alone down here, an orphan control with nothing to belong to, and
+          signing out took a trip to the bottom of /profile. */}
+      <div className="mt-auto flex items-center gap-1 border-t border-border pt-3">
+        <Link
+          href="/profile"
+          aria-current={onProfile ? "page" : undefined}
+          className={cn(
+            navItemVariants({ layout: "row", active: onProfile }),
+            "min-w-0 flex-1 px-2 py-2",
+          )}
+        >
+          {onProfile && (
+            <motion.span
+              aria-hidden
+              layoutId="sidebar-nav-active"
+              transition={springGlide}
+              className="absolute inset-0 -z-10 rounded-lg bg-primary-container"
+            />
+          )}
+          <Avatar
+            aria-hidden
+            size="sm"
+            name={identity?.name || "Profile"}
+            src={identity?.avatarUrl ?? undefined}
+          />
+          <span className="truncate">{identity?.name || "Profile"}</span>
+        </Link>
+        <ThemeToggleButton variant="ghost" />
+        <form action="/auth/signout" method="post">
+          <Button type="submit" variant="ghost" size="icon-sm" title="Sign out">
+            <SignOutIcon aria-hidden />
+            <span className="sr-only">Sign out</span>
+          </Button>
+        </form>
       </div>
     </aside>
   );

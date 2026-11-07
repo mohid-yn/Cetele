@@ -28,6 +28,7 @@ import {
 import { useAction } from "@/lib/use-action";
 import { usePropState } from "@/lib/use-prop-state";
 import { MAX_NAME_LENGTH } from "@/lib/profile";
+import { setViewerName } from "@/lib/viewer-store";
 import {
   pushEnvironment,
   type PushEnvironment,
@@ -182,72 +183,87 @@ export function ProfileClient({
   const remindersReachable = devices > 0 || canReceiveHere;
 
   return (
-    <Screen>
-      {/* Identity */}
-      <header className="flex items-center gap-4 pt-2">
-        <Avatar name={name} size="lg" />
-        <div className="min-w-0 flex-1">
-          <NameEditor name={name} onSaved={setName} />
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            You&apos;re someone who does dhikr daily.
-          </p>
-        </div>
-      </header>
+    // Desktop: two columns — who you are and where you can go on the left,
+    // reminders on the right — instead of one 1100px-wide strip of rows.
+    // Theme and Sign out live in the sidebar's account row there, so their
+    // rows here are the phone's only (the bottom bar has no room for them).
+    <Screen className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
+      <div className="flex flex-col gap-6">
+        {/* Identity */}
+        <header className="flex items-center gap-4 pt-2">
+          <Avatar name={name} size="lg" />
+          <div className="min-w-0 flex-1">
+            <NameEditor
+              name={name}
+              onSaved={(next) => {
+                setName(next);
+                setViewerName(next);
+              }}
+            />
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              You&apos;re someone who does dhikr daily.
+            </p>
+          </div>
+        </header>
 
-      {/* Where you can go from here. Role and circle used to be coloured pills
+        {/* Where you can go from here. Role and circle used to be coloured pills
           that looked pressable and did nothing, so they are now the row that
           does something with them. */}
-      <div
-        className={cn(cardVariants(), "divide-y divide-border overflow-hidden")}
-      >
-        <ProfileRow
-          href="/progress"
-          Icon={FlameIcon}
-          title={`${streak}-day streak`}
-          detail="Badges and consistency"
-        />
-        <ProfileRow
-          href="/groups"
-          Icon={GridIcon}
-          title="Your circles"
-          detail={
-            groupName
-              ? role === "owner"
-                ? `Owner of ${groupName}`
-                : role === "admin"
-                  ? `Co-admin of ${groupName}`
-                  : groupName
-              : "Join or create a circle"
-          }
-        />
-        {/* The one door that is always there. When an organiser's circle follows
+        <div
+          className={cn(
+            cardVariants(),
+            "divide-y divide-border overflow-hidden",
+          )}
+        >
+          <ProfileRow
+            href="/progress"
+            Icon={FlameIcon}
+            title={`${streak}-day streak`}
+            detail="Badges and consistency"
+          />
+          <ProfileRow
+            href="/groups"
+            Icon={GridIcon}
+            title="Your circles"
+            detail={
+              groupName
+                ? role === "owner"
+                  ? `Owner of ${groupName}`
+                  : role === "admin"
+                    ? `Co-admin of ${groupName}`
+                    : groupName
+                : "Join or create a circle"
+            }
+          />
+          {/* The one door that is always there. When an organiser's circle follows
             a roadmap, its Roadmap tab takes the bar's fifth slot from Admin. */}
-        {/* Camps and halaqahs from the branches your circles are in (D80). */}
-        {inAnyCircle && (
-          <ProfileRow
-            href="/events"
-            Icon={CalendarIcon}
-            title="Events"
-            detail="Camps and halaqahs near you"
-          />
-        )}
-        {isOrganiser ? (
-          <ProfileRow
-            href="/admin/branches"
-            Icon={ShieldIcon}
-            title="Administration"
-            detail="Branches, events, roadmaps and organisers"
-          />
-        ) : (
-          isSteward && (
+          {/* Camps and halaqahs from the branches your circles are in (D80). */}
+          {inAnyCircle && (
+            <ProfileRow
+              href="/events"
+              Icon={CalendarIcon}
+              title="Events"
+              detail="Camps and halaqahs near you"
+            />
+          )}
+          {isOrganiser ? (
             <ProfileRow
               href="/admin/branches"
               Icon={ShieldIcon}
               title="Administration"
-              detail="Branches and events you run"
+              detail="Branches, events, roadmaps and organisers"
             />
-          )
-        )}
+          ) : (
+            isSteward && (
+              <ProfileRow
+                href="/admin/branches"
+                Icon={ShieldIcon}
+                title="Administration"
+                detail="Branches and events you run"
+              />
+            )
+          )}
+        </div>
       </div>
 
       {/* Reminders (D30) + push delivery (D10) */}
@@ -383,7 +399,7 @@ export function ProfileClient({
       </section>
 
       {/* Appearance */}
-      <section>
+      <section className="lg:hidden">
         <h2 className="mb-1 text-sm font-semibold text-foreground">
           Appearance
         </h2>
@@ -393,7 +409,7 @@ export function ProfileClient({
         </Card>
       </section>
 
-      <form action="/auth/signout" method="post">
+      <form action="/auth/signout" method="post" className="lg:hidden">
         <Button type="submit" variant="outline" className="w-full">
           Sign out
         </Button>

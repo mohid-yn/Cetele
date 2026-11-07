@@ -567,26 +567,39 @@ export function TodayClient({
         )}
       </div>
 
-      {/* Primary action — one accent CTA, the nearest-to-done ring */}
-      {next && (
-        <Link
-          href={ringHref(next.task.id)}
-          className={buttonVariants({ variant: "accent", className: "w-full" })}
-        >
-          Continue {next.task.label} ·{" "}
-          {/* The ring this points at is measured against MY goal, so the CTA
+      {/* Desktop: your own work in the wide column, your circle beside it,
+          rather than every block stretched across the full page. On a phone
+          this is the same single stack as before. */}
+      <div
+        className={cn(
+          "flex flex-col gap-6",
+          circle.length > 1 && "lg:grid lg:grid-cols-3 lg:items-start lg:gap-8",
+        )}
+      >
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          {/* Primary action — one accent CTA, the nearest-to-done ring */}
+          {next && (
+            <Link
+              href={ringHref(next.task.id)}
+              className={buttonVariants({
+                variant: "accent",
+                className: "w-full",
+              })}
+            >
+              Continue {next.task.label} ·{" "}
+              {/* The ring this points at is measured against MY goal, so the CTA
               must be too — otherwise the one unfinished ring is advertised as
               "100/100", which reads as already done and makes the accent action
               look like a mistake. */}
-          <span className="tabular-nums">
-            {next.count}/{next.goal}
-          </span>
-        </Link>
-      )}
+              <span className="tabular-nums">
+                {next.count}/{next.goal}
+              </span>
+            </Link>
+          )}
 
-      {/* Rings */}
-      <section>
-        {/* The goals entry point lives HERE, on the heading of the rings it
+          {/* Rings */}
+          <section>
+            {/* The goals entry point lives HERE, on the heading of the rings it
             governs, rather than in the count screen's correction tray where it
             shipped first: raising your bar is an aspiration, not a fix, and a
             muted control two screens deep was one the owner could not find
@@ -594,95 +607,95 @@ export function TodayClient({
             accent CTA above is the one primary action per view — but a real bordered
             button, because "findable" is the whole point of moving it.
             Hidden with no tasks: there is nothing to aim at yet. */}
-        <SectionHeading
-          action={
-            // `undefined`, not `&&`: SectionHeading renders its slot whenever
-            // `action != null`, and `false` passes that test — a no-task circle
-            // would get an empty action div.
-            tasks.length > 0 ? (
-              <Button
-                variant="tonal"
-                size="sm"
-                leadingIcon={<TargetIcon />}
-                onClick={() => setGoalsOpen(true)}
-              >
-                My goals
-              </Button>
-            ) : undefined
-          }
-        >
-          {isToday ? "Your rings today" : "Your rings"}
-        </SectionHeading>
-        {/* ONE list on a phone, not a stack of slabs: rings are rows of the same
+            <SectionHeading
+              action={
+                // `undefined`, not `&&`: SectionHeading renders its slot whenever
+                // `action != null`, and `false` passes that test — a no-task circle
+                // would get an empty action div.
+                tasks.length > 0 ? (
+                  <Button
+                    variant="tonal"
+                    size="sm"
+                    leadingIcon={<TargetIcon />}
+                    onClick={() => setGoalsOpen(true)}
+                  >
+                    My goals
+                  </Button>
+                ) : undefined
+              }
+            >
+              {isToday ? "Your rings today" : "Your rings"}
+            </SectionHeading>
+            {/* ONE list on a phone, not a stack of slabs: rings are rows of the same
             thing, and a hairline between them says so with far less ink. The
             cards come back at lg, where they sit side by side. */}
-        <Grid
-          as="ul"
-          cols="cards"
-          gap="md"
-          className={cn(
-            rings.length > 0 &&
-              "max-lg:gap-0 max-lg:divide-y max-lg:divide-border max-lg:overflow-hidden max-lg:rounded-xl max-lg:border max-lg:border-border max-lg:bg-card",
-          )}
-        >
-          {rings.map(
-            ({
-              task: t,
-              count,
-              goal,
-              share,
-              due,
-              daysAway,
-              done,
-              shareDone,
-              stretched,
-            }) => {
-              // NO card is singled out. One used to carry a primary glow — the
-              // ring nearest done — on a goal-gradient argument. Removed on the
-              // owner's call, and the reason is the product, not the styling:
-              // **the tasks in a cetele have no order.** Dressing one up as the
-              // next one implies a sequence that does not exist, and the member
-              // decides what to reach for. Every ring is offered equally; the
-              // rings themselves already show where the progress is.
-              const ringLink = ringHref(t.id);
-              const ringGraphic = (
-                <ProgressRing
-                  value={due ? count : 0}
-                  max={goal}
-                  mark={due && stretched ? share : undefined}
-                  size={72}
-                  thickness={8}
-                >
-                  {!due ? (
-                    // Its own number, not a percentage: a resting ring has no
-                    // progress to report and "0%" would read as a failure.
-                    <span className="text-sm font-bold text-muted-foreground tabular-nums">
-                      {daysAway}d
-                    </span>
-                  ) : done ? (
-                    <CheckIcon className="size-6 text-success" />
-                  ) : (
-                    // Success-toned once the circle's share is in: the
-                    // number is still short of MY goal, but the part that
-                    // the circle and the streak are counting is finished,
-                    // and a plain foreground percent would read as neither.
-                    <span
-                      className={cn(
-                        "text-sm font-bold tabular-nums",
-                        shareDone ? "text-success" : "text-foreground",
-                      )}
+            <Grid
+              as="ul"
+              cols="cards"
+              gap="md"
+              className={cn(
+                rings.length > 0 &&
+                  "max-lg:gap-0 max-lg:divide-y max-lg:divide-border max-lg:overflow-hidden max-lg:rounded-xl max-lg:border max-lg:border-border max-lg:bg-card",
+              )}
+            >
+              {rings.map(
+                ({
+                  task: t,
+                  count,
+                  goal,
+                  share,
+                  due,
+                  daysAway,
+                  done,
+                  shareDone,
+                  stretched,
+                }) => {
+                  // NO card is singled out. One used to carry a primary glow — the
+                  // ring nearest done — on a goal-gradient argument. Removed on the
+                  // owner's call, and the reason is the product, not the styling:
+                  // **the tasks in a cetele have no order.** Dressing one up as the
+                  // next one implies a sequence that does not exist, and the member
+                  // decides what to reach for. Every ring is offered equally; the
+                  // rings themselves already show where the progress is.
+                  const ringLink = ringHref(t.id);
+                  const ringGraphic = (
+                    <ProgressRing
+                      value={due ? count : 0}
+                      max={goal}
+                      mark={due && stretched ? share : undefined}
+                      size={72}
+                      thickness={8}
                     >
-                      {count.toLocaleString()}
-                    </span>
-                  )}
-                </ProgressRing>
-              );
-              const ringBody = (
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-base font-semibold text-foreground">
-                    {t.label}
-                  </p>
-                  {/* Not truncated: the bigger ring left ~192px here and
+                      {!due ? (
+                        // Its own number, not a percentage: a resting ring has no
+                        // progress to report and "0%" would read as a failure.
+                        <span className="text-sm font-bold text-muted-foreground tabular-nums">
+                          {daysAway}d
+                        </span>
+                      ) : done ? (
+                        <CheckIcon className="size-6 text-success" />
+                      ) : (
+                        // Success-toned once the circle's share is in: the
+                        // number is still short of MY goal, but the part that
+                        // the circle and the streak are counting is finished,
+                        // and a plain foreground percent would read as neither.
+                        <span
+                          className={cn(
+                            "text-sm font-bold tabular-nums",
+                            shareDone ? "text-success" : "text-foreground",
+                          )}
+                        >
+                          {count.toLocaleString()}
+                        </span>
+                      )}
+                    </ProgressRing>
+                  );
+                  const ringBody = (
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-base font-semibold text-foreground">
+                        {t.label}
+                      </p>
+                      {/* Not truncated: the bigger ring left ~192px here and
                         "Allahumma salli ala Muhammad" needs 203, so it clipped
                         to "…humma salli ala Muhammad" — and for an RTL subtitle
                         the ellipsis lands at the START of the phrase. Clipping
@@ -696,243 +709,246 @@ export function TodayClient({
                         help, because the token cannot be broken at all.
                         `dir`/`lang` resolve from the text (lib/text-direction).
                       */}
-                  {t.subtitle && (
-                    <p
-                      className="text-sm wrap-anywhere text-muted-foreground"
-                      dir="auto"
-                      lang={langOf(t.subtitle)}
-                    >
-                      {t.subtitle}
-                    </p>
-                  )}
-                  {due ? (
-                    <>
-                      <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                        {count.toLocaleString()} / {goal.toLocaleString()}
-                        {stretched && (
-                          <span className="ms-1.5 tabular-nums">
-                            · circle&rsquo;s share {share.toLocaleString()}
+                      {t.subtitle && (
+                        <p
+                          className="text-sm wrap-anywhere text-muted-foreground"
+                          dir="auto"
+                          lang={langOf(t.subtitle)}
+                        >
+                          {t.subtitle}
+                        </p>
+                      )}
+                      {due ? (
+                        <>
+                          <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                            {count.toLocaleString()} / {goal.toLocaleString()}
+                            {stretched && (
+                              <span className="ms-1.5 tabular-nums">
+                                · circle&rsquo;s share {share.toLocaleString()}
+                              </span>
+                            )}
+                          </p>
+                        </>
+                      ) : (
+                        // No bar at all. An empty progress bar on a task that was
+                        // never asked for today reads as "you are behind"; the
+                        // schedule is the fact here, not the absent progress.
+                        <p className="mt-1.5 text-xs font-medium text-muted-foreground">
+                          {dueLabel(daysAway)}
+                          <span className="ms-1.5 font-normal">
+                            ·{" "}
+                            {frequencyLabel(
+                              t.myFrequencyDays ?? t.frequencyDays,
+                            ).toLowerCase()}
                           </span>
-                        )}
-                      </p>
-                    </>
-                  ) : (
-                    // No bar at all. An empty progress bar on a task that was
-                    // never asked for today reads as "you are behind"; the
-                    // schedule is the fact here, not the absent progress.
-                    <p className="mt-1.5 text-xs font-medium text-muted-foreground">
-                      {dueLabel(daysAway)}
-                      <span className="ms-1.5 font-normal">
-                        ·{" "}
-                        {frequencyLabel(
-                          t.myFrequencyDays ?? t.frequencyDays,
-                        ).toLowerCase()}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              );
-              return (
-                <li key={t.id}>
-                  {/* A resting task keeps its full card and stays tappable —
+                        </p>
+                      )}
+                    </div>
+                  );
+                  return (
+                    <li key={t.id}>
+                      {/* A resting task keeps its full card and stays tappable —
                     counting ahead is welcome, and the engine only claims a day
                     once you COMPLETE it, so nothing is risked by starting
                     early. It is marked by a dashed edge and a muted surface
                     (structure, not colour: the intensity ramp stays reserved
                     for progress) plus the one fact that answers "why is this
                     not counting" — when it next comes round. */}
-                  {/* TODAY'S RINGS COUNT WHERE THEY ARE (owner's call). Going into the count
+                      {/* TODAY'S RINGS COUNT WHERE THEY ARE (owner's call). Going into the count
                       screen and back out for every ring took too long, so the ring
                       adds one and the name still opens the full screen. A closed
                       ring goes inert rather than opening anything, so a fast extra
                       tap can't overshoot or throw the member onto another screen.
                       Past days and resting rings keep the whole card as a link. */}
-                  {isToday && due ? (
-                    <div
-                      className={cn(
-                        cardVariants({ padding: "compact" }),
-                        "flex items-center gap-2 max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent",
-                      )}
-                    >
-                      {done ? (
-                        <span className="shrink-0">{ringGraphic}</span>
+                      {isToday && due ? (
+                        <div
+                          className={cn(
+                            cardVariants({ padding: "compact" }),
+                            "flex items-center gap-2 max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent",
+                          )}
+                        >
+                          {done ? (
+                            <span className="shrink-0">{ringGraphic}</span>
+                          ) : (
+                            <button
+                              type="button"
+                              aria-label={`Add one to ${t.label}. ${count.toLocaleString()} of ${goal.toLocaleString()}`}
+                              onClick={() => {
+                                hapticTick();
+                                const crossed = milestoneCrossed(
+                                  count,
+                                  count + 1,
+                                  share,
+                                  goal,
+                                );
+                                quick.tap(t.id, date, crossed === "goal");
+                                if (crossed) {
+                                  playComplete();
+                                  celebrate({ confettiOnly: true });
+                                }
+                                if (crossed === "goal") hapticCelebrate();
+                              }}
+                              className="relative shrink-0 cursor-pointer touch-manipulation rounded-full transition-transform duration-[var(--duration-fast)] ease-[var(--ease-brand)] select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:scale-95 motion-reduce:transform-none"
+                            >
+                              {ringGraphic}
+                              {/* Says the ring is a button, without words on every row. */}
+                              <span
+                                aria-hidden
+                                className="absolute -right-0.5 -bottom-0.5 grid size-6 place-items-center rounded-full border-2 border-card bg-primary text-primary-foreground"
+                              >
+                                <PlusIcon className="size-3.5" />
+                              </span>
+                            </button>
+                          )}
+                          <Link
+                            href={ringLink}
+                            className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-xl p-2 transition-colors duration-[var(--duration-fast)] hover:bg-surface-hover active:bg-surface-active"
+                          >
+                            {ringBody}
+                            <ChevronRightIcon
+                              aria-hidden
+                              className="size-5 shrink-0 text-muted-foreground"
+                            />
+                          </Link>
+                        </div>
                       ) : (
-                        <button
-                          type="button"
-                          aria-label={`Add one to ${t.label}. ${count.toLocaleString()} of ${goal.toLocaleString()}`}
-                          onClick={() => {
-                            hapticTick();
-                            const crossed = milestoneCrossed(
-                              count,
-                              count + 1,
-                              share,
-                              goal,
-                            );
-                            quick.tap(t.id, date, crossed === "goal");
-                            if (crossed) {
-                              playComplete();
-                              celebrate({ confettiOnly: true });
-                            }
-                            if (crossed === "goal") hapticCelebrate();
-                          }}
-                          className="relative shrink-0 cursor-pointer touch-manipulation rounded-full transition-transform duration-[var(--duration-fast)] ease-[var(--ease-brand)] select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:scale-95 motion-reduce:transform-none"
+                        <Link
+                          href={ringLink}
+                          className={cn(
+                            cardVariants({ padding: "compact" }),
+                            "flex items-center gap-4 transition-colors duration-[var(--duration-fast)] hover:bg-surface-hover active:bg-surface-active max-lg:rounded-none max-lg:border-0",
+                            due && "max-lg:bg-transparent",
+                            // The BORDER does the work, not the fill. v1 used
+                            // `bg-muted/40`, which composited to 1.01:1 against the
+                            // page with a 1.23:1 edge — the card vanished. A recessed
+                            // surface should be quiet; what makes it legible as a
+                            // *thing* is a boundary at the 3:1 non-text floor.
+                            !due && "border-dashed border-outline bg-muted",
+                          )}
                         >
                           {ringGraphic}
-                          {/* Says the ring is a button, without words on every row. */}
-                          <span
-                            aria-hidden
-                            className="absolute -right-0.5 -bottom-0.5 grid size-6 place-items-center rounded-full border-2 border-card bg-primary text-primary-foreground"
-                          >
-                            <PlusIcon className="size-3.5" />
-                          </span>
-                        </button>
+                          {ringBody}
+                          <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
+                        </Link>
                       )}
-                      <Link
-                        href={ringLink}
-                        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-xl p-2 transition-colors duration-[var(--duration-fast)] hover:bg-surface-hover active:bg-surface-active"
-                      >
-                        {ringBody}
-                        <ChevronRightIcon
-                          aria-hidden
-                          className="size-5 shrink-0 text-muted-foreground"
-                        />
-                      </Link>
-                    </div>
-                  ) : (
-                    <Link
-                      href={ringLink}
-                      className={cn(
-                        cardVariants({ padding: "compact" }),
-                        "flex items-center gap-4 transition-colors duration-[var(--duration-fast)] hover:bg-surface-hover active:bg-surface-active max-lg:rounded-none max-lg:border-0",
-                        due && "max-lg:bg-transparent",
-                        // The BORDER does the work, not the fill. v1 used
-                        // `bg-muted/40`, which composited to 1.01:1 against the
-                        // page with a 1.23:1 edge — the card vanished. A recessed
-                        // surface should be quiet; what makes it legible as a
-                        // *thing* is a boundary at the 3:1 non-text floor.
-                        !due && "border-dashed border-outline bg-muted",
-                      )}
-                    >
-                      {ringGraphic}
-                      {ringBody}
-                      <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
-                    </Link>
-                  )}
+                    </li>
+                  );
+                },
+              )}
+              {quick.error && (
+                <li role="alert" className="p-3 text-sm text-danger">
+                  {quick.error}
                 </li>
-              );
-            },
-          )}
-          {quick.error && (
-            <li role="alert" className="p-3 text-sm text-danger">
-              {quick.error}
-            </li>
-          )}
-          {rings.length === 0 && (
-            <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-              No tasks yet. The group&rsquo;s admin sets the shared list under{" "}
-              <Link
-                href={groupHref(groupId, "/group/manage")}
-                className="font-medium text-primary underline"
-              >
-                Manage
-              </Link>
-              .
-            </li>
-          )}
-        </Grid>
-        {isToday && dueRings.some((r) => !r.done) && (
-          <p className="mt-2.5 text-xs text-muted-foreground">
-            Tap a ring to add one. Tap its name for the full counter.
-          </p>
-        )}
-        {isToday && tasks.length > 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            Your circle is{" "}
-            <span className="font-medium text-foreground tabular-nums">
-              {collectivePct}%
-            </span>{" "}
-            toward today&apos;s goal.
-          </p>
-        )}
-      </section>
+              )}
+              {rings.length === 0 && (
+                <li className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+                  No tasks yet. The group&rsquo;s admin sets the shared list
+                  under{" "}
+                  <Link
+                    href={groupHref(groupId, "/group/manage")}
+                    className="font-medium text-primary underline"
+                  >
+                    Manage
+                  </Link>
+                  .
+                </li>
+              )}
+            </Grid>
+            {isToday && dueRings.some((r) => !r.done) && (
+              <p className="mt-2.5 text-xs text-muted-foreground">
+                Tap a ring to add one. Tap its name for the full counter.
+              </p>
+            )}
+            {isToday && tasks.length > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Your circle is{" "}
+                <span className="font-medium text-foreground tabular-nums">
+                  {collectivePct}%
+                </span>{" "}
+                toward today&apos;s goal.
+              </p>
+            )}
+          </section>
 
-      {/* Camps and halaqahs (D80): one actionable line, below the rings so it
+          {/* Camps and halaqahs (D80): one actionable line, below the rings so it
           never moves what the thumb is about to tap, and only on today. It
           fetches after paint and renders nothing on most days. */}
-      {isToday && <UpNextCard />}
+          {isToday && <UpNextCard />}
+        </div>
 
-      {/* Your circle today — the accountability glance, now with the one-tap
+        {/* Your circle today — the accountability glance, now with the one-tap
           encouragement (CET-18) under anyone who has closed every ring. */}
-      {circle.length > 1 && (
-        <section>
-          <SectionHeading
-            action={
-              cheersForMe > 0 ? (
-                /* The same hands the Dua reaction is drawn with — this line
+        {circle.length > 1 && (
+          <section>
+            <SectionHeading
+              action={
+                cheersForMe > 0 ? (
+                  /* The same hands the Dua reaction is drawn with — this line
                    counts those taps, so it should be marked with the thing
                    being counted rather than a second, unrelated glyph. */
-                <span className="flex items-center gap-1">
-                  <HandsIcon aria-hidden className="size-3.5 shrink-0" />
-                  you received {cheersForMe} today
-                </span>
-              ) : undefined
-            }
-          >
-            Your circle today
-          </SectionHeading>
-          <ul className="flex flex-col gap-1.5">
-            {circle.map((m) => (
-              <li
-                key={m.userId}
-                className="rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm"
-              >
-                {/* Flat by design: these rows don't navigate, so they get no
+                  <span className="flex items-center gap-1">
+                    <HandsIcon aria-hidden className="size-3.5 shrink-0" />
+                    you received {cheersForMe} today
+                  </span>
+                ) : undefined
+              }
+            >
+              Your circle today
+            </SectionHeading>
+            <ul className="flex flex-col gap-1.5">
+              {circle.map((m) => (
+                <li
+                  key={m.userId}
+                  className="rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-sm"
+                >
+                  {/* Flat by design: these rows don't navigate, so they get no
                     hover lift (§B.5 — a lift implies a click that isn't there). */}
-                <div className="flex items-center gap-3">
-                  <Avatar size="sm" name={m.name} />
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-foreground">
-                      {m.name}
-                      {m.isMe && (
-                        <span className="ml-1.5 text-xs text-muted-foreground">
-                          (you)
-                        </span>
-                      )}
-                    </span>
-                    <ProgressBar
-                      value={m.closed}
-                      max={m.total || 1}
-                      tone={m.done ? "success" : "primary"}
-                      className="mt-1.5 h-1.5"
-                    />
+                  <div className="flex items-center gap-3">
+                    <Avatar size="sm" name={m.name} />
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-foreground">
+                        {m.name}
+                        {m.isMe && (
+                          <span className="ml-1.5 text-xs text-muted-foreground">
+                            (you)
+                          </span>
+                        )}
+                      </span>
+                      <ProgressBar
+                        value={m.closed}
+                        max={m.total || 1}
+                        tone={m.done ? "success" : "primary"}
+                        className="mt-1.5 h-1.5"
+                      />
+                    </div>
+                    {m.done ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-success">
+                        <CheckIcon className="size-4" /> all rings closed
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                        {m.closed}/{m.total} rings
+                      </span>
+                    )}
                   </div>
-                  {m.done ? (
-                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-success">
-                      <CheckIcon className="size-4" /> all rings closed
-                    </span>
-                  ) : (
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {m.closed}/{m.total} rings
-                    </span>
-                  )}
-                </div>
-                {/* You cheer a peer who finished — never yourself (the RPC
+                  {/* You cheer a peer who finished — never yourself (the RPC
                     refuses a self-reaction; don't offer the affordance). */}
-                {m.done && !m.isMe && (
-                  <div className="mt-2">
-                    <PeerReactions
-                      groupId={groupId}
-                      toUserId={m.userId}
-                      toName={m.name}
-                      tally={m.tally}
-                    />
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+                  {m.done && !m.isMe && (
+                    <div className="mt-2">
+                      <PeerReactions
+                        groupId={groupId}
+                        toUserId={m.userId}
+                        toName={m.name}
+                        tally={m.tally}
+                      />
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
 
       {/* Every goal in THIS circle, edited together (D51). Reconciles from each
           write's own return — the effective target after the raise-only rule
