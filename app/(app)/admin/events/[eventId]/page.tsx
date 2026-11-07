@@ -4,6 +4,7 @@ import { Badge, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { ArrowLeftIcon, ChevronRightIcon } from "@/components/app/icons";
 import { q } from "@/lib/db-log";
+import type { ScheduleRow } from "@/lib/events";
 import { loadStewardTree, requireSteward } from "../../steward";
 import { CampForm } from "../camp-form";
 import { branchOptions } from "../branch-options";
@@ -27,7 +28,7 @@ export default async function EditCampPage({
       supabase
         .from("events")
         .select(
-          "id, kind, branch_id, title, details, venue, starts_at, ends_at, timezone, rsvp_closes_at, capacity, status",
+          "id, kind, branch_id, title, details, venue, starts_at, ends_at, timezone, rsvp_closes_at, capacity, status, cost, bring, contact_name, contact_detail, schedule",
         )
         .eq("id", eventId)
         .maybeSingle(),
@@ -83,6 +84,11 @@ export default async function EditCampPage({
           rsvpClosesAt: e.rsvp_closes_at,
           capacity: e.capacity,
           status: e.status as "draft" | "published" | "cancelled",
+          cost: e.cost,
+          bring: e.bring,
+          contactName: e.contact_name,
+          contactDetail: e.contact_detail,
+          schedule: e.schedule as ScheduleRow[],
         }}
       />
     </Screen>

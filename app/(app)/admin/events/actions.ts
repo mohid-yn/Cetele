@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
 import { signOutIfStaleSession } from "@/lib/stale-session";
+import type { ScheduleRow } from "@/lib/events";
 
 /**
  * Posting events (D80). Stewards only, and the RPCs say so: these relay.
@@ -24,6 +25,12 @@ export type CampInput = {
   rsvpClosesAt: string | null;
   capacity: number | null;
   status: "draft" | "published" | "cancelled";
+  /** 0045 (D84). Free text, e.g. "$120, siblings $90". */
+  cost: string;
+  bring: string[];
+  contactName: string;
+  contactDetail: string;
+  schedule: ScheduleRow[];
 };
 
 export async function saveCamp(
@@ -44,6 +51,11 @@ export async function saveCamp(
       p_rsvp_closes_at: input.rsvpClosesAt as string,
       p_capacity: input.capacity as number,
       p_status: input.status,
+      p_cost: input.cost,
+      p_bring: input.bring,
+      p_contact_name: input.contactName,
+      p_contact_detail: input.contactDetail,
+      p_schedule: input.schedule,
     }),
   );
   await signOutIfStaleSession(error);

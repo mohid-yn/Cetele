@@ -344,3 +344,89 @@ export function applyRsvp(
     maybe: Math.max(0, e.maybe + delta("maybe")),
   };
 }
+
+/**
+ * One line of a camp's programme (0045, D84). Day 1 is the camp's first day;
+ * `time` is "HH:MM" on the venue's clock, or "" for a line with no time.
+ */
+export type ScheduleRow = { day: number; time: string; label: string };
+
+/**
+ * The client MIRROR of `private.valid_camp_schedule` (0045). Pinned case for
+ * case by lib/events.test.ts against pgTAP 027. Returns the rows tidied
+ * (trimmed, blank labels dropped, sorted by day then time) or an error
+ * sentence for the form.
+ */
+export function cleanSchedule(rows: readonly ScheduleRow[]): {
+  rows: ScheduleRow[];
+  error: string | null;
+} {
+  const kept = rows
+    .map((r) => ({ day: r.day, time: r.time.trim(), label: r.label.trim() }))
+    .filter((r) => r.label !== "");
+  if (kept.length > 80)
+    return { rows: kept, error: "A schedule can have up to 80 lines." };
+  for (const r of kept) {
+    if (!Number.isInteger(r.day) || r.day < 1 || r.day > 31)
+      return { rows: kept, error: "Each line needs a day from 1 to 31." };
+    if (r.time !== "" && !/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(r.time))
+      return { rows: kept, error: `"${r.time}" is not a time like 09:30.` };
+    if (r.label.length > 120)
+      return {
+        rows: kept,
+        error: "Each line must be 120 characters or fewer.",
+      };
+  }
+  kept.sort(
+    (a, b) =>
+      a.day - b.day ||
+      // A line with no time leads its day: it is usually "all day".
+      (a.time === "" ? -1 : b.time === "" ? 1 : a.time.localeCompare(b.time)),
+  );
+  return { rows: kept, error: null };
+}
+
+/** Rows grouped by day, in order, for the camp page. */
+export function scheduleByDay(
+  rows: readonly ScheduleRow[],
+): { day: number; rows: ScheduleRow[] }[] {
+  const out: { day: number; rows: ScheduleRow[] }[] = [];
+  for (const r of cleanSchedule(rows).rows) {
+    const last = out.at(-1);
+    if (last && last.day === r.day) last.rows.push(r);
+    else out.push({ day: r.day, rows: [r] });
+  }
+  return out;
+}
+
+/**
+ * How many calendar days a camp spans on the VENUE's calendar, so the schedule
+ * offers "Day 1 … Day N" and can name each one ("Day 2 · Sat 28 Nov").
+ */
+export function campDays(
+  startsAt: string,
+  endsAt: string,
+  timeZone: string,
+): string[] {
+  const fmt = new Intl.DateTimeFormat("en-AU", {
+    timeZone,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+  const key = new Intl.DateTimeFormat("en-CA", { timeZone });
+  const out: string[] = [];
+  const end = new Date(endsAt).getTime();
+  let t = new Date(startsAt).getTime();
+  let lastKey = "";
+  // Step by hours, not days, so a daylight-saving change cannot skip a date.
+  while (t <= end && out.length < 31) {
+    const k = key.format(t);
+    if (k !== lastKey) {
+      out.push(fmt.format(t));
+      lastKey = k;
+    }
+    t += 3_600_000;
+  }
+  return out;
+}

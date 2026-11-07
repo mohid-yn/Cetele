@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   applyRsvp,
+  campDays,
+  cleanSchedule,
+  scheduleByDay,
   clock,
   formatMoment,
   formatWhen,
@@ -276,5 +279,79 @@ describe("applyRsvp", () => {
   it("a 'no' changes neither count", () => {
     const after = applyRsvp(ev({ going: 2, maybe: 2 }), "no", null);
     assert.deepEqual([after.going, after.maybe], [2, 2]);
+  });
+});
+
+describe("cleanSchedule (mirror of 0045 valid_camp_schedule, pgTAP 027)", () => {
+  it("trims, drops blank lines and sorts by day then time", () => {
+    const r = cleanSchedule([
+      { day: 2, time: "09:00", label: " Hike " },
+      { day: 1, time: "18:00", label: "Dinner" },
+      { day: 1, time: "", label: "Arrive" },
+      { day: 1, time: "10:00", label: "   " },
+    ]);
+    assert.equal(r.error, null);
+    assert.deepEqual(r.rows, [
+      { day: 1, time: "", label: "Arrive" },
+      { day: 1, time: "18:00", label: "Dinner" },
+      { day: 2, time: "09:00", label: "Hike" },
+    ]);
+  });
+  it("refuses day 0 and a time of 25:00, as the database does", () => {
+    assert.notEqual(
+      cleanSchedule([{ day: 0, time: "", label: "x" }]).error,
+      null,
+    );
+    assert.notEqual(
+      cleanSchedule([{ day: 1, time: "25:00", label: "x" }]).error,
+      null,
+    );
+    assert.notEqual(
+      cleanSchedule([{ day: 1, time: "9:00", label: "x" }]).error,
+      null,
+    );
+  });
+  it("refuses a label over 120 characters", () => {
+    assert.notEqual(
+      cleanSchedule([{ day: 1, time: "", label: "x".repeat(121) }]).error,
+      null,
+    );
+  });
+});
+
+describe("scheduleByDay", () => {
+  it("groups consecutive days", () => {
+    const g = scheduleByDay([
+      { day: 1, time: "09:00", label: "A" },
+      { day: 2, time: "09:00", label: "C" },
+      { day: 1, time: "10:00", label: "B" },
+    ]);
+    assert.deepEqual(
+      g.map((d) => [d.day, d.rows.map((r) => r.label)]),
+      [
+        [1, ["A", "B"]],
+        [2, ["C"]],
+      ],
+    );
+  });
+});
+
+describe("campDays", () => {
+  it("counts the venue's calendar days, not 24-hour blocks", () => {
+    // Fri 9am → Sun 3pm in Melbourne is three days.
+    const d = campDays(
+      "2026-11-26T22:00:00Z",
+      "2026-11-29T04:00:00Z",
+      "Australia/Melbourne",
+    );
+    assert.equal(d.length, 3);
+  });
+  it("survives a daylight-saving change (Melbourne, first Sunday of April)", () => {
+    const d = campDays(
+      "2027-04-01T22:00:00Z",
+      "2027-04-04T08:00:00Z",
+      "Australia/Melbourne",
+    );
+    assert.equal(d.length, 3);
   });
 });

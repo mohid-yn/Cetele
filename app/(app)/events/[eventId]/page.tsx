@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
+import type { ScheduleRow } from "@/lib/events";
 import {
   EventDetailClient,
   type Attendee,
@@ -27,7 +28,7 @@ export default async function EventPage({
   const me = claims?.claims.sub as string | undefined;
   if (!me) redirect("/");
 
-  const [{ data: rows }, { data: profile }, polls, questions] =
+  const [{ data: rows }, { data: profile }, polls, questions, { data: extra }] =
     await Promise.all([
       q("event.detail", supabase.rpc("event_detail", { p_event: eventId })),
       q(
@@ -36,6 +37,16 @@ export default async function EventPage({
       ),
       loadPolls(eventId),
       loadQuestions(eventId),
+      // A camp's fields (0045). Read straight from `events`: `events_select`
+      // already limits it to people the event reaches.
+      q(
+        "event.camp details (0045)",
+        supabase
+          .from("events")
+          .select("cost, bring, contact_name, contact_detail, schedule")
+          .eq("id", eventId)
+          .maybeSingle(),
+      ),
     ]);
 
   const r = rows?.[0];
@@ -78,6 +89,11 @@ export default async function EventPage({
     no: r.no,
     canLead: r.can_lead,
     canSteward: r.can_steward,
+    cost: extra?.cost ?? "",
+    bring: extra?.bring ?? [],
+    contactName: extra?.contact_name ?? "",
+    contactDetail: extra?.contact_detail ?? "",
+    schedule: (extra?.schedule as ScheduleRow[] | undefined) ?? [],
   };
 
   return (

@@ -17,6 +17,8 @@ import {
   ArrowUpIcon,
   CalendarIcon,
   CheckIcon,
+  GiftIcon,
+  MailIcon,
   PencilIcon,
   PinIcon,
   PlusIcon,
@@ -35,8 +37,11 @@ import {
   POLL_KINDS,
   repliesOpen,
   zoneCity,
+  campDays,
+  scheduleByDay,
   type PollKind,
   type RsvpStatus,
+  type ScheduleRow,
 } from "@/lib/events";
 import {
   askQuestion,
@@ -73,6 +78,12 @@ export type EventDetail = {
   no: number;
   canLead: boolean;
   canSteward: boolean;
+  /** 0045 (D84), camps only; empty strings and lists when not given. */
+  cost: string;
+  bring: string[];
+  contactName: string;
+  contactDetail: string;
+  schedule: ScheduleRow[];
 };
 
 export type Attendee = {
@@ -164,6 +175,12 @@ export function EventDetailClient({
               {event.venue}
             </span>
           )}
+          {event.kind === "camp" && (
+            <span className="flex items-center gap-1.5">
+              <GiftIcon aria-hidden className="size-4 shrink-0" />
+              {event.cost || "Free"}
+            </span>
+          )}
         </div>
         {event.details && (
           <p className="text-sm whitespace-pre-line text-foreground">
@@ -233,6 +250,8 @@ export function EventDetailClient({
         </section>
       )}
 
+      {event.kind === "camp" && <CampInfo event={event} />}
+
       {event.status !== "draft" && (
         <Polls
           eventId={event.id}
@@ -255,6 +274,111 @@ export function EventDetailClient({
 
       {event.canSteward && <StewardTools event={event} attendees={attendees} />}
     </Screen>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// A camp's fields (D84): what to bring, the days, who to ask
+// ---------------------------------------------------------------------------
+
+/** A tel: or mailto: link when the contact detail is clearly one. */
+function contactHref(detail: string): string | null {
+  const d = detail.trim();
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d)) return `mailto:${d}`;
+  if (/^\+?[\d\s()-]{6,}$/.test(d)) return `tel:${d.replace(/[^\d+]/g, "")}`;
+  return null;
+}
+
+function CampInfo({ event }: { event: EventDetail }) {
+  const days = scheduleByDay(event.schedule);
+  const dayNames = campDays(event.startsAt, event.endsAt, event.timezone);
+  const href = contactHref(event.contactDetail);
+  const hasContact = event.contactName || event.contactDetail;
+  if (event.bring.length === 0 && days.length === 0 && !hasContact) return null;
+
+  return (
+    <>
+      {event.bring.length > 0 && (
+        <section>
+          <SectionHeading>What to bring</SectionHeading>
+          <Card className="p-4">
+            <ul className="flex flex-col gap-2">
+              {event.bring.map((item, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <CheckIcon
+                    aria-hidden
+                    className="mt-0.5 size-4 shrink-0 text-success"
+                  />
+                  <span className="text-foreground">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      )}
+
+      {days.length > 0 && (
+        <section>
+          <SectionHeading>Schedule</SectionHeading>
+          <Card className="flex flex-col divide-y divide-border">
+            {days.map((d) => (
+              <div key={d.day} className="p-4">
+                <p className="mb-2 text-sm font-semibold text-foreground">
+                  Day {d.day}
+                  {dayNames[d.day - 1] && (
+                    <span className="font-normal text-muted-foreground">
+                      {" "}
+                      · {dayNames[d.day - 1]}
+                    </span>
+                  )}
+                </p>
+                <ul className="flex flex-col gap-1.5">
+                  {d.rows.map((r, i) => (
+                    <li key={i} className="flex gap-3 text-sm">
+                      <span className="w-12 shrink-0 text-muted-foreground tabular-nums">
+                        {r.time}
+                      </span>
+                      <span className="text-foreground">{r.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
+
+      {hasContact && (
+        <section>
+          <SectionHeading>Who to ask</SectionHeading>
+          <Card className="flex items-center gap-3 p-4">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-primary-800">
+              <MailIcon aria-hidden className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              {event.contactName && (
+                <span className="block text-sm font-medium text-foreground">
+                  {event.contactName}
+                </span>
+              )}
+              {event.contactDetail &&
+                (href ? (
+                  <a
+                    href={href}
+                    className="block text-sm font-medium break-all text-primary underline-offset-4 hover:underline"
+                  >
+                    {event.contactDetail}
+                  </a>
+                ) : (
+                  <span className="block text-sm break-all text-muted-foreground">
+                    {event.contactDetail}
+                  </span>
+                ))}
+            </span>
+          </Card>
+        </section>
+      )}
+    </>
   );
 }
 
