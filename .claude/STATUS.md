@@ -21,21 +21,25 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 ### Current state (checked 2026-11-07)
 
-| Item         | State                                                                                                              |
-| ------------ | ------------------------------------------------------------------------------------------------------------------ |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `3dc00f7` (the branches release, 2026-11-07) |
-| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main` apart from this docs commit                 |
-| Migrations   | **47 on prod.** 0041–0047 pushed 2026-11-07 by the owner from omenserver (CLI now logged in and linked)            |
-| Git          | Only `main` and `staging`. Every feature branch was merged and deleted 2026-11-07                                  |
-| CI           | Green on both `main` and `staging`                                                                                 |
-| Tests        | On `main`: unit 228 · pgTAP 1034 across 29 suites · e2e 91 across 22 specs. Green locally and in CI                |
-| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                |
-| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                     |
-| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                              |
+| Item         | State                                                                                                            |
+| ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `b2d9704` (desktop refinement, 2026-11-07) |
+| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main` apart from this docs commit               |
+| Migrations   | **47 on prod.** 0041–0047 pushed 2026-11-07 by the owner from omenserver (CLI now logged in and linked)          |
+| Git          | Only `main` and `staging`. Every feature branch was merged and deleted 2026-11-07                                |
+| CI           | Green on both `main` and `staging`                                                                               |
+| Tests        | On `main`: unit 228 · pgTAP 1034 across 29 suites · e2e 91 across 22 specs. Green locally and in CI              |
+| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06              |
+| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                   |
+| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                            |
 
 Everything through D87 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
 
-### Last release (2026-11-07): `3dc00f7`
+### Last release (2026-11-07): `b2d9704`
+
+Desktop refinement (`eb35165`), at desktop widths (lg and up) only: the sidebar ends in an account row, Today puts the circle beside the rings, Profile is two columns. The owner checked it locally, signed in as the seed user, then asked to promote. A plain fast-forward from `staging`, with no migration.
+
+### Previous release (2026-11-07): `3dc00f7`
 
 Shipped at the owner's request ("push everything to main"). Migrations first (owner ran `supabase db push`), then `staging` (CI green: verify + stack-tests, Vercel green), then `main`. **No staging soak and nobody has clicked through it signed in.**
 
@@ -73,7 +77,6 @@ To turn it off, set `MCP_ENABLED` to anything else and redeploy.
 
 ### Next steps, in order
 
-- **Owner: check the desktop refinement on staging (`eb35165`), then say whether to promote.** Sidebar foot is an account row (avatar + name = Profile, theme, sign out); Today puts the circle beside the rings; Profile is two columns. Desktop only (lg+); phones are unchanged.
 - **Owner: check the release on a phone:** Events tab, a branch page, the switcher's "You run", and that Today still opens and counts at once.
 
 0. **Owner: check `2224fd2` on the phone.** Open Roadmap, tap +1 on an item a few times, reload at once. The count should hold. **Take part will not appear on the owner's organiser account**: it follows the only published roadmap through **meeting** and **Keysy Dersh**. Seeing it takes another organiser outside those circles, or a second published roadmap. CI covers the full flow.
