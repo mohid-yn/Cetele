@@ -3,10 +3,11 @@
 import * as React from "react";
 import { Badge, Input } from "@/components/ui";
 import { SectionHeading } from "@/components/app/section-heading";
-import { BranchesIcon } from "@/components/app/icons";
+import Link from "next/link";
+import { BranchesIcon, ChevronRightIcon } from "@/components/app/icons";
 import { usePropState } from "@/lib/use-prop-state";
 import { subtreeCircleCounts, type ReachBranch } from "@/lib/reach";
-import { setBranchOnRoadmap, setCircleOnRoadmap } from "./authoring-actions";
+import { setCircleOnRoadmap } from "./authoring-actions";
 
 export type RoadmapCircle = {
   id: string;
@@ -20,11 +21,12 @@ export type RoadmapCircle = {
 export type RoadmapBranch = ReachBranch & { assigned: boolean };
 
 /**
- * Who follows this roadmap (D72, D81), in the two ways it can happen:
+ * Who follows this roadmap (D72, D81, D85), in the two ways it can happen:
  *
- *   1. BRANCHES. Assign a branch and every circle in it and under it follows,
- *      including circles that join later. The same flow-down as events.
- *   2. SINGLE CIRCLES, for a circle outside any branch or one exception.
+ *   1. BRANCHES, shown here and placed from the branch's own page (owner's
+ *      choice A, 2026-11-07): a roadmap goes into a branch the way a camp does,
+ *      by being in the place. This list only says where it is and links there.
+ *   2. SINGLE CIRCLES, the exceptions, still switched here.
  *
  * A circle that follows through a branch is shown ticked and locked with the
  * branch's name, because unticking it would be undone by the branch anyway.
@@ -43,10 +45,9 @@ export function CirclesPanel({
   branches: RoadmapBranch[];
 }) {
   const [circles, setCircles] = usePropState(serverCircles);
-  const [branches, setBranches] = usePropState(serverBranches);
+  const branches = serverBranches;
   const [query, setQuery] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
-  const [busyBranch, setBusyBranch] = React.useState<string | null>(null);
 
   const toggle = async (circle: RoadmapCircle) => {
     const next = !circle.following;
@@ -63,45 +64,11 @@ export function CirclesPanel({
     }
   };
 
-  // A branch toggle changes which circles follow, which only the server knows,
-  // so the circle list waits for the refreshed props rather than guessing.
-  const toggleBranch = async (branch: RoadmapBranch) => {
-    const next = !branch.assigned;
-    const flip = (value: boolean) =>
-      setBranches((list) =>
-        list.map((b) => (b.id === branch.id ? { ...b, assigned: value } : b)),
-      );
-    flip(next);
-    setError(null);
-    setBusyBranch(branch.id);
-    const res = await setBranchOnRoadmap(roadmapId, branch.id, next);
-    setBusyBranch(null);
-    if (res.error) {
-      flip(!next);
-      setError(res.error);
-    }
-  };
-
   const subtreeCounts = React.useMemo(
     () => subtreeCircleCounts(branches),
     [branches],
   );
-  // The assigned branch above each branch, so a child can say it is covered.
-  const coveredBy = React.useMemo(() => {
-    const byId = new Map(branches.map((b) => [b.id, b]));
-    const out = new Map<string, string>();
-    for (const b of branches) {
-      let p = b.parentId ? byId.get(b.parentId) : undefined;
-      while (p) {
-        if (p.assigned) {
-          out.set(b.id, p.name);
-          break;
-        }
-        p = p.parentId ? byId.get(p.parentId) : undefined;
-      }
-    }
-    return out;
-  }, [branches]);
+  const assigned = branches.filter((b) => b.assigned);
 
   const onCount = circles.filter((c) => c.following).length;
   const viaCount = circles.filter((c) => c.viaBranch).length;
@@ -126,59 +93,52 @@ export function CirclesPanel({
       </div>
 
       <section>
-        <SectionHeading>By branch</SectionHeading>
-        <p className="mb-2 text-sm text-muted-foreground">
-          Every circle in a ticked branch and the branches inside it follows,
-          including circles that join later.
-        </p>
-        {branches.length > 0 ? (
+        <SectionHeading>Branches</SectionHeading>
+        {assigned.length > 0 ? (
           <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
-            {branches.map((b) => {
-              const covered = coveredBy.get(b.id);
+            {assigned.map((b) => {
               const count = subtreeCounts.get(b.id) ?? 0;
               return (
                 <li key={b.id}>
-                  <label
-                    className="flex min-h-14 cursor-pointer items-center gap-3 py-2 pr-4 transition-colors duration-[var(--duration-fast)] first:rounded-t-2xl last:rounded-b-2xl hover:bg-surface-hover"
-                    style={{
-                      paddingLeft: `calc(1rem + ${Math.min(b.depth, 5)} * 1.25rem)`,
-                    }}
+                  <Link
+                    href={`/admin/branches/${b.id}`}
+                    className="flex min-h-14 items-center gap-3 px-4 py-2 transition-colors duration-[var(--duration-fast)] first:rounded-t-2xl last:rounded-b-2xl hover:bg-surface-hover"
                   >
-                    <input
-                      type="checkbox"
-                      className="size-5 shrink-0 accent-primary"
-                      checked={b.assigned}
-                      disabled={busyBranch !== null}
-                      onChange={() => void toggleBranch(b)}
-                    />
                     <BranchesIcon
                       aria-hidden
                       className="size-4 shrink-0 text-muted-foreground"
                     />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium wrap-anywhere text-foreground">
-                        {b.name}
-                      </span>
-                      {covered && !b.assigned && (
-                        <span className="block text-xs text-muted-foreground">
-                          Already covered by {covered}
-                        </span>
-                      )}
+                    <span className="min-w-0 flex-1 text-sm font-medium wrap-anywhere text-foreground">
+                      Followed in {b.name}
                     </span>
                     <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                       {count} {count === 1 ? "circle" : "circles"}
                     </span>
-                  </label>
+                    <ChevronRightIcon
+                      aria-hidden
+                      className="size-5 shrink-0 text-muted-foreground"
+                    />
+                  </Link>
                 </li>
               );
             })}
           </ul>
         ) : (
-          <p className="rounded-2xl border border-dashed border-outline p-4 text-sm text-muted-foreground">
-            No branches yet. Create them in Admin › Branches to assign a roadmap
-            to a whole place at once.
+          <p className="text-sm text-muted-foreground">
+            No branch follows it yet.
           </p>
         )}
+        <p className="mt-2 text-sm text-muted-foreground">
+          To add a whole branch, open it in{" "}
+          <Link
+            href="/admin/branches"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Branches
+          </Link>{" "}
+          and add the roadmap there. Every circle inside follows, including
+          circles that join later.
+        </p>
       </section>
 
       <section>

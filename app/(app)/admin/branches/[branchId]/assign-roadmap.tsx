@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Dialog } from "@/components/ui";
-import { FlagIcon } from "@/components/app/icons";
+import { PlusIcon } from "@/components/app/icons";
 import { usePropState } from "@/lib/use-prop-state";
 import { setBranchOnRoadmap } from "@/app/(app)/programme/[roadmapId]/authoring-actions";
 
@@ -50,14 +50,14 @@ export function AssignRoadmap({
 
   return (
     <>
-      <Button variant="tonal" size="sm" onClick={() => setOpen(true)}>
-        <FlagIcon aria-hidden className="size-4" /> Assign a roadmap
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        <PlusIcon aria-hidden className="size-4" /> Roadmap
       </Button>
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title={`Roadmaps for ${branchName}`}
-        description={`A ticked roadmap reaches all ${circles} ${circles === 1 ? "circle" : "circles"} in ${branchName} and the branches inside it, including circles that join later.`}
+        title={`Add a roadmap to ${branchName}`}
+        description={`All ${circles} ${circles === 1 ? "circle" : "circles"} here follow it, and any circle that joins later.`}
         footer={
           <Button variant="primary" onClick={() => setOpen(false)}>
             Done

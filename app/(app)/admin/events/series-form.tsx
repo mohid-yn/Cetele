@@ -32,19 +32,20 @@ import type { BranchOption } from "./camp-form";
  * time they did not agree to.
  */
 export function SeriesForm({
-  branches,
+  branch,
   initial,
   defaultZone,
-  defaultBranchId,
 }: {
-  branches: BranchOption[];
-  /** Preselected when opened from a branch's page (D82). */
-  defaultBranchId?: string;
+  /**
+   * The branch it belongs to, fixed (D85): a halaqah is started from inside its
+   * branch, so the form never asks which one.
+   */
+  branch: BranchOption;
   initial: SeriesInput | null;
   defaultZone: string;
 }) {
   const [form, setForm] = React.useState(() => ({
-    branchId: initial?.branchId ?? defaultBranchId ?? branches[0]?.id ?? "",
+    branchId: branch.id,
     title: initial?.title ?? "",
     details: initial?.details ?? "",
     venue: initial?.venue ?? "",
@@ -83,24 +84,6 @@ export function SeriesForm({
 
   return (
     <Card className="flex flex-col gap-4 p-4">
-      <Field
-        label="Branch"
-        htmlFor="series-branch"
-        hint="Every circle in it, and in the branches inside it, will see this."
-      >
-        <select
-          id="series-branch"
-          className={selectCls + " w-full"}
-          value={form.branchId}
-          onChange={(e) => set("branchId", e.target.value)}
-        >
-          {branches.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.label}
-            </option>
-          ))}
-        </select>
-      </Field>
       <Field label="Title" htmlFor="series-title" required>
         <Input
           id="series-title"
@@ -197,7 +180,11 @@ export function SeriesForm({
           disabled={!ready || act.pending}
           onClick={() => void save(active)}
         >
-          {act.pending ? "Saving…" : initial ? "Save changes" : "Publish"}
+          {act.pending
+            ? "Saving…"
+            : initial
+              ? "Save changes"
+              : `Publish to ${branch.circles} ${branch.circles === 1 ? "circle" : "circles"}`}
         </Button>
       </div>
 

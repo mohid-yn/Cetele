@@ -2,12 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
-import { ArrowLeftIcon, ChevronRightIcon } from "@/components/app/icons";
+import { ChevronRightIcon } from "@/components/app/icons";
 import { q } from "@/lib/db-log";
 import type { ScheduleRow } from "@/lib/events";
 import { loadStewardTree, requireSteward } from "../../steward";
+import { BackLink } from "../form-header";
 import { CampForm } from "../camp-form";
-import { branchOptions } from "../branch-options";
+import { branchOption } from "../branch-options";
 
 /**
  * Edit a camp (D80). Who is coming, polls, questions and cancelling live on
@@ -35,19 +36,14 @@ export default async function EditCampPage({
     ),
   ]);
   if (!e || e.kind !== "camp") notFound();
-  const runs = tree.some((b) => b.id === e.branch_id);
-  if (!runs) notFound();
+  const branch = branchOption(tree, e.branch_id);
+  if (!branch) notFound();
 
   return (
     <Screen>
-      <Link
-        href="/admin/events"
-        className="inline-flex w-fit items-center gap-1 text-sm font-medium text-primary"
-      >
-        <ArrowLeftIcon aria-hidden className="size-4" /> Events
-      </Link>
+      <BackLink href={`/admin/branches/${branch.id}`} label={branch.name} />
       <PageHeader
-        eyebrow="Camp"
+        eyebrow={`Camp · ${branch.name}`}
         title={e.title}
         action={
           e.status === "draft" ? (
@@ -70,7 +66,7 @@ export default async function EditCampPage({
         />
       </Link>
       <CampForm
-        branches={branchOptions(tree)}
+        branch={branch}
         defaultZone={timezone}
         initial={{
           id: e.id,

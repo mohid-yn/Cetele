@@ -60,7 +60,9 @@ export async function saveCamp(
   );
   await signOutIfStaleSession(error);
   if (error) return { error: error.message };
-  revalidatePath("/admin/events");
+  revalidatePath("/admin/events", "layout");
+  // The branch's "Happening here" and the home's "Coming up" (D85).
+  revalidatePath("/admin/branches", "layout");
   revalidatePath("/events");
   // A new camp opens its own page; an edit stays where it is.
   if (!input.id) redirect(`/admin/events/${data}`);
@@ -70,6 +72,7 @@ export async function saveCamp(
 
 export async function deleteDraft(
   eventId: string,
+  branchId: string,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const { error } = await q(
@@ -78,8 +81,9 @@ export async function deleteDraft(
   );
   await signOutIfStaleSession(error);
   if (error) return { error: error.message };
-  revalidatePath("/admin/events");
-  redirect("/admin/events");
+  revalidatePath("/admin/branches", "layout");
+  // Back to the branch it was in (D85): there is no events list to return to.
+  redirect(`/admin/branches/${branchId}`);
 }
 
 export type SeriesInput = {
@@ -116,7 +120,9 @@ export async function saveSeries(
   );
   await signOutIfStaleSession(error);
   if (error) return { error: error.message };
-  revalidatePath("/admin/events");
+  revalidatePath("/admin/events", "layout");
+  // The branch's "Happening here" and the home's "Coming up" (D85).
+  revalidatePath("/admin/branches", "layout");
   revalidatePath("/events");
   if (!input.id) redirect(`/admin/events/series/${data}`);
   revalidatePath(`/admin/events/series/${input.id}`);

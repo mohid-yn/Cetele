@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { Badge, buttonVariants, Card, Screen } from "@/components/ui";
+import { redirect } from "next/navigation";
+import { Badge, Card, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { SectionHeading } from "@/components/app/section-heading";
 import {
   BranchesIcon,
   CalendarIcon,
   ChevronRightIcon,
-  FlagIcon,
-  PlusIcon,
 } from "@/components/app/icons";
 import { q } from "@/lib/db-log";
 import { formatWhen } from "@/lib/events";
@@ -16,17 +15,16 @@ import { loadStewardTree, requireSteward } from "../steward";
 import { NewBranchButton } from "./new-branch";
 
 /**
- * The administration workspace's landing page (D79, D82).
+ * The administration workspace's landing page (D82, D85): branches as FOLDERS.
  *
- *   1. COMING UP: the next camps the viewer runs, so the most time-bound thing
- *      in the workspace is the first thing in it.
- *   2. CREATE: camp, weekly halaqah, roadmap, one tap each.
- *   3. HOW REACH WORKS, in three lines, because the owner could not tell how a
- *      roadmap or an event finds its circles (2026-11-07).
- *   4. The tree. Open a branch to see everything reaching it.
+ *   1. COMING UP: the next camps the viewer runs, the most time-bound thing here.
+ *   2. YOUR BRANCHES: only the top of the tree. Open one to see what happens
+ *      there, post inside it, and open the branches inside it in turn. The tree
+ *      is understood by moving through it, never drawn (owner, 2026-11-07:
+ *      breadcrumbs and diagrams "make everything seem complicated").
  *
- * A branch with circles waiting to join says so, because approving them is the
- * one thing here that someone else is waiting on.
+ * A steward who runs ONE branch never sees this screen: they land inside it.
+ * Creating lives inside a branch, so there are no create buttons here.
  */
 export default async function BranchesPage() {
   const { supabase, isOrganiser } = await requireSteward();
@@ -34,8 +32,23 @@ export default async function BranchesPage() {
     loadStewardTree(supabase),
     q("branches.events_i_lead", supabase.rpc("events_i_lead")),
   ]);
-  const waiting = tree.reduce((n, b) => n + b.pending, 0);
+  const tops = tree.filter((b) => b.depth === 0);
+  if (!isOrganiser && tops.length === 1) {
+    redirect(`/admin/branches/${tops[0].id}`);
+  }
+
   const reach = subtreeCircleCounts(tree);
+  const inside = (id: string) => tree.filter((b) => b.parentId === id).length;
+  // Requests anywhere under a top branch, so the folder says it needs a look.
+  const waitingUnder = (id: string): number => {
+    const own = tree.find((b) => b.id === id)?.pending ?? 0;
+    return (
+      own +
+      tree
+        .filter((b) => b.parentId === id)
+        .reduce((n, c) => n + waitingUnder(c.id), 0)
+    );
+  };
   const camps = (led ?? [])
     .filter((e) => e.kind === "camp" && e.status !== "cancelled")
     .slice(0, 3);
@@ -45,7 +58,6 @@ export default async function BranchesPage() {
       <PageHeader
         eyebrow="Administration"
         title="Branches"
-        subtitle="Where camps, halaqahs and roadmaps reach circles."
         action={
           isOrganiser ? (
             <NewBranchButton parentId={null} label="New organisation" />
@@ -53,9 +65,9 @@ export default async function BranchesPage() {
         }
       />
 
-      <section>
-        <SectionHeading>Coming up</SectionHeading>
-        {camps.length > 0 ? (
+      {camps.length > 0 && (
+        <section>
+          <SectionHeading>Coming up</SectionHeading>
           <Card className="overflow-hidden">
             <ul className="flex flex-col divide-y divide-border">
               {camps.map((e) => (
@@ -85,153 +97,71 @@ export default async function BranchesPage() {
                         {e.going} going
                       </Badge>
                     )}
-                    <ChevronRightIcon
-                      aria-hidden
-                      className="size-5 shrink-0 text-muted-foreground"
-                    />
                   </Link>
                 </li>
               ))}
             </ul>
           </Card>
-        ) : (
-          <p className="text-sm text-muted-foreground">No camps coming up.</p>
-        )}
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <Link
-            href="/admin/events/new"
-            className={buttonVariants({ variant: "accent" })}
-          >
-            <PlusIcon aria-hidden className="size-4" /> New camp
-          </Link>
-          <Link
-            href="/admin/events/series/new"
-            className={buttonVariants({ variant: "tonal" })}
-          >
-            <PlusIcon aria-hidden className="size-4" /> Weekly halaqah
-          </Link>
-          {isOrganiser && (
-            <Link
-              href="/programme"
-              className={buttonVariants({
-                variant: "tonal",
-                className: "col-span-2 sm:col-span-1",
-              })}
-            >
-              <FlagIcon aria-hidden className="size-4" /> Roadmaps
-            </Link>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
 
       <section>
-        <SectionHeading>How things reach circles</SectionHeading>
-        <Card className="flex flex-col gap-3 p-4 text-sm">
-          <p className="flex gap-3">
-            <BranchesIcon
-              aria-hidden
-              className="mt-0.5 size-5 shrink-0 text-primary"
-            />
-            <span>
-              <strong className="text-foreground">Branches are places.</strong>{" "}
-              <span className="text-muted-foreground">
-                Each circle joins one. Anything set on a branch reaches every
-                circle in it and in the branches inside it.
-              </span>
-            </span>
-          </p>
-          <p className="flex gap-3">
-            <CalendarIcon
-              aria-hidden
-              className="mt-0.5 size-5 shrink-0 text-primary"
-            />
-            <span>
-              <strong className="text-foreground">
-                Camps and weekly halaqahs
-              </strong>{" "}
-              <span className="text-muted-foreground">
-                are posted to a branch. Members answer if they are coming;
-                nothing is required.
-              </span>
-            </span>
-          </p>
-          <p className="flex gap-3">
-            <FlagIcon
-              aria-hidden
-              className="mt-0.5 size-5 shrink-0 text-primary"
-            />
-            <span>
-              <strong className="text-foreground">Roadmaps</strong>{" "}
-              <span className="text-muted-foreground">
-                are assigned to a branch, or to single circles. Members record
-                their progress against them.
-              </span>
-            </span>
-          </p>
-        </Card>
+        <SectionHeading>Your branches</SectionHeading>
+        {tops.length > 0 ? (
+          <>
+            <Card className="overflow-hidden">
+              <ul className="flex flex-col divide-y divide-border">
+                {tops.map((b) => {
+                  const kids = inside(b.id);
+                  const circles = reach.get(b.id) ?? 0;
+                  const waiting = waitingUnder(b.id);
+                  return (
+                    <li key={b.id}>
+                      <Link
+                        href={`/admin/branches/${b.id}`}
+                        className="flex min-h-16 items-center gap-3 px-4 py-3 hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                      >
+                        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-100 text-primary-800">
+                          <BranchesIcon aria-hidden className="size-5" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-semibold text-foreground">
+                            {b.name}
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            {kids > 0 &&
+                              `${kids} ${kids === 1 ? "branch" : "branches"} inside · `}
+                            {circles} {circles === 1 ? "circle" : "circles"}
+                          </span>
+                        </span>
+                        {waiting > 0 && (
+                          <Badge variant="accent" size="sm">
+                            {waiting} waiting
+                          </Badge>
+                        )}
+                        <ChevronRightIcon
+                          aria-hidden
+                          className="size-5 shrink-0 text-muted-foreground"
+                        />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Open a branch to post a camp or halaqah there. It reaches every
+              circle inside.
+            </p>
+          </>
+        ) : (
+          <Card className="p-6 text-center text-sm text-muted-foreground">
+            {isOrganiser
+              ? "No branches yet. Start with your organisation, then add the places inside it."
+              : "You run no branches at the moment."}
+          </Card>
+        )}
       </section>
-
-      {waiting > 0 && (
-        <p className="rounded-xl bg-accent-100 px-4 py-3 text-sm font-medium text-accent-800">
-          {waiting === 1
-            ? "1 circle is waiting to join a branch."
-            : `${waiting} circles are waiting to join a branch.`}
-        </p>
-      )}
-
-      <SectionHeading className="-mb-2">
-        {isOrganiser ? "All branches" : "Branches you run"}
-      </SectionHeading>
-      {tree.length > 0 ? (
-        <Card className="overflow-hidden">
-          <ul className="flex flex-col divide-y divide-border">
-            {tree.map((b) => (
-              <li key={b.id}>
-                <Link
-                  href={`/admin/branches/${b.id}`}
-                  className="flex min-h-14 items-center gap-3 py-3 pr-4 hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-                  // One step of indent per level, capped so a deep tree still
-                  // fits a phone.
-                  style={{
-                    paddingLeft: `calc(1rem + ${Math.min(b.depth, 5)} * 1.25rem)`,
-                  }}
-                >
-                  <BranchesIcon
-                    aria-hidden
-                    className="size-4 shrink-0 text-muted-foreground"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-foreground">
-                      {b.name}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {(reach.get(b.id) ?? 0) === 1
-                        ? "Reaches 1 circle"
-                        : `Reaches ${reach.get(b.id) ?? 0} circles`}
-                      {b.direct && " · you run this"}
-                    </span>
-                  </span>
-                  {b.pending > 0 && (
-                    <Badge variant="accent" size="sm">
-                      {b.pending} waiting
-                    </Badge>
-                  )}
-                  <ChevronRightIcon
-                    aria-hidden
-                    className="size-5 shrink-0 text-muted-foreground"
-                  />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : (
-        <Card className="p-6 text-center text-sm text-muted-foreground">
-          {isOrganiser
-            ? "No branches yet. Start with your organisation, then add the places inside it."
-            : "You run no branches at the moment."}
-        </Card>
-      )}
     </Screen>
   );
 }

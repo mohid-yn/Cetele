@@ -22,6 +22,8 @@ test.describe.configure({ mode: "serial" });
 let organiser: Page;
 let member: Page;
 let campUrl = "";
+// The city branch, where camps and halaqahs are posted FROM (D85).
+let cityId = "";
 
 async function pageFor(browser: Browser, email: string): Promise<Page> {
   const ctx = await browser.newContext();
@@ -63,11 +65,14 @@ test("an organiser builds a branch tree", async () => {
   await organiser.fill("#branch-name", CITY);
   await organiser.getByRole("button", { name: "Create", exact: true }).click();
   await expect(organiser.getByRole("heading", { name: CITY })).toBeVisible();
+  cityId = organiser.url().split("/").at(-1)!;
 });
 
 test("a circle asks to join, and the organiser approves it", async () => {
   await newCircle(member, CIRCLE);
   await openManageTab(member, "Settings");
+  // One row on Settings (D85); the choices open from it.
+  await member.getByRole("button", { name: /^Branch/ }).click();
   await member.selectOption("#branch-choice", { label: `${ORG} › ${CITY}` });
   await member.getByRole("button", { name: "Ask", exact: true }).click();
   await expect(member.getByText("Waiting for approval")).toBeVisible();
@@ -76,8 +81,12 @@ test("a circle asks to join, and the organiser approves it", async () => {
   await member.goto("/events");
   await expect(member.getByText("not in a branch yet")).toBeVisible();
 
+  // Branches are folders (D85): the organisation says one is waiting inside it,
+  // and the city, opened from inside, shows the request.
   await organiser.goto("/admin/branches");
-  await expect(organiser.getByText("1 waiting").first()).toBeVisible();
+  await organiser
+    .getByRole("link", { name: new RegExp(`${ORG}.*1 waiting`) })
+    .click();
   await organiser.getByRole("link", { name: new RegExp(CITY) }).click();
   await expect(organiser.getByText(CIRCLE)).toBeVisible();
   await organiser.getByRole("button", { name: "Approve" }).click();
@@ -90,14 +99,17 @@ test("a circle asks to join, and the organiser approves it", async () => {
 });
 
 test("a camp posted to the branch reaches the circle, with a one-tap answer", async () => {
-  await organiser.goto("/admin/events/new");
-  await organiser.selectOption("#camp-branch", { label: `${ORG} › ${CITY}` });
+  // Started from inside the branch, so the form never asks which (D85).
+  await organiser.goto(`/admin/branches/${cityId}`);
+  await organiser.getByRole("link", { name: /New camp/ }).click();
+  await organiser.waitForURL(/\/admin\/events\/new\?branch=/);
+  await expect(organiser.getByText(`For ${CITY}`)).toBeVisible();
   await organiser.fill("#camp-title", CAMP);
   await organiser.fill("#camp-venue", "Lake Eildon");
   await organiser.fill("#camp-starts", localInput(20, 10));
   await organiser.fill("#camp-ends", localInput(22, 14));
   await organiser.fill("#camp-capacity", "40");
-  await organiser.getByRole("button", { name: "Publish" }).click();
+  await organiser.getByRole("button", { name: /^Publish to 1 circle/ }).click();
   await organiser.waitForURL(/\/admin\/events\/[0-9a-f-]{36}$/);
   campUrl = organiser.url().replace("/admin/events/", "/events/");
 
@@ -148,18 +160,16 @@ test("a circle outside the branch sees nothing, not even by link", async ({
 });
 
 test("a weekly halaqah: Today asks for a vote, and questions are anonymous", async () => {
-  await organiser.goto("/admin/events/series/new");
-  await organiser.selectOption("#series-branch", { label: `${ORG} › ${CITY}` });
+  await organiser.goto(`/admin/events/series/new?branch=${cityId}`);
   await organiser.fill("#series-title", HALAQAH);
   await organiser.fill("#series-venue", "Masjid");
-  await organiser.getByRole("button", { name: "Publish" }).click();
+  await organiser.getByRole("button", { name: /^Publish to/ }).click();
   await organiser.waitForURL(/\/admin\/events\/series\/[0-9a-f-]{36}$/);
 
-  // The first session, from the admin list.
-  await organiser.goto("/admin/events");
+  // The first session, from the halaqah's own "Coming weeks" (D85).
   await organiser
-    .getByRole("link", { name: new RegExp(HALAQAH) })
-    .filter({ has: organiser.locator("text=/\\d+ going/") })
+    .locator("section", { hasText: "Coming weeks" })
+    .getByRole("link")
     .first()
     .click();
   await organiser.waitForURL(/\/events\/[0-9a-f-]{36}$/);

@@ -10,8 +10,9 @@ import {
   Textarea,
 } from "@/components/ui";
 import { SectionHeading } from "@/components/app/section-heading";
-import { PlusIcon, CloseIcon } from "@/components/app/icons";
+import { ChevronDownIcon, CloseIcon, PlusIcon } from "@/components/app/icons";
 import { selectCls } from "@/components/app/role-toggle";
+import { cn } from "@/lib/utils";
 import { useAction } from "@/lib/use-action";
 import {
   campDays,
@@ -47,20 +48,21 @@ export type BranchOption = {
  * is no way back to a draft, only Cancel, on the event's own screen.
  */
 export function CampForm({
-  branches,
+  branch,
   initial,
   defaultZone,
-  defaultBranchId,
 }: {
-  branches: BranchOption[];
-  /** Preselected when opened from a branch's page (D82). */
-  defaultBranchId?: string;
+  /**
+   * The branch it belongs to, fixed (D85): a camp is started from inside its
+   * branch, so the form never asks which one.
+   */
+  branch: BranchOption;
   initial: CampInput | null;
   defaultZone: string;
 }) {
   const zone0 = initial?.timezone ?? defaultZone;
   const [form, setForm] = React.useState(() => ({
-    branchId: initial?.branchId ?? defaultBranchId ?? branches[0]?.id ?? "",
+    branchId: branch.id,
     title: initial?.title ?? "",
     details: initial?.details ?? "",
     venue: initial?.venue ?? "",
@@ -91,7 +93,6 @@ export function CampForm({
     form.starts &&
     form.ends &&
     !endsBeforeStart;
-  const branch = branches.find((b) => b.id === form.branchId);
 
   // The camp's days on the venue's calendar, for the schedule's day picker.
   const days = React.useMemo(() => {
@@ -106,6 +107,25 @@ export function CampForm({
       return [];
     }
   }, [form.starts, form.ends, form.timezone, endsBeforeStart]);
+
+  // The optional sections open on tap (D85), and say what they hold when shut.
+  const bringCount = form.bring.filter((b) => b.trim()).length;
+  const hasBring = bringCount > 0;
+  const bringSummary = hasBring
+    ? `${bringCount} ${bringCount === 1 ? "thing" : "things"}`
+    : "Add";
+  const hasSchedule = form.schedule.length > 0;
+  const scheduleSummary = hasSchedule
+    ? `${form.schedule.length} ${form.schedule.length === 1 ? "line" : "lines"}`
+    : "Add";
+  const hasContact = Boolean(
+    form.contactName.trim() || form.contactDetail.trim(),
+  );
+  const contactSummary = hasContact
+    ? form.contactName.trim() || form.contactDetail.trim()
+    : "Add";
+  const hasDetails = Boolean(form.details.trim());
+  const detailsSummary = hasDetails ? "Written" : "Add";
 
   const setRow = (i: number, patch: Partial<ScheduleRow>) =>
     set(
@@ -154,36 +174,6 @@ export function CampForm({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* 1. Who it is for --------------------------------------------------- */}
-      <section>
-        <SectionHeading>Who it&rsquo;s for</SectionHeading>
-        <Card className="flex flex-col gap-3 p-4">
-          <Field label="Branch" htmlFor="camp-branch">
-            <select
-              id="camp-branch"
-              className={selectCls + " w-full"}
-              value={form.branchId}
-              onChange={(e) => set("branchId", e.target.value)}
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          {branch && (
-            <p className="rounded-xl bg-muted px-3 py-2 text-sm text-foreground">
-              Reaches{" "}
-              <strong className="tabular-nums">
-                {branch.circles} {branch.circles === 1 ? "circle" : "circles"}
-              </strong>
-              : every circle in {branch.name} and the branches inside it.
-            </p>
-          )}
-        </Card>
-      </section>
-
       {/* 2. When and where -------------------------------------------------- */}
       <section>
         <SectionHeading>When and where</SectionHeading>
@@ -286,9 +276,12 @@ export function CampForm({
       </section>
 
       {/* 4. What to bring --------------------------------------------------- */}
-      <section>
-        <SectionHeading>What to bring</SectionHeading>
-        <Card className="flex flex-col gap-2 p-4">
+      <Optional
+        title="What to bring"
+        summary={bringSummary}
+        defaultOpen={hasBring}
+      >
+        <div className="flex flex-col gap-2 p-4">
           {form.bring.map((item, i) => (
             <div key={i} className="flex items-center gap-2">
               <Input
@@ -335,13 +328,16 @@ export function CampForm({
           >
             <PlusIcon aria-hidden className="size-4" /> Add a thing
           </Button>
-        </Card>
-      </section>
+        </div>
+      </Optional>
 
       {/* 5. Schedule -------------------------------------------------------- */}
-      <section>
-        <SectionHeading>Schedule</SectionHeading>
-        <Card className="flex flex-col gap-2 p-4">
+      <Optional
+        title="Schedule"
+        summary={scheduleSummary}
+        defaultOpen={hasSchedule}
+      >
+        <div className="flex flex-col gap-2 p-4">
           {form.schedule.length === 0 && (
             <p className="text-sm text-muted-foreground">
               Optional. What happens each day, e.g. &ldquo;Day 1 · 18:00 ·
@@ -405,13 +401,16 @@ export function CampForm({
           >
             <PlusIcon aria-hidden className="size-4" /> Add a line
           </Button>
-        </Card>
-      </section>
+        </div>
+      </Optional>
 
       {/* 6. Contact --------------------------------------------------------- */}
-      <section>
-        <SectionHeading>Who to ask</SectionHeading>
-        <Card className="grid gap-3 p-4 sm:grid-cols-2">
+      <Optional
+        title="Who to ask"
+        summary={contactSummary}
+        defaultOpen={hasContact}
+      >
+        <div className="grid gap-3 p-4 sm:grid-cols-2">
           <Field label="Name" htmlFor="camp-contact-name">
             <Input
               id="camp-contact-name"
@@ -433,13 +432,16 @@ export function CampForm({
               onChange={(e) => set("contactDetail", e.target.value)}
             />
           </Field>
-        </Card>
-      </section>
+        </div>
+      </Optional>
 
       {/* 7. Anything else --------------------------------------------------- */}
-      <section>
-        <SectionHeading>Anything else</SectionHeading>
-        <Card className="p-4">
+      <Optional
+        title="Anything else"
+        summary={detailsSummary}
+        defaultOpen={hasDetails}
+      >
+        <div className="p-4">
           <Field
             label="Details"
             htmlFor="camp-details"
@@ -453,8 +455,8 @@ export function CampForm({
               onChange={(e) => set("details", e.target.value)}
             />
           </Field>
-        </Card>
-      </section>
+        </div>
+      </Optional>
 
       {act.error && (
         <p role="alert" className="text-sm text-danger">
@@ -488,7 +490,7 @@ export function CampForm({
           {act.pending
             ? "Saving…"
             : status === "draft"
-              ? "Publish"
+              ? `Publish to ${branch.circles} ${branch.circles === 1 ? "circle" : "circles"}`
               : "Save changes"}
         </Button>
       </div>
@@ -506,9 +508,58 @@ export function CampForm({
         confirmLabel="Delete"
         onConfirm={() => {
           setConfirmDelete(false);
-          if (initial?.id) void del.run(() => deleteDraft(initial.id!));
+          if (initial?.id)
+            void del.run(() => deleteDraft(initial.id!, branch.id));
         }}
       />
     </div>
+  );
+}
+
+/**
+ * A section that stays one row until it is wanted (D85): optional detail opens
+ * on tap instead of filling the screen. Open from the start when it already
+ * holds something, so an edit never hides what is there.
+ */
+function Optional({
+  title,
+  summary,
+  defaultOpen,
+  children,
+}: {
+  title: string;
+  summary: string;
+  defaultOpen: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = React.useState(defaultOpen);
+  const id = React.useId();
+  return (
+    <Card className="overflow-hidden">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((o) => !o)}
+        className="flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+      >
+        <span className="text-sm font-semibold text-foreground">{title}</span>
+        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+          {!open && summary}
+          <ChevronDownIcon
+            aria-hidden
+            className={cn(
+              "size-4 transition-transform duration-[var(--duration-fast)]",
+              open && "rotate-180",
+            )}
+          />
+        </span>
+      </button>
+      {open && (
+        <div id={id} className="border-t border-border">
+          {children}
+        </div>
+      )}
+    </Card>
   );
 }

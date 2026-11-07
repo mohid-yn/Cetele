@@ -23,6 +23,9 @@ async function relay(
   await signOutIfStaleSession(error);
   if (error) return { error: error.message };
   paths.forEach((p) => revalidatePath(p));
+  // Every branch screen, its settings included: a rename or a new steward shows
+  // on the branch, its parent and the home list alike (D85).
+  revalidatePath("/admin/branches", "layout");
   return { error: null };
 }
 

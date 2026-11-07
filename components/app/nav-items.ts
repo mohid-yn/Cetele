@@ -82,18 +82,14 @@ export const ADMIN_NAV_ITEM: FlatItem = {
 
 /** The workspace's own tabs, which replace the member's nav inside it (D74). */
 export const ADMIN_ZONE_ITEMS: readonly FlatItem[] = [
-  // Branches first (D82): it is the workspace's landing page.
+  // Branches first (D82): the workspace's landing page. Events has no tab of
+  // its own (D85): a camp or halaqah lives inside the branch it was posted to,
+  // like a file in a folder, so there is one home for it, not two.
   {
     href: "/admin/branches",
     label: "Branches",
     shortLabel: "Branches",
     Icon: BranchesIcon,
-  },
-  {
-    href: "/admin/events",
-    label: "Events",
-    shortLabel: "Events",
-    Icon: CalendarIcon,
   },
   {
     href: "/programme",
@@ -111,15 +107,14 @@ export const ADMIN_ZONE_ITEMS: readonly FlatItem[] = [
 
 /**
  * The workspace's tabs for THIS viewer. A steward who is not an organiser
- * (D79) runs events and branches and nothing else, so Roadmaps and Organisers
- * are not offered to them: their pages would only send them away.
+ * (D79) runs branches and what is in them, and nothing else, so their bar is
+ * Branches and the way out (D85). Roadmaps and Organisers would only send them
+ * away.
  */
 export function adminZoneItems(isOrganiser: boolean): readonly FlatItem[] {
   return isOrganiser
     ? ADMIN_ZONE_ITEMS
-    : ADMIN_ZONE_ITEMS.filter(
-        (i) => i.href === "/admin/events" || i.href === "/admin/branches",
-      );
+    : ADMIN_ZONE_ITEMS.filter((i) => i.href === "/admin/branches");
 }
 
 /**

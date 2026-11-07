@@ -11,7 +11,11 @@ import {
   Field,
   Input,
 } from "@/components/ui";
-import { ChevronRightIcon, PencilIcon } from "@/components/app/icons";
+import {
+  BranchesIcon,
+  ChevronRightIcon,
+  PencilIcon,
+} from "@/components/app/icons";
 import { SectionHeading } from "@/components/app/section-heading";
 import { useAction } from "@/lib/use-action";
 import { NewBranchButton } from "../new-branch";
@@ -33,20 +37,22 @@ type Circle = {
 type Steward = { userId: string; name: string | null; email: string };
 type Child = { id: string; name: string; circles: number; pending: number };
 
+/**
+ * The body of a branch's page (D85), in the order someone running it needs:
+ * circles waiting on them, what happens here (`happening`, rendered on the
+ * server), the branches inside it as folders, then its own circles. Stewards,
+ * renaming and deleting are on the branch's settings screen, behind the gear.
+ */
 export function BranchDetail({
-  me,
   branch,
-  canDelete,
   subBranches,
   circles,
-  stewards,
+  happening,
 }: {
-  me: string;
   branch: { id: string; name: string; parentId: string | null };
-  canDelete: boolean;
   subBranches: Child[];
   circles: Circle[];
-  stewards: Steward[];
+  happening: React.ReactNode;
 }) {
   const waiting = circles.filter((c) => c.pending);
   const joined = circles.filter((c) => !c.pending);
@@ -115,6 +121,61 @@ export function BranchDetail({
         </section>
       )}
 
+      {happening}
+
+      <section>
+        <SectionHeading
+          action={
+            <NewBranchButton
+              parentId={branch.id}
+              parentName={branch.name}
+              label="Add"
+            />
+          }
+        >
+          Inside {branch.name}
+        </SectionHeading>
+        {subBranches.length > 0 ? (
+          <Card className="overflow-hidden">
+            <ul className="flex flex-col divide-y divide-border">
+              {subBranches.map((c) => (
+                <li key={c.id}>
+                  <Link
+                    href={`/admin/branches/${c.id}`}
+                    className="flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-surface-hover"
+                  >
+                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-100 text-primary-800">
+                      <BranchesIcon aria-hidden className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-foreground">
+                        {c.name}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {c.circles === 1 ? "1 circle" : `${c.circles} circles`}
+                      </span>
+                    </span>
+                    {c.pending > 0 && (
+                      <Badge variant="accent" size="sm">
+                        {c.pending} waiting
+                      </Badge>
+                    )}
+                    <ChevronRightIcon
+                      aria-hidden
+                      className="size-5 text-muted-foreground"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            None. Add one for a smaller area, like a suburb inside a city.
+          </p>
+        )}
+      </section>
+
       <section>
         <SectionHeading action={`${joined.length}`}>Circles</SectionHeading>
         {joined.length > 0 ? (
@@ -157,60 +218,6 @@ export function BranchDetail({
         )}
       </section>
 
-      <section>
-        <SectionHeading
-          action={
-            <NewBranchButton
-              parentId={branch.id}
-              parentName={branch.name}
-              label="Add"
-            />
-          }
-        >
-          Branches inside
-        </SectionHeading>
-        {subBranches.length > 0 ? (
-          <Card className="overflow-hidden">
-            <ul className="flex flex-col divide-y divide-border">
-              {subBranches.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={`/admin/branches/${c.id}`}
-                    className="flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-surface-hover"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-foreground">
-                        {c.name}
-                      </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {c.circles === 1 ? "1 circle" : `${c.circles} circles`}
-                      </span>
-                    </span>
-                    {c.pending > 0 && (
-                      <Badge variant="accent" size="sm">
-                        {c.pending} waiting
-                      </Badge>
-                    )}
-                    <ChevronRightIcon
-                      aria-hidden
-                      className="size-5 text-muted-foreground"
-                    />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            None. Add one for a smaller area, like a suburb inside a city.
-          </p>
-        )}
-      </section>
-
-      <Stewards me={me} branch={branch} stewards={stewards} />
-
-      <BranchSettings branch={branch} canDelete={canDelete} />
-
       <ConfirmDialog
         open={removing !== null}
         onClose={() => setRemoving(null)}
@@ -232,7 +239,7 @@ export function BranchDetail({
   );
 }
 
-function Stewards({
+export function Stewards({
   me,
   branch,
   stewards,
@@ -340,7 +347,7 @@ function Stewards({
   );
 }
 
-function BranchSettings({
+export function BranchSettings({
   branch,
   canDelete,
 }: {

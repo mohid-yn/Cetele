@@ -1,50 +1,29 @@
-import Link from "next/link";
-import { Card, Screen } from "@/components/ui";
-import { PageHeader } from "@/components/app/page-header";
-import { ArrowLeftIcon } from "@/components/app/icons";
+import { redirect } from "next/navigation";
+import { Screen } from "@/components/ui";
+import { BackLink, FormHeader } from "../../form-header";
 import { loadStewardTree, requireSteward } from "../../../steward";
 import { SeriesForm } from "../../series-form";
-import { branchOptions } from "../../branch-options";
+import { branchOption } from "../../branch-options";
 
-/** Start a weekly halaqah (D80). */
+/**
+ * Start a weekly halaqah (D80) from inside a branch (D85). Set it once: each
+ * week becomes its own session, with its own polls and questions.
+ */
 export default async function NewSeriesPage({
   searchParams,
 }: {
   searchParams: Promise<{ branch?: string }>;
 }) {
-  const { branch } = await searchParams;
+  const { branch: branchId } = await searchParams;
   const { supabase, timezone } = await requireSteward();
-  const tree = await loadStewardTree(supabase);
-  // From a branch's page (D82): start with that branch chosen.
-  const defaultBranchId = tree.some((b) => b.id === branch)
-    ? branch
-    : undefined;
+  const branch = branchOption(await loadStewardTree(supabase), branchId);
+  if (!branch) redirect("/admin/branches");
 
   return (
     <Screen>
-      <Link
-        href="/admin/events"
-        className="inline-flex w-fit items-center gap-1 text-sm font-medium text-primary"
-      >
-        <ArrowLeftIcon aria-hidden className="size-4" /> Events
-      </Link>
-      <PageHeader
-        eyebrow="Administration"
-        title="Weekly halaqah"
-        subtitle="Set it once. Each week becomes its own session, with its own polls and questions."
-      />
-      {tree.length > 0 ? (
-        <SeriesForm
-          branches={branchOptions(tree)}
-          initial={null}
-          defaultBranchId={defaultBranchId}
-          defaultZone={timezone}
-        />
-      ) : (
-        <Card className="p-6 text-sm text-muted-foreground">
-          Create a branch first. A halaqah is posted to a branch.
-        </Card>
-      )}
+      <BackLink href={`/admin/branches/${branch.id}`} label={branch.name} />
+      <FormHeader title="Weekly halaqah" branch={branch} />
+      <SeriesForm branch={branch} initial={null} defaultZone={timezone} />
     </Screen>
   );
 }
