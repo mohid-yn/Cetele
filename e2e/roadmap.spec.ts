@@ -66,7 +66,8 @@ test("a circle follows a programme, and its members can record against it", asyn
   // Before opting in there is NO Roadmap tab. The tab is the only way in now
   // (Q7 resolved) and it is conditional — most circles follow no programme, so
   // a permanent tab leading to "isn't following a programme" would be clutter.
-  await page.getByRole("link", { name: "Progress", exact: true }).click();
+  // Events, not Progress: Progress is a section of Group now (D83).
+  await page.getByRole("link", { name: "Events", exact: true }).first().click();
   await expect(
     page.getByRole("link", { name: "Roadmap", exact: true }),
   ).toHaveCount(0);
@@ -251,7 +252,10 @@ test("the roadmap never touches the daily engine", async ({ page }) => {
   // Wait for each landing before acting on it: clicking a nav tab on a
   // half-mounted screen is the false negative this suite keeps re-learning.
   await page.waitForURL("**/today");
-  await page.getByRole("link", { name: "Progress", exact: true }).click();
+  // Progress is a section of Group (D83): the Group tab, then its segment.
+  await page.getByRole("link", { name: "Group", exact: true }).first().click();
+  await page.waitForURL("**/group");
+  await page.getByRole("tab", { name: "Progress" }).click();
   await page.waitForURL("**/progress");
 
   await expect(page.getByText("of the last 14 days")).toBeVisible();

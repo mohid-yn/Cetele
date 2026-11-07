@@ -276,6 +276,7 @@ export default async function ProgressPage({
 
   return (
     <ProgressClient
+      groupId={groupId}
       badges={badges}
       current={streak?.current ?? 0}
       longest={streak?.longest ?? 0}

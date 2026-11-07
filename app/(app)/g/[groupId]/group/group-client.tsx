@@ -26,7 +26,7 @@ import { PairGoal, NoPairGoal, type Pair } from "@/components/app/pair-goal";
 import type { Garden } from "@/lib/retention";
 import { MemberRow } from "@/components/app/member-row";
 import { InlineAlert } from "@/components/app/inline-alert";
-import { Segmented } from "@/components/app/segmented";
+import { GroupSections } from "@/components/app/group-sections";
 import {
   MemberBreakdownDialog,
   type BreakdownMember,
@@ -115,6 +115,7 @@ export type Steadfast = {
 };
 
 export function GroupClient({
+  initialTab = "overview",
   groupId,
   groupName,
   memberCount,
@@ -137,6 +138,8 @@ export function GroupClient({
   pair,
   pairless,
 }: {
+  /** From `?tab=`, so Progress can send someone back to a section (D83). */
+  initialTab?: Tab;
   groupId: string;
   groupName: string;
   memberCount: number;
@@ -172,7 +175,7 @@ export function GroupClient({
   pairless: boolean;
 }) {
   const router = useRouter();
-  const [tab, setTab] = React.useState<Tab>("overview");
+  const [tab, setTab] = React.useState<Tab>(initialTab);
   const [breakdownUserId, setBreakdownUserId] = React.useState<string | null>(
     null,
   );
@@ -259,15 +262,7 @@ export function GroupClient({
         }
       />
 
-      <Segmented<Tab>
-        value={tab}
-        onChange={setTab}
-        options={[
-          { value: "overview", label: "Overview" },
-          { value: "standings", label: "Standings" },
-          { value: "members", label: "Members" },
-        ]}
-      />
+      <GroupSections groupId={groupId} value={tab} onInPage={setTab} />
 
       {/* ---- Tab panels crossfade in place (AnimatePresence mode="wait") ---- */}
       <AnimatePresence mode="wait">

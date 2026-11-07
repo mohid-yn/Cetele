@@ -10,6 +10,7 @@ import {
   Screen,
 } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
+import { GroupSections } from "@/components/app/group-sections";
 import { SectionHeading } from "@/components/app/section-heading";
 import { BadgesGrid, type EarnedBadge } from "@/components/app/badges";
 import { FlameIcon, ShieldIcon } from "@/components/app/icons";
@@ -30,6 +31,7 @@ function bandWord(pct: number): string {
 }
 
 export function ProgressClient({
+  groupId,
   current,
   longest,
   freezesLeft,
@@ -44,6 +46,8 @@ export function ProgressClient({
   hasTasks,
   badges,
 }: {
+  /** For the Group sections control this screen now sits under (D83). */
+  groupId: string;
   current: number;
   longest: number;
   freezesLeft: number;
@@ -71,7 +75,7 @@ export function ProgressClient({
   return (
     <Screen>
       <PageHeader
-        title="Progress"
+        title="My progress"
         subtitle={
           <span className="text-balance">
             You&apos;ve fully completed{" "}
@@ -82,6 +86,8 @@ export function ProgressClient({
           </span>
         }
       />
+
+      <GroupSections groupId={groupId} value="progress" />
 
       {/* The streak: this screen's one number. See components/ui/hero-card.tsx. */}
       <HeroCard

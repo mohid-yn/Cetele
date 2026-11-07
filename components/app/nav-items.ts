@@ -14,13 +14,15 @@ import { groupHref, groupSubPath, type GroupSubPath } from "@/lib/group-href";
 /**
  * Primary navigation, shared by the mobile bottom bar and the desktop sidebar.
  * Four destinations, each with a single job: Today (personal), Group
- * (collective — folds in standings), Progress (reflection), Profile (you).
+ * (collective — folds in standings and the member's own progress), Events
+ * (camps and halaqahs, D83), Profile (you).
  * `label` and `shortLabel` are kept identical so the tab name never changes
  * between mobile and desktop.
  *
- * The first three are group-scoped (CET-25): their real URL is
+ * Today and Group are group-scoped (CET-25): their real URL is
  * `/g/[groupId]/<sub>`, so they carry a `sub` path and resolve against the
- * active group at render time. Profile is a plain top-level route.
+ * active group at render time. Events and Profile are plain top-level routes:
+ * the events list is the member's own, across every circle (D80).
  */
 type NavIcon = typeof HomeIcon;
 type ScopedItem = {
@@ -39,11 +41,13 @@ type FlatItem = {
 export const NAV_ITEMS: readonly (ScopedItem | FlatItem)[] = [
   { sub: "/today", label: "Today", shortLabel: "Today", Icon: HomeIcon },
   { sub: "/group", label: "Group", shortLabel: "Group", Icon: UsersIcon },
+  // Events took Progress's place (D83). Progress is a section of Group now,
+  // and `resolveNavItem` lights Group while it is open.
   {
-    sub: "/progress",
-    label: "Progress",
-    shortLabel: "Progress",
-    Icon: GridIcon,
+    href: "/events",
+    label: "Events",
+    shortLabel: "Events",
+    Icon: CalendarIcon,
   },
   { href: "/profile", label: "Profile", shortLabel: "Profile", Icon: UserIcon },
 ] as const;
@@ -211,7 +215,9 @@ export function resolveNavItem(
     };
   }
   const href = groupId ? groupHref(groupId, item.sub) : "/groups";
+  const sub = pathname.startsWith("/g/") ? groupSubPath(pathname) : null;
+  // Progress is a section of Group (D83), so Group stays lit on it.
   const active =
-    pathname.startsWith("/g/") && groupSubPath(pathname) === item.sub;
+    sub === item.sub || (item.sub === "/group" && sub === "/progress");
   return { href, active };
 }

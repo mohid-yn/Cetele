@@ -48,10 +48,15 @@ const STEADFAST_BAR = 85;
  */
 export default async function GroupPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ groupId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { groupId } = await params;
+  const { tab } = await searchParams;
+  const initialTab =
+    tab === "standings" || tab === "members" ? tab : "overview";
 
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
@@ -647,6 +652,7 @@ export default async function GroupPage({
     <>
       <GroupLive groupId={groupId} taskIds={taskIds} />
       <GroupClient
+        initialTab={initialTab}
         groupId={groupId}
         groupName={group?.name ?? "Circle"}
         memberCount={memberList.length}
