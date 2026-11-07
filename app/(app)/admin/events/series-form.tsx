@@ -35,13 +35,16 @@ export function SeriesForm({
   branches,
   initial,
   defaultZone,
+  defaultBranchId,
 }: {
   branches: BranchOption[];
+  /** Preselected when opened from a branch's page (D82). */
+  defaultBranchId?: string;
   initial: SeriesInput | null;
   defaultZone: string;
 }) {
   const [form, setForm] = React.useState(() => ({
-    branchId: initial?.branchId ?? branches[0]?.id ?? "",
+    branchId: initial?.branchId ?? defaultBranchId ?? branches[0]?.id ?? "",
     title: initial?.title ?? "",
     details: initial?.details ?? "",
     venue: initial?.venue ?? "",

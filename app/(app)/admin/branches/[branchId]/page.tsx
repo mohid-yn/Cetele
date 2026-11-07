@@ -6,10 +6,14 @@ import { ArrowLeftIcon } from "@/components/app/icons";
 import { q } from "@/lib/db-log";
 import { loadStewardTree, requireSteward } from "../../steward";
 import { BranchDetail } from "./branch-detail";
+import { ReachSection, type ReachItem } from "./reach-section";
+import { subtreeCircleCounts } from "@/lib/reach";
 
 /**
- * One branch (D79): circles waiting to join, the circles in it, the branches
- * inside it, and who runs it.
+ * One branch (D79, D82): first, what reaches its circles (roadmaps, weekly
+ * halaqahs, camps; set here or from above) with the buttons to add one here.
+ * Then circles waiting to join, the circles in it, the branches inside it, and
+ * who runs it.
  *
  * A steward learns each circle's NAME and SIZE and nothing else (D27). The
  * branch is how invitations reach a circle, not a window into it.
@@ -25,13 +29,50 @@ export default async function BranchPage({
   const branch = tree.find((b) => b.id === branchId);
   if (!branch) redirect("/admin/branches");
 
-  const [{ data: circleRows }, { data: stewardRows }] = await Promise.all([
+  const [
+    { data: circleRows },
+    { data: stewardRows },
+    { data: reachRows },
+    { data: roadmapRows },
+  ] = await Promise.all([
     q("branch.circles", supabase.rpc("branch_circles", { p_branch: branchId })),
     q(
       "branch.stewards",
       supabase.rpc("list_branch_stewards", { p_branch: branchId }),
     ),
+    q(
+      "branch.reach (0046)",
+      supabase.rpc("branch_reach", { p_branch: branchId }),
+    ),
+    // The organiser's assign dialog lists every roadmap; a steward gets none.
+    isOrganiser
+      ? q(
+          "branch.roadmaps",
+          supabase
+            .from("roadmaps")
+            .select("id, name, published")
+            .order("starts_on", { ascending: false }),
+        )
+      : Promise.resolve({
+          data: [] as { id: string; name: string; published: boolean }[],
+        }),
   ]);
+  const reach: ReachItem[] = (reachRows ?? []).map((r) => ({
+    kind: r.kind as ReachItem["kind"],
+    id: r.id,
+    title: r.title,
+    status: r.status,
+    startsAt: r.starts_at,
+    endsAt: r.ends_at,
+    timezone: r.timezone,
+    weekday: r.weekday,
+    startTime: r.start_time,
+    fromBranchName: r.from_branch_name,
+    inherited: r.inherited,
+  }));
+  const assignedHere = new Set(
+    reach.filter((r) => r.kind === "roadmap" && !r.inherited).map((r) => r.id),
+  );
 
   // The path back up, as far as the viewer runs it.
   const trail: { id: string; name: string }[] = [];
@@ -62,6 +103,19 @@ export default async function BranchPage({
       <PageHeader
         eyebrow={trail.map((t) => t.name).join(" › ") || "Branch"}
         title={branch.name}
+      />
+      <ReachSection
+        branchId={branch.id}
+        branchName={branch.name}
+        circles={subtreeCircleCounts(tree).get(branch.id) ?? 0}
+        items={reach}
+        isOrganiser={isOrganiser}
+        roadmaps={(roadmapRows ?? []).map((r) => ({
+          id: r.id,
+          name: r.name,
+          published: r.published,
+          here: assignedHere.has(r.id),
+        }))}
       />
       <BranchDetail
         me={me}

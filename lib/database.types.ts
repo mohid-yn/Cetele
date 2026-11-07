@@ -1862,6 +1862,23 @@ export type Database = {
           label: string;
         }[];
       };
+      branch_reach: {
+        Args: { p_branch: string };
+        Returns: {
+          ends_at: string;
+          from_branch: string;
+          from_branch_name: string;
+          id: string;
+          inherited: boolean;
+          kind: string;
+          start_time: string;
+          starts_at: string;
+          status: string;
+          timezone: string;
+          title: string;
+          weekday: number;
+        }[];
+      };
       can_claim_ownership: { Args: { p_group: string }; Returns: boolean };
       can_read_roadmap_cohort: {
         Args: { p_roadmap: string };

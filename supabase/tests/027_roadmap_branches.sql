@@ -234,5 +234,41 @@ select lives_ok(
   'a caller that predates 0045 still saves a camp');
 select pg_temp.reset_role();
 
+-- ---- 9. branch_reach (0046) ------------------------------------------------
+-- Assign the roadmap at the root, so Melbourne's steward sees it as inherited.
+select pg_temp.impersonate('ce000000-0000-0000-0000-00000000000f');
+select public.set_branch_on_roadmap('ce000000-0000-0000-0000-000000000300',
+  'ce000000-0000-0000-0000-000000000100', true);
+select public.save_camp(null, 'ce000000-0000-0000-0000-000000000100',
+  'Root camp', '', '', now() + interval '5 days', now() + interval '6 days',
+  'Australia/Melbourne', null, null, 'published');
+select public.save_camp(null, 'ce000000-0000-0000-0000-000000000100',
+  'Root draft', '', '', now() + interval '5 days', now() + interval '6 days',
+  'Australia/Melbourne', null, null, 'draft');
+select pg_temp.reset_role();
+
+select pg_temp.impersonate('ce000000-0000-0000-0000-000000000005');
+select results_eq(
+  $$ select kind, title, from_branch_name, inherited from public.branch_reach('ce000000-0000-0000-0000-000000000104')
+      where title in ('RB Roadmap', 'Root camp', 'Root draft', 'RB Camp') order by title, inherited $$,
+  -- 'RB Camp' is a DRAFT in Melbourne (section 8), so North does not list it.
+  -- The roadmap shows twice: North's own assignment (section 6) and the root's.
+  $$ values ('roadmap'::text, 'RB Roadmap'::text, 'North'::text, false),
+            ('roadmap'::text, 'RB Roadmap'::text, 'RB Nexus'::text, true),
+            ('camp'::text, 'Root camp'::text, 'RB Nexus'::text, true) $$,
+  'a steward sees what reaches North from above, and no draft from above');
+select throws_ok(
+  $$ select * from public.branch_reach('ce000000-0000-0000-0000-000000000105') $$,
+  'you do not run that branch', 'and is refused for a branch beside theirs');
+select pg_temp.reset_role();
+
+select pg_temp.impersonate('ce000000-0000-0000-0000-00000000000f');
+select results_eq(
+  $$ select count(*)::int from public.branch_reach('ce000000-0000-0000-0000-000000000100')
+      where title = 'Root draft' and not inherited $$,
+  $$ values (1) $$,
+  'the branch''s own draft shows on its own page');
+select pg_temp.reset_role();
+
 select * from finish();
 rollback;

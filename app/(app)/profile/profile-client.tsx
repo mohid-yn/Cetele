@@ -233,18 +233,18 @@ export function ProfileClient({
         )}
         {isOrganiser ? (
           <ProfileRow
-            href="/programme"
+            href="/admin/branches"
             Icon={ShieldIcon}
             title="Administration"
-            detail="Roadmaps, events, branches and organisers"
+            detail="Branches, events, roadmaps and organisers"
           />
         ) : (
           isSteward && (
             <ProfileRow
-              href="/admin/events"
+              href="/admin/branches"
               Icon={ShieldIcon}
               title="Administration"
-              detail="Events and branches you run"
+              detail="Branches and events you run"
             />
           )
         )}

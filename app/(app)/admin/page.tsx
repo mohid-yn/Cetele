@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
 
 /**
- * `/admin` has no screen of its own. An organiser lands on the roadmap hub, a
- * steward (D79) on their events, and anyone else on the circle picker.
+ * `/admin` has no screen of its own. Organisers and stewards land on Branches
+ * (D82), the workspace's hub; anyone else on the circle picker.
  */
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -30,7 +30,7 @@ export default async function AdminPage() {
     ),
   ]);
 
-  if (viewer?.is_super_admin) redirect("/programme");
-  if ((stewardRows ?? []).length > 0) redirect("/admin/events");
+  if (viewer?.is_super_admin || (stewardRows ?? []).length > 0)
+    redirect("/admin/branches");
   redirect("/groups");
 }

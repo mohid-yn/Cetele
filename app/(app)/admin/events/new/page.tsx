@@ -7,9 +7,18 @@ import { CampForm } from "../camp-form";
 import { branchOptions } from "../branch-options";
 
 /** Post a camp (D80). It starts as a draft unless published straight away. */
-export default async function NewCampPage() {
+export default async function NewCampPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branch?: string }>;
+}) {
+  const { branch } = await searchParams;
   const { supabase, timezone } = await requireSteward();
   const tree = await loadStewardTree(supabase);
+  // From a branch's page (D82): start with that branch chosen.
+  const defaultBranchId = tree.some((b) => b.id === branch)
+    ? branch
+    : undefined;
 
   return (
     <Screen>
@@ -24,6 +33,7 @@ export default async function NewCampPage() {
         <CampForm
           branches={branchOptions(tree)}
           initial={null}
+          defaultBranchId={defaultBranchId}
           defaultZone={timezone}
         />
       ) : (

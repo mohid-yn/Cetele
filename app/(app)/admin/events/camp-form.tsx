@@ -50,14 +50,17 @@ export function CampForm({
   branches,
   initial,
   defaultZone,
+  defaultBranchId,
 }: {
   branches: BranchOption[];
+  /** Preselected when opened from a branch's page (D82). */
+  defaultBranchId?: string;
   initial: CampInput | null;
   defaultZone: string;
 }) {
   const zone0 = initial?.timezone ?? defaultZone;
   const [form, setForm] = React.useState(() => ({
-    branchId: initial?.branchId ?? branches[0]?.id ?? "",
+    branchId: initial?.branchId ?? defaultBranchId ?? branches[0]?.id ?? "",
     title: initial?.title ?? "",
     details: initial?.details ?? "",
     venue: initial?.venue ?? "",

@@ -7,9 +7,18 @@ import { SeriesForm } from "../../series-form";
 import { branchOptions } from "../../branch-options";
 
 /** Start a weekly halaqah (D80). */
-export default async function NewSeriesPage() {
+export default async function NewSeriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branch?: string }>;
+}) {
+  const { branch } = await searchParams;
   const { supabase, timezone } = await requireSteward();
   const tree = await loadStewardTree(supabase);
+  // From a branch's page (D82): start with that branch chosen.
+  const defaultBranchId = tree.some((b) => b.id === branch)
+    ? branch
+    : undefined;
 
   return (
     <Screen>
@@ -28,6 +37,7 @@ export default async function NewSeriesPage() {
         <SeriesForm
           branches={branchOptions(tree)}
           initial={null}
+          defaultBranchId={defaultBranchId}
           defaultZone={timezone}
         />
       ) : (

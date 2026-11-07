@@ -337,6 +337,12 @@ test("a super admin has a way in, and reads the cohort across circles", async ({
     .first();
   await expect(adminTab).toBeVisible();
   await adminTab.click();
+  // The door lands on Branches, the workspace's hub (D82); Roadmaps is a tab.
+  await page.waitForURL("**/admin/branches");
+  await page
+    .getByRole("navigation", { name: "Administration" })
+    .getByRole("link", { name: "Roadmaps" })
+    .click();
   await page.waitForURL("**/programme");
   await expect(
     page.getByRole("heading", { level: 1, name: "Roadmap" }),

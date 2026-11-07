@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Card, Screen } from "@/components/ui";
 import { PageHeader } from "@/components/app/page-header";
 import { EventCard } from "@/components/app/event-card";
+import { SectionHeading } from "@/components/app/section-heading";
 import { CalendarIcon } from "@/components/app/icons";
 import { createClient } from "@/lib/supabase/server";
 import { q } from "@/lib/db-log";
@@ -42,6 +43,8 @@ export default async function EventsPage() {
     ]);
 
   const events = (rows ?? []).map(toUpcoming);
+  const camps = events.filter((e) => e.kind === "camp");
+  const halaqahs = events.filter((e) => e.kind !== "camp");
   const zone = profile?.timezone ?? "UTC";
   const nowISO = new Date().toISOString();
   const circles = (memberships ?? []).filter((m) => m.groups);
@@ -60,13 +63,34 @@ export default async function EventsPage() {
       />
 
       {events.length > 0 ? (
-        <ul className="flex flex-col gap-3">
-          {events.map((e) => (
-            <li key={e.id}>
-              <EventCard event={e} viewerZone={zone} nowISO={nowISO} />
-            </li>
-          ))}
-        </ul>
+        // Camps first, as their own section (D83): they are rare, need an
+        // answer weeks ahead, and were getting lost among weekly sessions.
+        <>
+          {camps.length > 0 && (
+            <section>
+              <SectionHeading>Upcoming camps</SectionHeading>
+              <ul className="flex flex-col gap-3">
+                {camps.map((e) => (
+                  <li key={e.id}>
+                    <EventCard event={e} viewerZone={zone} nowISO={nowISO} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {halaqahs.length > 0 && (
+            <section>
+              <SectionHeading>Halaqahs</SectionHeading>
+              <ul className="flex flex-col gap-3">
+                {halaqahs.map((e) => (
+                  <li key={e.id}>
+                    <EventCard event={e} viewerZone={zone} nowISO={nowISO} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </>
       ) : (
         <Card className="flex flex-col items-center gap-3 p-8 text-center">
           <span className="grid size-12 place-items-center rounded-full bg-primary-100 text-primary-800">

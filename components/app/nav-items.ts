@@ -69,11 +69,12 @@ export const ROADMAP_NAV_ITEM: FlatItem = {
  * The organiser's door into the administration workspace.
  *
  * An organiser is deliberately in no circle (D27), so no group page can offer
- * this. It lands on the roadmap hub rather than a landing page of its own: that
- * is what an organiser comes for, and the workspace has its own tabs from there.
+ * this. It lands on Branches (D82): the tree is where roadmaps and events are
+ * seen reaching circles, and its top carries what is coming up and the buttons
+ * to create things. It was the roadmap hub, which hid events and reach.
  */
 export const ADMIN_NAV_ITEM: FlatItem = {
-  href: "/programme",
+  href: "/admin/branches",
   label: "Admin",
   shortLabel: "Admin",
   Icon: ShieldIcon,
@@ -81,11 +82,12 @@ export const ADMIN_NAV_ITEM: FlatItem = {
 
 /** The workspace's own tabs, which replace the member's nav inside it (D74). */
 export const ADMIN_ZONE_ITEMS: readonly FlatItem[] = [
+  // Branches first (D82): it is the workspace's landing page.
   {
-    href: "/programme",
-    label: "Roadmaps",
-    shortLabel: "Roadmaps",
-    Icon: FlagIcon,
+    href: "/admin/branches",
+    label: "Branches",
+    shortLabel: "Branches",
+    Icon: BranchesIcon,
   },
   {
     href: "/admin/events",
@@ -94,10 +96,10 @@ export const ADMIN_ZONE_ITEMS: readonly FlatItem[] = [
     Icon: CalendarIcon,
   },
   {
-    href: "/admin/branches",
-    label: "Branches",
-    shortLabel: "Branches",
-    Icon: BranchesIcon,
+    href: "/programme",
+    label: "Roadmaps",
+    shortLabel: "Roadmaps",
+    Icon: FlagIcon,
   },
   {
     href: "/admin/organisers",
