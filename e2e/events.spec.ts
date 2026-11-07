@@ -59,12 +59,16 @@ test("an organiser builds a branch tree", async () => {
   await organiser.fill("#branch-name", ORG);
   await organiser.getByRole("button", { name: "Create", exact: true }).click();
   await organiser.waitForURL(/\/admin\/branches\/[0-9a-f-]{36}$/);
-  await expect(organiser.getByRole("heading", { name: ORG })).toBeVisible();
+  await expect(
+    organiser.getByRole("heading", { level: 1, name: ORG }),
+  ).toBeVisible();
 
   await organiser.getByRole("button", { name: "Add" }).click();
   await organiser.fill("#branch-name", CITY);
   await organiser.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(organiser.getByRole("heading", { name: CITY })).toBeVisible();
+  await expect(
+    organiser.getByRole("heading", { level: 1, name: CITY }),
+  ).toBeVisible();
   cityId = organiser.url().split("/").at(-1)!;
 });
 

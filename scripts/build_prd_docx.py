@@ -193,7 +193,7 @@ for t in [
     ("An organiser reads the cohort, not just their own circle", "a progress report per programme, across every circle following it."),
 ]:
     A(bullet([B(t[0] + " — "), N(t[1])]))
-A(heading("Branches and events — camps and weekly halaqahs (D79–D84, not live)", 2))
+A(heading("Branches and events — camps and weekly halaqahs (D79–D85, not live)", 2))
 A(normal("Camps and halaqahs belong to a place, not to one circle and not to the whole administration. Nothing here touches logging: no event is read by the count screen, rings, streaks or the collective goal."))
 for t in [
     ("Branch", "a place, nested to any depth (Youth Nexus > Victoria > Melbourne > South East). A circle sits in at most one."),
@@ -207,7 +207,7 @@ for t in [
     ("Who sees names", "RSVP counts: everyone in reach. RSVP names and notes: the branch's stewards only."),
     ("Today", "one 'Up next' line below the rings, only when there is a vote or an answer to give, or you are going within two days. Fetched after the screen paints."),
     ("Roadmaps (D81)", "an organiser assigns a roadmap to a branch (every circle in it and below follows, including later joiners) or to single circles. A circle admin cannot drop one its branch set."),
-    ("Admin hub (D82)", "the workspace lands on Branches: coming up, create buttons, 'how things reach circles'. Each branch lists what reaches it, set here or from a branch above."),
+    ("Admin (D82, D85)", "branches work like folders: open one to see everything happening there and post inside it, so no form asks which branch. A steward of one branch lands in it. Roadmaps are added from the branch. No breadcrumbs."),
     ("Nav (D83)", "tab bar: Today, Group, Events, Roadmap/Admin, Profile. Progress is a section of Group. Camps lead the events list as their own section."),
 ]:
     A(bullet([B(t[0] + " — "), N(t[1])]))

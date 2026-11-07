@@ -79,13 +79,13 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 
 Camps and weekly halaqahs, scoped by place (D79, D80). After the owner's first local review ("if I'm having trouble navigating, so will others"), reach and creation were made visible (D81–D84). Owner gave the agent full ownership of the branch; nothing is on staging or prod.
 
-| Layer        | What exists                                                                                                                        |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| DB           | 0042 branches · 0043 events, series, RSVPs, polls, questions · 0044 roadmaps on a branch · 0045 camp details · 0046 `branch_reach` |
-| Member       | **Events tab** (camps first), `/events/[id]` with cost, what to bring, schedule, contact. Today "Up next". Progress is in Group    |
-| Steward      | Admin lands on **Branches**: coming up, create buttons, how reach works. Each branch lists what reaches it, set here or from above |
-| Organiser    | Roadmap editor's **Who follows** tab: by branch, then single circles. Assign a roadmap from a branch's page too                    |
-| Circle admin | Manage › Settings › Branch: ask, withdraw, leave. A roadmap the branch set shows ticked and locked                                 |
+| Layer        | What exists                                                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| DB           | 0042 branches · 0043 events, series, RSVPs, polls, questions · 0044 roadmaps on a branch · 0045 camp details · 0046 `branch_reach`            |
+| Member       | **Events tab** (camps first), `/events/[id]` with cost, what to bring, schedule, contact. Today "Up next". Progress is in Group               |
+| Steward      | Admin lands on **Branches** as folders (D85). A branch page: create tiles, Happening here, branches inside, circles; settings behind the gear |
+| Organiser    | Roadmaps are added from a branch's page; the editor's **Who follows** summarises branches and keeps single circles                            |
+| Circle admin | Manage › Settings: one **Branch** row (ask, withdraw, leave open from it). A branch-set roadmap shows ticked and locked                       |
 
 To ship: owner review on a preview, then `supabase db push` (0042–0046) **before** merging, because staging reads prod's DB. 0041 (D77) must go first or with it. Not done: push notifications for events, Linear issues. Local review data: `review-demo.sql` was a scratch file, not committed.
 
@@ -330,6 +330,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D82 (owner, 2026-11-07)** The branch tree is the admin hub. The workspace lands on Branches (not Roadmaps); each branch shows every roadmap, weekly halaqah and upcoming camp reaching it, marked set here or from above, with "Camp here", "Weekly halaqah here", "Assign a roadmap".
 - **D83 (owner, 2026-11-07)** Events is a tab: Today · Group · Events · Roadmap/Admin · Profile. Progress moves into Group as its fourth segment (own route kept, Group lit). `/events` leads with camps.
 - **D84 (owner, 2026-11-07)** A camp's cost, what to bring, contact and day-by-day schedule are fields, not a paragraph. `cleanSchedule` mirrors 0045's check in the unit suite.
+- **D85 (owner, 2026-11-07)** Branches work like folders: no breadcrumbs, no tree diagrams ("ruins the look"). Admin home lists top branches only; a branch page holds everything happening there and two create tiles ("reaches N circles"), so no form has a branch picker. Admin bar: Branches · Roadmaps · Organisers (Events tab gone); a steward of one branch lands inside it. Roadmaps are added from the branch (option A); the editor summarises. Manage shows one Branch row. Members never see the tree. Mockup: claude.ai/artifact/89HAMVVGXvgTpg5wRTp7Qx.
 - **D78 (proposed, awaiting owner)** Rebrand to the Youth Nexus palette: blue + navy + orange on white, design tokens v4, Chivo display face. Every v3 value is re-hued at its exact L\*, so contrast holds. The product name stays Cetele until the owner says otherwise. See `docs/DESIGN_SYSTEM.md` on the branch.
 - **D65** Planned: compute moves to Cloudflare (`@opennextjs/cloudflare`). Supabase and auth stay. Only `lib/push/send.ts` and `api/push/dispatch` are not portable. Not started.
 
