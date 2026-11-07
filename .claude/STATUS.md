@@ -7,7 +7,7 @@
 > rewrite) · [`STATUS-2026-07-16-full.md`](history/STATUS-2026-07-16-full.md) (D1–D48 in full, including superseded ones).
 > Section numbers are stable, because code comments and docs cite them.
 
-_Last updated: 2026-11-07 · Phase: **live in production. A large release (rebrand, garden, branches and events, D77–D87) is built and waiting on the production migrations.**_
+_Last updated: 2026-11-07 · Phase: **live in production. Rebrand, garden, branches and events (D77–D87) shipped 2026-11-07.**_
 
 ---
 
@@ -19,23 +19,38 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 ## 2. Where it's at
 
-### Current state (checked 2026-11-06)
+### Current state (checked 2026-11-07)
 
-| Item         | State                                                                                                                 |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `62078f7` (Manage tabs promoted 2026-11-06)     |
-| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main` apart from this docs commit                    |
-| Migrations   | **40 on prod.** The release line adds **0041–0047** (never pushed). They must reach prod BEFORE any merge             |
-| Git          | One release line: **`feat/unified-admin`** = rebrand + garden + D77 + branches/events (D78–D87). Blocked on CLI login |
-| CI           | Green on both `main` and `staging`                                                                                    |
-| Tests        | On `feat/unified-admin`: unit 228 · pgTAP 1034 across 29 suites · e2e 91 across 22 specs, all green locally           |
-| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                   |
-| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                        |
-| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                                 |
+| Item         | State                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `3dc00f7` (the branches release, 2026-11-07) |
+| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main` apart from this docs commit                 |
+| Migrations   | **47 on prod.** 0041–0047 pushed 2026-11-07 by the owner from omenserver (CLI now logged in and linked)            |
+| Git          | Only `main` and `staging`. Every feature branch was merged and deleted 2026-11-07                                  |
+| CI           | Green on both `main` and `staging`                                                                                 |
+| Tests        | On `main`: unit 228 · pgTAP 1034 across 29 suites · e2e 91 across 22 specs. Green locally and in CI                |
+| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                |
+| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                     |
+| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                              |
 
-Everything through D76 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
+Everything through D87 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
 
-### Last release (2026-11-06)
+### Last release (2026-11-07): `3dc00f7`
+
+Shipped at the owner's request ("push everything to main"). Migrations first (owner ran `supabase db push`), then `staging` (CI green: verify + stack-tests, Vercel green), then `main`. **No staging soak and nobody has clicked through it signed in.**
+
+| Part                      | Decisions | What members and admins get                                                                                          |
+| ------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------- |
+| Youth Nexus rebrand       | D78       | Blue + navy + orange tokens v4, Chivo display face. Name stays Cetele (shipping it is the owner's approval)          |
+| Garden reward loop        | (garden)  | The group garden rebuilt as a reward loop (`29ac93c`)                                                                |
+| Drafts can't be followed  | D77       | 0041. Carried into 0044, which replaces its policy and function                                                      |
+| Branches, camps, halaqahs | D79–D80   | 0042, 0043. RSVPs, polls, anonymous questions, Today's "Up next"                                                     |
+| Making it findable        | D81–D84   | 0044 roadmaps on a branch, 0045 camp details, 0046 `branch_reach`. Events tab; Progress inside Group                 |
+| Folders, one Admin word   | D85–D87   | Branches as folders, no pickers; the switcher's "You run"; move/archive branches, move circles, delete events (0047) |
+
+Not in it: push notifications for events, archiving a circle (needs the streak decision, D36/D48), Linear issues.
+
+### Previous release (2026-11-06)
 
 Three releases that night, all at the owner's request without a staging soak, each with CI green first. The owner checked the first two on production. The third has not been opened signed in.
 
@@ -44,8 +59,6 @@ Three releases that night, all at the owner's request without a staging soak, ea
 | `eaa5167` | Administration workspace (D74): sage bar, `/admin/organisers`, off the Groups tab               | None      | Yes              |
 | `fa24989` | Personal roadmap (D75): `/roadmap`, tab shows whichever circle is selected                      | None      | Yes              |
 | `2224fd2` | Saves survive a reload (`lib/roadmap-outbox.ts`). Organisers can Take part with no circle (D76) | 0040      | **No**           |
-
-For an organiser whose circle follows a roadmap, Admin is off the usual tab bar. It is at Profile > Administration and on the Groups screen. The owner was told, and may want this revisited.
 
 ### Previous release (2026-11-06)
 
@@ -58,42 +71,9 @@ The organiser MCP server (D73). Organisers connect Claude and build draft progra
 
 To turn it off, set `MCP_ENABLED` to anything else and redeploy.
 
-### Previous release (2026-11-05)
-
-Next and eslint-config-next 16.2.9 → 16.4.5, plus CI repairs (runner `ubuntu-26.04`, Supabase CLI 3.0.0, `scripts/ci-build.sh`
-retries only the `next/font/google` build error). No migrations.
-
-The bug: tapping a ring soon after Today loads could leave the count screen empty until the member navigated away. The server
-sent the whole page and the browser rendered nothing.
-
-| Measured (fresh profile, immediate click, service worker blocked) | Blank screens |
-| ----------------------------------------------------------------- | ------------- |
-| 16.2.9                                                            | 5 of 240      |
-| 16.2.9, waiting 2.5s first                                        | 0 of 240      |
-| 16.4.5                                                            | 0 of 480      |
-| `prefetch={false}` on ring links, no upgrade                      | 7 of 480      |
-
-Which upstream change fixed it was not traced. The bug predates D71/D72 (August's `0532e25` blanks 1 of 240).
-
-### The waiting release (built 2026-11-07, `feat/unified-admin`)
-
-Owner asked on 2026-11-07 to ship everything to `main` and clear the redundant branches. Blocked only on the production migrations: omenserver's Supabase CLI is not logged in.
-
-| Part                      | Decisions | What members and admins get                                                                                          |
-| ------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------- |
-| Youth Nexus rebrand       | D78       | Blue + navy + orange tokens v4, Chivo display face. Name stays Cetele (shipping it is the owner's approval)          |
-| Garden reward loop        | (garden)  | The group garden rebuilt as a reward loop (`29ac93c`)                                                                |
-| Drafts can't be followed  | D77       | 0041. Carried into 0044, which replaces its policy and function                                                      |
-| Branches, camps, halaqahs | D79–D80   | 0042, 0043. RSVPs, polls, anonymous questions, Today's "Up next"                                                     |
-| Making it findable        | D81–D84   | 0044 roadmaps on a branch, 0045 camp details, 0046 `branch_reach`. Events tab; Progress inside Group                 |
-| Folders, one Admin word   | D85–D87   | Branches as folders, no pickers; the switcher's "You run"; move/archive branches, move circles, delete events (0047) |
-
-**To ship (agent, once logged in):** `supabase link` → `supabase db push` (0041–0047, owner's approval: "push everything") → merge `feat/unified-admin` into `staging` → push → CI green → `ALLOW_MAIN_PUSH=1 git push origin main` → delete the merged branches (`feat/unified-admin`, `feat/branches-events`, `feat/garden-dopamine`, `feat/youth-nexus-rebrand`, `fix/drafts-cannot-be-followed-v2`, local and remote). Not in it: push notifications for events, archiving a circle (needs the streak decision, D36/D48), Linear issues.
-
 ### Next steps, in order
 
-- **Owner: run `! supabase login`.** Then the agent ships the waiting release above, in that order. Do not merge any code before `supabase db push`: staging and prod read the same database.
-- **Owner: after the release, check on a phone:** Events tab, a branch page, the switcher's "You run", and that Today still opens and counts at once.
+- **Owner: check the release on a phone:** Events tab, a branch page, the switcher's "You run", and that Today still opens and counts at once.
 
 0. **Owner: check `2224fd2` on the phone.** Open Roadmap, tap +1 on an item a few times, reload at once. The count should hold. **Take part will not appear on the owner's organiser account**: it follows the only published roadmap through **meeting** and **Keysy Dersh**. Seeing it takes another organiser outside those circles, or a second published roadmap. CI covers the full flow.
 1. **Owner: check the release on a real phone.** Sign in, then open a ring from Today right after it loads, a few times. Google sign-in on a desktop browser is confirmed on this release (2026-11-06). Nobody has used a phone on it, and staging was not clicked through.
@@ -374,6 +354,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 
 **Supabase and CI**
 
+- **Production migrations:** the CLI is logged in and linked to prod (2026-11-07). Claude Code's auto mode refuses `supabase db push --remote` for the agent, so the owner runs it from an SSH session (`supabase login` also needs a real terminal, not `!`). Check first with `supabase db push --remote --dry-run`; a plain `--dry-run` targets the LOCAL stack.
 - **Full local env:** `cp .env.ci .env.local`, plus the service-role key from `supabase status -o env`. `pnpm test:e2e` runs `check:env` first and fails by name if something is missing.
 - **GoTrue errors:** read `docker logs supabase_auth_Cetele`. The JS client only reports `AuthRetryableFetchError {}`.
 - **`supabase db push` certificate error after "Finished":** the CLI's catalog-cache step, not a migration failure.
