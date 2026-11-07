@@ -51,7 +51,7 @@ export default async function EventsPage() {
   ]);
 
   const events = (rows ?? []).map(toUpcoming);
-  const tops = (running ?? []).filter((b) => b.depth === 0);
+  const tops = (running ?? []).filter((b) => b.depth === 0 && b.live);
   const postTo =
     tops.length === 1
       ? {

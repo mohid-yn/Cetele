@@ -111,7 +111,7 @@ off, it is not counted, so nothing here reaches `logs`, streaks, rings or the co
 - **An organiser reads the cohort, not just their own circle**: a progress report per programme, across every
   circle following it
 
-### 🧪 Branches and events — camps and weekly halaqahs (D79–D85, on `feat/branches-events`, not live)
+### 🧪 Branches and events — camps and weekly halaqahs (D79–D87, on `feat/branches-events` / `feat/unified-admin`, not live)
 
 Camps and halaqahs belong to a **place**, not to one circle and not to the whole administration. Nothing here
 touches logging: no event is read by the count screen, rings, streaks or the collective goal.
@@ -130,6 +130,7 @@ touches logging: no event is read by the count screen, rings, streaks or the col
 | **Today**            | One "Up next" line below the rings, only when there is a vote or an answer to give, or you are going within two days. Fetched after the screen paints                                                               |
 | **Roadmaps (D81)**   | An organiser assigns a roadmap to a **branch** (every circle in it and below follows, including later joiners) or to single circles. A circle admin cannot drop one its branch set                                  |
 | **Admin (D82, D85)** | Branches work like folders: open one to see everything happening there and post inside it, so no form asks which branch. A steward of one branch lands in it. Roadmaps are added from the branch. No breadcrumbs    |
+| **Folders (D87)**    | Move a branch, move a circle between branches you run, archive and restore a branch. Delete or cancel a camp; delete a whole weekly halaqah                                                                         |
 | **Nav (D83)**        | Tab bar: Today · Group · **Events** · Roadmap/Admin · Profile. Progress is a section of Group. Camps lead `/events` as their own section                                                                            |
 | **Organiser scope**  | Today's organiser flag stays global. Scoping roadmaps to branches (Q6) can reuse the steward check later                                                                                                            |
 

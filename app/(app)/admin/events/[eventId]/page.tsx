@@ -8,6 +8,7 @@ import type { ScheduleRow } from "@/lib/events";
 import { loadStewardTree, requireSteward } from "../../steward";
 import { BackLink } from "../form-header";
 import { CampForm } from "../camp-form";
+import { CampActions } from "../event-actions";
 import { branchOption } from "../branch-options";
 
 /**
@@ -86,6 +87,11 @@ export default async function EditCampPage({
           contactDetail: e.contact_detail,
           schedule: e.schedule as ScheduleRow[],
         }}
+      />
+      <CampActions
+        eventId={e.id}
+        branchId={branch.id}
+        status={e.status as "draft" | "published" | "cancelled"}
       />
     </Screen>
   );

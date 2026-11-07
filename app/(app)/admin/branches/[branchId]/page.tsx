@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils";
 import { loadStewardTree, requireSteward } from "../../steward";
 import { BranchDetail } from "./branch-detail";
 import { HappeningHere, type ReachItem } from "./happening-here";
+import { ArchivedList } from "../archived-list";
+import { RestoreBranchButton } from "./restore-branch";
+import { branchDestinations } from "../destinations";
 
 /**
  * One branch, as a FOLDER (D79, D85). Everything happening in this place is
@@ -55,10 +58,19 @@ export default async function BranchPage({
   const parent = tree.find((b) => b.id === branch.parentId);
   // A steward of exactly one branch landed here from Admin; "back" would only
   // bounce them straight back in.
-  const tops = tree.filter((b) => b.depth === 0);
-  const showBack = parent || isOrganiser || tops.length > 1;
-  const children = tree.filter((b) => b.parentId === branchId);
-  const circles = subtreeCircleCounts(tree).get(branchId) ?? 0;
+  const tops = tree.filter((b) => b.depth === 0 && b.live);
+  const showBack = parent || isOrganiser || tops.length !== 1;
+  // Archived branches (D87) leave the folders for a quiet list at the foot.
+  const children = tree.filter((b) => b.parentId === branchId && b.live);
+  const archivedChildren = tree.filter(
+    (b) => b.parentId === branchId && b.archived,
+  );
+  const liveCounts = subtreeCircleCounts(tree.filter((b) => b.live));
+  const circles = liveCounts.get(branchId) ?? 0;
+  // Who may restore: whoever may archive it, i.e. the admins above (0047).
+  const canRehome = isOrganiser || Boolean(parent);
+  // Where a circle here can be moved to: any other live branch the viewer runs.
+  const destinations = branchDestinations(tree, branchId);
 
   const reach: ReachItem[] = (reachRows ?? []).map((r) => ({
     kind: r.kind as ReachItem["kind"],
@@ -114,27 +126,42 @@ export default async function BranchPage({
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <CreateTile
-          href={`/admin/events/new?branch=${branchId}`}
-          label="New camp"
-          hint={reaches}
-          tone="accent"
-        />
-        <CreateTile
-          href={`/admin/events/series/new?branch=${branchId}`}
-          label="Weekly halaqah"
-          hint={reaches}
-          tone="primary"
-        />
-      </div>
+      {!branch.live && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-muted px-4 py-3">
+          <p className="text-sm text-foreground">
+            {branch.archived
+              ? "Archived. It reaches no circles and is hidden from pickers."
+              : "Inside an archived branch, so it reaches no circles."}
+          </p>
+          {branch.archived && canRehome && (
+            <RestoreBranchButton branchId={branch.id} />
+          )}
+        </div>
+      )}
+
+      {branch.live && (
+        <div className="grid grid-cols-2 gap-2">
+          <CreateTile
+            href={`/admin/events/new?branch=${branchId}`}
+            label="New camp"
+            hint={reaches}
+            tone="accent"
+          />
+          <CreateTile
+            href={`/admin/events/series/new?branch=${branchId}`}
+            label="Weekly halaqah"
+            hint={reaches}
+            tone="primary"
+          />
+        </div>
+      )}
 
       <BranchDetail
         branch={{ id: branch.id, name: branch.name, parentId: branch.parentId }}
         subBranches={children.map((c) => ({
           id: c.id,
           name: c.name,
-          circles: subtreeCircleCounts(tree).get(c.id) ?? 0,
+          circles: liveCounts.get(c.id) ?? 0,
           pending: c.pending,
         }))}
         circles={(circleRows ?? []).map((c) => ({
@@ -143,6 +170,7 @@ export default async function BranchPage({
           members: c.members,
           pending: c.pending,
         }))}
+        destinations={destinations}
         happening={
           <HappeningHere
             branchId={branch.id}
@@ -159,6 +187,8 @@ export default async function BranchPage({
           />
         }
       />
+
+      <ArchivedList branches={archivedChildren} />
     </Screen>
   );
 }

@@ -156,7 +156,7 @@ select pg_temp.reset_role();
 select pg_temp.impersonate('cc000000-0000-0000-0000-00000000000b');
 select throws_ok(
   $$ select public.request_branch('cc000000-0000-0000-0000-000000000200', 'cc000000-0000-0000-0000-000000000103') $$,
-  'only the circle''s owner or a co-admin can do this',
+  'only the circle''s owner or an admin can do this',
   'a plain member cannot ask for the circle');
 select pg_temp.reset_role();
 

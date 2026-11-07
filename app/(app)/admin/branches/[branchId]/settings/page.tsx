@@ -6,6 +6,7 @@ import { ArrowLeftIcon } from "@/components/app/icons";
 import { q } from "@/lib/db-log";
 import { loadStewardTree, requireSteward } from "../../../steward";
 import { BranchSettings, Stewards } from "../branch-detail";
+import { branchDestinations } from "../../destinations";
 
 /**
  * A branch's settings (D85): who runs it, its name, deleting it. Behind the
@@ -29,6 +30,8 @@ export default async function BranchSettingsPage({
   );
   // Deleting needs the right to run the branch above (or the organiser role).
   const canDelete = isOrganiser || tree.some((b) => b.id === branch.parentId);
+  // Moving and archiving need the same right (0047, D87).
+  const canRehome = canDelete;
 
   return (
     <Screen>
@@ -52,6 +55,10 @@ export default async function BranchSettingsPage({
       <BranchSettings
         branch={{ id: branch.id, name: branch.name, parentId: branch.parentId }}
         canDelete={canDelete}
+        canRehome={canRehome}
+        archived={branch.archived}
+        moveTo={branchDestinations(tree, branch.id, true)}
+        canMakeTop={isOrganiser}
       />
     </Screen>
   );

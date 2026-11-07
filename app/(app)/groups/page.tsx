@@ -51,7 +51,7 @@ export default async function GroupsHomePage() {
     ]);
 
   const isSuperAdmin = viewer?.is_super_admin ?? false;
-  const tops = (running ?? []).filter((b) => b.depth === 0);
+  const tops = (running ?? []).filter((b) => b.depth === 0 && b.live);
 
   // An organiser runs every branch; the switcher calls that "All branches".
   const runs = isSuperAdmin

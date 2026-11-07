@@ -107,3 +107,44 @@ export async function removeCircle(branchId: string, groupId: string) {
     ["/admin/branches", `/admin/branches/${branchId}`],
   );
 }
+
+/**
+ * Move a branch under another parent, or to the top level (0047, D87). The
+ * database checks the right to run both ends and refuses a move inside itself.
+ */
+export async function moveBranch(branchId: string, parentId: string | null) {
+  return relay(
+    "rpc.move_branch",
+    (s) =>
+      s.rpc("move_branch", {
+        p_branch: branchId,
+        p_parent: parentId as string,
+      }),
+    ["/admin/branches"],
+  );
+}
+
+/** Archive or restore a branch and everything inside it (0047, D87). */
+export async function setBranchArchived(branchId: string, archived: boolean) {
+  return relay(
+    "rpc.set_branch_archived",
+    (s) =>
+      s.rpc("set_branch_archived", {
+        p_branch: branchId,
+        p_archived: archived,
+      }),
+    ["/admin/branches"],
+  );
+}
+
+/**
+ * Move a circle between two branches the viewer runs (0047, D87). Never into
+ * the circle: its members and dhikr are untouched, only where it sits changes.
+ */
+export async function moveCircle(groupId: string, branchId: string) {
+  return relay(
+    "rpc.move_circle",
+    (s) => s.rpc("move_circle", { p_group: groupId, p_branch: branchId }),
+    ["/admin/branches"],
+  );
+}

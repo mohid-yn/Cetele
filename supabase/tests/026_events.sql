@@ -204,10 +204,8 @@ update public.events set rsvp_closes_at = null
 
 -- ---- cancelling ------------------------------------------------------------
 select pg_temp.impersonate('cd000000-0000-0000-0000-000000000005');
-select throws_ok(
-  $$ select public.delete_event((select v from ids where k = 'camp')) $$,
-  'cancel a published event instead of deleting it',
-  'a published camp is cancelled, never deleted');
+-- 0047 (D87) lets a camp be deleted in any state; pgTAP 028 pins it, and
+-- that a weekly session is cancelled rather than deleted.
 select lives_ok(
   $$ select public.set_event_cancelled((select v from ids where k = 'camp'), true) $$,
   'cancelling works');

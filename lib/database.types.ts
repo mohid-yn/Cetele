@@ -326,6 +326,7 @@ export type Database = {
       };
       branches: {
         Row: {
+          archived_at: string | null;
           created_at: string;
           created_by: string | null;
           id: string;
@@ -334,6 +335,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          archived_at?: string | null;
           created_at?: string;
           created_by?: string | null;
           id?: string;
@@ -341,6 +343,7 @@ export type Database = {
           parent_id?: string | null;
         };
         Update: {
+          archived_at?: string | null;
           created_at?: string;
           created_by?: string | null;
           id?: string;
@@ -1956,6 +1959,7 @@ export type Database = {
       delete_roadmap: { Args: { p_roadmap: string }; Returns: undefined };
       delete_roadmap_item: { Args: { p_item: string }; Returns: undefined };
       delete_roadmap_reward: { Args: { p_reward: string }; Returns: undefined };
+      delete_series: { Args: { p_series: string }; Returns: undefined };
       event_attendees: {
         Args: { p_event: string };
         Returns: {
@@ -2096,13 +2100,23 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };
+      move_branch: {
+        Args: { p_branch: string; p_parent: string };
+        Returns: undefined;
+      };
+      move_circle: {
+        Args: { p_branch: string; p_group: string };
+        Returns: undefined;
+      };
       my_steward_tree: {
         Args: Record<PropertyKey, never>;
         Returns: {
+          archived: boolean;
           circles: number;
           depth: number;
           direct: boolean;
           id: string;
+          live: boolean;
           name: string;
           parent_id: string;
           pending: number;
@@ -2228,6 +2242,10 @@ export type Database = {
           p_weekday: number;
         };
         Returns: string;
+      };
+      set_branch_archived: {
+        Args: { p_archived: boolean; p_branch: string };
+        Returns: undefined;
       };
       set_branch_on_roadmap: {
         Args: { p_assign: boolean; p_branch: string; p_roadmap: string };

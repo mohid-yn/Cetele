@@ -70,7 +70,7 @@ export async function saveCamp(
   return { error: null };
 }
 
-export async function deleteDraft(
+export async function deleteCamp(
   eventId: string,
   branchId: string,
 ): Promise<{ error: string | null }> {
@@ -82,6 +82,7 @@ export async function deleteDraft(
   await signOutIfStaleSession(error);
   if (error) return { error: error.message };
   revalidatePath("/admin/branches", "layout");
+  revalidatePath("/events");
   // Back to the branch it was in (D85): there is no events list to return to.
   redirect(`/admin/branches/${branchId}`);
 }
@@ -162,4 +163,44 @@ export async function removeHost(
   if (error) return { error: error.message };
   revalidatePath(`/admin/events/series/${seriesId}`);
   return { error: null };
+}
+
+/** Cancel or restore a camp from its admin page (D87). Answers are kept. */
+export async function setCampCancelled(
+  eventId: string,
+  cancelled: boolean,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await q(
+    "rpc.set_event_cancelled",
+    supabase.rpc("set_event_cancelled", {
+      p_event: eventId,
+      p_cancelled: cancelled,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+  revalidatePath("/admin", "layout");
+  revalidatePath("/events", "layout");
+  return { error: null };
+}
+
+/**
+ * Delete a weekly halaqah outright (0047, D87): every week, with its answers,
+ * polls and questions. Stopping it keeps the past; this does not.
+ */
+export async function deleteSeries(
+  seriesId: string,
+  branchId: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await q(
+    "rpc.delete_series",
+    supabase.rpc("delete_series", { p_series: seriesId }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+  revalidatePath("/admin", "layout");
+  revalidatePath("/events", "layout");
+  redirect(`/admin/branches/${branchId}`);
 }

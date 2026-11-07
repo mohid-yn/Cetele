@@ -28,7 +28,7 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 | Migrations   | **40 on prod.** `feat/branches-events` adds 0042 + 0043 (local only, never pushed). D77's 0041 is on its own branch |
 | Git          | D77 approved, blocked on `supabase login`. `feat/branches-events` sits on rebrand + garden (`feat/garden-dopamine`) |
 | CI           | Green on both `main` and `staging`                                                                                  |
-| Tests        | On `feat/branches-events`: unit 228 · pgTAP 997 across 27 suites · e2e 90 across 22 specs, all green locally        |
+| Tests        | On `feat/unified-admin`: unit 228 · pgTAP 1024 across 28 suites · e2e 91 across 22 specs, all green locally         |
 | Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                 |
 | Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                      |
 | Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                               |
@@ -79,13 +79,13 @@ Which upstream change fixed it was not traced. The bug predates D71/D72 (August'
 
 Camps and weekly halaqahs, scoped by place (D79, D80). After the owner's first local review ("if I'm having trouble navigating, so will others"), reach and creation were made visible (D81–D84). Owner gave the agent full ownership of the branch; nothing is on staging or prod.
 
-| Layer        | What exists                                                                                                                                   |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| DB           | 0042 branches · 0043 events, series, RSVPs, polls, questions · 0044 roadmaps on a branch · 0045 camp details · 0046 `branch_reach`            |
-| Member       | **Events tab** (camps first), `/events/[id]` with cost, what to bring, schedule, contact. Today "Up next". Progress is in Group               |
-| Steward      | Admin lands on **Branches** as folders (D85). A branch page: create tiles, Happening here, branches inside, circles; settings behind the gear |
-| Organiser    | Roadmaps are added from a branch's page; the editor's **Who follows** summarises branches and keeps single circles                            |
-| Circle admin | Manage › Settings: one **Branch** row (ask, withdraw, leave open from it). A branch-set roadmap shows ticked and locked                       |
+| Layer        | What exists                                                                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| DB           | 0042 branches · 0043 events · 0044 roadmaps on a branch · 0045 camp details · 0046 `branch_reach` · 0047 move/archive (on `feat/unified-admin`) |
+| Member       | **Events tab** (camps first), `/events/[id]` with cost, what to bring, schedule, contact. Today "Up next". Progress is in Group                 |
+| Steward      | Admin lands on **Branches** as folders (D85). A branch page: create tiles, Happening here, branches inside, circles; settings behind the gear   |
+| Organiser    | Roadmaps are added from a branch's page; the editor's **Who follows** summarises branches and keeps single circles                              |
+| Circle admin | Manage › Settings: one **Branch** row (ask, withdraw, leave open from it). A branch-set roadmap shows ticked and locked                         |
 
 To ship: owner review on a preview, then `supabase db push` (0042–0046) **before** merging, because staging reads prod's DB. 0041 (D77) must go first or with it. Not done: push notifications for events, Linear issues. Local review data: `review-demo.sql` was a scratch file, not committed.
 
@@ -332,6 +332,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 - **D84 (owner, 2026-11-07)** A camp's cost, what to bring, contact and day-by-day schedule are fields, not a paragraph. `cleanSchedule` mirrors 0045's check in the unit suite.
 - **D85 (owner, 2026-11-07)** Branches work like folders: no breadcrumbs, no tree diagrams ("ruins the look"). Admin home lists top branches only; a branch page holds everything happening there and two create tiles ("reaches N circles"), so no form has a branch picker. Admin bar: Branches · Roadmaps · Organisers (Events tab gone); a steward of one branch lands inside it. Roadmaps are added from the branch (option A); the editor summarises. Manage shows one Branch row. Members never see the tree. Mockup: claude.ai/artifact/89HAMVVGXvgTpg5wRTp7Qx.
 - **D86 (owner, 2026-11-07, on `feat/unified-admin`)** One role word, **Admin**, for circles and branches (a circle's owner keeps "Owner"). The way into running a place is the circle switcher's "You run" section (and the same on `/groups`), not a tab: the member bar's come-and-go Admin tab is gone (an organiser in no circle keeps theirs). Events shows "Post to <branch>". Permissions unchanged: what's posted cascades down; a circle's members and dhikr stay with its own admins (D27, like Drive's My Drive vs shared drive). Built on its own branch so the owner can fall back to `feat/branches-events`.
+- **D87 (owner, 2026-11-07, on `feat/unified-admin`)** Branches behave like Drive folders: **move** a branch (needs the right to run both ends; never inside itself), branch admins **move circles** between branches they run, **archive/restore** a branch (its subtree stops reaching circles and leaves pickers; nothing deleted). Camps can be **deleted** in any state and cancelled/restored from their admin page; a weekly halaqah can be deleted whole; a single week is cancelled, not deleted. Migration 0047, pgTAP 028. Archiving a **circle** is deferred until streak rules for it are decided (D36/D48).
 - **D78 (proposed, awaiting owner)** Rebrand to the Youth Nexus palette: blue + navy + orange on white, design tokens v4, Chivo display face. Every v3 value is re-hued at its exact L\*, so contrast holds. The product name stays Cetele until the owner says otherwise. See `docs/DESIGN_SYSTEM.md` on the branch.
 - **D65** Planned: compute moves to Cloudflare (`@opennextjs/cloudflare`). Supabase and auth stay. Only `lib/push/send.ts` and `api/push/dispatch` are not portable. Not started.
 

@@ -23,10 +23,15 @@ import {
   appointSteward,
   decideRequest,
   deleteBranch,
+  moveBranch,
+  moveCircle,
   removeCircle,
   removeSteward,
   renameBranch,
+  setBranchArchived,
 } from "../actions";
+import type { Destination } from "../destinations";
+import { selectCls } from "@/components/app/role-toggle";
 
 type Circle = {
   groupId: string;
@@ -48,17 +53,21 @@ export function BranchDetail({
   subBranches,
   circles,
   happening,
+  destinations,
 }: {
   branch: { id: string; name: string; parentId: string | null };
   subBranches: Child[];
   circles: Circle[];
   happening: React.ReactNode;
+  /** Other live branches the viewer runs, for moving a circle (D87). */
+  destinations: Destination[];
 }) {
   const waiting = circles.filter((c) => c.pending);
   const joined = circles.filter((c) => !c.pending);
   const decide = useAction();
   const remove = useAction();
   const [removing, setRemoving] = React.useState<Circle | null>(null);
+  const [moving, setMoving] = React.useState<Circle | null>(null);
 
   return (
     <>
@@ -194,6 +203,15 @@ export function BranchDetail({
                       {c.members === 1 ? "1 member" : `${c.members} members`}
                     </p>
                   </div>
+                  {destinations.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setMoving(c)}
+                    >
+                      Move
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"
@@ -217,6 +235,13 @@ export function BranchDetail({
           </p>
         )}
       </section>
+
+      <MoveCircleDialog
+        circle={moving}
+        from={branch.name}
+        destinations={destinations}
+        onClose={() => setMoving(null)}
+      />
 
       <ConfirmDialog
         open={removing !== null}
@@ -351,15 +376,33 @@ export function Stewards({
 export function BranchSettings({
   branch,
   canDelete,
+  canRehome = false,
+  archived = false,
+  moveTo = [],
+  canMakeTop = false,
 }: {
   branch: { id: string; name: string; parentId: string | null };
   canDelete: boolean;
+  /** May move or archive it: the admins of the branch above (0047, D87). */
+  canRehome?: boolean;
+  archived?: boolean;
+  /** Where it may go: live branches the viewer runs, outside its own subtree. */
+  moveTo?: Destination[];
+  /** An organiser may make it a top-level branch. */
+  canMakeTop?: boolean;
 }) {
   const [renaming, setRenaming] = React.useState(false);
   const [name, setName] = React.useState(branch.name);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [moving, setMoving] = React.useState(false);
+  const [to, setTo] = React.useState("");
+  const [confirmArchive, setConfirmArchive] = React.useState(false);
   const rename = useAction();
   const del = useAction();
+  const move = useAction();
+  const archive = useAction();
+  const options = moveTo.filter((d) => d.id !== branch.parentId);
+  const TOP = "__top__";
 
   return (
     <section className="flex flex-wrap gap-2">
@@ -373,6 +416,25 @@ export function BranchSettings({
       >
         <PencilIcon aria-hidden className="size-4" /> Rename
       </Button>
+      {canRehome && (options.length > 0 || (canMakeTop && branch.parentId)) && (
+        <Button size="sm" variant="outline" onClick={() => setMoving(true)}>
+          Move
+        </Button>
+      )}
+      {canRehome && (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={archive.pending}
+          onClick={() =>
+            archived
+              ? void archive.run(() => setBranchArchived(branch.id, false))
+              : setConfirmArchive(true)
+          }
+        >
+          {archived ? "Restore" : "Archive"}
+        </Button>
+      )}
       {canDelete && (
         <Button
           size="sm"
@@ -382,11 +444,75 @@ export function BranchSettings({
           Delete branch
         </Button>
       )}
-      {del.error && (
+      {(del.error || archive.error) && (
         <p role="alert" className="w-full text-xs text-danger">
-          {del.error}
+          {del.error ?? archive.error}
         </p>
       )}
+
+      <Dialog
+        open={moving}
+        onClose={() => setMoving(false)}
+        title={`Move ${branch.name}`}
+        description="Everything inside moves with it. Its circles then hear from the branches above its new place."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setMoving(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!to || move.pending}
+              onClick={() =>
+                void move.run(
+                  () => moveBranch(branch.id, to === TOP ? null : to),
+                  () => {
+                    setMoving(false);
+                    setTo("");
+                  },
+                )
+              }
+            >
+              {move.pending ? "Moving…" : "Move"}
+            </Button>
+          </>
+        }
+      >
+        <Field label="Into" htmlFor="move-branch-to">
+          <select
+            id="move-branch-to"
+            className={selectCls + " w-full"}
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+          >
+            <option value="">Choose a branch…</option>
+            {canMakeTop && branch.parentId && (
+              <option value={TOP}>Top level (a new organisation)</option>
+            )}
+            {options.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {move.error && (
+          <p role="alert" className="mt-2 text-sm text-danger">
+            {move.error}
+          </p>
+        )}
+      </Dialog>
+
+      <ConfirmDialog
+        open={confirmArchive}
+        onClose={() => setConfirmArchive(false)}
+        title={`Archive ${branch.name}?`}
+        description="It and every branch inside it stop reaching their circles and leave the pickers. Nothing is deleted: camps, halaqahs and circles stay, and you can restore it."
+        confirmLabel="Archive"
+        onConfirm={() => {
+          setConfirmArchive(false);
+          void archive.run(() => setBranchArchived(branch.id, true));
+        }}
+      />
 
       <Dialog
         open={renaming}
@@ -438,5 +564,78 @@ export function BranchSettings({
         }}
       />
     </section>
+  );
+}
+
+/**
+ * Move a circle to another branch the viewer runs (D87). Only where it sits
+ * changes: its members, tasks and dhikr are the circle's and stay so (D27).
+ */
+function MoveCircleDialog({
+  circle,
+  from,
+  destinations,
+  onClose,
+}: {
+  circle: Circle | null;
+  from: string;
+  destinations: Destination[];
+  onClose: () => void;
+}) {
+  const [to, setTo] = React.useState("");
+  const act = useAction();
+  return (
+    <Dialog
+      open={circle !== null}
+      onClose={() => {
+        setTo("");
+        onClose();
+      }}
+      title={circle ? `Move ${circle.name}` : "Move circle"}
+      description={`From ${from}. It will hear about the new branch's camps and halaqahs instead. Its members and their dhikr are not affected.`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!to || act.pending}
+            onClick={() =>
+              circle &&
+              void act.run(
+                () => moveCircle(circle.groupId, to),
+                () => {
+                  setTo("");
+                  onClose();
+                },
+              )
+            }
+          >
+            {act.pending ? "Moving…" : "Move"}
+          </Button>
+        </>
+      }
+    >
+      <Field label="To" htmlFor="move-circle-to">
+        <select
+          id="move-circle-to"
+          className={selectCls + " w-full"}
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+        >
+          <option value="">Choose a branch…</option>
+          {destinations.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {act.error && (
+        <p role="alert" className="mt-2 text-xs text-danger">
+          {act.error}
+        </p>
+      )}
+    </Dialog>
   );
 }

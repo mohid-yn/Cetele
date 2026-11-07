@@ -13,6 +13,7 @@ import { formatWhen } from "@/lib/events";
 import { subtreeCircleCounts } from "@/lib/reach";
 import { loadStewardTree, requireSteward } from "../steward";
 import { NewBranchButton } from "./new-branch";
+import { ArchivedList } from "./archived-list";
 
 /**
  * The administration workspace's landing page (D82, D85): branches as FOLDERS.
@@ -32,13 +33,16 @@ export default async function BranchesPage() {
     loadStewardTree(supabase),
     q("branches.events_i_lead", supabase.rpc("events_i_lead")),
   ]);
-  const tops = tree.filter((b) => b.depth === 0);
+  // Archived branches (D87) leave the folders and wait in a quiet list below.
+  const tops = tree.filter((b) => b.depth === 0 && b.live);
+  const archivedTops = tree.filter((b) => b.depth === 0 && b.archived);
   if (!isOrganiser && tops.length === 1) {
     redirect(`/admin/branches/${tops[0].id}`);
   }
 
-  const reach = subtreeCircleCounts(tree);
-  const inside = (id: string) => tree.filter((b) => b.parentId === id).length;
+  const reach = subtreeCircleCounts(tree.filter((b) => b.live));
+  const inside = (id: string) =>
+    tree.filter((b) => b.parentId === id && b.live).length;
   // Requests anywhere under a top branch, so the folder says it needs a look.
   const waitingUnder = (id: string): number => {
     const own = tree.find((b) => b.id === id)?.pending ?? 0;
@@ -162,6 +166,7 @@ export default async function BranchesPage() {
           </Card>
         )}
       </section>
+      <ArchivedList branches={archivedTops} />
     </Screen>
   );
 }

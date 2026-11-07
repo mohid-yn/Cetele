@@ -215,3 +215,26 @@ test("a weekly halaqah: Today asks for a vote, and questions are anonymous", asy
   await question.getByRole("button", { name: "Mark answered" }).click();
   await expect(question.getByText("Answered")).toBeVisible();
 });
+
+test("archiving a branch silences it; restoring brings it back (D87)", async () => {
+  await organiser.goto(`/admin/branches/${cityId}/settings`);
+  await organiser.getByRole("button", { name: "Archive", exact: true }).click();
+  await organiser
+    .getByRole("dialog")
+    .getByRole("button", { name: "Archive" })
+    .click();
+  await expect(
+    organiser.getByRole("button", { name: "Restore", exact: true }),
+  ).toBeVisible();
+
+  // Nothing from the archived branch reaches the member.
+  await member.goto("/events");
+  await expect(member.getByText(CAMP)).toHaveCount(0);
+
+  await organiser.getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(
+    organiser.getByRole("button", { name: "Archive", exact: true }),
+  ).toBeVisible();
+  await member.goto("/events");
+  await expect(member.getByText(CAMP).first()).toBeVisible();
+});

@@ -106,13 +106,15 @@ async function fetchOnce(): Promise<void> {
       "viewer-store.is_steward",
       supabase
         .from("branch_stewards")
-        .select("branch_id, branches(name)")
+        .select("branch_id, branches(name, archived_at)")
         .eq("user_id", me),
     ),
   ]);
   publish(
     data?.is_super_admin ?? false,
     (stewardRows ?? [])
+      // An archived branch (D87) is not somewhere to go in the switcher.
+      .filter((r) => !r.branches?.archived_at)
       .map((r) => ({ id: r.branch_id, name: r.branches?.name ?? "Branch" }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   );

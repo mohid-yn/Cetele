@@ -50,6 +50,10 @@ export type TreeBranch = {
   circles: number;
   pending: number;
   direct: boolean;
+  /** Archived itself (0047, D87). */
+  archived: boolean;
+  /** Neither it nor anything above it is archived: it reaches circles. */
+  live: boolean;
 };
 
 /** Everything the viewer runs, as one flattened, ordered tree. */
@@ -68,5 +72,7 @@ export async function loadStewardTree(
     circles: b.circles,
     pending: b.pending,
     direct: b.direct,
+    archived: b.archived,
+    live: b.live,
   }));
 }

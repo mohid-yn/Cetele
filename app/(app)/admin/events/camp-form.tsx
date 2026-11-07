@@ -1,14 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Button,
-  Card,
-  ConfirmDialog,
-  Field,
-  Input,
-  Textarea,
-} from "@/components/ui";
+import { Button, Card, Field, Input, Textarea } from "@/components/ui";
 import { SectionHeading } from "@/components/app/section-heading";
 import { ChevronDownIcon, CloseIcon, PlusIcon } from "@/components/app/icons";
 import { selectCls } from "@/components/app/role-toggle";
@@ -21,7 +14,7 @@ import {
   venueLocalToISO,
   type ScheduleRow,
 } from "@/lib/events";
-import { deleteDraft, saveCamp, type CampInput } from "./actions";
+import { saveCamp, type CampInput } from "./actions";
 import { ZoneInput } from "./zone-input";
 
 export type BranchOption = {
@@ -79,9 +72,7 @@ export function CampForm({
     contactDetail: initial?.contactDetail ?? "",
     schedule: initial?.schedule ?? ([] as ScheduleRow[]),
   }));
-  const [confirmDelete, setConfirmDelete] = React.useState(false);
   const act = useAction();
-  const del = useAction();
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
@@ -465,14 +456,6 @@ export function CampForm({
       )}
 
       <div className="flex flex-wrap justify-end gap-2">
-        {initial && status === "draft" && (
-          <Button
-            variant="destructive-outline"
-            onClick={() => setConfirmDelete(true)}
-          >
-            Delete draft
-          </Button>
-        )}
         {status === "draft" && (
           <Button
             variant="outline"
@@ -494,24 +477,6 @@ export function CampForm({
               : "Save changes"}
         </Button>
       </div>
-      {del.error && (
-        <p role="alert" className="text-sm text-danger">
-          {del.error}
-        </p>
-      )}
-
-      <ConfirmDialog
-        open={confirmDelete}
-        onClose={() => setConfirmDelete(false)}
-        title="Delete this draft?"
-        description="Nobody else has seen it."
-        confirmLabel="Delete"
-        onConfirm={() => {
-          setConfirmDelete(false);
-          if (initial?.id)
-            void del.run(() => deleteDraft(initial.id!, branch.id));
-        }}
-      />
     </div>
   );
 }

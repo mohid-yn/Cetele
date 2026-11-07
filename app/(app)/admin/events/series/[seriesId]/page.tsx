@@ -8,6 +8,7 @@ import { formatWhen } from "@/lib/events";
 import { BackLink, FormHeader } from "../../form-header";
 import { loadStewardTree, requireSteward } from "../../../steward";
 import { Hosts, SeriesForm } from "../../series-form";
+import { SeriesDelete } from "../../event-actions";
 import { branchOption } from "../../branch-options";
 
 /**
@@ -120,6 +121,7 @@ export default async function EditSeriesPage({
           email: h.email,
         }))}
       />
+      <SeriesDelete seriesId={s.id} branchId={branch.id} title={s.title} />
     </Screen>
   );
 }
