@@ -73,6 +73,7 @@ To turn it off, set `MCP_ENABLED` to anything else and redeploy.
 
 ### Next steps, in order
 
+- **Owner: check the desktop refinement on staging (`eb35165`), then say whether to promote.** Sidebar foot is an account row (avatar + name = Profile, theme, sign out); Today puts the circle beside the rings; Profile is two columns. Desktop only (lg+); phones are unchanged.
 - **Owner: check the release on a phone:** Events tab, a branch page, the switcher's "You run", and that Today still opens and counts at once.
 
 0. **Owner: check `2224fd2` on the phone.** Open Roadmap, tap +1 on an item a few times, reload at once. The count should hold. **Take part will not appear on the owner's organiser account**: it follows the only published roadmap through **meeting** and **Keysy Dersh**. Seeing it takes another organiser outside those circles, or a second published roadmap. CI covers the full flow.
