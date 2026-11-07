@@ -40,6 +40,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -52,6 +53,7 @@
     "lint-staged": "^17.0.8",
     "prettier": "^3.8.4",
     "prettier-plugin-tailwindcss": "^0.8.0",
+    "satori": "^0.63.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

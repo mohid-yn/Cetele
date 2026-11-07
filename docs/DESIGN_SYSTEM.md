@@ -23,6 +23,12 @@ and blue `#1172c1` on white. Motion is unchanged: it already followed the strong
 sub-300ms timings and `scale(0.97)` press feedback that the reference motion guidance asks for. The brand mark
 keeps its shape and takes blue to navy plus the two YN oranges. The group garden stays green (leaves are green).
 
+**Brand mark (D88, 2026-11-07): the last bead.** A bold open C for Cetele, with one orange bead in its gap:
+the final count that closes the circle. Flat, blue plus one orange, no gradients or shadow, so it holds at
+16 px. The geometry lives only in `scripts/brand-mark.mjs`; `node scripts/gen-icons.mjs` and
+`node scripts/gen-splash.mjs` draw every asset from it with satori + resvg. The app icon is the white mark
+on a blue square (`public/logo-tile.svg`); `public/logo.svg` is the blue mark alone.
+
 ---
 
 # v3 derivation (the values v4 was re-hued from)

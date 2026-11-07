@@ -9,44 +9,46 @@
  * + filenames come from lib/apple-splash.js — the same table the <link> tags
  * read, so they can't drift.
  *
- * Rasterises with the Chromium Playwright already installs (a dev dep), exactly
- * like scripts/gen-icons.mjs — logo.svg has gradients a stdlib rasteriser
- * can't render. Re-run after editing public/logo.svg or the device table:
+ * Composed with satori and rasterised with resvg, exactly like
+ * scripts/gen-icons.mjs, from the mark in scripts/brand-mark.mjs. Re-run after
+ * editing the mark or the device table, then bump CACHE in public/sw.js:
  *
  *   node scripts/gen-splash.mjs
  */
-import { chromium } from "@playwright/test";
+import satori from "satori";
+import { Resvg } from "@resvg/resvg-js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { APPLE_DEVICES, splashFiles } from "../lib/apple-splash.js";
+import { markElement } from "./brand-mark.mjs";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const svg = fs.readFileSync(path.join(root, "public/logo.svg"), "utf8");
-const uri = "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64");
-
 const CREAM = "#f6f9fe"; // matches BRAND_SURFACE_COLOR / --background (light)
 const outDir = path.join(root, "public/splash");
 fs.mkdirSync(outDir, { recursive: true });
 
-const browser = await chromium.launch();
-
-/** Cream canvas at the device's physical pixels, logo centred at ~30% of the
- *  short side — a native-looking, orientation-independent launch mark. */
+/** Cream canvas at the device's physical pixels, the mark centred at ~30% of
+ *  the short side — a native-looking, orientation-independent launch mark. */
 async function render(w, h) {
-  const icon = Math.round(Math.min(w, h) * 0.3);
-  const ctx = await browser.newContext({
-    viewport: { width: w, height: h },
-    deviceScaleFactor: 1,
-  });
-  const p = await ctx.newPage();
-  await p.setContent(
-    `<!doctype html><html><body style="margin:0"><div id="c" style="width:${w}px;height:${h}px;background:${CREAM};display:flex;align-items:center;justify-content:center"><img src="${uri}" style="width:${icon}px;height:${icon}px"></div></body></html>`,
+  const svg = await satori(
+    {
+      type: "div",
+      props: {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: w,
+          height: h,
+          background: CREAM,
+        },
+        children: [markElement(Math.round(Math.min(w, h) * 0.3))],
+      },
+    },
+    { width: w, height: h, fonts: [] },
   );
-  await p.waitForTimeout(120);
-  const buf = await p.locator("#c").screenshot();
-  await ctx.close();
-  return buf;
+  return new Resvg(svg).render().asPng();
 }
 
 let n = 0;
@@ -57,5 +59,3 @@ for (const d of APPLE_DEVICES) {
   }
 }
 console.log(`wrote ${n} splash images to public/splash/`);
-
-await browser.close();

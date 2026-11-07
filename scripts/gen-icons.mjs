@@ -1,52 +1,62 @@
 #!/usr/bin/env node
 /**
- * Generate the PWA icons + favicon + apple-icon from the brand mark.
- *
- * The mark lives in `public/logo.svg` (gradients + a drop shadow), which a
- * stdlib rasteriser can't render — so this rasterises it with the Chromium that
- * Playwright already installs (a dev dep). Re-run after editing public/logo.svg:
+ * Generate every brand asset except the iOS launch images from the mark in
+ * scripts/brand-mark.mjs, composed with satori and rasterised with resvg:
  *
  *   node scripts/gen-icons.mjs
  *
- * Outputs (all static, under public/ — referenced from metadata/manifest, NOT
- * via Next's app/icon file convention, whose ICO/PNG image processing rejects
- * these): public/icons/icon-{192,512}.png, icon-maskable-512.png, and
- * public/apple-icon.png. Each is the mark centred on a white tile (the maskable
- * one carries extra padding for the platform safe zone).
+ * Outputs, all static under public/ (referenced from metadata and the
+ * manifest, NOT via Next's app/icon file convention):
+ *   logo.svg                 the mark alone, blue C + orange bead (favicon, wordmark)
+ *   logo-tile.svg            the app icon: white C + orange bead on a blue square
+ *   icons/icon-{192,512}.png the app icon as PNG
+ *   icons/icon-maskable-512.png  the same tile; the mark sits well inside the
+ *                            40% safe-zone circle, so the platform can crop it
+ *   apple-icon.png           180 px, for iOS home screens (iOS rounds the corners)
+ *
+ * The tiles are full-bleed squares: every platform applies its own corner mask.
+ * After running, bump CACHE in public/sw.js.
  */
-import { chromium } from "@playwright/test";
+import satori from "satori";
+import { Resvg } from "@resvg/resvg-js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { BLUE, ORANGE, WHITE, markElement, markSvg } from "./brand-mark.mjs";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const svg = fs.readFileSync(path.join(root, "public/logo.svg"), "utf8");
-const uri = "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64");
-
-const browser = await chromium.launch();
-async function render(size, scalePct, bg = "#ffffff") {
-  const ctx = await browser.newContext({
-    viewport: { width: size, height: size },
-    deviceScaleFactor: 1,
-  });
-  const p = await ctx.newPage();
-  await p.setContent(
-    `<!doctype html><html><body style="margin:0"><div id="c" style="width:${size}px;height:${size}px;background:${bg};display:flex;align-items:center;justify-content:center"><img src="${uri}" style="width:${scalePct}%"></div></body></html>`,
-  );
-  await p.waitForTimeout(120);
-  const buf = await p.locator("#c").screenshot();
-  await ctx.close();
-  return buf;
-}
-
-const w = (rel, buf) => {
-  fs.writeFileSync(path.join(root, rel), buf);
+const w = (rel, data) => {
+  fs.writeFileSync(path.join(root, rel), data);
   console.log("wrote", rel);
 };
 
-w("public/icons/icon-192.png", await render(192, 82));
-w("public/icons/icon-512.png", await render(512, 82));
-w("public/icons/icon-maskable-512.png", await render(512, 64)); // safe-zone padding
-w("public/apple-icon.png", await render(180, 82));
+/** The app icon at `size` px, with the mark at `scale` of the tile. */
+async function tileSvg(size, scale = 0.66) {
+  return satori(
+    {
+      type: "div",
+      props: {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: size,
+          height: size,
+          background: BLUE,
+        },
+        children: [
+          markElement(Math.round(size * scale), { ring: WHITE, bead: ORANGE }),
+        ],
+      },
+    },
+    { width: size, height: size, fonts: [] },
+  );
+}
+const png = (svg) => new Resvg(svg).render().asPng();
 
-await browser.close();
+w("public/logo.svg", markSvg());
+w("public/logo-tile.svg", await tileSvg(512));
+w("public/icons/icon-192.png", png(await tileSvg(192)));
+w("public/icons/icon-512.png", png(await tileSvg(512)));
+w("public/icons/icon-maskable-512.png", png(await tileSvg(512, 0.6)));
+w("public/apple-icon.png", png(await tileSvg(180)));

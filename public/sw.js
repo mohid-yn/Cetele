@@ -48,7 +48,9 @@
 //
 // **Bump this on any change to a cached asset, not only on a change to this
 // file.** Logo, PWA icons, splash images, manifest: if you regenerate one, bump.
-const CACHE = "cetele-static-v7";
+// v8 (2026-11-07): caching logic UNCHANGED. Evicts the old brand mark for the
+// new one (D88): logo.svg, the new logo-tile.svg, the PWA icons and 36 splash images.
+const CACHE = "cetele-static-v8";
 
 /** Immutable build output + static files. Everything else is app data. */
 function isStaticAsset(url) {
