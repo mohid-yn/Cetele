@@ -7,7 +7,7 @@
 > rewrite) · [`STATUS-2026-07-16-full.md`](history/STATUS-2026-07-16-full.md) (D1–D48 in full, including superseded ones).
 > Section numbers are stable, because code comments and docs cite them.
 
-_Last updated: 2026-11-07 · Phase: **live in production. Rebrand, garden, branches and events (D77–D87) shipped 2026-11-07.**_
+_Last updated: 2026-11-07 · Phase: **live in production. Rebrand, garden, branches and events (D77–D87), desktop refinement and the new logo (D88) shipped 2026-11-07.**_
 
 ---
 
@@ -21,21 +21,31 @@ A mobile-first group dhikr tracker, shipped as an installable PWA. Spec: [`docs/
 
 ### Current state (checked 2026-11-07)
 
-| Item         | State                                                                                                            |
-| ------------ | ---------------------------------------------------------------------------------------------------------------- |
-| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` at `b2d9704` (desktop refinement, 2026-11-07) |
-| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main` apart from this docs commit               |
-| Migrations   | **47 on prod.** 0041–0047 pushed 2026-11-07 by the owner from omenserver (CLI now logged in and linked)          |
-| Git          | Only `main` and `staging`. Every feature branch was merged and deleted 2026-11-07                                |
-| CI           | Green on both `main` and `staging`                                                                               |
-| Tests        | On `main`: unit 228 · pgTAP 1034 across 29 suites · e2e 91 across 22 specs. Green locally and in CI              |
-| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06              |
-| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                   |
-| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                            |
+| Item         | State                                                                                                                              |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Production   | [cetele-sable.vercel.app](https://cetele-sable.vercel.app), `main` level with `staging`: the new logo (D88, `aac9872`), 2026-11-07 |
+| Staging      | `cetele-git-staging-university-services.vercel.app`. Level with `main`                                                             |
+| Migrations   | **47 on prod.** 0041–0047 pushed 2026-11-07 by the owner from omenserver (CLI now logged in and linked)                            |
+| Git          | Only `main` and `staging`. `feat/logo-last-bead` merged and deleted 2026-11-07                                                     |
+| CI           | Green on both `main` and `staging`                                                                                                 |
+| Tests        | On `main`: unit 228 · pgTAP 1034 across 29 suites · e2e 91 across 22 specs. Green locally and in CI                                |
+| Local stack  | Runs on omenserver: Docker data on the HDD, Supabase started as in CI. Every suite green 2026-11-06                                |
+| Linear       | **Out of date.** CET-1…31 Done except CET-10 (deferred). Nothing since 2026-07-25 has an issue                                     |
+| Prod numbers | 64 users, all Google sign-in · 11 reminders across 9 members · 2 circles on a roadmap                                              |
 
-Everything through D87 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
+Everything through D88 is on production. The 2026-08-15 relative-redirect change to `/auth/callback`, long listed as unverified, is confirmed working: 10 accounts have Google sign-ins recorded after it.
 
-### Last release (2026-11-07): `b2d9704`
+### Last release (2026-11-07): the new logo, D88 (`aac9872`)
+
+**The last bead**: a bold open C with one orange bead in its gap, chosen from four satori concepts (claude.ai/artifact/T8RNDupbAY6SWxyPadDS89). Flat, blue + one orange. Replaced `logo.svg`, the 4 PWA icons, 36 iOS splash images, and the login hero (now `public/logo-tile.svg`, white mark on blue). SW cache v8. Promoted at the owner's request straight after it reached `staging`: **not yet looked at in the running app or on a phone.** No migration.
+
+| To change the mark | How                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| Geometry           | `scripts/brand-mark.mjs` only (ring r32, stroke 18, bead r9 on a 100 grid)                      |
+| Regenerate         | `node scripts/gen-icons.mjs && node scripts/gen-splash.mjs` (satori + resvg, ~3 s, no Chromium) |
+| Then               | Bump `CACHE` in `public/sw.js`; on a phone, remove and re-add the home-screen icon              |
+
+### Previous release (2026-11-07): `b2d9704`
 
 Desktop refinement (`eb35165`), at desktop widths (lg and up) only: the sidebar ends in an account row, Today puts the circle beside the rings, Profile is two columns. The owner checked it locally, signed in as the seed user, then asked to promote. A plain fast-forward from `staging`, with no migration.
 
@@ -77,7 +87,7 @@ To turn it off, set `MCP_ENABLED` to anything else and redeploy.
 
 ### Next steps, in order
 
-- **Owner: check the new logo (D88) on staging,** then say whether to promote. Login hero, sidebar wordmark, favicon. On a phone, remove and re-add the home-screen icon to see the new one.
+- **Owner: look at the new logo (D88) on production.** Login hero, sidebar wordmark, favicon, `/designsystem`. On a phone, remove and re-add the home-screen icon. Untracked `AGENTS.md` (written by `next dev`; Next suggests committing it) can go in with the next change.
 - **Owner: check the release on a phone:** Events tab, a branch page, the switcher's "You run", and that Today still opens and counts at once.
 
 0. **Owner: check `2224fd2` on the phone.** Open Roadmap, tap +1 on an item a few times, reload at once. The count should hold. **Take part will not appear on the owner's organiser account**: it follows the only published roadmap through **meeting** and **Keysy Dersh**. Seeing it takes another organiser outside those circles, or a second published roadmap. CI covers the full flow.
@@ -232,7 +242,7 @@ lib/                                       supabase/ · push/ · use-*.ts · gro
                                            goals.ts · shares.ts · task-links.ts · quick-count.ts · roadmap.ts
                                            programme-readiness.ts · sound.ts · haptics.ts · db-log.ts
 supabase/migrations/ (39) · supabase/tests/ (23 pgTAP) · e2e/ (21 specs + helpers.ts)
-public/splash/ (gen-splash.mjs) · public/icons/ (gen-icons.mjs)
+public/splash/ (gen-splash.mjs) · public/icons/, logo.svg, logo-tile.svg (gen-icons.mjs; mark in scripts/brand-mark.mjs, D88)
 scripts/                                   build_prd_docx.py · check-env.mjs · ci-build.sh · dev-fixture.sql
 research/                                  landscape · motivation and reward · feature recommendations
 ```
@@ -340,6 +350,7 @@ One line each. Cite by number; the numbering is stable. Full text: D1–D48 in t
 
 **Local browser**
 
+- **Owner reviewing from the Windows PC: tunnel, don't use the LAN IP.** Sign-in runs in the browser against `127.0.0.1:54321`, and magic links only redirect to `localhost:3000`, so `http://192.168.0.19:3000` can never sign in (and its HMR socket is refused). From WSL: `ssh -L 3000:localhost:3000 -L 54321:localhost:54321 -L 54324:localhost:54324 omen`, keep it open, then `http://localhost:3000`. Seed login `ahmad@example.com` (organiser + circle owner, live streak); the link arrives in Mailpit at `http://localhost:54324`. Check the tunnel from the PC side with `curl localhost:54321/auth/v1/health`.
 - **Use `http://localhost:3000`, never `127.0.0.1`.** They are separate cookie jars, and Server Actions 403 silently on the wrong one.
 - **Phone width:** `resize_page` silently stops at 500px. Use `emulate` with `390x844x2,mobile,touch` and confirm `innerWidth`.
 - **Authenticated perf traces:** `pnpm build && pnpm start`, click **Dev sign-in (skip inbox)**, emulate mobile at 4× CPU. Skip network throttling; it times out through the MCP.

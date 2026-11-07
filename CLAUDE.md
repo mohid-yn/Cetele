@@ -59,9 +59,10 @@ colors/spacing or fork primitives.
   sweep it back into icons** — that already happened once (`def9314`) and the owner's verdict
   on the result was "weird icons".
 - **Living reference:** route `/designsystem`. **Guidelines:** `docs/DESIGN_SYSTEM.md`.
-- Accent (rose) = one primary action per view. PWA icons: `node scripts/gen-icons.mjs`;
-  iOS launch/splash images: `node scripts/gen-splash.mjs` (regenerate after editing
-  `public/logo.svg` or the device table in `lib/apple-splash.js`).
+- Accent (rose) = one primary action per view. **Brand mark** (D88, "the last bead"): its geometry
+  lives only in `scripts/brand-mark.mjs`. `node scripts/gen-icons.mjs` writes `public/logo.svg`,
+  `logo-tile.svg` and the PWA icons; `node scripts/gen-splash.mjs` the iOS launch images (also after
+  editing the device table in `lib/apple-splash.js`). Both use satori + resvg. Never hand-edit the outputs.
 
 ## Commands
 
@@ -88,7 +89,7 @@ the unit suite is its only check; write the test with the code.
 > then gone for good. The installed PWA caches the old manifest/icons — to
 > see a `start_url`/splash change, remove the home-screen icon and re-add it.
 >
-> **Regenerated `logo.svg`, an icon, a splash image or the manifest? Bump `CACHE` in
+> **Regenerated `logo.svg`, `logo-tile.svg`, an icon, a splash image or the manifest? Bump `CACHE` in
 > `public/sw.js`.** Those filenames are not content-hashed, so the worker's cache-first
 > rule serves the old bytes forever and only the cache NAME can evict them. v3 shipped a
 > recoloured brand mark without bumping it and every existing user kept the old one.
