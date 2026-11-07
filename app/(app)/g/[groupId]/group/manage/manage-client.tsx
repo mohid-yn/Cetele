@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@/lib/utils";
 import { refreshGroups } from "@/lib/groups-store";
 import Link from "next/link";
 import {
@@ -290,6 +291,7 @@ export function ManageClient({
   initialTab,
   roadmaps,
   followedRoadmapIds,
+  roadmapsViaBranch = {},
   branchSlot,
 }: {
   group: ManageGroup;
@@ -307,6 +309,12 @@ export function ManageClient({
   roadmaps: { id: string; name: string }[];
   /** Which of them this circle follows (0028) — several is ordinary now. */
   followedRoadmapIds: string[];
+  /**
+   * Roadmaps this circle follows because its branch was assigned them (D81),
+   * keyed by roadmap id, naming the branch. Shown ticked and locked: the
+   * branch decides, as it does for events.
+   */
+  roadmapsViaBranch?: Record<string, string>;
   /** The circle's branch (D79), rendered on the server and placed in Settings. */
   branchSlot?: React.ReactNode;
 }) {
@@ -806,7 +814,8 @@ export function ManageClient({
               <Card className="p-4">
                 <p className="mb-3 text-sm text-muted-foreground">
                   Everyone in this circle sees the roadmaps ticked here. An
-                  organiser can also add or remove them.
+                  organiser can also add or remove them, for this circle or for
+                  its whole branch.
                 </p>
 
                 {/* CHECKBOXES, not a <select> (0028). A circle may follow several,
@@ -819,14 +828,20 @@ export function ManageClient({
                 <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
                   {roadmaps.map((r) => {
                     const on = followed.includes(r.id);
+                    const via = roadmapsViaBranch[r.id];
                     return (
                       <li key={r.id}>
-                        <label className="flex min-h-11 cursor-pointer items-center gap-3 p-3">
+                        <label
+                          className={cn(
+                            "flex min-h-11 items-center gap-3 p-3",
+                            via ? "cursor-default" : "cursor-pointer",
+                          )}
+                        >
                           <input
                             type="checkbox"
                             className="size-4 shrink-0 accent-primary"
-                            checked={on}
-                            disabled={roadmapAct.pending}
+                            checked={on || Boolean(via)}
+                            disabled={roadmapAct.pending || Boolean(via)}
                             onChange={() => {
                               const previous = followed;
                               // Optimistic, undone on refusal — without the undo a
@@ -845,8 +860,15 @@ export function ManageClient({
                               );
                             }}
                           />
-                          <span className="min-w-0 flex-1 text-sm text-foreground">
-                            {r.name}
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm text-foreground">
+                              {r.name}
+                            </span>
+                            {via && (
+                              <span className="block text-xs text-muted-foreground">
+                                Set for every circle in {via}
+                              </span>
+                            )}
                           </span>
                         </label>
                       </li>

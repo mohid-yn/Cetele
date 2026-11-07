@@ -236,6 +236,50 @@ export type Database = {
           },
         ];
       };
+      branch_roadmaps: {
+        Row: {
+          branch_id: string;
+          created_at: string;
+          created_by: string | null;
+          roadmap_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          branch_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          roadmap_id: string;
+        };
+        Update: {
+          branch_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          roadmap_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "branch_roadmaps_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branch_roadmaps_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branch_roadmaps_roadmap_id_fkey";
+            columns: ["roadmap_id"];
+            isOneToOne: false;
+            referencedRelation: "roadmaps";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       branch_stewards: {
         Row: {
           branch_id: string;
@@ -507,7 +551,11 @@ export type Database = {
       events: {
         Row: {
           branch_id: string;
+          bring: string[];
           capacity: number | null;
+          contact_detail: string;
+          contact_name: string;
+          cost: string;
           created_at: string;
           created_by: string | null;
           details: string;
@@ -515,6 +563,7 @@ export type Database = {
           id: string;
           kind: string;
           rsvp_closes_at: string | null;
+          schedule: NonNullable<Json>;
           series_id: string | null;
           starts_at: string;
           status: string;
@@ -526,7 +575,11 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           branch_id: string;
+          bring?: string[];
           capacity?: number | null;
+          contact_detail?: string;
+          contact_name?: string;
+          cost?: string;
           created_at?: string;
           created_by?: string | null;
           details?: string;
@@ -534,6 +587,7 @@ export type Database = {
           id?: string;
           kind: string;
           rsvp_closes_at?: string | null;
+          schedule?: NonNullable<Json>;
           series_id?: string | null;
           starts_at: string;
           status?: string;
@@ -544,7 +598,11 @@ export type Database = {
         };
         Update: {
           branch_id?: string;
+          bring?: string[];
           capacity?: number | null;
+          contact_detail?: string;
+          contact_name?: string;
+          cost?: string;
           created_at?: string;
           created_by?: string | null;
           details?: string;
@@ -552,6 +610,7 @@ export type Database = {
           id?: string;
           kind?: string;
           rsvp_closes_at?: string | null;
+          schedule?: NonNullable<Json>;
           series_id?: string | null;
           starts_at?: string;
           status?: string;
@@ -589,17 +648,20 @@ export type Database = {
           created_at: string;
           group_id: string;
           roadmap_id: string;
+          via_branch: string | null;
         };
         ComputedFields: never;
         Insert: {
           created_at?: string;
           group_id: string;
           roadmap_id: string;
+          via_branch?: string | null;
         };
         Update: {
           created_at?: string;
           group_id?: string;
           roadmap_id?: string;
+          via_branch?: string | null;
         };
         Relationships: [
           {
@@ -614,6 +676,13 @@ export type Database = {
             columns: ["roadmap_id"];
             isOneToOne: false;
             referencedRelation: "roadmaps";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "group_roadmaps_via_branch_fkey";
+            columns: ["via_branch"];
+            isOneToOne: false;
+            referencedRelation: "branches";
             referencedColumns: ["id"];
           },
         ];
@@ -2086,6 +2155,7 @@ export type Database = {
           group_id: string;
           member_count: number;
           name: string;
+          via_branch_name: string;
         }[];
       };
       roadmap_reach: { Args: { p_roadmap: string }; Returns: number };
@@ -2100,11 +2170,16 @@ export type Database = {
       save_camp: {
         Args: {
           p_branch: string;
+          p_bring?: string[];
           p_capacity: number;
+          p_contact_detail?: string;
+          p_contact_name?: string;
+          p_cost?: string;
           p_details: string;
           p_ends_at: string;
           p_id: string;
           p_rsvp_closes_at: string;
+          p_schedule?: Json;
           p_starts_at: string;
           p_status: string;
           p_timezone: string;
@@ -2136,6 +2211,10 @@ export type Database = {
           p_weekday: number;
         };
         Returns: string;
+      };
+      set_branch_on_roadmap: {
+        Args: { p_assign: boolean; p_branch: string; p_roadmap: string };
+        Returns: undefined;
       };
       set_circle_on_roadmap: {
         Args: { p_follow: boolean; p_group: string; p_roadmap: string };

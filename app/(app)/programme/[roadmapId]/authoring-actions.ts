@@ -357,3 +357,24 @@ export async function setCircleOnRoadmap(
   revalidateProgramme();
   return { error: null };
 }
+
+/** Assign or unassign a whole branch (0044, D81): every circle under it follows. */
+export async function setBranchOnRoadmap(
+  roadmapId: string,
+  branchId: string,
+  assign: boolean,
+): Promise<Result> {
+  const supabase = await createClient();
+  const { error } = await q(
+    "rpc.set_branch_on_roadmap",
+    supabase.rpc("set_branch_on_roadmap", {
+      p_roadmap: roadmapId,
+      p_branch: branchId,
+      p_assign: assign,
+    }),
+  );
+  await signOutIfStaleSession(error);
+  if (error) return { error: error.message };
+  revalidateProgramme();
+  return { error: null };
+}

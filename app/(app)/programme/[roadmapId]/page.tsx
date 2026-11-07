@@ -213,25 +213,35 @@ export default async function ProgrammeCataloguePage({
   // Who may edit. Only decides which screen renders: every RPC behind the builder
   // refuses a non-organiser on its own.
   if (canEdit && view !== "member") {
-    const [{ data: circles }, { data: reachMembers }, { data: profile }] =
-      await Promise.all([
-        q(
-          "catalogue.circles (0037)",
-          supabase.rpc("roadmap_circles", { p_roadmap: roadmapId }),
-        ),
-        q(
-          "catalogue.reach (0038)",
-          supabase.rpc("roadmap_reach", { p_roadmap: roadmapId }),
-        ),
-        q(
-          "catalogue.profile (timezone)",
-          supabase
-            .from("profiles")
-            .select("timezone")
-            .eq("id", me)
-            .maybeSingle(),
-        ),
-      ]);
+    const [
+      { data: circles },
+      { data: reachMembers },
+      { data: profile },
+      { data: tree },
+      { data: assignedRows },
+    ] = await Promise.all([
+      q(
+        "catalogue.circles (0037)",
+        supabase.rpc("roadmap_circles", { p_roadmap: roadmapId }),
+      ),
+      q(
+        "catalogue.reach (0038)",
+        supabase.rpc("roadmap_reach", { p_roadmap: roadmapId }),
+      ),
+      q(
+        "catalogue.profile (timezone)",
+        supabase.from("profiles").select("timezone").eq("id", me).maybeSingle(),
+      ),
+      q("catalogue.branches (0042)", supabase.rpc("my_steward_tree")),
+      q(
+        "catalogue.branches assigned (0044)",
+        supabase
+          .from("branch_roadmaps")
+          .select("branch_id")
+          .eq("roadmap_id", roadmapId),
+      ),
+    ]);
+    const assigned = new Set((assignedRows ?? []).map((r) => r.branch_id));
 
     return (
       <ProgrammeBuilder
@@ -250,6 +260,15 @@ export default async function ProgrammeCataloguePage({
           name: c.name,
           memberCount: c.member_count,
           following: c.following,
+          viaBranch: c.via_branch_name,
+        }))}
+        branches={(tree ?? []).map((b) => ({
+          id: b.id,
+          parentId: b.parent_id,
+          name: b.name,
+          depth: b.depth,
+          circles: b.circles,
+          assigned: assigned.has(b.id),
         }))}
         reachMembers={reachMembers ?? 0}
         recordedIds={[...recorded]}

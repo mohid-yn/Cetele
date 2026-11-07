@@ -65,7 +65,9 @@ export default async function ManageGroupPage({
   ] = await Promise.all([
     supabase
       .from("groups")
-      .select("id, name, created_by, branch_id, group_roadmaps(roadmap_id)")
+      .select(
+        "id, name, created_by, branch_id, group_roadmaps(roadmap_id, via_branch, branches(name))",
+      )
       .eq("id", active.groupId)
       .maybeSingle(),
     supabase
@@ -183,6 +185,11 @@ export default async function ManageGroupPage({
       }
       roadmaps={(roadmaps ?? []).map((r) => ({ id: r.id, name: r.name }))}
       followedRoadmapIds={(group.group_roadmaps ?? []).map((g) => g.roadmap_id)}
+      roadmapsViaBranch={Object.fromEntries(
+        (group.group_roadmaps ?? [])
+          .filter((g) => g.via_branch)
+          .map((g) => [g.roadmap_id, g.branches?.name ?? "your branch"]),
+      )}
     />
   );
 }

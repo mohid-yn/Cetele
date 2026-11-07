@@ -18,7 +18,11 @@ import {
   type RoadmapItem,
 } from "@/lib/roadmap";
 import type { BuilderTab } from "./builder-tabs";
-import { CirclesPanel, type RoadmapCircle } from "./circles-panel";
+import {
+  CirclesPanel,
+  type RoadmapBranch,
+  type RoadmapCircle,
+} from "./circles-panel";
 import { ItemsPanel } from "./items-panel";
 import { StopTakingPart, TakePart } from "./take-part";
 import { ReachCard } from "./reach-card";
@@ -51,6 +55,7 @@ export function ProgrammeBuilder({
   requirements,
   rewards,
   circles,
+  branches,
   reachMembers,
   recordedIds,
   sortOrders,
@@ -71,6 +76,8 @@ export function ProgrammeBuilder({
   requirements: LevelRequirement[];
   rewards: EditableReward[];
   circles: RoadmapCircle[];
+  /** The branch tree, with which branches this roadmap is assigned to (D81). */
+  branches: RoadmapBranch[];
   /** Distinct people on those circles (0038). */
   reachMembers: number;
   recordedIds: string[];
@@ -174,7 +181,7 @@ export function ProgrammeBuilder({
         onChange={choose}
         options={[
           { value: "items", label: "Items" },
-          { value: "circles", label: "Circles" },
+          { value: "circles", label: "Who follows" },
           { value: "rewards", label: "Rewards" },
           { value: "settings", label: "Settings" },
         ]}
@@ -195,6 +202,7 @@ export function ProgrammeBuilder({
           roadmapId={roadmap.id}
           published={roadmap.published}
           circles={circles}
+          branches={branches}
         />
       )}
       {tab === "rewards" && (
