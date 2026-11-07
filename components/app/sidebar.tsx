@@ -21,7 +21,7 @@ import { WebAppLogo } from "@/components/ui/logo";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
 import { useHasRoadmap } from "@/lib/groups-store";
-import { useIsSuperAdmin } from "@/lib/viewer-store";
+import { useIsSteward, useIsSuperAdmin } from "@/lib/viewer-store";
 import { groupHref } from "@/lib/group-href";
 import { isAdminZone } from "@/lib/admin-zone";
 
@@ -45,13 +45,15 @@ export function Sidebar({
   const hasRoadmap = useHasRoadmap(initialHasRoadmap);
   // The flag is fetched client-side because the shell does no server work (§4).
   const isOrganiser = useIsSuperAdmin(initialIsOrganiser);
+  // A branch admin in no circle has no switcher, so the bar carries Admin (D86).
+  const runsBranch = useIsSteward();
   // …and the same collapse on the picker itself, where no circle is selected.
   const inAdmin = isAdminZone(pathname, isOrganiser);
   const items = inAdmin
     ? [...adminZoneItems(isOrganiser), ADMIN_ZONE_EXIT]
     : hasGroups && !isGroupPicker(pathname)
       ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
-      : noGroupNavItems(isOrganiser, hasRoadmap);
+      : noGroupNavItems(isOrganiser, hasRoadmap, hasGroups, runsBranch);
 
   return (
     // `bg-chrome` — same reason as the bottom nav: the sidebar is the frame.

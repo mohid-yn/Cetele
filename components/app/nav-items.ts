@@ -38,6 +38,15 @@ type FlatItem = {
   Icon: NavIcon;
 };
 
+/** Events (D83): the member's own list across every circle, like Roadmap. */
+const EVENTS_NAV_ITEM_DEF: FlatItem = {
+  href: "/events",
+  label: "Events",
+  shortLabel: "Events",
+  Icon: CalendarIcon,
+};
+export const EVENTS_NAV_ITEM = EVENTS_NAV_ITEM_DEF;
+
 export const NAV_ITEMS: readonly (ScopedItem | FlatItem)[] = [
   { sub: "/today", label: "Today", shortLabel: "Today", Icon: HomeIcon },
   { sub: "/group", label: "Group", shortLabel: "Group", Icon: UsersIcon },
@@ -184,12 +193,19 @@ export const NO_GROUP_NAV_ITEMS: readonly FlatItem[] = [
 export function noGroupNavItems(
   isOrganiser: boolean,
   hasRoadmap = false,
+  hasGroups = false,
+  runsBranch = false,
 ): readonly (ScopedItem | FlatItem)[] {
-  // The roadmap is the member's own, so it needs no circle (D75, D76).
+  // The roadmap and the events list are the member's own, across every circle,
+  // so neither needs one SELECTED (D75, D76, D86). Events needs one to EXIST,
+  // though: with no circle nothing can reach you, and the tab would be empty.
+  // Admin is here for anyone with no switcher to reach it through: an organiser
+  // in no circle (D27), or a branch admin who belongs to no circle (D86).
   return [
     NO_GROUP_NAV_ITEMS[0],
-    ...(isOrganiser ? [ADMIN_NAV_ITEM] : []),
+    ...(hasGroups ? [EVENTS_NAV_ITEM] : []),
     ...(hasRoadmap ? [ROADMAP_NAV_ITEM] : []),
+    ...((isOrganiser || runsBranch) && !hasGroups ? [ADMIN_NAV_ITEM] : []),
     NO_GROUP_NAV_ITEMS.at(-1)!,
   ];
 }

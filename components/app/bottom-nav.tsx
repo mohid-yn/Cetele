@@ -18,7 +18,7 @@ import { isAdminZone } from "@/lib/admin-zone";
 import { useActiveGroupId } from "@/lib/use-active-group";
 import { useHasGroups } from "@/lib/use-has-groups";
 import { useHasRoadmap } from "@/lib/groups-store";
-import { useIsSuperAdmin } from "@/lib/viewer-store";
+import { useIsSteward, useIsSuperAdmin } from "@/lib/viewer-store";
 
 /** Mobile tab bar pinned to the bottom of the app column (hidden on desktop). */
 export function BottomNav({
@@ -42,6 +42,8 @@ export function BottomNav({
   // thing in this bar that no group page can publish — it comes from the
   // client-side viewer store instead.
   const isOrganiser = useIsSuperAdmin(initialIsOrganiser);
+  // A branch admin in no circle has no switcher, so the bar carries Admin (D86).
+  const runsBranch = useIsSteward();
   // …and the same collapse on the picker itself, where no circle is selected.
   if (isAdminZone(pathname, isOrganiser)) {
     return <AdminTabBar pathname={pathname} isOrganiser={isOrganiser} />;
@@ -50,7 +52,7 @@ export function BottomNav({
   const items =
     hasGroups && !isGroupPicker(pathname)
       ? navItemsWithRoadmap(hasRoadmap, isOrganiser)
-      : noGroupNavItems(isOrganiser, hasRoadmap);
+      : noGroupNavItems(isOrganiser, hasRoadmap, hasGroups, runsBranch);
 
   return (
     <nav
