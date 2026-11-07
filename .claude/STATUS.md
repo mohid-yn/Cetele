@@ -77,7 +77,7 @@ To turn it off, set `MCP_ENABLED` to anything else and redeploy.
 
 ### Next steps, in order
 
-- **Owner: check the new logo (D88) on the `feat/logo-last-bead` preview,** then say whether to merge and promote. Login hero, sidebar wordmark, favicon. On a phone, remove and re-add the home-screen icon to see the new one.
+- **Owner: check the new logo (D88) on staging,** then say whether to promote. Login hero, sidebar wordmark, favicon. On a phone, remove and re-add the home-screen icon to see the new one.
 - **Owner: check the release on a phone:** Events tab, a branch page, the switcher's "You run", and that Today still opens and counts at once.
 
 0. **Owner: check `2224fd2` on the phone.** Open Roadmap, tap +1 on an item a few times, reload at once. The count should hold. **Take part will not appear on the owner's organiser account**: it follows the only published roadmap through **meeting** and **Keysy Dersh**. Seeing it takes another organiser outside those circles, or a second published roadmap. CI covers the full flow.
