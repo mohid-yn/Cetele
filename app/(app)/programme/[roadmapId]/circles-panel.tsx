@@ -28,6 +28,10 @@ export type RoadmapBranch = ReachBranch & { assigned: boolean };
  *      by being in the place. This list only says where it is and links there.
  *   2. SINGLE CIRCLES, the exceptions, still switched here.
  *
+ * A DRAFT takes no new circles (0041, D77): its unticked rows are disabled. A
+ * ticked row can still be unticked, because a circle put on before 0041, or on
+ * a roadmap unpublished since, must always be removable.
+ *
  * A circle that follows through a branch is shown ticked and locked with the
  * branch's name, because unticking it would be undone by the branch anyway.
  * Rows stay in alphabetical order when toggled, so the row under a thumb never
@@ -88,7 +92,7 @@ export function CirclesPanel({
         <p className="mt-1 text-sm text-muted-foreground">
           {published
             ? "Taking a circle off hides the roadmap from it and keeps everything its members recorded."
-            : "Members won't see anything until you publish."}
+            : "Publish this roadmap to add circles. A draft is still being written, so nobody can join it yet."}
         </p>
       </div>
 
@@ -178,14 +182,20 @@ export function CirclesPanel({
                         "flex min-h-14 items-center gap-3 px-4 py-2 transition-colors duration-[var(--duration-fast)] first:rounded-t-2xl last:rounded-b-2xl " +
                         (c.viaBranch
                           ? "cursor-default"
-                          : "cursor-pointer hover:bg-surface-hover")
+                          : !published && !c.following
+                            ? "cursor-not-allowed opacity-60"
+                            : "cursor-pointer hover:bg-surface-hover")
                       }
                     >
                       <input
                         type="checkbox"
                         className="size-5 shrink-0 accent-primary"
                         checked={c.following}
-                        disabled={Boolean(c.viaBranch)}
+                        // A draft takes no new circles (0041, D77); a ticked
+                        // row stays removable.
+                        disabled={
+                          Boolean(c.viaBranch) || (!published && !c.following)
+                        }
                         onChange={() => void toggle(c)}
                       />
                       <span className="min-w-0 flex-1">

@@ -408,7 +408,10 @@ select is((select count(*)::int from public.group_roadmaps
   '...and the OWNER can');
 
 -- THE POINT OF 0028: a circle may follow MORE THAN ONE, which the old single
--- column made unrepresentable.
+-- column made unrepresentable. Both must be PUBLISHED to be followed (0041),
+-- and nothing after this point needs the 2027 programme to stay a draft.
+update public.roadmaps set published = true
+  where id = 'c5000000-0000-0000-0000-0000000000a2';
 select pg_temp.impersonate('c5000000-0000-0000-0000-00000000000a');
 select lives_ok(
   $$ insert into public.group_roadmaps (group_id, roadmap_id) values

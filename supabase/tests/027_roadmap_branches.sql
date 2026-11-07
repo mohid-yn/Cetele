@@ -69,6 +69,22 @@ select throws_ok(
   'organisers only', 'a steward cannot assign a roadmap, even to their own branch');
 select pg_temp.reset_role();
 
+-- A draft cannot be given to a branch (D77 carried into 0044).
+insert into public.roadmaps (id, name, starts_on, ends_on, published) values
+  ('ce000000-0000-0000-0000-000000000301', 'RB Draft', current_date, current_date + 300, false);
+select pg_temp.impersonate('ce000000-0000-0000-0000-00000000000f');
+select throws_ok(
+  $$ select public.set_branch_on_roadmap('ce000000-0000-0000-0000-000000000301',
+       'ce000000-0000-0000-0000-000000000102', true) $$,
+  'publish this roadmap before adding it to a branch',
+  'a draft roadmap cannot be added to a branch');
+select throws_ok(
+  $$ select public.set_circle_on_roadmap('ce000000-0000-0000-0000-000000000301',
+       'ce000000-0000-0000-0000-000000000200', true) $$,
+  'publish this roadmap before adding circles to it',
+  'nor to a single circle: 0044 keeps 0041''s rule');
+select pg_temp.reset_role();
+
 -- ---- 2. assigning reaches the subtree, not beside it -----------------------
 select pg_temp.impersonate('ce000000-0000-0000-0000-00000000000f');
 select lives_ok(

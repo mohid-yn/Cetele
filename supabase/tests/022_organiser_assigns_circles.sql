@@ -124,10 +124,11 @@ select is((select count(*)::int from public.group_roadmaps
               and roadmap_id = 'ca000000-0000-0000-0000-0000000000a1'), 1,
   'and leaves exactly one row');
 
-select lives_ok(
+select throws_ok(
   $$ select public.set_circle_on_roadmap('ca000000-0000-0000-0000-0000000000a2',
        'ca000000-0000-0000-0000-0000000000d1', true) $$,
-  'a draft can be lined up with circles before it is published');
+  'publish this roadmap before adding circles to it',
+  'a draft cannot be given circles, even by an organiser (0041, D77)');
 
 select lives_ok(
   $$ select public.set_circle_on_roadmap('ca000000-0000-0000-0000-0000000000a1',
@@ -157,6 +158,11 @@ select is((select count(*)::int from public.audit_log
 -- ----------------------------------------------------------------------------
 -- 4. A draft stays hidden from a member of a circle lined up for it
 -- ----------------------------------------------------------------------------
+-- 0041 stops new rows, but a row made before it (or a roadmap unpublished
+-- later) can still point at a draft. Seed one as the table owner, which RLS
+-- does not apply to.
+insert into public.group_roadmaps (group_id, roadmap_id) values
+  ('ca000000-0000-0000-0000-0000000000d1', 'ca000000-0000-0000-0000-0000000000a2');
 select pg_temp.impersonate('ca000000-0000-0000-0000-00000000000b');
 select is((select count(*)::int from public.roadmaps
             where id = 'ca000000-0000-0000-0000-0000000000a2'), 0,

@@ -64,11 +64,20 @@ comment on column public.group_roadmaps.via_branch is
   'Null for a circle that follows directly. Otherwise the assigned branch this '
   'row comes from (0044, D81). Written only by private.sync_branch_roadmaps.';
 
--- A circle admin keeps adding and removing DIRECT rows only.
+-- A circle admin keeps adding and removing DIRECT rows only, and only for a
+-- PUBLISHED roadmap: 0041 (D77) added that check, and this policy replaces
+-- 0041's, so it must carry it forward.
 drop policy group_roadmaps_insert_admin on public.group_roadmaps;
 create policy group_roadmaps_insert_admin on public.group_roadmaps
   for insert to authenticated
-  with check (private.is_group_admin(group_id) and via_branch is null);
+  with check (
+    private.is_group_admin(group_id)
+    and via_branch is null
+    and exists (
+      select 1 from public.roadmaps r
+       where r.id = roadmap_id and r.published
+    )
+  );
 
 drop policy group_roadmaps_delete_admin on public.group_roadmaps;
 create policy group_roadmaps_delete_admin on public.group_roadmaps
@@ -172,6 +181,12 @@ begin
   end if;
 
   if p_assign then
+    -- A draft is still being written: nobody can follow it (D77), so no
+    -- branch can be given it either.
+    if not exists (select 1 from public.roadmaps
+                    where id = p_roadmap and published) then
+      raise exception 'publish this roadmap before adding it to a branch';
+    end if;
     insert into public.branch_roadmaps (branch_id, roadmap_id, created_by)
     values (p_branch, p_roadmap, v_uid)
     on conflict (branch_id, roadmap_id) do nothing;
@@ -215,6 +230,11 @@ begin
   end if;
 
   if p_follow then
+    -- Carried forward from 0041 (D77), which this replaces.
+    if not exists (select 1 from public.roadmaps
+                    where id = p_roadmap and published) then
+      raise exception 'publish this roadmap before adding circles to it';
+    end if;
     insert into public.group_roadmaps (group_id, roadmap_id)
     values (p_group, p_roadmap)
     on conflict (group_id, roadmap_id) do nothing;

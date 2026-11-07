@@ -77,7 +77,9 @@ export function AssignRoadmap({
                     type="checkbox"
                     className="size-5 shrink-0 accent-primary"
                     checked={r.here}
-                    disabled={busy !== null}
+                    // A draft can't be followed yet (D77); one already here
+                    // can still be taken off.
+                    disabled={busy !== null || (!r.published && !r.here)}
                     onChange={() => void toggle(r.id, !r.here)}
                   />
                   <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
@@ -85,7 +87,7 @@ export function AssignRoadmap({
                   </span>
                   {!r.published && (
                     <Badge variant="outline" size="sm">
-                      Draft
+                      Draft · publish first
                     </Badge>
                   )}
                 </label>

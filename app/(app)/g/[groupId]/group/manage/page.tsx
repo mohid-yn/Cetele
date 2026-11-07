@@ -106,12 +106,15 @@ export default async function ManageGroupPage({
       .is("unassigned_at", null),
     // M7 (D27): a co-admin can claim the group if the owner is absent.
     supabase.rpc("can_claim_ownership", { p_group: active.groupId }),
-    // The programmes this circle could follow (0025, D55). RLS returns only
-    // PUBLISHED ones, which is what makes this list safe to render without a
-    // filter here — an unpublished roadmap is staged, not offered.
-    supabase.from("roadmaps").select("id, name").order("starts_on", {
-      ascending: false,
-    }),
+    // The programmes this circle could follow (0025, D55). Filtered on
+    // `published` HERE as well as by the database: RLS hides drafts from a
+    // circle admin but NOT from an organiser, so an organiser's Manage used to
+    // offer drafts, unlabelled (D77). The insert policy refuses them too (0041).
+    supabase
+      .from("roadmaps")
+      .select("id, name")
+      .eq("published", true)
+      .order("starts_on", { ascending: false }),
     // Branches (D79): every place, labelled with its path, for the picker.
     supabase.rpc("branch_directory"),
     supabase
